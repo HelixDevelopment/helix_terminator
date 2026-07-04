@@ -1,34 +1,4 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>HelixTerminator — 12_mermaid_diagrams</title>
-  <style>
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-  </style>
-  <link rel="stylesheet" href="/tmp/helix_style.css" />
-</head>
-<body>
-<header id="title-block-header">
-<h1 class="title">HelixTerminator — 12_mermaid_diagrams</h1>
-</header>
-<h1 id="helixterminator--complete-mermaid-diagram-suite">HelixTerminator
+<h1 id="helixterminator-complete-mermaid-diagram-suite">HelixTerminator
 — Complete Mermaid Diagram Suite</h1>
 <blockquote>
 <p><strong>Project:</strong> HelixTerminator — Next-Generation
@@ -202,7 +172,7 @@ mTLS<br />
 </tbody>
 </table>
 <hr />
-<h2 id="1-high-level-system-context-c4-level-1">1. High-Level System
+<h2 id="high-level-system-context-c4-level-1">1. High-Level System
 Context (C4 Level 1)</h2>
 <p>Shows HelixTerminator as a system-in-context with all external actors
 and external systems it interacts with.</p>
@@ -246,7 +216,7 @@ and external systems it interacts with.</p>
     class CORE system
     class SSH,LDAP,SAML,SMTP,S3,SPIRE external</code></pre>
 <hr />
-<h2 id="2-container-diagram-c4-level-2">2. Container Diagram (C4 Level
+<h2 id="container-diagram-c4-level-2">2. Container Diagram (C4 Level
 2)</h2>
 <p>Shows all major containers (client apps, API gateway, microservice
 groups, data stores, and messaging) and their primary communication
@@ -310,7 +280,7 @@ channels.</p>
     end
 
     subgraph DataStores[&quot;Data Stores&quot;]
-        PG[(&quot;PostgreSQL 16\nPrimary DB\n:5432&quot;)]
+        PG[(&quot;PostgreSQL 17.2\nPrimary DB\n:5432&quot;)]
         REDIS[(&quot;Redis Cluster\nSessions/Cache\n:6379&quot;)]
         S3_STORE[(&quot;S3 / MinIO\nRecordings/Files\n:9000&quot;)]
     end
@@ -344,7 +314,7 @@ channels.</p>
     class PG,REDIS,S3_STORE datastore
     class KAFKA,RABBIT messaging</code></pre>
 <hr />
-<h2 id="3-microservices-architecture--full-domain-map">3. Microservices
+<h2 id="microservices-architecture-full-domain-map">3. Microservices
 Architecture — Full Domain Map</h2>
 <p>All 25 microservices grouped by domain, with inter-service gRPC/event
 connections labeled.</p>
@@ -384,7 +354,7 @@ connections labeled.</p>
     end
 
     subgraph PLATFORM[&quot;Platform Domain&quot;]
-        P1[&quot;API Gateway\n:8000\nRoute · Rate-limit · Auth MW&quot;]
+        P1[&quot;API Gateway\n:8080\nRoute · Rate-limit · Auth MW&quot;]
         P2[&quot;Config Service\n:8030\nFeature flags · Remote config&quot;]
         P3[&quot;Health Service\n:8031\nLiveness · Readiness · Deps&quot;]
         P4[&quot;Notification Service\n:8032\nEmail · Webhook · Push&quot;]
@@ -436,7 +406,7 @@ connections labeled.</p>
     class GW infra
     class CLIENT client</code></pre>
 <hr />
-<h2 id="4-kafka-topic-flow-diagram">4. Kafka Topic Flow Diagram</h2>
+<h2 id="kafka-topic-flow-diagram">4. Kafka Topic Flow Diagram</h2>
 <p>Shows all Kafka producers, topics, and consumers for event-driven
 flows across the platform.</p>
 <pre class="mermaid"><code>flowchart LR
@@ -517,7 +487,7 @@ flows across the platform.</p>
     class T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11 topic
     class C_REC,C_ANALYTICS,C_NOTIF,C_AUDIT_SINK,C_VAULT_SYNC,C_HOST_CACHE,C_USER_PROJ,C_AI,C_SEARCH consumer</code></pre>
 <hr />
-<h2 id="5-rabbitmq-exchangequeue-flow">5. RabbitMQ Exchange/Queue
+<h2 id="rabbitmq-exchangequeue-flow">5. RabbitMQ Exchange/Queue
 Flow</h2>
 <p>Shows RabbitMQ exchanges, routing keys, queues, and consumers for
 command and notification flows.</p>
@@ -607,7 +577,7 @@ command and notification flows.</p>
     class CON_SSH,CON_SFTP,CON_PF,CON_PKI,CON_EMAIL,CON_PUSH,CON_WEBHOOK,CON_CONTAINER,CON_RETRY,CON_HEALTH consumer
     class PUB_GW,PUB_SSH,PUB_NOTIF,PUB_SCHED producer</code></pre>
 <hr />
-<h2 id="6-ssh-connection-establishment">6. SSH Connection
+<h2 id="ssh-connection-establishment">6. SSH Connection
 Establishment</h2>
 <p>Full sequence from client initiating connection through
 authentication, jump host traversal, and active shell.</p>
@@ -668,7 +638,7 @@ authentication, jump host traversal, and active shell.</p>
     GW-&gt;&gt;PROXY: Stream attach {session_id}
     Note over C,TARGET: Bidirectional WebSocket ↔ SSH channel active</code></pre>
 <hr />
-<h2 id="7-user-login-with-mfa">7. User Login with MFA</h2>
+<h2 id="user-login-with-mfa">7. User Login with MFA</h2>
 <p>Full authentication flow covering credential validation, TOTP/FIDO2
 verification, JWT issuance, and session creation.</p>
 <pre class="mermaid"><code>sequenceDiagram
@@ -729,7 +699,7 @@ verification, JWT issuance, and session creation.</p>
         GW--&gt;&gt;C: 200 {access_token, refresh_token, user_profile}
     end</code></pre>
 <hr />
-<h2 id="8-vault-sync-flow">8. Vault Sync Flow</h2>
+<h2 id="vault-sync-flow">8. Vault Sync Flow</h2>
 <p>End-to-end vault synchronization from client write through
 encryption, persistence, Kafka event propagation, and multi-device
 sync.</p>
@@ -788,7 +758,7 @@ sync.</p>
         C2-&gt;&gt;C2: Decrypt with local Vault Key → Item Key → plaintext
     end</code></pre>
 <hr />
-<h2 id="9-sftp-file-transfer">9. SFTP File Transfer</h2>
+<h2 id="sftp-file-transfer">9. SFTP File Transfer</h2>
 <p>Full SFTP upload/download flow including authentication, channel
 setup, progress tracking, and error handling.</p>
 <pre class="mermaid"><code>sequenceDiagram
@@ -849,7 +819,7 @@ setup, progress tracking, and error handling.</p>
     SFTP-&gt;&gt;KAFKA: Produce sftp.transfer.events {type:COMPLETED, transfer_id, bytes, duration}
     SFTP-&gt;&gt;C: WS {status:COMPLETED, checksum_sha256}</code></pre>
 <hr />
-<h2 id="10-real-time-collaboration-terminal-sharing">10. Real-time
+<h2 id="real-time-collaboration-terminal-sharing">10. Real-time
 Collaboration (Terminal Sharing)</h2>
 <p>Sequence for initiating a collaborative terminal session, observer
 join flow, and data multiplexing.</p>
@@ -913,8 +883,8 @@ join flow, and data multiplexing.</p>
         Note over OBS: Observer can now send input
     end</code></pre>
 <hr />
-<h2 id="11-certificate-issuance-ssh-cert-ca">11. Certificate Issuance
-(SSH Cert CA)</h2>
+<h2 id="certificate-issuance-ssh-cert-ca">11. Certificate Issuance (SSH
+Cert CA)</h2>
 <p>Flow from client requesting an SSH certificate through signing and
 deployment to SSH Proxy.</p>
 <pre class="mermaid"><code>sequenceDiagram
@@ -961,7 +931,7 @@ deployment to SSH Proxy.</p>
     PKI--&gt;&gt;PROXY: NotRevoked
     PROXY-&gt;&gt;PROXY: Certificate valid — proceed with SSH authentication</code></pre>
 <hr />
-<h2 id="12-vault-encryption-flow">12. Vault Encryption Flow</h2>
+<h2 id="vault-encryption-flow">12. Vault Encryption Flow</h2>
 <p>Detailed cryptographic flow showing how plaintext is protected
 through multiple layers of key hierarchy.</p>
 <pre class="mermaid"><code>sequenceDiagram
@@ -1015,7 +985,7 @@ through multiple layers of key hierarchy.</p>
     IK-&gt;&gt;ENC: AES-256-GCM Decrypt{ciphertext, nonce, auth_tag, Item Key}
     ENC--&gt;&gt;PT: Plaintext (visible in UI only)</code></pre>
 <hr />
-<h2 id="13-api-gateway-request-flow">13. API Gateway Request Flow</h2>
+<h2 id="api-gateway-request-flow">13. API Gateway Request Flow</h2>
 <p>Request lifecycle from client through rate limiting, authentication
 middleware, routing, and response.</p>
 <pre class="mermaid"><code>sequenceDiagram
@@ -1087,7 +1057,7 @@ middleware, routing, and response.</p>
     GW-&gt;&gt;AUDIT: async log {request_id, user_id, method, path, status, latency_ms}
     GW--&gt;&gt;C: HTTP Response {status, body, X-Request-ID, X-RateLimit-Remaining}</code></pre>
 <hr />
-<h2 id="14-zero-trust-mtls-flow">14. Zero Trust mTLS Flow</h2>
+<h2 id="zero-trust-mtls-flow">14. Zero Trust mTLS Flow</h2>
 <p>SPIRE/SPIFFE workload identity verification and mTLS establishment
 between two internal microservices.</p>
 <pre class="mermaid"><code>sequenceDiagram
@@ -1105,12 +1075,12 @@ between two internal microservices.</p>
     SPIRE_A-&gt;&gt;SPIRE_A: Attest workload (verify pod UID, SA token)
     SPIRE_A-&gt;&gt;SPIRE_SRV: AttestAgent + NodeAttestation (EC2/K8s)
     SPIRE_SRV-&gt;&gt;SPIRE_SRV: Verify node identity + check registration entries
-    SPIRE_SRV--&gt;&gt;SPIRE_A: X.509-SVID {spiffe://helixterm.io/ns/prod/sa/ssh-proxy, cert, key, bundle}
+    SPIRE_SRV--&gt;&gt;SPIRE_A: X.509-SVID {spiffe://helixterminator.io/ns/prod/sa/ssh-proxy, cert, key, bundle}
     SPIRE_A--&gt;&gt;SA: X509SVIDResponse {svid_pem, key_pem, bundle_pem, expires_at}
 
     SB-&gt;&gt;SPIRE_B: FetchX509SVID{workload_selector: k8s:sa:pki-service}
     SPIRE_B-&gt;&gt;SPIRE_SRV: Attest + fetch SVID
-    SPIRE_SRV--&gt;&gt;SPIRE_B: X.509-SVID {spiffe://helixterm.io/ns/prod/sa/pki-service, cert, key}
+    SPIRE_SRV--&gt;&gt;SPIRE_B: X.509-SVID {spiffe://helixterminator.io/ns/prod/sa/pki-service, cert, key}
     SPIRE_B--&gt;&gt;SB: X509SVIDResponse
 
     Note over SA,SB: Service-to-service call with mTLS
@@ -1134,7 +1104,7 @@ between two internal microservices.</p>
     SPIRE_A-&gt;&gt;SA: Push updated SVID (hot-reload, zero downtime)
     SA-&gt;&gt;SA: Replace TLS credentials in connection pool</code></pre>
 <hr />
-<h2 id="15-session-recording-flow">15. Session Recording Flow</h2>
+<h2 id="session-recording-flow">15. Session Recording Flow</h2>
 <p>Full pipeline from SSH Proxy capturing terminal data through Kafka to
 persistent storage and replay.</p>
 <pre class="mermaid"><code>sequenceDiagram
@@ -1187,7 +1157,7 @@ persistent storage and replay.</p>
     REC--&gt;&gt;GW: Stream Asciinema JSON events
     GW--&gt;&gt;C: Chunked transfer (play at recorded timing or N× speed)</code></pre>
 <hr />
-<h2 id="16-ssh-connection-state-machine">16. SSH Connection State
+<h2 id="ssh-connection-state-machine">16. SSH Connection State
 Machine</h2>
 <p>Complete state machine for an SSH connection lifecycle, including
 error recovery paths.</p>
@@ -1253,7 +1223,7 @@ error recovery paths.</p>
         Re-opens PTY on reconnect
     end note</code></pre>
 <hr />
-<h2 id="17-vault-state-machine">17. Vault State Machine</h2>
+<h2 id="vault-state-machine">17. Vault State Machine</h2>
 <p>State machine for vault lifecycle — from locked state through unlock,
 sync, and conflict resolution.</p>
 <pre class="mermaid"><code>stateDiagram-v2
@@ -1308,7 +1278,7 @@ sync, and conflict resolution.</p>
         - Deletions: tombstone wins
     end note</code></pre>
 <hr />
-<h2 id="18-sftp-transfer-state-machine">18. SFTP Transfer State
+<h2 id="sftp-transfer-state-machine">18. SFTP Transfer State
 Machine</h2>
 <p>Full state machine for an SFTP file transfer including pause, resume,
 retry, and failure paths.</p>
@@ -1361,8 +1331,8 @@ retry, and failure paths.</p>
         (concurrent writes: 4 streams)
     end note</code></pre>
 <hr />
-<h2 id="19-user-authentication-state-machine">19. User Authentication
-State Machine</h2>
+<h2 id="user-authentication-state-machine">19. User Authentication State
+Machine</h2>
 <p>State machine for the full user authentication lifecycle from
 anonymous to authenticated session.</p>
 <pre class="mermaid"><code>stateDiagram-v2
@@ -1414,7 +1384,7 @@ anonymous to authenticated session.</p>
         Session stored in Redis
     end note</code></pre>
 <hr />
-<h2 id="20-service-health-state-machine">20. Service Health State
+<h2 id="service-health-state-machine">20. Service Health State
 Machine</h2>
 <p>State machine for any HelixTerminator microservice from startup
 through healthy operation to failure and recovery.</p>
@@ -1470,8 +1440,7 @@ through healthy operation to failure and recovery.</p>
         K8s: fails liveness probe
     end note</code></pre>
 <hr />
-<h2 id="21-core-data-model-er-diagram">21. Core Data Model ER
-Diagram</h2>
+<h2 id="core-data-model-er-diagram">21. Core Data Model ER Diagram</h2>
 <p>Primary entities spanning organizations, users, vaults, hosts,
 sessions, and workspace configuration.</p>
 <pre class="mermaid"><code>erDiagram
@@ -1690,7 +1659,7 @@ sessions, and workspace configuration.</p>
     users ||--o{ audit_events : &quot;generates&quot;
     sessions ||--o{ audit_events : &quot;generates&quot;</code></pre>
 <hr />
-<h2 id="22-auth-domain-er-diagram">22. Auth Domain ER Diagram</h2>
+<h2 id="auth-domain-er-diagram">22. Auth Domain ER Diagram</h2>
 <p>Authentication and identity entities covering tokens, MFA
 credentials, API keys, and login history.</p>
 <pre class="mermaid"><code>erDiagram
@@ -1845,7 +1814,7 @@ credentials, API keys, and login history.</p>
     auth_tokens }o--|| device_tokens : &quot;issued_to&quot;
     refresh_tokens }o--|| device_tokens : &quot;issued_to&quot;</code></pre>
 <hr />
-<h2 id="23-sshterminal-domain-er-diagram">23. SSH/Terminal Domain ER
+<h2 id="sshterminal-domain-er-diagram">23. SSH/Terminal Domain ER
 Diagram</h2>
 <p>Entities for SSH sessions, recordings, terminal output, port
 forwarding, SFTP, and collaboration.</p>
@@ -1979,7 +1948,7 @@ forwarding, SFTP, and collaboration.</p>
     collaboration_sessions ||--o{ collaboration_participants : &quot;has&quot;
     collaboration_participants ||--o{ collab_input_events : &quot;sends&quot;</code></pre>
 <hr />
-<h2 id="24-go-service-interface-hierarchy">24. Go Service Interface
+<h2 id="go-service-interface-hierarchy">24. Go Service Interface
 Hierarchy</h2>
 <p>Class diagram showing core Go interfaces, structs, and method
 signatures across the HelixTerminator service layer.</p>
@@ -2122,7 +2091,7 @@ signatures across the HelixTerminator service layer.</p>
     SFTPService --&gt; SSHProxyService : uses proxy
     ContainerRuntime --&gt; SSHProxyService : uses proxy</code></pre>
 <hr />
-<h2 id="25-flutter-bloc-architecture">25. Flutter BLoC Architecture</h2>
+<h2 id="flutter-bloc-architecture">25. Flutter BLoC Architecture</h2>
 <p>BLoC (Business Logic Component) class hierarchy for the Flutter
 client, showing states, events, and service dependencies.</p>
 <pre class="mermaid"><code>classDiagram
@@ -2300,7 +2269,7 @@ client, showing states, events, and service dependencies.</p>
     TerminalBloc --&gt; SSHSessionBloc : manages sessions
     TerminalBloc --&gt; SFTPBloc : spawns SFTP</code></pre>
 <hr />
-<h2 id="26-kubernetes-cluster-layout">26. Kubernetes Cluster Layout</h2>
+<h2 id="kubernetes-cluster-layout">26. Kubernetes Cluster Layout</h2>
 <p>Full Kubernetes cluster topology showing namespaces, deployments,
 statefulsets, and node assignments.</p>
 <pre class="mermaid"><code>graph TB
@@ -2311,7 +2280,7 @@ statefulsets, and node assignments.</p>
     classDef infra fill:#4a148c,stroke:#311b92,color:#fff
     classDef monitoring fill:#006064,stroke:#004d40,color:#fff
 
-    subgraph CLUSTER[&quot;Kubernetes Cluster (EKS v1.30)&quot;]
+    subgraph CLUSTER[&quot;Kubernetes Cluster (EKS v1.31)&quot;]
 
         subgraph INFRA_NS[&quot;Namespace: kube-system / istio-system&quot;]
             ISTIOD[&quot;istiod\n(Deployment, 3 replicas)&quot;]
@@ -2395,7 +2364,7 @@ statefulsets, and node assignments.</p>
     class ISTIOD,COREDNS,SPIRE_SERVER,SPIRE_AGENT infra
     class GRAFANA,PROM,LOKI,JAEGER,ALERTMGR monitoring</code></pre>
 <hr />
-<h2 id="27-network-architecture">27. Network Architecture</h2>
+<h2 id="network-architecture">27. Network Architecture</h2>
 <p>Full network flow from internet through CDN, load balancer, ingress,
 service mesh, and to backing data stores.</p>
 <pre class="mermaid"><code>graph LR
@@ -2427,7 +2396,7 @@ service mesh, and to backing data stores.</p>
     ISTIO_MESH[&quot;Istio Service Mesh\nEnvoy sidecars on all pods\nmTLS (SPIFFE/X.509)\nTraffic mirroring\nCircuit breaking&quot;]
 
     subgraph SERVICES[&quot;Microservices Layer (helixterm-prod)&quot;]
-        API_GW[&quot;API Gateway\n:8000&quot;]
+        API_GW[&quot;API Gateway\n:8080&quot;]
         CORE_SVCS[&quot;Core Services\nAuth/User/PKI/Org\n:8001-8004&quot;]
         TERM_SVCS[&quot;Terminal Services\nSSH Proxy/Terminal\n:8010-8013&quot;]
         DATA_SVCS[&quot;Data Services\nVault/Keys/Hosts\n:8020-8024&quot;]
@@ -2493,8 +2462,8 @@ service mesh, and to backing data stores.</p>
     class S3,EFS,EBS data
     class SSH_TARGETS internet</code></pre>
 <hr />
-<h2 id="28-multi-region-deployment">28. Multi-Region Deployment</h2>
-<p>Primary (eu-west-1) and disaster recovery (us-east-1) regions with
+<h2 id="multi-region-deployment">28. Multi-Region Deployment</h2>
+<p>Primary (us-east-1) and disaster recovery (eu-west-1) regions with
 replication, failover, and traffic routing.</p>
 <pre class="mermaid"><code>graph TB
     classDef region fill:none,stroke:#1565c0,stroke-width:2px
@@ -2513,20 +2482,20 @@ replication, failover, and traffic routing.</p>
     CF --&gt; PRIMARY_LB
     CF -.-&gt;|&quot;failover (RTO &lt; 5min)&quot;| DR_LB
 
-    subgraph PRIMARY[&quot;Primary Region: eu-west-1 (Ireland) — ACTIVE&quot;]
-        PRIMARY_LB[&quot;ALB (eu-west-1)\nhelixterm.io → :443&quot;]
+    subgraph PRIMARY[&quot;Primary Region: us-east-1 (N. Virginia) — ACTIVE&quot;]
+        PRIMARY_LB[&quot;ALB (us-east-1)\nhelixterminator.io → :443&quot;]
 
-        subgraph AZ1[&quot;AZ: eu-west-1a&quot;]
+        subgraph AZ1[&quot;AZ: us-east-1a&quot;]
             P_GW1[&quot;api-gateway-1\n(pod)&quot;]
             P_APP1[&quot;app-services-1\n(3-5 pods/svc)&quot;]
         end
 
-        subgraph AZ2[&quot;AZ: eu-west-1b&quot;]
+        subgraph AZ2[&quot;AZ: us-east-1b&quot;]
             P_GW2[&quot;api-gateway-2\n(pod)&quot;]
             P_APP2[&quot;app-services-2\n(3-5 pods/svc)&quot;]
         end
 
-        subgraph AZ3[&quot;AZ: eu-west-1c&quot;]
+        subgraph AZ3[&quot;AZ: us-east-1c&quot;]
             P_GW3[&quot;api-gateway-3\n(pod)&quot;]
             P_APP3[&quot;app-services-3\n(3-5 pods/svc)&quot;]
         end
@@ -2538,18 +2507,18 @@ replication, failover, and traffic routing.</p>
             P_KAFKA[&quot;Kafka Cluster\n(3 brokers, RF=3)&quot;]
         end
 
-        P_S3[&quot;S3 Bucket (eu-west-1)\nCross-region replication ON&quot;]
+        P_S3[&quot;S3 Bucket (us-east-1)\nCross-region replication ON&quot;]
     end
 
-    subgraph DR[&quot;DR Region: us-east-1 (N. Virginia) — STANDBY&quot;]
-        DR_LB[&quot;ALB (us-east-1)\ndr.helixterm.io → :443\n(traffic off in normal operation)&quot;]
+    subgraph DR[&quot;DR Region: eu-west-1 (Ireland) — STANDBY&quot;]
+        DR_LB[&quot;ALB (eu-west-1)\ndr.helixterminator.io → :443\n(traffic off in normal operation)&quot;]
 
-        subgraph DR_AZ1[&quot;AZ: us-east-1a&quot;]
+        subgraph DR_AZ1[&quot;AZ: eu-west-1a&quot;]
             DR_GW1[&quot;api-gateway-1\n(scaled to 0 in standby)&quot;]
             DR_APP1[&quot;app-services-1\n(scaled to 0 in standby)&quot;]
         end
 
-        subgraph DR_AZ2[&quot;AZ: us-east-1b&quot;]
+        subgraph DR_AZ2[&quot;AZ: eu-west-1b&quot;]
             DR_GW2[&quot;api-gateway-2\n(scaled to 0 in standby)&quot;]
             DR_APP2[&quot;app-services-2\n(scaled to 0 in standby)&quot;]
         end
@@ -2560,11 +2529,11 @@ replication, failover, and traffic routing.</p>
             DR_KAFKA[&quot;Kafka MirrorMaker 2\n(topic replication)&quot;]
         end
 
-        DR_S3[&quot;S3 Bucket (us-east-1)\nCross-region replica\n(replication lag &lt; 15 min)&quot;]
+        DR_S3[&quot;S3 Bucket (eu-west-1)\nCross-region replica\n(replication lag &lt; 15 min)&quot;]
     end
 
     subgraph SHARED[&quot;Global Shared Services&quot;]
-        GLOBAL_CF_CERTS[&quot;AWS Certificate Manager\nWildcard TLS certs\n*.helixterm.io&quot;]
+        GLOBAL_CF_CERTS[&quot;AWS Certificate Manager\nWildcard TLS certs\n*.helixterminator.io&quot;]
         GLOBAL_SECRETS[&quot;AWS Secrets Manager\n(cross-region replication)&quot;]
         GLOBAL_KMS[&quot;AWS KMS\n(multi-region keys\nfor vault encryption)&quot;]
     end
@@ -2598,7 +2567,7 @@ replication, failover, and traffic routing.</p>
     class ROUTE53,CF cdn
     class GLOBAL_CF_CERTS,GLOBAL_SECRETS,GLOBAL_KMS replication</code></pre>
 <hr />
-<h2 id="29-development-phase-plan-gantt">29. Development Phase Plan
+<h2 id="development-phase-plan-gantt">29. Development Phase Plan
 (Gantt)</h2>
 <p>Full project timeline for HelixTerminator from foundation through GA
 release.</p>
@@ -2661,7 +2630,7 @@ release.</p>
     Multi-region production deploy            :         p5_5,  2026-01-26, 1w
     GA Launch                                 :milestone, p5_6, 2026-02-02, 0d</code></pre>
 <hr />
-<h2 id="30-cicd-pipeline-flow">30. CI/CD Pipeline Flow</h2>
+<h2 id="cicd-pipeline-flow">30. CI/CD Pipeline Flow</h2>
 <p>Full continuous integration and deployment pipeline from commit
 through production deployment.</p>
 <pre class="mermaid"><code>flowchart LR
@@ -2707,9 +2676,9 @@ through production deployment.</p>
 
     subgraph PROD[&quot;Production Deploy&quot;]
         PUSH_PROD[&quot;Push to ECR\n(prod + semver tag)&quot;]
-        DEPLOY_PRIMARY[&quot;Deploy Primary\neu-west-1\n• helm upgrade\n• Rolling (1 pod at a time)&quot;]
+        DEPLOY_PRIMARY[&quot;Deploy Primary\nus-east-1\n• helm upgrade\n• Rolling (1 pod at a time)&quot;]
         HEALTHCHECK[&quot;Production Health\n• All /healthz 200\n• Datadog synthetic\n• Error rate &lt; 0.1%&quot;]
-        DEPLOY_DR[&quot;Deploy DR\nus-east-1\n• 10 min after primary\n• Verify replication&quot;]
+        DEPLOY_DR[&quot;Deploy DR\neu-west-1\n• 10 min after primary\n• Verify replication&quot;]
         NOTIFY_SUCCESS[&quot;Notify Success\n• Slack #deployments\n• Jira release ticket\n• GitHub release notes&quot;]
     end
 
@@ -2770,5 +2739,3 @@ through production deployment.</p>
 <hr />
 <p><em>End of HelixTerminator Mermaid Diagram Suite — 30 diagrams
 total</em></p>
-</body>
-</html>

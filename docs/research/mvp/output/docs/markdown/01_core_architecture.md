@@ -5,9 +5,11 @@
 **Spec Owner:** HelixDevelopment
 **Date:** 2026-06-28
 **Status:** DRAFT — Engineering Review
-**Constitution Compliance:** HelixConstitution `v1.1.0` · §11.4, §11.4.73–78
+**Constitution Compliance:** HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line) · §11.4, §11.4.73–78
 
 > **Inheritance:** This document and the project that contains it extend the Helix Universal Constitution at `constitution/Constitution.md`. All clauses there apply unless explicitly overridden. See `constitution/CLAUDE.md` and `constitution/AGENTS.md`.
+
+> NOTE (CD-2 — flagged, not mass-rewritten): per `CANONICAL_FACTS.md`, the primary org/domain identity going forward is `HelixDevelopment` / `helixterminator.io` (org identity above is already correct). This document's Go module namespace and every `helixterm.io` host/URL/SPIFFE-ID reference throughout §1–§10 predate that domain decision and are **not** rewritten here — a domain-wide rename is a high-churn, cross-cutting change (100+ refs) tracked as DEFERRED cross-doc work in `CANONICAL_FACTS.md`, consistent with how `10_submodule_integration.md` treats the same identity fields. Do not treat `helixterm.io` below as newly-canonical.
 
 ---
 
@@ -40,7 +42,7 @@ The platform is built around five irrevocable principles:
 2. **Audit completeness is non-negotiable.** Every terminal command, every file transfer, every authentication event, every configuration change is persisted as an immutable, cryptographically chained audit event, available for real-time streaming and retrospective forensic analysis.
 3. **Collaboration is a first-class primitive.** Multiple operators can share a terminal session with role-differentiated capabilities (read-only observer, co-pilot, session owner) in real time, with sub-100ms propagation latency.
 4. **AI augmentation is integrated, not bolted on.** The AI/Autocomplete service analyses shell history, infrastructure topology, and contextual signals to suggest commands, detect anomalies, generate runbooks, and explain terminal output — all without transmitting sensitive credential material to external model providers.
-5. **HelixConstitution compliance is mechanically enforced.** Every CI/CD pipeline gate, every agent rule file, every submodule dependency graph, and every code generation pass respects the universal constitution inherited from `HelixDevelopment/HelixConstitution` v1.1.0.
+5. **HelixConstitution compliance is mechanically enforced.** Every CI/CD pipeline gate, every agent rule file, every submodule dependency graph, and every code generation pass respects the universal constitution inherited from `HelixDevelopment/HelixConstitution` (pinned e6504c2, helixcode-v1.1.0 line).
 
 ## 1.2 How HelixTerminator Surpasses Termius at Every Dimension
 
@@ -282,7 +284,7 @@ SPIRE Server runs as a StatefulSet. SPIRE Agents run as DaemonSets. SVIDs are ro
 The API Gateway (`helixterm.io/services/gateway`) is built on Gin Gonic and performs:
 
 1. **TLS termination** (delegated to Nginx Ingress + cert-manager in Kubernetes).
-2. **JWT validation:** Validates access tokens signed by the Auth Service (RS256, public key fetched from JWKS endpoint with caching via `digital.vasic.cache`).
+2. **JWT validation:** Validates access tokens signed by the Auth Service (EdDSA/Ed25519, public key fetched from JWKS endpoint with caching via `digital.vasic.cache`).
 3. **Rate limiting:** Per-user, per-IP, per-endpoint rate limiting using `digital.vasic.ratelimiter` backed by Redis sliding window counters.
 4. **Request routing:** Path-based routing to upstream services via registered Gin route groups.
 5. **Circuit breaking:** `digital.vasic.recovery` circuit breaker wraps every upstream call; open-circuit returns 503 with `Retry-After` header.
@@ -692,7 +694,7 @@ Stateless. Horizontal scaling via HPA (CPU threshold 60%). Connection pool to ea
 
 ### Responsibilities
 - User authentication: password, FIDO2/WebAuthn, TOTP, OAuth2 (OIDC/SAML).
-- Token lifecycle: issue access tokens (JWT RS256, TTL=15min), refresh tokens (opaque, TTL=30d), device tokens (JWT RS256, TTL=24h).
+- Token lifecycle: issue access tokens (JWT EdDSA/Ed25519, TTL=15min), refresh tokens (opaque, TTL=30d), device tokens (JWT EdDSA/Ed25519, TTL=24h).
 - Session management: track active sessions per user/device.
 - FIDO2/WebAuthn credential registration and assertion.
 - TOTP registration and verification.
@@ -1694,7 +1696,7 @@ Each microservice owns exactly one PostgreSQL database. No service reads from or
 | Container Bridge | `helixterm_container_bridge` | `pg-containers.helixterm-prod.svc` |
 | HelixTrack Bridge | `helixterm_helixtrack_bridge` | `pg-helixtrack.helixterm-prod.svc` |
 
-All PostgreSQL instances run **PostgreSQL 17.0** with:
+All PostgreSQL instances run **PostgreSQL 17.2** (per `CANONICAL_FACTS.md` CD-4) with:
 - **pgvector v0.7.0** extension (AI service similarity search)
 - **pg_partman v5.0.1** (automated partition management)
 - **pg_cron v1.6.2** (scheduled maintenance jobs)
@@ -2580,6 +2582,243 @@ CREATE TABLE projections (
 );
 ```
 
+## 4.15 Additional Schema: Collab Service (`helixterm_collab`)
+
+```sql
+-- Migration: 00001_init_collab.up.sql
+
+CREATE TABLE collab_sessions (
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    terminal_session_id UUID      NOT NULL UNIQUE,
+    owner_user_id    UUID         NOT NULL,
+    org_id           UUID,
+    share_token      VARCHAR(64)  NOT NULL UNIQUE,
+    mode             VARCHAR(16)  NOT NULL DEFAULT 'observe'
+                                  CHECK (mode IN ('observe', 'copilot', 'broadcast')),
+    max_participants INT          NOT NULL DEFAULT 10,
+    requires_approval BOOLEAN     NOT NULL DEFAULT FALSE,
+    chat_enabled     BOOLEAN      NOT NULL DEFAULT TRUE,
+    started_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    ended_at         TIMESTAMPTZ,
+    status           VARCHAR(16)  NOT NULL DEFAULT 'active'
+                                  CHECK (status IN ('active', 'ended'))
+);
+CREATE INDEX idx_collab_sessions_terminal ON collab_sessions (terminal_session_id);
+CREATE INDEX idx_collab_sessions_token    ON collab_sessions (share_token) WHERE status = 'active';
+
+CREATE TABLE collab_participants (
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    collab_session_id UUID        NOT NULL REFERENCES collab_sessions(id) ON DELETE CASCADE,
+    user_id          UUID         NOT NULL,
+    role             VARCHAR(16)  NOT NULL DEFAULT 'observer'
+                                  CHECK (role IN ('owner', 'co_pilot', 'observer')),
+    joined_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    left_at          TIMESTAMPTZ,
+    kicked_by        UUID,
+    UNIQUE (collab_session_id, user_id)
+);
+CREATE INDEX idx_collab_participants_session ON collab_participants (collab_session_id);
+
+CREATE TABLE collab_chat_messages (
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    collab_session_id UUID        NOT NULL REFERENCES collab_sessions(id) ON DELETE CASCADE,
+    user_id          UUID         NOT NULL,
+    message          TEXT         NOT NULL,
+    sent_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_collab_chat_session ON collab_chat_messages (collab_session_id, sent_at);
+```
+
+## 4.16 Additional Schema: Notification Service (`helixterm_notifications`)
+
+```sql
+-- Migration: 00001_init_notifications.up.sql
+
+CREATE TABLE notification_templates (
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        VARCHAR(255) NOT NULL UNIQUE,
+    channel     VARCHAR(32)  NOT NULL CHECK (channel IN ('email', 'push', 'slack', 'in_app', 'webhook')),
+    event_type  VARCHAR(128) NOT NULL,
+    subject     TEXT,        -- Email subject (Mustache template)
+    body        TEXT         NOT NULL, -- Body (Mustache template)
+    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE notifications (
+    id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID         NOT NULL,
+    org_id       UUID,
+    template_id  UUID         REFERENCES notification_templates(id),
+    channel      VARCHAR(32)  NOT NULL,
+    event_type   VARCHAR(128) NOT NULL,
+    title        VARCHAR(255),
+    body         TEXT         NOT NULL,
+    data         JSONB        NOT NULL DEFAULT '{}',
+    status       VARCHAR(16)  NOT NULL DEFAULT 'pending'
+                              CHECK (status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
+    delivered_at TIMESTAMPTZ,
+    read_at      TIMESTAMPTZ,
+    error        TEXT,
+    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+) PARTITION BY RANGE (created_at);
+
+CREATE INDEX idx_notif_user_unread ON notifications (user_id, created_at DESC)
+    WHERE status NOT IN ('read');
+
+CREATE TABLE notification_preferences (
+    user_id    UUID         PRIMARY KEY REFERENCES notification_templates(id),
+    channel    VARCHAR(32)  NOT NULL,
+    event_type VARCHAR(128) NOT NULL,
+    enabled    BOOLEAN      NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (user_id, channel, event_type)
+);
+```
+
+## 4.17 Additional Schema: Config Service (`helixterm_config`)
+
+```sql
+-- Migration: 00001_init_config.up.sql
+
+CREATE TABLE config_entries (
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    key         VARCHAR(255) NOT NULL,
+    scope       VARCHAR(16)  NOT NULL DEFAULT 'global'
+                             CHECK (scope IN ('global', 'org', 'team', 'user')),
+    scope_id    UUID,        -- org_id / team_id / user_id; NULL for global
+    value       JSONB        NOT NULL,
+    value_type  VARCHAR(32)  NOT NULL DEFAULT 'json',
+    description TEXT,
+    is_secret   BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE (key, scope, scope_id)
+);
+CREATE INDEX idx_config_scope ON config_entries (scope, scope_id);
+CREATE INDEX idx_config_key   ON config_entries (key);
+
+CREATE TABLE config_change_log (
+    id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    entry_id   UUID         NOT NULL REFERENCES config_entries(id),
+    changed_by UUID         NOT NULL,
+    old_value  JSONB,
+    new_value  JSONB        NOT NULL,
+    changed_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_config_change_entry ON config_change_log (entry_id, changed_at DESC);
+```
+
+## 4.18 Additional Schema: Analytics Service (`helixterm_analytics`)
+
+```sql
+-- Migration: 00001_init_analytics.up.sql
+
+CREATE TABLE analytics_events (
+    id          UUID         NOT NULL DEFAULT gen_random_uuid(),
+    user_id     UUID,
+    org_id      UUID,
+    event_type  VARCHAR(128) NOT NULL,
+    properties  JSONB        NOT NULL DEFAULT '{}',
+    occurred_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (id, occurred_at)
+) PARTITION BY RANGE (occurred_at);
+-- Weekly partitions via pg_partman
+
+CREATE TABLE daily_usage_summary (
+    date        DATE         NOT NULL,
+    org_id      UUID         NOT NULL,
+    metric      VARCHAR(64)  NOT NULL,
+    value       BIGINT       NOT NULL DEFAULT 0,
+    PRIMARY KEY (date, org_id, metric)
+);
+CREATE INDEX idx_usage_org_date ON daily_usage_summary (org_id, date DESC);
+
+CREATE TABLE feature_adoption (
+    date        DATE         NOT NULL,
+    org_id      UUID         NOT NULL,
+    feature     VARCHAR(128) NOT NULL,
+    dau         INT          NOT NULL DEFAULT 0, -- daily active users
+    PRIMARY KEY (date, org_id, feature)
+);
+
+CREATE TABLE session_metrics (
+    date            DATE    NOT NULL,
+    org_id          UUID    NOT NULL,
+    sessions_count  BIGINT  NOT NULL DEFAULT 0,
+    total_duration_s BIGINT NOT NULL DEFAULT 0,
+    commands_count  BIGINT  NOT NULL DEFAULT 0,
+    p50_latency_ms  INT,
+    p95_latency_ms  INT,
+    p99_latency_ms  INT,
+    PRIMARY KEY (date, org_id)
+);
+```
+
+## 4.19 Additional Schema: Port Forwarding Service (`helixterm_port_forward`)
+
+```sql
+-- Migration: 00001_init_port_forward.up.sql
+
+CREATE TABLE port_forward_rules (
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID         NOT NULL,
+    org_id           UUID,
+    host_id          UUID         NOT NULL,
+    name             VARCHAR(255) NOT NULL,
+    type             VARCHAR(16)  NOT NULL CHECK (type IN ('local', 'remote', 'dynamic', 'reverse')),
+    local_host       VARCHAR(253) NOT NULL DEFAULT '127.0.0.1',
+    local_port       INT          NOT NULL,
+    remote_host      VARCHAR(253),  -- NULL for dynamic/SOCKS5
+    remote_port      INT,           -- NULL for dynamic/SOCKS5
+    auto_start       BOOLEAN      NOT NULL DEFAULT FALSE,
+    auto_reconnect   BOOLEAN      NOT NULL DEFAULT TRUE,
+    reconnect_delay_s SMALLINT    NOT NULL DEFAULT 5,
+    status           VARCHAR(16)  NOT NULL DEFAULT 'stopped'
+                                  CHECK (status IN ('stopped', 'connecting', 'active', 'error')),
+    error_message    TEXT,
+    last_started_at  TIMESTAMPTZ,
+    last_stopped_at  TIMESTAMPTZ,
+    bytes_in         BIGINT       NOT NULL DEFAULT 0,
+    bytes_out        BIGINT       NOT NULL DEFAULT 0,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_pf_user_id   ON port_forward_rules (user_id);
+CREATE INDEX idx_pf_host_id   ON port_forward_rules (host_id);
+CREATE INDEX idx_pf_status    ON port_forward_rules (status);
+```
+
+## 4.20 Additional Schema: SFTP Service (`helixterm_sftp`)
+
+```sql
+-- Migration: 00001_init_sftp.up.sql
+
+CREATE TABLE sftp_transfers (
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID         NOT NULL,
+    host_id          UUID         NOT NULL,
+    direction        VARCHAR(8)   NOT NULL CHECK (direction IN ('upload', 'download')),
+    local_path       TEXT         NOT NULL,
+    remote_path      TEXT         NOT NULL,
+    file_name        VARCHAR(255) NOT NULL,
+    file_size        BIGINT       NOT NULL DEFAULT 0,
+    bytes_transferred BIGINT      NOT NULL DEFAULT 0,
+    checksum_local   VARCHAR(64),
+    checksum_remote  VARCHAR(64),
+    checksum_match   BOOLEAN,
+    priority         SMALLINT     NOT NULL DEFAULT 5,
+    status           VARCHAR(16)  NOT NULL DEFAULT 'queued'
+                                  CHECK (status IN ('queued', 'active', 'paused', 'completed', 'failed', 'canceled')),
+    error_message    TEXT,
+    started_at       TIMESTAMPTZ,
+    completed_at     TIMESTAMPTZ,
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_sftp_transfers_user   ON sftp_transfers (user_id, created_at DESC);
+CREATE INDEX idx_sftp_transfers_status ON sftp_transfers (status);
+```
+
 ---
 # 5. Kafka & RabbitMQ Architecture
 
@@ -2594,7 +2833,7 @@ CREATE TABLE projections (
 | **Use in HelixTerminator** | Events (facts that happened) | Commands (actions to execute) |
 | **Throughput** | Millions/sec | Hundreds of thousands/sec |
 
-**Version:** Apache Kafka 3.7.0 (KRaft mode, no ZooKeeper), RabbitMQ 3.13.3.
+**Version:** Apache Kafka 3.9 (per `CANONICAL_FACTS.md` CD-4; KRaft mode, no ZooKeeper), RabbitMQ 3.13.3.
 
 ## 5.2 Kafka Cluster Configuration
 
@@ -2607,7 +2846,7 @@ metadata:
   namespace: helixterm-infra
 spec:
   kafka:
-    version: 3.7.0
+    version: 3.9.0  # per CANONICAL_FACTS.md CD-4
     replicas: 9                          # 3 per AZ, 3 AZs
     listeners:
       - name: plain
@@ -3162,7 +3401,7 @@ spec:
 ```json
 // JWT Header
 {
-    "alg": "RS256",
+    "alg": "EdDSA",
     "typ": "JWT",
     "kid": "helix-2026-06-key-01"   // key ID for JWKS lookup
 }
@@ -3184,7 +3423,7 @@ spec:
 }
 ```
 
-Access tokens are **RS256-signed** (RSA-2048 key pair). The public key is exposed at `GET /api/v1/auth/.well-known/jwks.json`. The Gateway validates tokens locally using cached JWKS (TTL=300s in Redis). RSA signing keys are rotated every 90 days with a 7-day overlap period for graceful token expiry.
+Access tokens are **EdDSA-signed** (Ed25519 key pair), per `CANONICAL_FACTS.md` CD-7. The public key is exposed at `GET /api/v1/auth/.well-known/jwks.json`. The Gateway validates tokens locally using cached JWKS (TTL=300s in Redis). Ed25519 signing keys are rotated every 90 days with a 7-day overlap period for graceful token expiry.
 
 ### 6.3.2 Refresh Token
 
@@ -3196,7 +3435,7 @@ Refresh tokens are opaque random 32-byte values, stored as SHA-256 hash in Postg
 
 ### 6.3.3 Device Token
 
-Device tokens are JWT RS256 tokens with TTL=24h, issued during device registration. They carry `device_cert` claim — the fingerprint of the device's X.509 certificate issued by the PKI service. Device tokens can be used for automation/CI pipelines where interactive MFA is not possible.
+Device tokens are JWT EdDSA/Ed25519 tokens with TTL=24h, issued during device registration. They carry `device_cert` claim — the fingerprint of the device's X.509 certificate issued by the PKI service. Device tokens can be used for automation/CI pipelines where interactive MFA is not possible.
 
 ### 6.3.4 JWT Key Rotation
 
@@ -3207,7 +3446,7 @@ Device tokens are JWT RS256 tokens with TTL=24h, issued during device registrati
 package keys
 
 import (
-    "crypto/rsa"
+    "crypto/ed25519"
     "crypto/rand"
     "encoding/json"
     "time"
@@ -3219,12 +3458,13 @@ import (
 type KeyRotationManager struct {
     store      storage.SecureStore
     activeKeyID string
-    keys        map[string]*rsa.PrivateKey
+    keys        map[string]ed25519.PrivateKey
     mu          sync.RWMutex
 }
 
 func (m *KeyRotationManager) Rotate() error {
-    newKey, err := rsa.GenerateKey(rand.Reader, 2048)
+    // EdDSA (Ed25519) signing key, per CANONICAL_FACTS.md CD-7
+    _, newKey, err := ed25519.GenerateKey(rand.Reader)
     if err != nil {
         return err
     }
@@ -3251,9 +3491,9 @@ func (m *KeyRotationManager) JWKS() jose.JSONWebKeySet {
     var keys []jose.JSONWebKey
     for id, key := range m.keys {
         keys = append(keys, jose.JSONWebKey{
-            Key:       &key.PublicKey,
+            Key:       key.Public(),
             KeyID:     id,
-            Algorithm: "RS256",
+            Algorithm: "EdDSA",
             Use:       "sig",
         })
     }
@@ -5349,10 +5589,12 @@ Per HelixConstitution §11.4.74 (submodule-catalogue-first discovery, extend-don
 - **All containerized workloads** must use `digital.vasic.containers` per §11.4.76.
 - **All spec documents** must be registered with `digital.vasic.docs_chain` per §11.4.73.
 
+> **Canonical reference:** `10_submodule_integration.md` is the authoritative submodule-integration document (versions, import-path convention, service registry). §10.2–§10.13 below are this document's own architectural walkthrough of the same submodules and are kept for context, but where a version number or module-path line below conflicts with `10_submodule_integration.md`, that document — reconciled against `CANONICAL_FACTS.md` — wins. Per `CANONICAL_FACTS.md`, the Go import-path rename (dot-form `digital.vasic.*` → slash-form `digital.vasic/*`) is DEFERRED, high-churn (600+ refs), cross-document work; the `digital.vasic.*`-dotted import paths inside the code samples below are therefore left as-is and flagged rather than mass-rewritten.
+
 ## 10.2 `digital.vasic.containers`
 
-**Version used:** v0.5.0
-**Module path:** `digital.vasic.containers`
+**Version used:** see `10_submodule_integration.md` (canonical: v1.0.5) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
+**Module path:** `digital.vasic.containers` (dot-form; DEFERRED rename to slash-form per `CANONICAL_FACTS.md` — see `10_submodule_integration.md` for the canonical import-path convention note)
 **Used by:** SSH Proxy Service, Container Bridge Service
 
 ### ContainerRuntime Abstraction
@@ -5515,8 +5757,8 @@ func (w *ContainerHealthWatcher) Start(ctx context.Context) {
 
 ## 10.3 `digital.vasic.security`
 
-**Version used:** v0.3.2
-**Module path:** `digital.vasic.security`
+**Version used:** see `10_submodule_integration.md` (canonical: v1.4.2) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
+**Module path:** `digital.vasic.security` (dot-form; DEFERRED rename to slash-form per `CANONICAL_FACTS.md` — see `10_submodule_integration.md` for the canonical import-path convention note)
 **Used by:** Vault Service, Keychain Service, Auth Service, PKI Service
 
 ### Encryption Primitives
@@ -5590,8 +5832,8 @@ valid, err := hasher.Verify(password, hash)
 
 ## 10.4 `digital.vasic.auth`
 
-**Version used:** v0.4.1
-**Module path:** `digital.vasic.auth`
+**Version used:** see `10_submodule_integration.md` (canonical: v2.3.1) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
+**Module path:** `digital.vasic.auth` (dot-form; DEFERRED rename to slash-form per `CANONICAL_FACTS.md` — see `10_submodule_integration.md` for the canonical import-path convention note)
 **Used by:** Auth Service, HelixTrack Bridge Service, Billing Service (Stripe OAuth)
 
 ### OAuth2 Flows
@@ -5633,7 +5875,7 @@ tokenManager := oauth2.NewTokenManager(oauth2.TokenManagerConfig{
 import "digital.vasic.auth/pkg/jwt"
 
 manager := jwt.NewManager(jwt.Config{
-    Algorithm:    jwt.RS256,
+    Algorithm:    jwt.EdDSA,
     Issuer:       "https://auth.helixterm.io",
     Audience:     []string{"https://api.helixterm.io"},
     PrivateKeyID: "helix-2026-06-key-01",
@@ -5652,8 +5894,8 @@ claims, err := manager.Validate(tokenString)
 
 ## 10.5 `digital.vasic.messaging`
 
-**Version used:** v0.3.1
-**Module path:** `digital.vasic.messaging`
+**Version used:** see `10_submodule_integration.md` (canonical: v1.5.3) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
+**Module path:** `digital.vasic.messaging` (dot-form; DEFERRED rename to slash-form per `CANONICAL_FACTS.md` — see `10_submodule_integration.md` for the canonical import-path convention note)
 **Used by:** All services that produce or consume Kafka topics or RabbitMQ queues
 
 ### Kafka Producer (all services)
@@ -5717,8 +5959,8 @@ err = publisher.Publish(rabbitmq.Message{
 
 ## 10.6 `digital.vasic.observability`
 
-**Version used:** v0.4.0
-**Module path:** `digital.vasic.observability`
+**Version used:** see `10_submodule_integration.md` (canonical: v1.3.0) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
+**Module path:** `digital.vasic.observability` (dot-form; DEFERRED rename to slash-form per `CANONICAL_FACTS.md` — see `10_submodule_integration.md` for the canonical import-path convention note)
 **Used by:** All services
 
 ### Initialization Pattern
@@ -5808,7 +6050,7 @@ var (
 
 ## 10.7 `digital.vasic.ratelimiter`
 
-**Version used:** v0.2.1
+**Version used:** see `10_submodule_integration.md` (canonical: v1.0.9) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
 **Used by:** Gateway Service (per-endpoint), Auth Service (login attempts), AI Service (inference rate)
 
 ```go
@@ -5836,7 +6078,7 @@ policies := map[string]limiter.Policy{
 
 ## 10.8 `digital.vasic.recovery`
 
-**Version used:** v0.3.0
+**Version used:** see `10_submodule_integration.md` (canonical: v1.2.1) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
 **Used by:** Gateway Service (circuit breakers), Port Forward Service (auto-reconnect), SSH Proxy (connection retry)
 
 ```go
@@ -5869,7 +6111,7 @@ err := reconnector.Do(ctx, func() error {
 
 ## 10.9 `digital.vasic.cache`
 
-**Version used:** v0.2.8
+**Version used:** see `10_submodule_integration.md` (canonical: v1.2.7) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
 **Used by:** All services for L1/L2 caching
 
 ```go
@@ -5901,7 +6143,7 @@ err = c.Delete(ctx, "jwks_cache")
 
 ## 10.10 `digital.vasic.concurrency`
 
-**Version used:** v0.2.2
+**Version used:** see `10_submodule_integration.md` (canonical: v1.1.0) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
 **Used by:** Terminal Service (WebSocket hub), Recording Service (segment assembly), AI Service (batch inference)
 
 ```go
@@ -5935,8 +6177,8 @@ fanout.Do(ctx, participantIDs, func(participantID string) error {
 
 ## 10.11 `digital.vasic.docs_chain`
 
-**Version used:** v0.1.5
-**Module path:** `digital.vasic.docs_chain`
+**Version used:** see `10_submodule_integration.md` (canonical: v1.0.3) — this section's version reference is superseded per `CANONICAL_FACTS.md`.
+**Module path:** `digital.vasic.docs_chain` (dot-form; DEFERRED rename to slash-form per `CANONICAL_FACTS.md` — see `10_submodule_integration.md` for the canonical import-path convention note)
 **Used by:** CI/CD pipeline (spec document dependency validation)
 
 `digital.vasic.docs_chain` is a Salsa-inspired DAG-based document dependency engine. In HelixTerminator, it ensures that changes to `01_core_architecture.md` (this document) automatically trigger validation and regeneration gates on all dependent specification documents.
@@ -6136,242 +6378,3 @@ jobs:
 ```
 
 ---
-
----
-
-## 4.15 Additional Schema: Collab Service (`helixterm_collab`)
-
-```sql
--- Migration: 00001_init_collab.up.sql
-
-CREATE TABLE collab_sessions (
-    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    terminal_session_id UUID      NOT NULL UNIQUE,
-    owner_user_id    UUID         NOT NULL,
-    org_id           UUID,
-    share_token      VARCHAR(64)  NOT NULL UNIQUE,
-    mode             VARCHAR(16)  NOT NULL DEFAULT 'observe'
-                                  CHECK (mode IN ('observe', 'copilot', 'broadcast')),
-    max_participants INT          NOT NULL DEFAULT 10,
-    requires_approval BOOLEAN     NOT NULL DEFAULT FALSE,
-    chat_enabled     BOOLEAN      NOT NULL DEFAULT TRUE,
-    started_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    ended_at         TIMESTAMPTZ,
-    status           VARCHAR(16)  NOT NULL DEFAULT 'active'
-                                  CHECK (status IN ('active', 'ended'))
-);
-CREATE INDEX idx_collab_sessions_terminal ON collab_sessions (terminal_session_id);
-CREATE INDEX idx_collab_sessions_token    ON collab_sessions (share_token) WHERE status = 'active';
-
-CREATE TABLE collab_participants (
-    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    collab_session_id UUID        NOT NULL REFERENCES collab_sessions(id) ON DELETE CASCADE,
-    user_id          UUID         NOT NULL,
-    role             VARCHAR(16)  NOT NULL DEFAULT 'observer'
-                                  CHECK (role IN ('owner', 'co_pilot', 'observer')),
-    joined_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    left_at          TIMESTAMPTZ,
-    kicked_by        UUID,
-    UNIQUE (collab_session_id, user_id)
-);
-CREATE INDEX idx_collab_participants_session ON collab_participants (collab_session_id);
-
-CREATE TABLE collab_chat_messages (
-    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    collab_session_id UUID        NOT NULL REFERENCES collab_sessions(id) ON DELETE CASCADE,
-    user_id          UUID         NOT NULL,
-    message          TEXT         NOT NULL,
-    sent_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-CREATE INDEX idx_collab_chat_session ON collab_chat_messages (collab_session_id, sent_at);
-```
-
-## 4.16 Additional Schema: Notification Service (`helixterm_notifications`)
-
-```sql
--- Migration: 00001_init_notifications.up.sql
-
-CREATE TABLE notification_templates (
-    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    name        VARCHAR(255) NOT NULL UNIQUE,
-    channel     VARCHAR(32)  NOT NULL CHECK (channel IN ('email', 'push', 'slack', 'in_app', 'webhook')),
-    event_type  VARCHAR(128) NOT NULL,
-    subject     TEXT,        -- Email subject (Mustache template)
-    body        TEXT         NOT NULL, -- Body (Mustache template)
-    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE notifications (
-    id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id      UUID         NOT NULL,
-    org_id       UUID,
-    template_id  UUID         REFERENCES notification_templates(id),
-    channel      VARCHAR(32)  NOT NULL,
-    event_type   VARCHAR(128) NOT NULL,
-    title        VARCHAR(255),
-    body         TEXT         NOT NULL,
-    data         JSONB        NOT NULL DEFAULT '{}',
-    status       VARCHAR(16)  NOT NULL DEFAULT 'pending'
-                              CHECK (status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
-    delivered_at TIMESTAMPTZ,
-    read_at      TIMESTAMPTZ,
-    error        TEXT,
-    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-) PARTITION BY RANGE (created_at);
-
-CREATE INDEX idx_notif_user_unread ON notifications (user_id, created_at DESC)
-    WHERE status NOT IN ('read');
-
-CREATE TABLE notification_preferences (
-    user_id    UUID         PRIMARY KEY REFERENCES notification_templates(id),
-    channel    VARCHAR(32)  NOT NULL,
-    event_type VARCHAR(128) NOT NULL,
-    enabled    BOOLEAN      NOT NULL DEFAULT TRUE,
-    PRIMARY KEY (user_id, channel, event_type)
-);
-```
-
-## 4.17 Additional Schema: Config Service (`helixterm_config`)
-
-```sql
--- Migration: 00001_init_config.up.sql
-
-CREATE TABLE config_entries (
-    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    key         VARCHAR(255) NOT NULL,
-    scope       VARCHAR(16)  NOT NULL DEFAULT 'global'
-                             CHECK (scope IN ('global', 'org', 'team', 'user')),
-    scope_id    UUID,        -- org_id / team_id / user_id; NULL for global
-    value       JSONB        NOT NULL,
-    value_type  VARCHAR(32)  NOT NULL DEFAULT 'json',
-    description TEXT,
-    is_secret   BOOLEAN      NOT NULL DEFAULT FALSE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    UNIQUE (key, scope, scope_id)
-);
-CREATE INDEX idx_config_scope ON config_entries (scope, scope_id);
-CREATE INDEX idx_config_key   ON config_entries (key);
-
-CREATE TABLE config_change_log (
-    id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    entry_id   UUID         NOT NULL REFERENCES config_entries(id),
-    changed_by UUID         NOT NULL,
-    old_value  JSONB,
-    new_value  JSONB        NOT NULL,
-    changed_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-CREATE INDEX idx_config_change_entry ON config_change_log (entry_id, changed_at DESC);
-```
-
-## 4.18 Additional Schema: Analytics Service (`helixterm_analytics`)
-
-```sql
--- Migration: 00001_init_analytics.up.sql
-
-CREATE TABLE analytics_events (
-    id          UUID         NOT NULL DEFAULT gen_random_uuid(),
-    user_id     UUID,
-    org_id      UUID,
-    event_type  VARCHAR(128) NOT NULL,
-    properties  JSONB        NOT NULL DEFAULT '{}',
-    occurred_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (id, occurred_at)
-) PARTITION BY RANGE (occurred_at);
--- Weekly partitions via pg_partman
-
-CREATE TABLE daily_usage_summary (
-    date        DATE         NOT NULL,
-    org_id      UUID         NOT NULL,
-    metric      VARCHAR(64)  NOT NULL,
-    value       BIGINT       NOT NULL DEFAULT 0,
-    PRIMARY KEY (date, org_id, metric)
-);
-CREATE INDEX idx_usage_org_date ON daily_usage_summary (org_id, date DESC);
-
-CREATE TABLE feature_adoption (
-    date        DATE         NOT NULL,
-    org_id      UUID         NOT NULL,
-    feature     VARCHAR(128) NOT NULL,
-    dau         INT          NOT NULL DEFAULT 0, -- daily active users
-    PRIMARY KEY (date, org_id, feature)
-);
-
-CREATE TABLE session_metrics (
-    date            DATE    NOT NULL,
-    org_id          UUID    NOT NULL,
-    sessions_count  BIGINT  NOT NULL DEFAULT 0,
-    total_duration_s BIGINT NOT NULL DEFAULT 0,
-    commands_count  BIGINT  NOT NULL DEFAULT 0,
-    p50_latency_ms  INT,
-    p95_latency_ms  INT,
-    p99_latency_ms  INT,
-    PRIMARY KEY (date, org_id)
-);
-```
-
-## 4.19 Additional Schema: Port Forwarding Service (`helixterm_port_forward`)
-
-```sql
--- Migration: 00001_init_port_forward.up.sql
-
-CREATE TABLE port_forward_rules (
-    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id          UUID         NOT NULL,
-    org_id           UUID,
-    host_id          UUID         NOT NULL,
-    name             VARCHAR(255) NOT NULL,
-    type             VARCHAR(16)  NOT NULL CHECK (type IN ('local', 'remote', 'dynamic', 'reverse')),
-    local_host       VARCHAR(253) NOT NULL DEFAULT '127.0.0.1',
-    local_port       INT          NOT NULL,
-    remote_host      VARCHAR(253),  -- NULL for dynamic/SOCKS5
-    remote_port      INT,           -- NULL for dynamic/SOCKS5
-    auto_start       BOOLEAN      NOT NULL DEFAULT FALSE,
-    auto_reconnect   BOOLEAN      NOT NULL DEFAULT TRUE,
-    reconnect_delay_s SMALLINT    NOT NULL DEFAULT 5,
-    status           VARCHAR(16)  NOT NULL DEFAULT 'stopped'
-                                  CHECK (status IN ('stopped', 'connecting', 'active', 'error')),
-    error_message    TEXT,
-    last_started_at  TIMESTAMPTZ,
-    last_stopped_at  TIMESTAMPTZ,
-    bytes_in         BIGINT       NOT NULL DEFAULT 0,
-    bytes_out        BIGINT       NOT NULL DEFAULT 0,
-    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-CREATE INDEX idx_pf_user_id   ON port_forward_rules (user_id);
-CREATE INDEX idx_pf_host_id   ON port_forward_rules (host_id);
-CREATE INDEX idx_pf_status    ON port_forward_rules (status);
-```
-
-## 4.20 Additional Schema: SFTP Service (`helixterm_sftp`)
-
-```sql
--- Migration: 00001_init_sftp.up.sql
-
-CREATE TABLE sftp_transfers (
-    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id          UUID         NOT NULL,
-    host_id          UUID         NOT NULL,
-    direction        VARCHAR(8)   NOT NULL CHECK (direction IN ('upload', 'download')),
-    local_path       TEXT         NOT NULL,
-    remote_path      TEXT         NOT NULL,
-    file_name        VARCHAR(255) NOT NULL,
-    file_size        BIGINT       NOT NULL DEFAULT 0,
-    bytes_transferred BIGINT      NOT NULL DEFAULT 0,
-    checksum_local   VARCHAR(64),
-    checksum_remote  VARCHAR(64),
-    checksum_match   BOOLEAN,
-    priority         SMALLINT     NOT NULL DEFAULT 5,
-    status           VARCHAR(16)  NOT NULL DEFAULT 'queued'
-                                  CHECK (status IN ('queued', 'active', 'paused', 'completed', 'failed', 'canceled')),
-    error_message    TEXT,
-    started_at       TIMESTAMPTZ,
-    completed_at     TIMESTAMPTZ,
-    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-CREATE INDEX idx_sftp_transfers_user   ON sftp_transfers (user_id, created_at DESC);
-CREATE INDEX idx_sftp_transfers_status ON sftp_transfers (status);
-```

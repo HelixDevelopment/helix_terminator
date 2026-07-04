@@ -1,99 +1,5 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>HelixTerminator — 10_submodule_integration</title>
-  <style>
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-      }
-    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-    div.sourceCode
-      { color: #cccccc; background-color: #303030; }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ffcfaf; } /* Alert */
-    code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
-    code span.at { } /* Attribute */
-    code span.bn { color: #dca3a3; } /* BaseN */
-    code span.bu { } /* BuiltIn */
-    code span.cf { color: #f0dfaf; } /* ControlFlow */
-    code span.ch { color: #dca3a3; } /* Char */
-    code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
-    code span.co { color: #7f9f7f; } /* Comment */
-    code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
-    code span.do { color: #7f9f7f; } /* Documentation */
-    code span.dt { color: #dfdfbf; } /* DataType */
-    code span.dv { color: #dcdccc; } /* DecVal */
-    code span.er { color: #c3bf9f; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #c0bed1; } /* Float */
-    code span.fu { color: #efef8f; } /* Function */
-    code span.im { } /* Import */
-    code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
-    code span.kw { color: #f0dfaf; } /* Keyword */
-    code span.op { color: #f0efd0; } /* Operator */
-    code span.ot { color: #efef8f; } /* Other */
-    code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
-    code span.sc { color: #dca3a3; } /* SpecialChar */
-    code span.ss { color: #cc9393; } /* SpecialString */
-    code span.st { color: #cc9393; } /* String */
-    code span.va { } /* Variable */
-    code span.vs { color: #cc9393; } /* VerbatimString */
-    code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
-  </style>
-  <link rel="stylesheet" href="/tmp/helix_style.css" />
-</head>
-<body>
-<header id="title-block-header">
-<h1 class="title">HelixTerminator — 10_submodule_integration</h1>
-</header>
 <h1
-id="helixterminator--submodule-integration-specification">HelixTerminator
+id="helixterminator-submodule-integration-specification">HelixTerminator
 — Submodule Integration Specification</h1>
 <p><strong>Document:</strong>
 <code>10_submodule_integration.md</code><br />
@@ -140,27 +46,38 @@ href="#12-digitalvasiccontainers"><code>digital.vasic.containers</code>
 href="#13-digitalvasicdocs_chain"><code>digital.vasic.docs_chain</code>
 — Salsa-style DAG Document Engine</a></li>
 <li><a
-href="#14-digitalvasichallenges"><code>digital.vasic.challenges</code> —
-Challenges Submodule</a></li>
+href="#14-digitalvasicchallenges"><code>digital.vasic.challenges</code>
+— Challenges Submodule</a></li>
 <li><a href="#15-helixqa"><code>helixqa</code> — AI-driven QA
 Orchestration</a></li>
 <li><a href="#16-helixtrackrucore"><code>helixtrack.ru/core</code> —
 Project Management Integration</a></li>
-<li><a href="#17-helixconstitution">HelixConstitution — AGENTS.MD,
-CLAUDE.MD, Constitution.md</a></li>
-<li><a href="#appendix-a-gowork-workspace-file">Appendix A:
+<li><a
+href="#17-helixconstitution--agentsmd-claudemd-constitutionmd">HelixConstitution
+— AGENTS.MD, CLAUDE.MD, Constitution.md</a></li>
+<li><a href="#appendix-a-gowork--workspace-file">Appendix A:
 <code>go.work</code> Workspace File</a></li>
-<li><a href="#appendix-b-helix-depsyaml">Appendix B:
-<code>helix-deps.yaml</code></a></li>
-<li><a href="#appendix-c-makefile-submodule-targets">Appendix C:
-Makefile Submodule Targets</a></li>
-<li><a href="#appendix-d-github-actions--submodule-compliance">Appendix
-D: GitHub Actions — Submodule Compliance</a></li>
-<li><a href="#appendix-e-dependency-graph-mermaid">Appendix E:
-Dependency Graph (Mermaid)</a></li>
+<li><a
+href="#171-helix-depsyaml--helixterminator-dependency-manifest">§17.1:
+<code>helix-deps.yaml</code> — Dependency Manifest</a></li>
+<li><a href="#appendix-b-makefile--submodule-targets">Appendix B:
+Makefile — Submodule Targets</a></li>
+<li><a
+href="#appendix-c-github-actions--submodule-compliance-workflow">Appendix
+C: GitHub Actions — Submodule Compliance Workflow</a></li>
+<li><a
+href="#appendix-d-servicesubmodule-dependency-graph-mermaid">Appendix D:
+Service–Submodule Dependency Graph (Mermaid)</a></li>
 </ol>
+<blockquote>
+<p>NOTE: this document’s appendices continue through Appendix I (E:
+<code>docs-chain.yaml</code>, F: Integration Testing Matrix, G: Error
+Code Registry, H: Submodule Version Compatibility Matrix, I: Common
+Integration Pitfalls); only A–D are indexed above — see the body
+headings for the rest.</p>
+</blockquote>
 <hr />
-<h2 id="1-overview">1. Overview</h2>
+<h2 id="overview">1. Overview</h2>
 <p>HelixTerminator (<code>helixterm.io</code>) is a 25-microservice
 platform built on Go 1.25, Gin Gonic, Kafka, RabbitMQ, PostgreSQL, and
 Redis, deployed on Kubernetes. The platform is composed of first-party
@@ -177,8 +94,31 @@ applicable)</li>
 <li><strong>Configuration</strong> artifacts (YAML, env variables)</li>
 <li><strong>Error handling</strong> and operational concerns</li>
 </ul>
-<h3 id="11-submodule-inventory">1.1 Submodule Inventory</h3>
+<blockquote>
+<p>NOTE (CD-2 / CD-11 — flagged, not mass-rewritten): per
+<code>CANONICAL_FACTS.md</code>, the primary org/domain identity going
+forward is <code>HelixDevelopment</code> /
+<code>helixterminator.io</code>, and the canonical Go import-path
+convention is slash-form (<code>digital.vasic/security</code>, as used
+throughout the code samples in §2–§16). This document’s Go module
+namespace (<code>helixterm.io/...</code>), and the dot-form paths used
+in <code>go.work</code>’s <code>replace</code> directives (Appendix A)
+and in <code>helix-deps.yaml</code> (§17.1,
+<code>import_path: digital.vasic.security</code>), predate that decision
+and are <strong>not</strong> rewritten here — both are high-churn,
+cross-cutting renames (600+ refs) tracked as DEFERRED cross-doc work in
+<code>CANONICAL_FACTS.md</code>. Do not treat <code>helixterm.io</code>
+or the dot-form <code>import_path</code> values below as
+newly-canonical; they are left in place and flagged.</p>
+</blockquote>
+<h3 id="submodule-inventory">1.1 Submodule Inventory</h3>
 <table>
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 37%" />
+<col style="width: 27%" />
+<col style="width: 24%" />
+</colgroup>
 <thead>
 <tr>
 <th>#</th>
@@ -286,34 +226,52 @@ applicable)</li>
 </tr>
 </tbody>
 </table>
-<h3 id="12-service-registry">1.2 Service Registry</h3>
-<p>All 25 microservices under <code>helixterm.io/services/</code>:</p>
-<pre><code>helixterm.io/services/api-gateway
+<h3 id="service-registry">1.2 Service Registry</h3>
+<p>All 25 microservices under <code>helixterm.io/services/</code>. This
+is the <strong>CD-3 canonical service set</strong>, adopted verbatim
+from <code>01_core_architecture.md</code> §2.10 (Go Module Structure) —
+the single authoritative enumeration; do not re-derive or re-list a
+divergent set elsewhere in this document (see Appendix A and Appendix D,
+which reference this same set):</p>
+<pre><code>helixterm.io/services/gateway
 helixterm.io/services/auth
+helixterm.io/services/user
 helixterm.io/services/vault
+helixterm.io/services/host
 helixterm.io/services/ssh-proxy
 helixterm.io/services/terminal
 helixterm.io/services/sftp
-helixterm.io/services/host-manager
-helixterm.io/services/user
+helixterm.io/services/port-forward
+helixterm.io/services/snippet
+helixterm.io/services/keychain
 helixterm.io/services/workspace
+helixterm.io/services/collab
 helixterm.io/services/notification
 helixterm.io/services/audit
 helixterm.io/services/analytics
 helixterm.io/services/ai
-helixterm.io/services/container-bridge
-helixterm.io/services/helixtrack-bridge
+helixterm.io/services/recording
+helixterm.io/services/pki
+helixterm.io/services/org
 helixterm.io/services/billing
-helixterm.io/services/scheduler
-helixterm.io/services/file-manager
 helixterm.io/services/config
-helixterm.io/services/identity
-helixterm.io/services/team
-helixterm.io/services/secret
-helixterm.io/services/webhook
-helixterm.io/services/search
-helixterm.io/services/onboarding</code></pre>
-<h3 id="13-go-module-layout">1.3 Go Module Layout</h3>
+helixterm.io/services/health
+helixterm.io/services/container-bridge
+helixterm.io/services/helixtrack-bridge</code></pre>
+<blockquote>
+<p>DEFERRED: several code samples later in this document (§2–§17,
+e.g. <code>host-manager</code>, <code>sftp-proxy</code>,
+<code>workspace-svc</code>, <code>config-svc</code>,
+<code>api-gateway</code>, <code>team</code>, <code>session</code>,
+<code>secret-manager</code>,
+<code>challenge</code>/<code>onboarding</code>) still use
+pre-convergence service names that predate this registry fix.
+Propagating the CD-3 canonical names through every code sample is
+high-churn, cross-cutting work tracked under CD-3/CD-11 (per
+<code>CANONICAL_FACTS.md</code>) and is intentionally out of scope for
+this pass — flagged here rather than silently left inconsistent.</p>
+</blockquote>
+<h3 id="go-module-layout">1.3 Go Module Layout</h3>
 <pre><code>helixterm.io/
 ├── go.work
 ├── helix-deps.yaml
@@ -321,8 +279,8 @@ helixterm.io/services/onboarding</code></pre>
 ├── CLAUDE.MD
 ├── Makefile
 ├── services/
-│   ├── api-gateway/
-│   │   ├── go.mod         (module helixterm.io/services/api-gateway)
+│   ├── gateway/
+│   │   ├── go.mod         (module helixterm.io/services/gateway)
 │   │   └── ...
 │   ├── auth/
 │   │   ├── go.mod         (module helixterm.io/services/auth)
@@ -332,13 +290,13 @@ helixterm.io/services/onboarding</code></pre>
 │   └── shared/            (helixterm.io/pkg/shared)
 └── docs/</code></pre>
 <hr />
-<h2 id="2-digitalvasicsecurity">2.
+<h2 id="digital.vasic.security">2.
 <code>digital.vasic.security</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/security</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/security v1.x.x</code></p>
-<h3 id="21-purpose">2.1 Purpose</h3>
+<code>digital.vasic/security v1.4.2</code></p>
+<h3 id="purpose">2.1 Purpose</h3>
 <p><code>digital.vasic.security</code> provides AES-256-GCM encryption,
 PBKDF2/Argon2id key derivation, and a unified platform keychain/keystore
 abstraction. Within HelixTerminator it is the single encryption boundary
@@ -350,7 +308,7 @@ for:</p>
 <li>Platform keychain integration on iOS, Android, macOS, Windows, and
 Linux</li>
 </ul>
-<h3 id="22-go-module-initialization">2.2 Go: Module Initialization</h3>
+<h3 id="go-module-initialization">2.2 Go: Module Initialization</h3>
 <p>Every service that performs encryption imports and initialises the
 security module once at startup via a singleton:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode go"><code class="sourceCode go"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/vault/internal/crypto/crypto.go</span></span>
@@ -466,8 +424,8 @@ security module once at startup via a singleton:</p>
 <span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a>        logger<span class="op">:</span> logger<span class="op">,</span></span>
 <span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span> <span class="ot">nil</span></span>
 <span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="23-go-encrypting-and-decrypting-vault-payloads">2.3 Go:
-Encrypting and Decrypting Vault Payloads</h3>
+<h3 id="go-encrypting-and-decrypting-vault-payloads">2.3 Go: Encrypting
+and Decrypting Vault Payloads</h3>
 <div class="sourceCode" id="cb4"><pre class="sourceCode go"><code class="sourceCode go"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/vault/internal/crypto/vault_payload.go</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> crypto</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -554,9 +512,9 @@ Encrypting and Decrypting Vault Payloads</h3>
 <span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> key<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="24-go-key-rotation-orchestration">2.4 Go: Key Rotation
+<h3 id="go-key-rotation-orchestration">2.4 Go: Key Rotation
 Orchestration</h3>
-<p>HelixTerminator's key rotation orchestrator lives in the
+<p>HelixTerminator’s key rotation orchestrator lives in the
 <code>vault</code> service and coordinates re-encryption of all vault
 items when a new master key is introduced.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode go"><code class="sourceCode go"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/vault/internal/rotation/rotation.go</span></span>
@@ -664,7 +622,7 @@ items when a new master key is introduced.</p>
 <span id="cb5-103"><a href="#cb5-103" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb5-104"><a href="#cb5-104" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb5-105"><a href="#cb5-105" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="25-go-ssh-key-encryption-in-the-ssh-key-service">2.5 Go: SSH Key
+<h3 id="go-ssh-key-encryption-in-the-ssh-key-service">2.5 Go: SSH Key
 Encryption in the SSH Key Service</h3>
 <div class="sourceCode" id="cb6"><pre class="sourceCode go"><code class="sourceCode go"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/vault/internal/handler/ssh_key_handler.go</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> handler</span>
@@ -769,7 +727,7 @@ Encryption in the SSH Key Service</h3>
 <span id="cb6-101"><a href="#cb6-101" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb6-102"><a href="#cb6-102" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> import_json_raw</span>
 <span id="cb6-103"><a href="#cb6-103" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="26-dartflutter-platform-keychain-integration">2.6 Dart/Flutter:
+<h3 id="dartflutter-platform-keychain-integration">2.6 Dart/Flutter:
 Platform Keychain Integration</h3>
 <p>The Flutter client uses <code>digital.vasic.security</code> via a
 platform channel bridge. The Dart-side wrapper is in
@@ -943,16 +901,16 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb8-1"><a href="
 <span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
 <span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="3-digitalvasicauth">3. <code>digital.vasic.auth</code></h2>
+<h2 id="digital.vasic.auth">3. <code>digital.vasic.auth</code></h2>
 <p><strong>Import path:</strong> <code>digital.vasic/auth</code><br />
-<strong>Go module:</strong> <code>digital.vasic/auth v2.x.x</code></p>
-<h3 id="31-purpose">3.1 Purpose</h3>
+<strong>Go module:</strong> <code>digital.vasic/auth v2.3.1</code></p>
+<h3 id="purpose-1">3.1 Purpose</h3>
 <p><code>digital.vasic.auth</code> provides OAuth2/OIDC integration, JWT
 issuance and validation, refresh token rotation, SCIM 2.0 provisioning,
 and a unified identity provider adapter layer. Within HelixTerminator it
-underpins the Auth Service, the API Gateway's token validation
-middleware, and all 25 services' inter-service token propagation.</p>
-<h3 id="32-go-auth-service--jwt-issuance">3.2 Go: Auth Service — JWT
+underpins the Auth Service, the API Gateway’s token validation
+middleware, and all 25 services’ inter-service token propagation.</p>
+<h3 id="go-auth-service-jwt-issuance">3.2 Go: Auth Service — JWT
 Issuance</h3>
 <div class="sourceCode" id="cb9"><pre class="sourceCode go"><code class="sourceCode go"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/auth/internal/handler/token_handler.go</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> handler</span>
@@ -1154,8 +1112,8 @@ Issuance</h3>
 <span id="cb9-198"><a href="#cb9-198" aria-hidden="true" tabindex="-1"></a>        ExpiresIn<span class="op">:</span>    <span class="dt">int</span><span class="op">(</span><span class="dv">15</span> <span class="op">*</span> time<span class="op">.</span>Minute <span class="op">/</span> time<span class="op">.</span>Second<span class="op">),</span></span>
 <span id="cb9-199"><a href="#cb9-199" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb9-200"><a href="#cb9-200" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="33-go-api-gateway-token-validation-middleware">3.3 Go: API
-Gateway Token Validation Middleware</h3>
+<h3 id="go-api-gateway-token-validation-middleware">3.3 Go: API Gateway
+Token Validation Middleware</h3>
 <div class="sourceCode" id="cb10"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/api-gateway/internal/middleware/auth_middleware.go</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> middleware</span>
@@ -1253,9 +1211,9 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb10-1"><a href="#cb
 <span id="cb10-94"><a href="#cb10-94" aria-hidden="true" tabindex="-1"></a>        <span class="op">})</span></span>
 <span id="cb10-95"><a href="#cb10-95" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb10-96"><a href="#cb10-96" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="34-go-token-propagation-via-grpc-metadata">3.4 Go: Token
+<h3 id="go-token-propagation-via-grpc-metadata">3.4 Go: Token
 Propagation via gRPC Metadata</h3>
-<p>All 25 services forward the caller's JWT in gRPC metadata under the
+<p>All 25 services forward the caller’s JWT in gRPC metadata under the
 <code>authorization</code> key. The interceptor is shared via
 <code>helixterm.io/pkg/shared/grpcauth</code>.</p>
 <div class="sourceCode" id="cb11"><pre
@@ -1349,7 +1307,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb11-1"><a href="#cb
 <span id="cb11-88"><a href="#cb11-88" aria-hidden="true" tabindex="-1"></a>    t<span class="op">,</span> ok <span class="op">:=</span> ctx<span class="op">.</span>Value<span class="op">(</span>tokenKey<span class="op">).(</span><span class="dt">string</span><span class="op">)</span></span>
 <span id="cb11-89"><a href="#cb11-89" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> t<span class="op">,</span> ok</span>
 <span id="cb11-90"><a href="#cb11-90" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="35-go-oidc-provider-integrations">3.5 Go: OIDC Provider
+<h3 id="go-oidc-provider-integrations">3.5 Go: OIDC Provider
 Integrations</h3>
 <div class="sourceCode" id="cb12"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/auth/internal/oidc/providers.go</span></span>
@@ -1454,8 +1412,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb12-1"><a href="#cb
 <span id="cb12-100"><a href="#cb12-100" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb12-101"><a href="#cb12-101" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> p<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb12-102"><a href="#cb12-102" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="36-go-scim-20-provisioning-handler">3.6 Go: SCIM 2.0
-Provisioning Handler</h3>
+<h3 id="go-scim-2.0-provisioning-handler">3.6 Go: SCIM 2.0 Provisioning
+Handler</h3>
 <div class="sourceCode" id="cb13"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/auth/internal/handler/scim_handler.go</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> handler</span>
@@ -1589,10 +1547,10 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb13-1"><a href="#cb
 <span id="cb13-130"><a href="#cb13-130" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb13-131"><a href="#cb13-131" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="4-digitalvasiccache">4. <code>digital.vasic.cache</code></h2>
+<h2 id="digital.vasic.cache">4. <code>digital.vasic.cache</code></h2>
 <p><strong>Import path:</strong> <code>digital.vasic/cache</code><br />
-<strong>Go module:</strong> <code>digital.vasic/cache v1.x.x</code></p>
-<h3 id="41-purpose">4.1 Purpose</h3>
+<strong>Go module:</strong> <code>digital.vasic/cache v1.2.7</code></p>
+<h3 id="purpose-2">4.1 Purpose</h3>
 <p><code>digital.vasic.cache</code> provides a two-layer Redis caching
 abstraction (L1 in-process + L2 Redis) with encryption-aware TTL
 handling, workspace-isolated namespacing, and cache-aside patterns. In
@@ -1606,7 +1564,7 @@ encryption)</li>
 <li>Rate limiter state counters</li>
 <li>User preference and config caching</li>
 </ul>
-<h3 id="42-go-cache-manager-initialization">4.2 Go: Cache Manager
+<h3 id="go-cache-manager-initialization">4.2 Go: Cache Manager
 Initialization</h3>
 <div class="sourceCode" id="cb14"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/cachemanager/manager.go</span></span>
@@ -1731,7 +1689,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb14-1"><a href="#cb
 <span id="cb14-120"><a href="#cb14-120" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb14-121"><a href="#cb14-121" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb14-122"><a href="#cb14-122" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="43-go-cache-aside-pattern-for-host-lists">4.3 Go: Cache-Aside
+<h3 id="go-cache-aside-pattern-for-host-lists">4.3 Go: Cache-Aside
 Pattern for Host Lists</h3>
 <div class="sourceCode" id="cb15"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/host-manager/internal/handler/host_handler.go</span></span>
@@ -1811,8 +1769,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb15-1"><a href="#cb
 <span id="cb15-75"><a href="#cb15-75" aria-hidden="true" tabindex="-1"></a>        h<span class="op">.</span>logger<span class="op">.</span>Warn<span class="op">(</span><span class="st">&quot;failed to invalidate host cache&quot;</span><span class="op">,</span> zap<span class="op">.</span>String<span class="op">(</span><span class="st">&quot;key&quot;</span><span class="op">,</span> key<span class="op">),</span> zap<span class="op">.</span>Error<span class="op">(</span>err<span class="op">))</span></span>
 <span id="cb15-76"><a href="#cb15-76" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb15-77"><a href="#cb15-77" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="44-go-vault-item-caching-with-encryption-aware-ttls">4.4 Go:
-Vault Item Caching with Encryption-Aware TTLs</h3>
+<h3 id="go-vault-item-caching-with-encryption-aware-ttls">4.4 Go: Vault
+Item Caching with Encryption-Aware TTLs</h3>
 <p>Vault items are cached in their <strong>decrypted</strong> form for a
 short TTL (30 seconds) scoped to the requesting session. This avoids
 repeated decryption round-trips while minimising the window of plaintext
@@ -1856,7 +1814,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb16-1"><a href="#cb
 <span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>    pattern <span class="op">:=</span> fmt<span class="op">.</span>Sprintf<span class="op">(</span><span class="st">&quot;vault:decrypted:session:%s:*&quot;</span><span class="op">,</span> sessionID<span class="op">)</span></span>
 <span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> vc<span class="op">.</span>cm<span class="op">.</span>DeletePattern<span class="op">(</span>ctx<span class="op">,</span> pattern<span class="op">)</span></span>
 <span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="45-go-cache-warming-on-service-startup">4.5 Go: Cache Warming on
+<h3 id="go-cache-warming-on-service-startup">4.5 Go: Cache Warming on
 Service Startup</h3>
 <div class="sourceCode" id="cb17"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/host-manager/internal/startup/cache_warm.go</span></span>
@@ -1919,19 +1877,19 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb17-1"><a href="#cb
 <span id="cb17-58"><a href="#cb17-58" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb17-59"><a href="#cb17-59" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="5-digitalvasicdatabase">5.
+<h2 id="digital.vasic.database">5.
 <code>digital.vasic.database</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/database</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/database v1.x.x</code></p>
-<h3 id="51-purpose">5.1 Purpose</h3>
+<code>digital.vasic/database v1.8.0</code></p>
+<h3 id="purpose-3">5.1 Purpose</h3>
 <p><code>digital.vasic.database</code> provides a PostgreSQL abstraction
 layer with support for primary/replica routing, connection pooling,
 migration runner integration (golang-migrate), soft delete conventions,
 cursor-based pagination, and structured transaction helpers. All 25
 HelixTerminator services use this module for database access.</p>
-<h3 id="52-go-database-initialization-per-service">5.2 Go: Database
+<h3 id="go-database-initialization-per-service">5.2 Go: Database
 Initialization Per Service</h3>
 <div class="sourceCode" id="cb18"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/dbmanager/manager.go</span></span>
@@ -2033,7 +1991,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb18-1"><a href="#cb
 <span id="cb18-97"><a href="#cb18-97" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb18-98"><a href="#cb18-98" aria-hidden="true" tabindex="-1"></a><span class="co">// DB returns the underlying database instance for direct use.</span></span>
 <span id="cb18-99"><a href="#cb18-99" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>m <span class="op">*</span>Manager<span class="op">)</span> DB<span class="op">()</span> database<span class="op">.</span>DB <span class="op">{</span> <span class="cf">return</span> m<span class="op">.</span>db <span class="op">}</span></span></code></pre></div>
-<h3 id="53-go-transaction-helper-patterns">5.3 Go: Transaction Helper
+<h3 id="go-transaction-helper-patterns">5.3 Go: Transaction Helper
 Patterns</h3>
 <div class="sourceCode" id="cb19"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/dbmanager/tx.go</span></span>
@@ -2083,7 +2041,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb19-1"><a href="#cb
 <span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="54-go-soft-delete-patterns">5.4 Go: Soft Delete Patterns</h3>
+<h3 id="go-soft-delete-patterns">5.4 Go: Soft Delete Patterns</h3>
 <p>All HelixTerminator tables that support soft delete use a
 <code>deleted_at TIMESTAMPTZ</code> column. The database module provides
 query helpers that automatically add
@@ -2125,7 +2083,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb20-1"><a href="#cb
 <span id="cb20-34"><a href="#cb20-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb20-35"><a href="#cb20-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;deleted_at IS NULL&quot;</span></span>
 <span id="cb20-36"><a href="#cb20-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="55-go-pagination-helper">5.5 Go: Pagination Helper</h3>
+<h3 id="go-pagination-helper">5.5 Go: Pagination Helper</h3>
 <p>HelixTerminator uses cursor-based pagination throughout. The database
 module provides a generic cursor helper.</p>
 <div class="sourceCode" id="cb21"><pre
@@ -2191,19 +2149,19 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb21-1"><a href="#cb
 <span id="cb21-60"><a href="#cb21-60" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> requested</span>
 <span id="cb21-61"><a href="#cb21-61" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="6-digitalvasicmessaging">6.
+<h2 id="digital.vasic.messaging">6.
 <code>digital.vasic.messaging</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/messaging</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/messaging v1.x.x</code></p>
-<h3 id="61-purpose">6.1 Purpose</h3>
+<code>digital.vasic/messaging v1.5.3</code></p>
+<h3 id="purpose-4">6.1 Purpose</h3>
 <p><code>digital.vasic.messaging</code> abstracts Kafka (audit events,
 session lifecycle, analytics) and RabbitMQ (SSH command dispatch, SFTP
 operations) behind a unified interface. It provides message schema
 validation, retry policies, dead letter queue (DLQ) routing, and
 observability hooks.</p>
-<h3 id="62-kafka-topic-definitions">6.2 Kafka Topic Definitions</h3>
+<h3 id="kafka-topic-definitions">6.2 Kafka Topic Definitions</h3>
 <div class="sourceCode" id="cb22"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/topics/topics.go</span></span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> topics</span>
@@ -2240,8 +2198,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb22-1"><a href="#cb
 <span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>    QueueSFTPCommandsProxy <span class="op">=</span> <span class="st">&quot;helix.sftp.commands.proxy&quot;</span></span>
 <span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a>    QueueSFTPCommandsDLQ   <span class="op">=</span> <span class="st">&quot;helix.sftp.commands.dlq&quot;</span></span>
 <span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a><span class="op">)</span></span></code></pre></div>
-<h3 id="63-go-kafka-producer-initialization-and-publishing">6.3 Go:
-Kafka Producer Initialization and Publishing</h3>
+<h3 id="go-kafka-producer-initialization-and-publishing">6.3 Go: Kafka
+Producer Initialization and Publishing</h3>
 <div class="sourceCode" id="cb23"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/kafkaproducer/producer.go</span></span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> kafkaproducer</span>
@@ -2327,8 +2285,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb23-1"><a href="#cb
 <span id="cb23-82"><a href="#cb23-82" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>p <span class="op">*</span>Producer<span class="op">)</span> Close<span class="op">()</span> <span class="dt">error</span> <span class="op">{</span></span>
 <span id="cb23-83"><a href="#cb23-83" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> p<span class="op">.</span>client<span class="op">.</span>Close<span class="op">()</span></span>
 <span id="cb23-84"><a href="#cb23-84" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="64-go-audit-event-publishing">6.4 Go: Audit Event
-Publishing</h3>
+<h3 id="go-audit-event-publishing">6.4 Go: Audit Event Publishing</h3>
 <div class="sourceCode" id="cb24"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/audit/publisher.go</span></span>
 <span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> audit</span>
@@ -2391,7 +2348,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb24-1"><a href="#cb
 <span id="cb24-59"><a href="#cb24-59" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb24-60"><a href="#cb24-60" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb24-61"><a href="#cb24-61" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="65-go-rabbitmq-consumer-for-ssh-proxy">6.5 Go: RabbitMQ Consumer
+<h3 id="go-rabbitmq-consumer-for-ssh-proxy">6.5 Go: RabbitMQ Consumer
 for SSH Proxy</h3>
 <div class="sourceCode" id="cb25"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/ssh-proxy/internal/messaging/consumer.go</span></span>
@@ -2495,7 +2452,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb25-1"><a href="#cb
 <span id="cb25-99"><a href="#cb25-99" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb25-100"><a href="#cb25-100" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb25-101"><a href="#cb25-101" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="66-go-dead-letter-queue-handler">6.6 Go: Dead Letter Queue
+<h3 id="go-dead-letter-queue-handler">6.6 Go: Dead Letter Queue
 Handler</h3>
 <div class="sourceCode" id="cb26"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/ssh-proxy/internal/messaging/dlq_handler.go</span></span>
@@ -2561,19 +2518,19 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb26-1"><a href="#cb
 <span id="cb26-61"><a href="#cb26-61" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb26-62"><a href="#cb26-62" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="7-digitalvasicmiddleware">7.
+<h2 id="digital.vasic.middleware">7.
 <code>digital.vasic.middleware</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/middleware</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/middleware v1.x.x</code></p>
-<h3 id="71-purpose">7.1 Purpose</h3>
+<code>digital.vasic/middleware v1.1.4</code></p>
+<h3 id="purpose-5">7.1 Purpose</h3>
 <p><code>digital.vasic.middleware</code> provides a suite of
 production-ready Gin middleware components: request ID injection,
 structured JSON logging, panic recovery, timeout enforcement, CORS, and
 compression. Every HelixTerminator service that exposes an HTTP router
 uses this module.</p>
-<h3 id="72-go-full-middleware-chain-setup">7.2 Go: Full Middleware Chain
+<h3 id="go-full-middleware-chain-setup">7.2 Go: Full Middleware Chain
 Setup</h3>
 <div class="sourceCode" id="cb27"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/api-gateway/internal/server/server.go</span></span>
@@ -2669,8 +2626,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb27-1"><a href="#cb
 <span id="cb27-91"><a href="#cb27-91" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;request_id&quot;</span><span class="op">:</span> c<span class="op">.</span>GetHeader<span class="op">(</span><span class="st">&quot;X-Request-ID&quot;</span><span class="op">),</span></span>
 <span id="cb27-92"><a href="#cb27-92" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb27-93"><a href="#cb27-93" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="73-go-request-id-propagation">7.3 Go: Request ID
-Propagation</h3>
+<h3 id="go-request-id-propagation">7.3 Go: Request ID Propagation</h3>
 <div class="sourceCode" id="cb28"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/requestid/propagate.go</span></span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> requestid</span>
@@ -2708,8 +2664,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb28-1"><a href="#cb
 <span id="cb28-34"><a href="#cb28-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb28-35"><a href="#cb28-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">&quot;&quot;</span></span>
 <span id="cb28-36"><a href="#cb28-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="74-go-structured-json-logging-middleware">7.4 Go: Structured
-JSON Logging Middleware</h3>
+<h3 id="go-structured-json-logging-middleware">7.4 Go: Structured JSON
+Logging Middleware</h3>
 <div class="sourceCode" id="cb29"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/logging/gin_logger.go</span></span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> logging</span>
@@ -2772,7 +2728,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb29-1"><a href="#cb
 <span id="cb29-59"><a href="#cb29-59" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
 <span id="cb29-60"><a href="#cb29-60" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb29-61"><a href="#cb29-61" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="75-go-panic-recovery-middleware">7.5 Go: Panic Recovery
+<h3 id="go-panic-recovery-middleware">7.5 Go: Panic Recovery
 Middleware</h3>
 <div class="sourceCode" id="cb30"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/recovery/recovery.go</span></span>
@@ -2811,7 +2767,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb30-1"><a href="#cb
 <span id="cb30-34"><a href="#cb30-34" aria-hidden="true" tabindex="-1"></a>        c<span class="op">.</span>Next<span class="op">()</span></span>
 <span id="cb30-35"><a href="#cb30-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb30-36"><a href="#cb30-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="76-go-timeout-middleware">7.6 Go: Timeout Middleware</h3>
+<h3 id="go-timeout-middleware">7.6 Go: Timeout Middleware</h3>
 <div class="sourceCode" id="cb31"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/timeout/timeout.go</span></span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> timeout</span>
@@ -2853,19 +2809,19 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb31-1"><a href="#cb
 <span id="cb31-38"><a href="#cb31-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb31-39"><a href="#cb31-39" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="8-digitalvasicobservability">8.
+<h2 id="digital.vasic.observability">8.
 <code>digital.vasic.observability</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/observability</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/observability v1.x.x</code></p>
-<h3 id="81-purpose">8.1 Purpose</h3>
+<code>digital.vasic/observability v1.3.0</code></p>
+<h3 id="purpose-6">8.1 Purpose</h3>
 <p><code>digital.vasic.observability</code> provides Prometheus metrics
 registration, OpenTelemetry distributed tracing with OTLP export,
 structured health check endpoints, and Kubernetes readiness/liveness
 probe handlers. All 25 HelixTerminator services initialise this module
 at startup.</p>
-<h3 id="82-go-observability-initialization-per-service">8.2 Go:
+<h3 id="go-observability-initialization-per-service">8.2 Go:
 Observability Initialization Per Service</h3>
 <div class="sourceCode" id="cb32"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/obs/obs.go</span></span>
@@ -2980,7 +2936,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb32-1"><a href="#cb
 <span id="cb32-110"><a href="#cb32-110" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb32-111"><a href="#cb32-111" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dt">string</span><span class="op">(</span>result<span class="op">)</span></span>
 <span id="cb32-112"><a href="#cb32-112" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="83-go-custom-metric-definitions">8.3 Go: Custom Metric
+<h3 id="go-custom-metric-definitions">8.3 Go: Custom Metric
 Definitions</h3>
 <div class="sourceCode" id="cb33"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/ssh-proxy/internal/metrics/metrics.go</span></span>
@@ -3075,7 +3031,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb33-1"><a href="#cb
 <span id="cb33-90"><a href="#cb33-90" aria-hidden="true" tabindex="-1"></a>        BytesTransferred<span class="op">:</span> bytes<span class="op">,</span></span>
 <span id="cb33-91"><a href="#cb33-91" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span> <span class="ot">nil</span></span>
 <span id="cb33-92"><a href="#cb33-92" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="84-go-trace-span-creation">8.4 Go: Trace Span Creation</h3>
+<h3 id="go-trace-span-creation">8.4 Go: Trace Span Creation</h3>
 <div class="sourceCode" id="cb34"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/vault/internal/handler/vault_handler.go (tracing excerpt)</span></span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> handler</span>
@@ -3129,7 +3085,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb34-1"><a href="#cb
 <span id="cb34-50"><a href="#cb34-50" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb34-51"><a href="#cb34-51" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mapPayloadToResponse<span class="op">(</span>payload<span class="op">),</span> <span class="ot">nil</span></span>
 <span id="cb34-52"><a href="#cb34-52" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="85-go-health-check-endpoint">8.5 Go: Health Check Endpoint</h3>
+<h3 id="go-health-check-endpoint">8.5 Go: Health Check Endpoint</h3>
 <div class="sourceCode" id="cb35"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/health/health.go</span></span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> health</span>
@@ -3204,7 +3160,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb35-1"><a href="#cb
 <span id="cb35-71"><a href="#cb35-71" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb35-72"><a href="#cb35-72" aria-hidden="true" tabindex="-1"></a>    c<span class="op">.</span>JSON<span class="op">(</span>status<span class="op">,</span> gin<span class="op">.</span>H<span class="op">{</span><span class="st">&quot;checks&quot;</span><span class="op">:</span> results<span class="op">,</span> <span class="st">&quot;status&quot;</span><span class="op">:</span> <span class="kw">map</span><span class="op">[</span><span class="dt">bool</span><span class="op">]</span><span class="dt">string</span><span class="op">{</span><span class="ot">true</span><span class="op">:</span> <span class="st">&quot;ready&quot;</span><span class="op">,</span> <span class="ot">false</span><span class="op">:</span> <span class="st">&quot;not_ready&quot;</span><span class="op">}[</span>allOK<span class="op">]})</span></span>
 <span id="cb35-73"><a href="#cb35-73" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="86-yaml-prometheus-scrape-config-for-all-services">8.6 YAML:
+<h3 id="yaml-prometheus-scrape-config-for-all-services">8.6 YAML:
 Prometheus Scrape Config for All Services</h3>
 <div class="sourceCode" id="cb36"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co"># prometheus/scrape_config.yaml</span></span>
@@ -3285,19 +3241,19 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb36-1"><a href=
 <span id="cb36-76"><a href="#cb36-76" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">source_labels</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">__meta_kubernetes_pod_label_app</span><span class="kw">]</span></span>
 <span id="cb36-77"><a href="#cb36-77" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">target_label</span><span class="kw">:</span><span class="at"> service_name</span></span></code></pre></div>
 <hr />
-<h2 id="9-digitalvasicratelimiter">9.
+<h2 id="digital.vasic.ratelimiter">9.
 <code>digital.vasic.ratelimiter</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/ratelimiter</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/ratelimiter v1.x.x</code></p>
-<h3 id="91-purpose">9.1 Purpose</h3>
+<code>digital.vasic/ratelimiter v1.0.9</code></p>
+<h3 id="purpose-7">9.1 Purpose</h3>
 <p><code>digital.vasic.ratelimiter</code> implements distributed
 token-bucket and fixed-window rate limiting backed by Redis. In
 HelixTerminator it protects the API Gateway (per-user, per-IP,
 per-endpoint limits), the SSH Proxy (per-user concurrent connection
 limits), and the Auth Service (brute-force login protection).</p>
-<h3 id="92-go-rate-limiter-initialization">9.2 Go: Rate Limiter
+<h3 id="go-rate-limiter-initialization">9.2 Go: Rate Limiter
 Initialization</h3>
 <div class="sourceCode" id="cb37"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/ratelimit/ratelimit.go</span></span>
@@ -3355,7 +3311,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb37-1"><a href="#cb
 <span id="cb37-53"><a href="#cb37-53" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb37-54"><a href="#cb37-54" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">&amp;</span>Limiter<span class="op">{</span>rl<span class="op">:</span> rl<span class="op">,</span> logger<span class="op">:</span> logger<span class="op">},</span> <span class="ot">nil</span></span>
 <span id="cb37-55"><a href="#cb37-55" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="93-go-middleware-integration-with-gin">9.3 Go: Middleware
+<h3 id="go-middleware-integration-with-gin">9.3 Go: Middleware
 Integration with Gin</h3>
 <div class="sourceCode" id="cb38"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/api-gateway/internal/middleware/ratelimit_middleware.go</span></span>
@@ -3446,7 +3402,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb38-1"><a href="#cb
 <span id="cb38-86"><a href="#cb38-86" aria-hidden="true" tabindex="-1"></a>        c<span class="op">.</span>Next<span class="op">()</span></span>
 <span id="cb38-87"><a href="#cb38-87" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb38-88"><a href="#cb38-88" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="94-go-auth-brute-force-protection">9.4 Go: Auth Brute-Force
+<h3 id="go-auth-brute-force-protection">9.4 Go: Auth Brute-Force
 Protection</h3>
 <div class="sourceCode" id="cb39"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/auth/internal/handler/brute_force.go</span></span>
@@ -3485,7 +3441,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb39-1"><a href="#cb
 <span id="cb39-34"><a href="#cb39-34" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb39-35"><a href="#cb39-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result<span class="op">.</span>Allowed<span class="op">,</span> result<span class="op">.</span>ResetAt<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb39-36"><a href="#cb39-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="95-go-dynamic-rate-limit-adjustment">9.5 Go: Dynamic Rate Limit
+<h3 id="go-dynamic-rate-limit-adjustment">9.5 Go: Dynamic Rate Limit
 Adjustment</h3>
 <div class="sourceCode" id="cb40"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/api-gateway/internal/ratelimit/dynamic.go</span></span>
@@ -3528,18 +3484,18 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb40-1"><a href="#cb
 <span id="cb40-38"><a href="#cb40-38" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb40-39"><a href="#cb40-39" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="10-digitalvasicrecovery">10.
+<h2 id="digital.vasic.recovery">10.
 <code>digital.vasic.recovery</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/recovery</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/recovery v1.x.x</code></p>
-<h3 id="101-purpose">10.1 Purpose</h3>
+<code>digital.vasic/recovery v1.2.1</code></p>
+<h3 id="purpose-8">10.1 Purpose</h3>
 <p><code>digital.vasic.recovery</code> provides circuit breaker,
-bulkhead, and timeout patterns built on top of Sony's Gobreaker and the
-<code>digital.vasic</code> ecosystem. It protects HelixTerminator's
+bulkhead, and timeout patterns built on top of Sony’s Gobreaker and the
+<code>digital.vasic</code> ecosystem. It protects HelixTerminator’s
 inter-service calls from cascading failures.</p>
-<h3 id="102-go-circuit-breaker-initialization">10.2 Go: Circuit Breaker
+<h3 id="go-circuit-breaker-initialization">10.2 Go: Circuit Breaker
 Initialization</h3>
 <div class="sourceCode" id="cb41"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/circuitbreaker/circuitbreaker.go</span></span>
@@ -3607,8 +3563,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb41-1"><a href="#cb
 <span id="cb41-63"><a href="#cb41-63" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb41-64"><a href="#cb41-64" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb41-65"><a href="#cb41-65" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="103-go-ssh-proxy--auth-service-with-circuit-breaker">10.3 Go:
-SSH Proxy → Auth Service with Circuit Breaker</h3>
+<h3 id="go-ssh-proxy-auth-service-with-circuit-breaker">10.3 Go: SSH
+Proxy → Auth Service with Circuit Breaker</h3>
 <div class="sourceCode" id="cb42"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/ssh-proxy/internal/auth/auth_client.go</span></span>
 <span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> auth</span>
@@ -3684,7 +3640,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb42-1"><a href="#cb
 <span id="cb42-72"><a href="#cb42-72" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb42-73"><a href="#cb42-73" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> resp<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb42-74"><a href="#cb42-74" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="104-go-bulkhead-pattern">10.4 Go: Bulkhead Pattern</h3>
+<h3 id="go-bulkhead-pattern">10.4 Go: Bulkhead Pattern</h3>
 <div class="sourceCode" id="cb43"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/pkg/shared/bulkhead/bulkhead.go</span></span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> bulkhead</span>
@@ -3724,21 +3680,21 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb43-1"><a href="#cb
 <span id="cb43-36"><a href="#cb43-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fn<span class="op">(</span>ctx<span class="op">)</span></span>
 <span id="cb43-37"><a href="#cb43-37" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="11-digitalvasicconcurrency">11.
+<h2 id="digital.vasic.concurrency">11.
 <code>digital.vasic.concurrency</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/concurrency</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/concurrency v1.x.x</code></p>
-<h3 id="111-purpose">11.1 Purpose</h3>
+<code>digital.vasic/concurrency v1.1.0</code></p>
+<h3 id="purpose-9">11.1 Purpose</h3>
 <p><code>digital.vasic.concurrency</code> provides worker pool
 primitives, semaphores, and errgroup wrappers for structured
 concurrency. In HelixTerminator it is used by the SSH Proxy for
 goroutine pool-managed sessions, the Vault Service for parallel
 encryption operations, and the Terminal Service for fan-out to
 collaboration subscribers.</p>
-<h3 id="112-go-worker-pool-for-ssh-session-management">11.2 Go: Worker
-Pool for SSH Session Management</h3>
+<h3 id="go-worker-pool-for-ssh-session-management">11.2 Go: Worker Pool
+for SSH Session Management</h3>
 <div class="sourceCode" id="cb44"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/ssh-proxy/internal/pool/session_pool.go</span></span>
 <span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> pool</span>
@@ -3791,8 +3747,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb44-1"><a href="#cb
 <span id="cb44-49"><a href="#cb44-49" aria-hidden="true" tabindex="-1"></a>    p<span class="op">.</span>logger<span class="op">.</span>Info<span class="op">(</span><span class="st">&quot;stopping SSH session pool&quot;</span><span class="op">)</span></span>
 <span id="cb44-50"><a href="#cb44-50" aria-hidden="true" tabindex="-1"></a>    p<span class="op">.</span>pool<span class="op">.</span>Stop<span class="op">(</span>ctx<span class="op">)</span></span>
 <span id="cb44-51"><a href="#cb44-51" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="113-go-semaphore-for-concurrent-db-writes">11.3 Go: Semaphore
-for Concurrent DB Writes</h3>
+<h3 id="go-semaphore-for-concurrent-db-writes">11.3 Go: Semaphore for
+Concurrent DB Writes</h3>
 <div class="sourceCode" id="cb45"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/vault/internal/crypto/parallel_encrypt.go</span></span>
 <span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> crypto</span>
@@ -3853,8 +3809,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb45-1"><a href="#cb
 <span id="cb45-57"><a href="#cb45-57" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb45-58"><a href="#cb45-58" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> results<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb45-59"><a href="#cb45-59" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="114-go-errgroup-for-parallel-service-calls">11.4 Go: errgroup
-for Parallel Service Calls</h3>
+<h3 id="go-errgroup-for-parallel-service-calls">11.4 Go: errgroup for
+Parallel Service Calls</h3>
 <div class="sourceCode" id="cb46"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/terminal/internal/handler/collaboration.go</span></span>
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> handler</span>
@@ -3895,13 +3851,13 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb46-1"><a href="#cb
 <span id="cb46-37"><a href="#cb46-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb46-38"><a href="#cb46-38" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="12-digitalvasiccontainers">12.
+<h2 id="digital.vasic.containers">12.
 <code>digital.vasic.containers</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/containers</code><br />
 <strong>Go module:</strong>
-<code>digital.vasic/containers v1.x.x</code></p>
-<h3 id="121-purpose">12.1 Purpose</h3>
+<code>digital.vasic/containers v1.0.5</code></p>
+<h3 id="purpose-10">12.1 Purpose</h3>
 <p><code>digital.vasic.containers</code> abstracts container runtime
 operations (Docker Engine API, Podman socket, Kubernetes exec) behind a
 unified <code>ContainerRuntime</code> interface. In HelixTerminator it
@@ -3913,7 +3869,7 @@ management</li>
 <li>SSH Proxy: <code>container-exec</code> sessions (equivalent to
 <code>docker exec -it</code>)</li>
 </ul>
-<h3 id="122-go-runtime-detection-and-initialization">12.2 Go: Runtime
+<h3 id="go-runtime-detection-and-initialization">12.2 Go: Runtime
 Detection and Initialization</h3>
 <div class="sourceCode" id="cb47"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/container-bridge/internal/runtime/runtime.go</span></span>
@@ -3978,8 +3934,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb47-1"><a href="#cb
 <span id="cb47-60"><a href="#cb47-60" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb47-61"><a href="#cb47-61" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span><span class="op">,</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;container_runtime: no container runtime detected on this host&quot;</span><span class="op">)</span></span>
 <span id="cb47-62"><a href="#cb47-62" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="123-go-container-bridge-service-handler">12.3 Go: Container
-Bridge Service Handler</h3>
+<h3 id="go-container-bridge-service-handler">12.3 Go: Container Bridge
+Service Handler</h3>
 <div class="sourceCode" id="cb48"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/container-bridge/internal/handler/container_handler.go</span></span>
 <span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> handler</span>
@@ -4137,8 +4093,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb48-1"><a href="#cb
 <span id="cb48-154"><a href="#cb48-154" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> err <span class="op">==</span> <span class="ot">nil</span></span>
 <span id="cb48-155"><a href="#cb48-155" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb48-156"><a href="#cb48-156" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="124-flutter-client-integration">12.4 Flutter Client
-Integration</h3>
+<h3 id="flutter-client-integration">12.4 Flutter Client Integration</h3>
 <p>On the Flutter side, container operations are surfaced through the
 <code>ContainerBridgeClient</code>:</p>
 <div class="sourceCode" id="cb49"><pre
@@ -4202,20 +4157,20 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb49-1"><a href=
 <span id="cb49-58"><a href="#cb49-58" aria-hidden="true" tabindex="-1"></a>  <span class="at">const</span> ContainerBridgeException(<span class="kw">this</span><span class="op">.</span>message<span class="op">,</span> <span class="op">{</span>required <span class="kw">this</span><span class="op">.</span>statusCode<span class="op">}</span>);</span>
 <span id="cb49-59"><a href="#cb49-59" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="13-digitalvasicdocs_chain">13.
+<h2 id="digital.vasic.docs_chain">13.
 <code>digital.vasic.docs_chain</code></h2>
 <p><strong>Import path:</strong> <code>digital.vasic/docs_chain</code>
 (CLI tool: <code>docs-chain</code>)<br />
 <strong>Go module:</strong>
-<code>digital.vasic/docs_chain v1.x.x</code></p>
-<h3 id="131-purpose">13.1 Purpose</h3>
+<code>digital.vasic/docs_chain v1.0.3</code></p>
+<h3 id="purpose-11">13.1 Purpose</h3>
 <p><code>digital.vasic.docs_chain</code> is a Salsa-style DAG (Directed
 Acyclic Graph) document dependency engine. It tracks inter-document
 references, validates consistency (e.g., API names referenced in the
 integration spec must match those defined in the API spec), applies
 transforms (Pandoc HTML, WeasyPrint PDF, Pandoc DOCX), and provides CI
 verification commands.</p>
-<h3 id="132-docs-chainyaml--complete-helixterminator-manifest">13.2
+<h3 id="docs-chain.yaml-complete-helixterminator-manifest">13.2
 <code>docs-chain.yaml</code> — Complete HelixTerminator Manifest</h3>
 <div class="sourceCode" id="cb50"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># docs-chain.yaml</span></span>
@@ -4362,7 +4317,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb50-1"><a href=
 <span id="cb50-142"><a href="#cb50-142" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">fail_on_missing_transform</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span><span class="co">  # transforms are optional in dev</span></span>
 <span id="cb50-143"><a href="#cb50-143" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">cache_transforms</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
 <span id="cb50-144"><a href="#cb50-144" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">cache_dir</span><span class="kw">:</span><span class="at"> .docs-chain-cache/</span></span></code></pre></div>
-<h3 id="133-cli-commands-used-in-ci">13.3 CLI Commands Used in CI</h3>
+<h3 id="cli-commands-used-in-ci">13.3 CLI Commands Used in CI</h3>
 <div class="sourceCode" id="cb51"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify document graph integrity — checks for cycles, missing dependencies,</span></span>
 <span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="co"># and broken cross-references. Exit code 0 = pass.</span></span>
@@ -4380,13 +4335,13 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb51-1"><a href=
 <span id="cb51-14"><a href="#cb51-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Watch mode — re-generates affected outputs when source documents change.</span></span>
 <span id="cb51-15"><a href="#cb51-15" aria-hidden="true" tabindex="-1"></a><span class="ex">docs-chain</span> watch <span class="at">--config</span> docs-chain.yaml</span></code></pre></div>
 <hr />
-<h2 id="14-digitalvasicchallenges">14.
+<h2 id="digital.vasic.challenges">14.
 <code>digital.vasic.challenges</code></h2>
 <p><strong>Import path:</strong>
 <code>digital.vasic/challenges</code><br />
-<strong>Go module:</strong>
-<code>digital.vasic/challenges v1.x.x</code></p>
-<h3 id="141-architecture-and-purpose">14.1 Architecture and Purpose</h3>
+<strong>Go module:</strong> <code>digital.vasic/challenges v0.9.2</code>
+(pre-stable; see Appendix H — breaking v1.0.0 pending)</p>
+<h3 id="architecture-and-purpose">14.1 Architecture and Purpose</h3>
 <p><code>digital.vasic.challenges</code> is a structured learning and
 assessment framework. It provides:</p>
 <ul>
@@ -4402,9 +4357,15 @@ challenges</li>
 <p>Within HelixTerminator, challenges power the <strong>SSH Onboarding
 Track</strong> — a gamified learning path that teaches users SSH best
 practices as they use the terminal.</p>
-<h3 id="142-challenge-types-in-helixterminator">14.2 Challenge Types in
+<h3 id="challenge-types-in-helixterminator">14.2 Challenge Types in
 HelixTerminator</h3>
 <table>
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 44%" />
+</colgroup>
 <thead>
 <tr>
 <th>ID</th>
@@ -4458,7 +4419,7 @@ HelixTerminator</h3>
 </tr>
 </tbody>
 </table>
-<h3 id="143-go-challenge-handler">14.3 Go: Challenge Handler</h3>
+<h3 id="go-challenge-handler">14.3 Go: Challenge Handler</h3>
 <div class="sourceCode" id="cb52"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/onboarding/internal/handler/challenge_handler.go</span></span>
 <span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> handler</span>
@@ -4631,10 +4592,10 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb52-1"><a href="#cb
 <span id="cb52-169"><a href="#cb52-169" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">true</span></span>
 <span id="cb52-170"><a href="#cb52-170" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="15-helixqa">15. <code>helixqa</code></h2>
+<h2 id="helixqa">15. <code>helixqa</code></h2>
 <p><strong>Source:</strong> HelixDevelopment<br />
 <strong>Config file:</strong> <code>.helixqa.yaml</code></p>
-<h3 id="151-purpose">15.1 Purpose</h3>
+<h3 id="purpose-12">15.1 Purpose</h3>
 <p><code>helixqa</code> is an AI-driven QA orchestration platform from
 HelixDevelopment. It:</p>
 <ul>
@@ -4644,7 +4605,7 @@ HelixDevelopment. It:</p>
 <li>Aggregates coverage and pushes reports to the HelixQA dashboard</li>
 <li>Integrates with GitHub Actions via first-class workflow steps</li>
 </ul>
-<h3 id="152-complete-helixqayaml-for-helixterminator">15.2 Complete
+<h3 id="complete-.helixqa.yaml-for-helixterminator">15.2 Complete
 <code>.helixqa.yaml</code> for HelixTerminator</h3>
 <div class="sourceCode" id="cb53"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .helixqa.yaml</span></span>
@@ -4762,7 +4723,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb53-1"><a href=
 <span id="cb53-113"><a href="#cb53-113" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> quarantine_cleared</span></span>
 <span id="cb53-114"><a href="#cb53-114" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">email</span><span class="kw">:</span></span>
 <span id="cb53-115"><a href="#cb53-115" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">enabled</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span></code></pre></div>
-<h3 id="153-github-actions-job-for-helixqa">15.3 GitHub Actions Job for
+<h3 id="github-actions-job-for-helixqa">15.3 GitHub Actions Job for
 HelixQA</h3>
 <div class="sourceCode" id="cb54"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .github/workflows/helixqa.yml</span></span>
@@ -4872,10 +4833,10 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb54-1"><a href=
 <span id="cb54-105"><a href="#cb54-105" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">GITHUB_TOKEN</span><span class="kw">:</span><span class="at"> ${{ secrets.GITHUB_TOKEN }}</span></span>
 <span id="cb54-106"><a href="#cb54-106" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">HELIXQA_API_KEY</span><span class="kw">:</span><span class="at"> ${{ secrets.HELIXQA_API_KEY }}</span></span></code></pre></div>
 <hr />
-<h2 id="16-helixtrackrucore">16. <code>helixtrack.ru/core</code></h2>
+<h2 id="helixtrack.rucore">16. <code>helixtrack.ru/core</code></h2>
 <p><strong>Import path:</strong> <code>helixtrack.ru/core</code><br />
-<strong>Go module:</strong> <code>helixtrack.ru/core v1.x.x</code></p>
-<h3 id="161-purpose">16.1 Purpose</h3>
+<strong>Go module:</strong> <code>helixtrack.ru/core v2.1.4</code></p>
+<h3 id="purpose-13">16.1 Purpose</h3>
 <p><code>helixtrack.ru/core</code> is the Helix-Track project management
 SDK. HelixTerminator integrates Helix-Track via the dedicated
 <strong>HelixTrack Bridge Service</strong>
@@ -4886,8 +4847,8 @@ SDK. HelixTerminator integrates Helix-Track via the dedicated
 <li>Provides the Flutter client with a task picker embedded in the
 terminal UI</li>
 </ul>
-<h3 id="162-go-helixtrack-bridge-service-handler">16.2 Go: HelixTrack
-Bridge Service Handler</h3>
+<h3 id="go-helixtrack-bridge-service-handler">16.2 Go: HelixTrack Bridge
+Service Handler</h3>
 <div class="sourceCode" id="cb55"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: helixterm.io/services/helixtrack-bridge/internal/handler/bridge_handler.go</span></span>
 <span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> handler</span>
@@ -5051,8 +5012,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb55-1"><a href="#cb
 <span id="cb55-160"><a href="#cb55-160" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb55-161"><a href="#cb55-161" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb55-162"><a href="#cb55-162" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="163-dartflutter-task-picker-in-terminal-ui">16.3 Dart/Flutter:
-Task Picker in Terminal UI</h3>
+<h3 id="dartflutter-task-picker-in-terminal-ui">16.3 Dart/Flutter: Task
+Picker in Terminal UI</h3>
 <div class="sourceCode" id="cb56"><pre
 class="sourceCode dart"><code class="sourceCode dart"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co">// File: lib/src/helixtrack/task_picker.dart</span></span>
 <span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -5201,7 +5162,7 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb58-1"><a href=
 <span id="cb58-21"><a href="#cb58-21" aria-hidden="true" tabindex="-1"></a>  );</span>
 <span id="cb58-22"><a href="#cb58-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="17-helixconstitution--agentsmd-claudemd-constitutionmd">17.
+<h2 id="helixconstitution-agents.md-claude.md-constitution.md">17.
 HelixConstitution — AGENTS.MD, CLAUDE.MD, Constitution.md</h2>
 <p><strong>Module:</strong>
 <code>github.com/HelixDevelopment/helix-constitution</code>
@@ -5211,16 +5172,25 @@ compliance checks, dependency hygiene rules, package naming conventions,
 test coverage thresholds, and inter-service contract rules.
 HelixTerminator must satisfy every rule in the constitution for CI to
 pass.</p>
-<h3 id="171-helix-depsyaml--helixterminator-dependency-manifest">17.1
+<h3 id="helix-deps.yaml-helixterminator-dependency-manifest">17.1
 <code>helix-deps.yaml</code> — HelixTerminator Dependency Manifest</h3>
 <p>This file lives at the repository root. The
 <code>helix-constitution</code> CI action reads it and verifies that all
 referenced submodule versions exist, licenses are approved, and
 dependency graph is acyclic.</p>
+<blockquote>
+<p>DEFERRED: a few <code>required_by</code> entries below
+(e.g. <code>helixterm.io/services/ssh-key</code>,
+<code>helixterm.io/services/session</code>) predate the CD-3 canonical
+service registry (§1.2) and do not correspond to a service name in it.
+Reconciling every <code>required_by</code> entry against the canonical
+registry is cross-doc CD-3/CD-11 work and is out of scope for this pass;
+flagged rather than silently left inconsistent.</p>
+</blockquote>
 <div class="sourceCode" id="cb59"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="co"># helix-deps.yaml</span></span>
 <span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="co"># HelixTerminator — Helix Dependency Manifest</span></span>
-<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Governed by §11.4.31 of HelixConstitution v2.</span></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Governed by §11.4.31 of HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line).</span></span>
 <span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a><span class="fu">schema_version</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;2.1&quot;</span></span>
 <span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a><span class="fu">project</span><span class="kw">:</span></span>
@@ -5228,7 +5198,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb59-1"><a href=
 <span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">module</span><span class="kw">:</span><span class="at"> helixterm.io</span></span>
 <span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">team</span><span class="kw">:</span><span class="at"> core-platform</span></span>
 <span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">go_version</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;1.25&quot;</span></span>
-<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">constitution_version</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;2.0&quot;</span></span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">constitution_version</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;helixcode-v1.1.0&quot;</span><span class="co">  # pinned commit e6504c2 (git describe: helixcode-v1.1.0-39-ge6504c2); CD-9</span></span>
 <span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">license</span><span class="kw">:</span><span class="at"> AGPL-3.0</span></span>
 <span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a><span class="fu">submodules</span><span class="kw">:</span></span>
@@ -5423,7 +5393,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb59-1"><a href=
 <span id="cb59-203"><a href="#cb59-203" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb59-204"><a href="#cb59-204" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">id</span><span class="kw">:</span><span class="at"> helix_constitution</span></span>
 <span id="cb59-205"><a href="#cb59-205" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">source</span><span class="kw">:</span><span class="at"> github.com/HelixDevelopment/helix-constitution</span></span>
-<span id="cb59-206"><a href="#cb59-206" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">version</span><span class="kw">:</span><span class="at"> v2.0.0</span></span>
+<span id="cb59-206"><a href="#cb59-206" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">version</span><span class="kw">:</span><span class="at"> helixcode-v1.1.0</span><span class="co">  # pinned commit e6504c2 (git describe: helixcode-v1.1.0-39-ge6504c2)</span></span>
 <span id="cb59-207"><a href="#cb59-207" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">import_path</span><span class="kw">:</span><span class="at"> helix-constitution</span></span>
 <span id="cb59-208"><a href="#cb59-208" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">license</span><span class="kw">:</span><span class="at"> Proprietary-Helix</span></span>
 <span id="cb59-209"><a href="#cb59-209" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">required_by</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;ci&quot;</span><span class="kw">]</span></span>
@@ -5477,11 +5447,11 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb59-1"><a href=
 <span id="cb59-257"><a href="#cb59-257" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">no_hardcoded_secrets</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
 <span id="cb59-258"><a href="#cb59-258" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">no_unencrypted_sensitive_fields</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
 <span id="cb59-259"><a href="#cb59-259" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">all_credentials_via_vault</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span></code></pre></div>
-<h3 id="172-agentsmd-for-helixterminator">17.2 <code>AGENTS.MD</code>
-for HelixTerminator</h3>
+<h3 id="agents.md-for-helixterminator">17.2 <code>AGENTS.MD</code> for
+HelixTerminator</h3>
 <div class="sourceCode" id="cb60"><pre
 class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># AGENTS.MD — HelixTerminator</span></span>
-<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a><span class="fu"># Governed by HelixConstitution §3 (AI Agent Rules), v2.0</span></span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a><span class="fu"># Governed by HelixConstitution §3 (AI Agent Rules) (pinned e6504c2, helixcode-v1.1.0 line)</span></span>
 <span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a><span class="fu"># Last updated: 2026-06-28</span></span>
 <span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a><span class="fu">## Identity</span></span>
@@ -5569,14 +5539,14 @@ class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb60-1">
 <span id="cb60-87"><a href="#cb60-87" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`Constitution.md`</span> — full governance rules</span>
 <span id="cb60-88"><a href="#cb60-88" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`helix-deps.yaml`</span> — dependency manifest</span>
 <span id="cb60-89"><a href="#cb60-89" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`docs/10_submodule_integration.md`</span> — this spec</span>
-<span id="cb60-90"><a href="#cb60-90" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`docs/01_architecture.md`</span> — system architecture</span>
-<span id="cb60-91"><a href="#cb60-91" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`docs/02_data_model.md`</span> — database schema</span></code></pre></div>
-<h3 id="173-claudemd-for-helixterminator">17.3 <code>CLAUDE.MD</code>
-for HelixTerminator</h3>
+<span id="cb60-90"><a href="#cb60-90" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`docs/01_core_architecture.md`</span> — system architecture</span>
+<span id="cb60-91"><a href="#cb60-91" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="in">`docs/07_api_and_database.md`</span> — API &amp; database schema (no standalone <span class="in">`02_data_model.md`</span> exists in this corpus)</span></code></pre></div>
+<h3 id="claude.md-for-helixterminator">17.3 <code>CLAUDE.MD</code> for
+HelixTerminator</h3>
 <div class="sourceCode" id="cb61"><pre
 class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu"># CLAUDE.MD — HelixTerminator</span></span>
 <span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a><span class="fu"># Claude-specific rules for operating on the HelixTerminator codebase.</span></span>
-<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a><span class="fu"># Governed by HelixConstitution §3.2 (Claude Rules), v2.0</span></span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a><span class="fu"># Governed by HelixConstitution §3.2 (Claude Rules) (pinned e6504c2, helixcode-v1.1.0 line)</span></span>
 <span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a><span class="fu"># Last updated: 2026-06-28</span></span>
 <span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a><span class="fu">## Persona</span></span>
@@ -5648,7 +5618,7 @@ class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb61-1">
 <span id="cb61-72"><a href="#cb61-72" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span><span class="in">`helixterm.io/pkg/&lt;name&gt;/`</span> — shared internal packages</span>
 <span id="cb61-73"><a href="#cb61-73" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span><span class="in">`digital.vasic.&lt;module&gt;`</span> — submodule public API</span>
 <span id="cb61-74"><a href="#cb61-74" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span><span class="in">`docs/10_submodule_integration.md`</span> — integration reference</span></code></pre></div>
-<h3 id="174-ci-constitution-compliance-check">17.4 CI Constitution
+<h3 id="ci-constitution-compliance-check">17.4 CI Constitution
 Compliance Check</h3>
 <div class="sourceCode" id="cb62"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .github/workflows/constitution-compliance.yml</span></span>
@@ -5680,13 +5650,13 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb62-1"><a href=
 <span id="cb62-27"><a href="#cb62-27" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> actions/cache@v4</span></span>
 <span id="cb62-28"><a href="#cb62-28" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">with</span><span class="kw">:</span></span>
 <span id="cb62-29"><a href="#cb62-29" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">path</span><span class="kw">:</span><span class="at"> ~/.helix/bin</span></span>
-<span id="cb62-30"><a href="#cb62-30" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">key</span><span class="kw">:</span><span class="at"> helix-constitution-v2.0.0</span></span>
+<span id="cb62-30"><a href="#cb62-30" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">key</span><span class="kw">:</span><span class="at"> helix-constitution-helixcode-v1.1.0-ge6504c2</span></span>
 <span id="cb62-31"><a href="#cb62-31" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb62-32"><a href="#cb62-32" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Install helix-constitution CLI</span></span>
 <span id="cb62-33"><a href="#cb62-33" aria-hidden="true" tabindex="-1"></a><span class="fu">        run</span><span class="kw">: </span><span class="ch">|</span></span>
 <span id="cb62-34"><a href="#cb62-34" aria-hidden="true" tabindex="-1"></a>          if [ ! -f ~/.helix/bin/helix-constitution ]; then</span>
 <span id="cb62-35"><a href="#cb62-35" aria-hidden="true" tabindex="-1"></a>            mkdir -p ~/.helix/bin</span>
-<span id="cb62-36"><a href="#cb62-36" aria-hidden="true" tabindex="-1"></a>            curl -sSfL https://releases.helixdevelopment.io/constitution/v2.0.0/helix-constitution-linux-amd64 \</span>
+<span id="cb62-36"><a href="#cb62-36" aria-hidden="true" tabindex="-1"></a>            curl -sSfL https://releases.helixdevelopment.io/constitution/helixcode-v1.1.0-ge6504c2/helix-constitution-linux-amd64 \</span>
 <span id="cb62-37"><a href="#cb62-37" aria-hidden="true" tabindex="-1"></a>              -o ~/.helix/bin/helix-constitution</span>
 <span id="cb62-38"><a href="#cb62-38" aria-hidden="true" tabindex="-1"></a>            chmod +x ~/.helix/bin/helix-constitution</span>
 <span id="cb62-39"><a href="#cb62-39" aria-hidden="true" tabindex="-1"></a>          fi</span>
@@ -5754,11 +5724,16 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb62-1"><a href=
 <span id="cb62-101"><a href="#cb62-101" aria-hidden="true" tabindex="-1"></a>            --project HelixTerminator \</span>
 <span id="cb62-102"><a href="#cb62-102" aria-hidden="true" tabindex="-1"></a>            --job constitution-check \</span>
 <span id="cb62-103"><a href="#cb62-103" aria-hidden="true" tabindex="-1"></a>            --status ${{ job.status }}</span></code></pre></div>
-<h3 id="175-constitution-rules-applicable-to-helixterminator">17.5
+<h3 id="constitution-rules-applicable-to-helixterminator">17.5
 Constitution Rules Applicable to HelixTerminator</h3>
-<p>The following rules from HelixConstitution v2.0 are binding on all
-HelixTerminator code:</p>
+<p>The following rules from HelixConstitution (pinned e6504c2,
+helixcode-v1.1.0 line) are binding on all HelixTerminator code:</p>
 <table>
+<colgroup>
+<col style="width: 7%" />
+<col style="width: 53%" />
+<col style="width: 38%" />
+</colgroup>
 <thead>
 <tr>
 <th>§</th>
@@ -5860,7 +5835,7 @@ HelixTerminator code:</p>
 </tbody>
 </table>
 <hr />
-<h2 id="appendix-a-gowork--workspace-file">Appendix A:
+<h2 id="appendix-a-go.work-workspace-file">Appendix A:
 <code>go.work</code> — Workspace File</h2>
 <p>The Go workspace file enables local development across all submodules
 and services simultaneously, providing module resolution without
@@ -5877,32 +5852,32 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb63-1"><a href="#cb
 <span id="cb63-9"><a href="#cb63-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Root module</span></span>
 <span id="cb63-10"><a href="#cb63-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span></span>
 <span id="cb63-11"><a href="#cb63-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb63-12"><a href="#cb63-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Microservices</span></span>
+<span id="cb63-12"><a href="#cb63-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Microservices (CD-3 canonical 25 — see §1.2 Service Registry)</span></span>
 <span id="cb63-13"><a href="#cb63-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>gateway</span>
 <span id="cb63-14"><a href="#cb63-14" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>auth</span>
 <span id="cb63-15"><a href="#cb63-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>vault</span>
 <span id="cb63-16"><a href="#cb63-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>ssh<span class="op">-</span>proxy</span>
-<span id="cb63-17"><a href="#cb63-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>sftp<span class="op">-</span>proxy</span>
+<span id="cb63-17"><a href="#cb63-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>sftp</span>
 <span id="cb63-18"><a href="#cb63-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>terminal</span>
-<span id="cb63-19"><a href="#cb63-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>host<span class="op">-</span>manager</span>
+<span id="cb63-19"><a href="#cb63-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>host</span>
 <span id="cb63-20"><a href="#cb63-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>user</span>
-<span id="cb63-21"><a href="#cb63-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>team</span>
-<span id="cb63-22"><a href="#cb63-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>workspace<span class="op">-</span>svc</span>
+<span id="cb63-21"><a href="#cb63-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>org</span>
+<span id="cb63-22"><a href="#cb63-22" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>workspace</span>
 <span id="cb63-23"><a href="#cb63-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>audit</span>
 <span id="cb63-24"><a href="#cb63-24" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>analytics</span>
 <span id="cb63-25"><a href="#cb63-25" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>notification</span>
 <span id="cb63-26"><a href="#cb63-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>billing</span>
 <span id="cb63-27"><a href="#cb63-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>ai</span>
-<span id="cb63-28"><a href="#cb63-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>challenge</span>
+<span id="cb63-28"><a href="#cb63-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>pki</span>
 <span id="cb63-29"><a href="#cb63-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>container<span class="op">-</span>bridge</span>
 <span id="cb63-30"><a href="#cb63-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>helixtrack<span class="op">-</span>bridge</span>
-<span id="cb63-31"><a href="#cb63-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>scheduler</span>
-<span id="cb63-32"><a href="#cb63-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>rbac</span>
-<span id="cb63-33"><a href="#cb63-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>secret<span class="op">-</span>manager</span>
-<span id="cb63-34"><a href="#cb63-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>session</span>
+<span id="cb63-31"><a href="#cb63-31" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>health</span>
+<span id="cb63-32"><a href="#cb63-32" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>port<span class="op">-</span>forward</span>
+<span id="cb63-33"><a href="#cb63-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>keychain</span>
+<span id="cb63-34"><a href="#cb63-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>collab</span>
 <span id="cb63-35"><a href="#cb63-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>snippet</span>
-<span id="cb63-36"><a href="#cb63-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>webhook</span>
-<span id="cb63-37"><a href="#cb63-37" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>config<span class="op">-</span>svc</span>
+<span id="cb63-36"><a href="#cb63-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>recording</span>
+<span id="cb63-37"><a href="#cb63-37" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>services<span class="op">/</span>config</span>
 <span id="cb63-38"><a href="#cb63-38" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb63-39"><a href="#cb63-39" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Proto definitions (generated code)</span></span>
 <span id="cb63-40"><a href="#cb63-40" aria-hidden="true" tabindex="-1"></a>    <span class="op">./</span>proto</span>
@@ -5952,7 +5927,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb63-1"><a href="#cb
 <span id="cb63-84"><a href="#cb63-84" aria-hidden="true" tabindex="-1"></a>    helix<span class="op">-</span>constitution        <span class="op">=&gt;</span> <span class="op">./</span>submodules<span class="op">/</span>helixdevelopment<span class="op">/</span>helix<span class="op">-</span>constitution</span>
 <span id="cb63-85"><a href="#cb63-85" aria-hidden="true" tabindex="-1"></a><span class="op">)</span></span></code></pre></div>
 <hr />
-<h2 id="appendix-b-makefile--submodule-targets">Appendix B: Makefile —
+<h2 id="appendix-b-makefile-submodule-targets">Appendix B: Makefile —
 Submodule Targets</h2>
 <div class="sourceCode" id="cb64"><pre
 class="sourceCode makefile"><code class="sourceCode makefile"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Makefile — Submodule management targets</span></span>
@@ -6069,8 +6044,8 @@ class="sourceCode makefile"><code class="sourceCode makefile"><span id="cb64-1">
 <span id="cb64-112"><a href="#cb64-112" aria-hidden="true" tabindex="-1"></a><span class="fu">    fi</span></span></code></pre></div>
 <hr />
 <h2
-id="appendix-c-github-actions--submodule-compliance-workflow">Appendix
-C: GitHub Actions — Submodule Compliance Workflow</h2>
+id="appendix-c-github-actions-submodule-compliance-workflow">Appendix C:
+GitHub Actions — Submodule Compliance Workflow</h2>
 <div class="sourceCode" id="cb65"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .github/workflows/submodule-compliance.yml</span></span>
 <span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a><span class="fu">name</span><span class="kw">:</span><span class="at"> Submodule Compliance</span></span>
@@ -6093,7 +6068,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb65-1"><a href=
 <span id="cb65-19"><a href="#cb65-19" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb65-20"><a href="#cb65-20" aria-hidden="true" tabindex="-1"></a><span class="fu">env</span><span class="kw">:</span></span>
 <span id="cb65-21"><a href="#cb65-21" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">GO_VERSION</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;1.25&quot;</span></span>
-<span id="cb65-22"><a href="#cb65-22" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">HELIX_CONSTITUTION_VERSION</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;2.0.0&quot;</span></span>
+<span id="cb65-22"><a href="#cb65-22" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">HELIX_CONSTITUTION_VERSION</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;1.1.0&quot;</span><span class="co">  # helixcode-v1.1.0 line, pinned commit e6504c2</span></span>
 <span id="cb65-23"><a href="#cb65-23" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb65-24"><a href="#cb65-24" aria-hidden="true" tabindex="-1"></a><span class="fu">jobs</span><span class="kw">:</span></span>
 <span id="cb65-25"><a href="#cb65-25" aria-hidden="true" tabindex="-1"></a><span class="co">  # ── Job 1: Validate submodule versions and manifest ────────────────────────</span></span>
@@ -6111,7 +6086,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb65-1"><a href=
 <span id="cb65-37"><a href="#cb65-37" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Install helix-constitution CLI</span></span>
 <span id="cb65-38"><a href="#cb65-38" aria-hidden="true" tabindex="-1"></a><span class="fu">        run</span><span class="kw">: </span><span class="ch">|</span></span>
 <span id="cb65-39"><a href="#cb65-39" aria-hidden="true" tabindex="-1"></a>          curl -sSfL \</span>
-<span id="cb65-40"><a href="#cb65-40" aria-hidden="true" tabindex="-1"></a>            &quot;https://releases.helixdevelopment.io/constitution/v${HELIX_CONSTITUTION_VERSION}/helix-constitution-linux-amd64&quot; \</span>
+<span id="cb65-40"><a href="#cb65-40" aria-hidden="true" tabindex="-1"></a>            &quot;https://releases.helixdevelopment.io/constitution/helixcode-v${HELIX_CONSTITUTION_VERSION}-ge6504c2/helix-constitution-linux-amd64&quot; \</span>
 <span id="cb65-41"><a href="#cb65-41" aria-hidden="true" tabindex="-1"></a>            -o /usr/local/bin/helix-constitution</span>
 <span id="cb65-42"><a href="#cb65-42" aria-hidden="true" tabindex="-1"></a>          chmod +x /usr/local/bin/helix-constitution</span>
 <span id="cb65-43"><a href="#cb65-43" aria-hidden="true" tabindex="-1"></a>          helix-constitution version</span>
@@ -6314,7 +6289,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb65-1"><a href=
 <span id="cb65-240"><a href="#cb65-240" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Install helix-constitution CLI</span></span>
 <span id="cb65-241"><a href="#cb65-241" aria-hidden="true" tabindex="-1"></a><span class="fu">        run</span><span class="kw">: </span><span class="ch">|</span></span>
 <span id="cb65-242"><a href="#cb65-242" aria-hidden="true" tabindex="-1"></a>          curl -sSfL \</span>
-<span id="cb65-243"><a href="#cb65-243" aria-hidden="true" tabindex="-1"></a>            &quot;https://releases.helixdevelopment.io/constitution/v${HELIX_CONSTITUTION_VERSION}/helix-constitution-linux-amd64&quot; \</span>
+<span id="cb65-243"><a href="#cb65-243" aria-hidden="true" tabindex="-1"></a>            &quot;https://releases.helixdevelopment.io/constitution/helixcode-v${HELIX_CONSTITUTION_VERSION}-ge6504c2/helix-constitution-linux-amd64&quot; \</span>
 <span id="cb65-244"><a href="#cb65-244" aria-hidden="true" tabindex="-1"></a>            -o /usr/local/bin/helix-constitution</span>
 <span id="cb65-245"><a href="#cb65-245" aria-hidden="true" tabindex="-1"></a>          chmod +x /usr/local/bin/helix-constitution</span>
 <span id="cb65-246"><a href="#cb65-246" aria-hidden="true" tabindex="-1"></a></span>
@@ -6381,32 +6356,33 @@ for clarity).</p>
     HT[helixtrack.ru/core]:::submod
     CONST[helix-constitution]:::submod
 
-    %% Services
+    %% Services (node IDs kept stable so edges below don&#39;t need renumbering;
+    %% labels updated to the CD-3 canonical 25-service set, see §1.2)
     GW[gateway]:::service
     AUTHSVC[auth]:::service
     VAULT[vault]:::service
     SSH[ssh-proxy]:::service
-    SFTP[sftp-proxy]:::service
+    SFTP[sftp]:::service
     TERM[terminal]:::service
-    HOSTMGR[host-manager]:::service
+    HOSTMGR[host]:::service
     USER[user]:::service
-    TEAM[team]:::service
-    WS[workspace-svc]:::service
+    TEAM[org]:::service
+    WS[workspace]:::service
     AUDIT[audit]:::service
     ANALYTICS[analytics]:::service
     NOTIF[notification]:::service
     BILLING[billing]:::service
     AI[ai]:::service
-    CHALSVC[challenge]:::service
+    CHALSVC[pki]:::service
     CB[container-bridge]:::service
     HTB[helixtrack-bridge]:::service
-    SCHED[scheduler]:::service
-    RBAC[rbac]:::service
-    SECMGR[secret-manager]:::service
-    SESSION[session]:::service
+    SCHED[health]:::service
+    RBAC[port-forward]:::service
+    SECMGR[keychain]:::service
+    SESSION[collab]:::service
     SNIPPET[snippet]:::service
-    WEBHOOK[webhook]:::service
-    CONFSVC[config-svc]:::service
+    WEBHOOK[recording]:::service
+    CONFSVC[config]:::service
 
     %% Security dependencies
     SEC --&gt; VAULT
@@ -6498,7 +6474,7 @@ for clarity).</p>
     OBS -.-&gt; USER
     OBS -.-&gt; TEAM</code></pre>
 <hr />
-<h2 id="appendix-e-docs-chainyaml-for-helixterminator">Appendix E:
+<h2 id="appendix-e-docs-chain.yaml-for-helixterminator">Appendix E:
 <code>docs-chain.yaml</code> for HelixTerminator</h2>
 <div class="sourceCode" id="cb67"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co"># docs-chain.yaml</span></span>
@@ -6689,6 +6665,11 @@ Testing Matrix</h2>
 that exercise cross-submodule behaviour. All suites run in CI on every
 PR to <code>main</code>.</p>
 <table>
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 37%" />
+<col style="width: 34%" />
+</colgroup>
 <thead>
 <tr>
 <th>Test Suite</th>
@@ -6935,6 +6916,13 @@ Submodule Version Compatibility Matrix</h2>
 <p>The following matrix specifies the minimum and maximum tested
 versions of each submodule against HelixTerminator Go 1.25.</p>
 <table>
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 10%" />
+<col style="width: 9%" />
+<col style="width: 20%" />
+<col style="width: 34%" />
+</colgroup>
 <thead>
 <tr>
 <th>Submodule</th>
@@ -7052,17 +7040,18 @@ versions of each submodule against HelixTerminator Go 1.25.</p>
 </tr>
 <tr>
 <td><code>helix-constitution</code></td>
-<td>v2.0.0</td>
-<td>v2.0.0</td>
+<td>helixcode-v1.1.0</td>
+<td>helixcode-v1.1.0</td>
 <td>—</td>
-<td>Major version locked per policy</td>
+<td>Pinned at commit e6504c2 (CD-9); major version locked per
+policy</td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h2 id="appendix-i-common-integration-pitfalls">Appendix I: Common
 Integration Pitfalls</h2>
-<h3 id="i1-digitalvasicsecurity--key-rotation-race">I.1
+<h3 id="i.1-digital.vasic.security-key-rotation-race">I.1
 <code>digital.vasic.security</code> — Key Rotation Race</h3>
 <p><strong>Problem:</strong> If the Vault Service starts key rotation
 while another goroutine is mid-encryption,
@@ -7079,13 +7068,13 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb69-1"><a href="#cb
 <span id="cb69-7"><a href="#cb69-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb69-8"><a href="#cb69-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">break</span></span>
 <span id="cb69-9"><a href="#cb69-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="i2-digitalvasicauth--token-clock-skew">I.2
+<h3 id="i.2-digital.vasic.auth-token-clock-skew">I.2
 <code>digital.vasic.auth</code> — Token Clock Skew</h3>
 <p><strong>Problem:</strong> JWT validation fails on services whose
 system clocks drift more than 30 seconds relative to the Auth
 Service.</p>
 <p><strong>Solution:</strong> All Kubernetes pods must sync time via the
-node's NTP daemon. The <code>digital.vasic.auth</code> JWT validator
+node’s NTP daemon. The <code>digital.vasic.auth</code> JWT validator
 accepts a configurable <code>ClockSkewTolerance</code> (default 30s).
 Set to 60s only in testing environments:</p>
 <div class="sourceCode" id="cb70"><pre
@@ -7093,7 +7082,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb70-1"><a href="#cb
 <span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>    JWKSEndpoint<span class="op">:</span>       cfg<span class="op">.</span>Auth<span class="op">.</span>JWKSEndpoint<span class="op">,</span></span>
 <span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a>    ClockSkewTolerance<span class="op">:</span> <span class="dv">30</span> <span class="op">*</span> time<span class="op">.</span>Second<span class="op">,</span> <span class="co">// never increase in production</span></span>
 <span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a><span class="op">})</span></span></code></pre></div>
-<h3 id="i3-digitalvasiccache--l2-stampede-on-cold-start">I.3
+<h3 id="i.3-digital.vasic.cache-l2-stampede-on-cold-start">I.3
 <code>digital.vasic.cache</code> — L2 Stampede on Cold Start</h3>
 <p><strong>Problem:</strong> On service restart, the L1 (in-process)
 cache is empty. If many requests arrive simultaneously, all miss L2
@@ -7106,7 +7095,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb71-1"><a href="#cb
 <span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>    L2Client<span class="op">:</span>    redisClient<span class="op">,</span></span>
 <span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>    SingleFlight<span class="op">:</span> <span class="ot">true</span><span class="op">,</span> <span class="co">// deduplicate concurrent misses</span></span>
 <span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a><span class="op">})</span></span></code></pre></div>
-<h3 id="i4-digitalvasicdatabase--unheld-transaction-connections">I.4
+<h3 id="i.4-digital.vasic.database-unheld-transaction-connections">I.4
 <code>digital.vasic.database</code> — Unheld Transaction
 Connections</h3>
 <p><strong>Problem:</strong> If a goroutine acquires a
@@ -7132,7 +7121,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb72-1"><a href="#cb
 <p>The <code>digital.vasic.database</code> <code>WithTransaction</code>
 helper does this automatically — always prefer it over manual
 transaction management.</p>
-<h3 id="i5-digitalvasicmessaging--kafka-producer-requiredacks">I.5
+<h3 id="i.5-digital.vasic.messaging-kafka-producer-requiredacks">I.5
 <code>digital.vasic.messaging</code> — Kafka Producer
 <code>RequiredAcks</code></h3>
 <p><strong>Problem:</strong> Using <code>RequiredAcks: AcksNone</code>
@@ -7142,7 +7131,7 @@ broker restart.</p>
 <code>RequiredAcks: AcksAll</code> with
 <code>MinInSyncReplicas: 2</code> for all audit and compliance topics.
 Analytics topics may use <code>AcksLeader</code>.</p>
-<h3 id="i6-digitalvasicrecovery--circuit-breaker-state-not-shared">I.6
+<h3 id="i.6-digital.vasic.recovery-circuit-breaker-state-not-shared">I.6
 <code>digital.vasic.recovery</code> — Circuit Breaker State Not
 Shared</h3>
 <p><strong>Problem:</strong> Each pod maintains its own circuit breaker
@@ -7162,10 +7151,10 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb73-1"><a href="#cb
 <span id="cb73-7"><a href="#cb73-7" aria-hidden="true" tabindex="-1"></a>    HalfOpenProbes<span class="op">:</span> <span class="dv">2</span><span class="op">,</span></span>
 <span id="cb73-8"><a href="#cb73-8" aria-hidden="true" tabindex="-1"></a><span class="op">})</span></span></code></pre></div>
 <h3
-id="i7-digitalvasicconcurrency--worker-pool-blocking-on-shutdown">I.7
+id="i.7-digital.vasic.concurrency-worker-pool-blocking-on-shutdown">I.7
 <code>digital.vasic.concurrency</code> — Worker Pool Blocking on
 Shutdown</h3>
-<p><strong>Problem:</strong> If the worker pool's <code>Stop()</code> is
+<p><strong>Problem:</strong> If the worker pool’s <code>Stop()</code> is
 not called before application shutdown, in-flight tasks may be abandoned
 and goroutines leaked.</p>
 <p><strong>Solution:</strong> Always register the pool with the
@@ -7175,7 +7164,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb74-1"><a href="#cb
 <span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>lifecycle<span class="op">.</span>RegisterShutdown<span class="op">(</span><span class="kw">func</span><span class="op">(</span>ctx context<span class="op">.</span>Context<span class="op">)</span> <span class="dt">error</span> <span class="op">{</span></span>
 <span id="cb74-3"><a href="#cb74-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pool<span class="op">.</span>Stop<span class="op">(</span>ctx<span class="op">)</span></span>
 <span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a><span class="op">})</span></span></code></pre></div>
-<h3 id="i8-helixqa--flaky-tests-blocking-ci">I.8 <code>helixqa</code> —
+<h3 id="i.8-helixqa-flaky-tests-blocking-ci">I.8 <code>helixqa</code> —
 Flaky Tests Blocking CI</h3>
 <p><strong>Problem:</strong> Some integration tests (especially those
 involving SSH session timing) are inherently flaky. Without quarantine,
@@ -7187,12 +7176,20 @@ while keeping it in the test suite for diagnostic runs:</p>
 <div class="sourceCode" id="cb75"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="co">//helixqa:quarantine flaky-test-id=HT-1234 reason=&quot;SSH session timing sensitive&quot;</span></span>
 <span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> TestSSHSessionHandshakeTimeout<span class="op">(</span>t <span class="op">*</span>testing<span class="op">.</span>T<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ...</span></span>
-<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<span id="cb75-3"><a href="#cb75-3" aria-hidden="true" tabindex="-1"></a>    srv <span class="op">:=</span> newTestSSHServer<span class="op">(</span>t<span class="op">,</span> sshServerConfig<span class="op">{</span>HandshakeDelay<span class="op">:</span> <span class="dv">250</span> <span class="op">*</span> time<span class="op">.</span>Millisecond<span class="op">})</span></span>
+<span id="cb75-4"><a href="#cb75-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">defer</span> srv<span class="op">.</span>Close<span class="op">()</span></span>
+<span id="cb75-5"><a href="#cb75-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb75-6"><a href="#cb75-6" aria-hidden="true" tabindex="-1"></a>    _<span class="op">,</span> err <span class="op">:=</span> dialSSHWithTimeout<span class="op">(</span>srv<span class="op">.</span>Addr<span class="op">(),</span> <span class="dv">50</span><span class="op">*</span>time<span class="op">.</span>Millisecond<span class="op">)</span></span>
+<span id="cb75-7"><a href="#cb75-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">==</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb75-8"><a href="#cb75-8" aria-hidden="true" tabindex="-1"></a>        t<span class="op">.</span>Fatal<span class="op">(</span><span class="st">&quot;expected handshake to time out, but dial succeeded&quot;</span><span class="op">)</span></span>
+<span id="cb75-9"><a href="#cb75-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb75-10"><a href="#cb75-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">!</span>errors<span class="op">.</span>Is<span class="op">(</span>err<span class="op">,</span> context<span class="op">.</span>DeadlineExceeded<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb75-11"><a href="#cb75-11" aria-hidden="true" tabindex="-1"></a>        t<span class="op">.</span>Fatalf<span class="op">(</span><span class="st">&quot;expected context.DeadlineExceeded, got: %v&quot;</span><span class="op">,</span> err<span class="op">)</span></span>
+<span id="cb75-12"><a href="#cb75-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb75-13"><a href="#cb75-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
 <p><em>End of HelixTerminator Submodule Integration Specification</em>
 <em>Document ID: doc_10_submodule_integration</em> <em>Version:
 1.0.0</em> <em>Last Updated: 2026-06-28</em> <em>Governed by:
-HelixConstitution v2.0 §11.4.31</em></p>
-</body>
-</html>
+HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line)
+§11.4.31</em></p>

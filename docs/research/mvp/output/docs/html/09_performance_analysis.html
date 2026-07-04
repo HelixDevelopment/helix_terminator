@@ -1,97 +1,3 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>HelixTerminator — 09_performance_analysis</title>
-  <style>
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-      }
-    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-    div.sourceCode
-      { color: #cccccc; background-color: #303030; }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ffcfaf; } /* Alert */
-    code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
-    code span.at { } /* Attribute */
-    code span.bn { color: #dca3a3; } /* BaseN */
-    code span.bu { } /* BuiltIn */
-    code span.cf { color: #f0dfaf; } /* ControlFlow */
-    code span.ch { color: #dca3a3; } /* Char */
-    code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
-    code span.co { color: #7f9f7f; } /* Comment */
-    code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
-    code span.do { color: #7f9f7f; } /* Documentation */
-    code span.dt { color: #dfdfbf; } /* DataType */
-    code span.dv { color: #dcdccc; } /* DecVal */
-    code span.er { color: #c3bf9f; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #c0bed1; } /* Float */
-    code span.fu { color: #efef8f; } /* Function */
-    code span.im { } /* Import */
-    code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
-    code span.kw { color: #f0dfaf; } /* Keyword */
-    code span.op { color: #f0efd0; } /* Operator */
-    code span.ot { color: #efef8f; } /* Other */
-    code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
-    code span.sc { color: #dca3a3; } /* SpecialChar */
-    code span.ss { color: #cc9393; } /* SpecialString */
-    code span.st { color: #cc9393; } /* String */
-    code span.va { } /* Variable */
-    code span.vs { color: #cc9393; } /* VerbatimString */
-    code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
-  </style>
-  <link rel="stylesheet" href="/tmp/helix_style.css" />
-</head>
-<body>
-<header id="title-block-header">
-<h1 class="title">HelixTerminator — 09_performance_analysis</h1>
-</header>
 <h1
 id="helixterminator-performance-analysis-specification">HelixTerminator:
 Performance Analysis Specification</h1>
@@ -111,7 +17,7 @@ Architecture Overview</a></li>
 <li><a href="#3-identified-bottlenecks--danger-zones">Identified
 Bottlenecks &amp; Danger Zones</a></li>
 <li><a href="#4-gap-analysis--whats-missing-vs-production-ready">Gap
-Analysis — What's Missing vs. Production-Ready</a></li>
+Analysis — What’s Missing vs. Production-Ready</a></li>
 <li><a href="#5-database-performance-deep-dive">Database Performance
 Deep-Dive</a></li>
 <li><a href="#6-caching-strategy--cache-architecture">Caching Strategy
@@ -128,15 +34,15 @@ Performance</a></li>
 Performance</a></li>
 <li><a href="#12-danger-zones--security-performance-tradeoffs">Danger
 Zones — Security-Performance Tradeoffs</a></li>
-<li><a href="#13-load-testing-results--benchmarks">Load Testing Results
-&amp; Benchmarks</a></li>
+<li><a href="#13-load-testing-plan--benchmarks">Load Testing Plan &amp;
+Benchmarks</a></li>
 <li><a href="#14-performance-improvement-roadmap">Performance
 Improvement Roadmap</a></li>
 </ol>
 <hr />
-<h2 id="1-performance-architecture-overview">1. Performance Architecture
+<h2 id="performance-architecture-overview">1. Performance Architecture
 Overview</h2>
-<h3 id="11-performance-philosophy">1.1 Performance Philosophy</h3>
+<h3 id="performance-philosophy">1.1 Performance Philosophy</h3>
 <p>HelixTerminator is engineered under a <strong>performance-first,
 correctness-concurrent</strong> philosophy. Every architectural decision
 is evaluated against three axes:</p>
@@ -151,8 +57,17 @@ than p50 as load increases?</li>
 <p>The system targets <strong>millions of requests per second</strong>
 aggregate across its 25 microservices, with a non-negotiable
 <strong>sub-millisecond p50 latency</strong> for all hot-path
-operations. These targets are not aspirational—they are encoded as SLO
-burn-rate alerts and will page on-call engineers if violated.</p>
+operations. The <em>measurement and alerting</em> pipeline for these
+targets is real: they are encoded as SLO burn-rate alerts (§11.4) that
+page on-call engineers when the error budget burns down. However, per
+the gap analysis in §4, the resilience mechanisms required to
+<em>hold</em> these ceilings under adverse conditions — timeouts (§4.8),
+circuit breakers (§4.1), backpressure (§4.5), bulkheads (§4.7), and
+retry budgets (§4.9) — are largely <strong>not yet implemented</strong>.
+Until those gaps close, treat the per-service SLOs in §1.2 as
+<strong>target/aspirational figures the alerting pipeline
+watches</strong>, not as guarantees the system currently enforces
+end-to-end.</p>
 <p><strong>Core tenets:</strong></p>
 <ul>
 <li><strong>Measure before optimising.</strong> Every identified
@@ -170,13 +85,21 @@ synchronous user feedback (audit logging, metrics emission, Kafka
 publishes for non-transactional events) must be off the critical
 path.</li>
 </ul>
-<h3 id="12-slosla-definitions-per-microservice">1.2 SLO/SLA Definitions
-per Microservice</h3>
+<h3 id="slosla-definitions-per-microservice">1.2 SLO/SLA Definitions per
+Microservice</h3>
 <p>All latency SLOs are measured at the <strong>service egress
 point</strong> (not client-perceived), excluding external network
 propagation. Availability SLAs are measured as rolling 30-day
 windows.</p>
-<table>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
 <thead>
 <tr>
 <th>Service</th>
@@ -390,13 +313,21 @@ windows.</p>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>Status: ASPIRATIONAL, not fully ENFORCED.</strong> These are
+the target ceilings the SLO burn-rate alerting (§11.4) is configured
+against. They are not yet backed end-to-end by the resilience mechanisms
+(timeouts, circuit breakers, backpressure) that §4 shows are missing on
+several of these same call paths — see the ENFORCED vs ASPIRATIONAL note
+in §1.1 before citing any row here as a guarantee.</p>
+</blockquote>
 <p><strong>SLA Error Budget Calculation:</strong></p>
 <p>For a 99.99% SLA over 30 days:</p>
 <pre><code>Error budget = (1 - 0.9999) × 30 × 24 × 3600 = 259.2 seconds/month
 Burn rate 1× = exhausted in 30 days
 Burn rate 14.4× = exhausted in 2 days (5-minute window alert threshold)
 Burn rate 6× = exhausted in 5 days (1-hour window alert threshold)</code></pre>
-<h3 id="13-latency-budget-breakdown">1.3 Latency Budget Breakdown</h3>
+<h3 id="latency-budget-breakdown">1.3 Latency Budget Breakdown</h3>
 <p>The end-to-end latency budget for a <strong>typical authenticated API
 request</strong> is decomposed into its constituent stages. Each stage
 has a hard ceiling; exceeding it triggers the circuit breaker for that
@@ -441,9 +372,16 @@ WS Gateway → Client                0.5 ms      4.5 ms
 Nominal hot-path total:            4.5 ms
 Slack to p99 budget:               0.5 ms
 ─────────────────────────────────────────────────────────</code></pre>
-<h3 id="14-throughput-targets-per-service">1.4 Throughput Targets per
+<h3 id="throughput-targets-per-service">1.4 Throughput Targets per
 Service</h3>
 <table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
 <thead>
 <tr>
 <th>Service</th>
@@ -512,7 +450,7 @@ Service</h3>
 </tr>
 </tbody>
 </table>
-<h3 id="15-performance-testing-pyramid">1.5 Performance Testing
+<h3 id="performance-testing-pyramid">1.5 Performance Testing
 Pyramid</h3>
 <pre><code>                    ┌─────────────────────┐
                     │   Chaos Engineering  │  ← 1× per release cycle
@@ -538,6 +476,19 @@ Pyramid</h3>
                │    Unit Micro-Benchmarks    │  ← Every commit (automated)
                │  (func BenchmarkXxx in Go)  │    Critical-path functions
                └─────────────────────────────┘</code></pre>
+<blockquote>
+<p><strong>Status:</strong> Unit Micro-Benchmarks and Integration
+Benchmarks run in CI today (per-commit/per-PR, automated). <strong>Load,
+Stress, Soak, and Chaos Engineering are the <em>planned</em>
+cadence</strong> — no executed run of any of these four tiers has
+produced reported results in this document; §13 is a test plan, not a
+results report (see §13 status note). In particular, the “150% → 300%
+load” stress range shown above is a target ceiling: the only stress data
+available (§7.5) tops out at 150,000 sessions against the
+100,000-session target — i.e. 150%, not 300% — and no soak-test leak
+data or chaos-engineering MTTR/blast-radius findings are reported
+anywhere in this document.</p>
+</blockquote>
 <p><strong>CI Integration:</strong></p>
 <div class="sourceCode" id="cb5"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .github/workflows/bench.yml</span></span>
@@ -568,12 +519,12 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="
 <span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">fail-on-alert</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
 <span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">github-token</span><span class="kw">:</span><span class="at"> ${{ secrets.GITHUB_TOKEN }}</span></span></code></pre></div>
 <hr />
-<h2 id="2-critical-path-analysis">2. Critical Path Analysis</h2>
-<h3 id="21-ssh-connection-establishment-critical-path">2.1 SSH
-Connection Establishment Critical Path</h3>
+<h2 id="critical-path-analysis">2. Critical Path Analysis</h2>
+<h3 id="ssh-connection-establishment-critical-path">2.1 SSH Connection
+Establishment Critical Path</h3>
 <p>The SSH connection establishment path is the most latency-sensitive
-user-facing flow. A user perceives "slow SSH" as the time from clicking
-"Connect" to seeing the first prompt. Target: <strong>&lt; 500
+user-facing flow. A user perceives “slow SSH” as the time from clicking
+“Connect” to seeing the first prompt. Target: <strong>&lt; 500
 ms</strong> for a warm connection, <strong>&lt; 2 s</strong> for a cold
 connection (with new certificate issuance).</p>
 <pre><code>Step 1: Client initiates WebSocket upgrade [0 ms baseline]
@@ -719,8 +670,8 @@ TOTAL COLD PATH (no cert cache, cross-region, 50 ms RTT):
 <span id="cb7-78"><a href="#cb7-78" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-79"><a href="#cb7-79" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> buildSession<span class="op">(</span>req<span class="op">),</span> <span class="ot">nil</span></span>
 <span id="cb7-80"><a href="#cb7-80" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="22-vault-sync-critical-path-crdt-merge--encryption">2.2 Vault
-Sync Critical Path (CRDT Merge + Encryption)</h3>
+<h3 id="vault-sync-critical-path-crdt-merge-encryption">2.2 Vault Sync
+Critical Path (CRDT Merge + Encryption)</h3>
 <p>The vault sync path handles bidirectional synchronisation of
 encrypted vault items using CRDTs (Last-Write-Wins with vector clocks).
 The performance challenge is that every write requires decryption →
@@ -782,7 +733,7 @@ Step 9: Return delta to client [+17 ms]
 TOTAL SYNC PATH (100 items, warm cache):  ~17 ms
 TOTAL SYNC PATH (1000 items, warm cache): ~65 ms
 TOTAL SYNC PATH (cold start, no cache):   ~120 ms</code></pre>
-<h3 id="23-api-gateway-critical-path">2.3 API Gateway Critical Path</h3>
+<h3 id="api-gateway-critical-path">2.3 API Gateway Critical Path</h3>
 <pre><code>Inbound HTTP/2 request arrives [0 ms]
   │
   ▼
@@ -821,7 +772,7 @@ Step 6: Response serialisation [0.2 ms]
   └─ HTTP/2 response write: 0.1 ms
 
 TOTAL API GATEWAY PATH: ~4–8 ms (within 8 ms p95 budget)</code></pre>
-<h3 id="24-websocket-terminal-critical-path">2.4 WebSocket Terminal
+<h3 id="websocket-terminal-critical-path">2.4 WebSocket Terminal
 Critical Path</h3>
 <pre><code>User keypress in Flutter terminal [0 ms]
   │
@@ -861,7 +812,7 @@ Step 7: WebSocket gateway sends to client [0.3 ms]
 TOTAL ROUND-TRIP (intra-DC, excluding remote processing):
   ~1.5 ms overhead (HelixTerminator processing only)
   ~3–5 ms including network (intra-DC)</code></pre>
-<h3 id="25-kafka-consumer-lag-critical-path">2.5 Kafka Consumer Lag
+<h3 id="kafka-consumer-lag-critical-path">2.5 Kafka Consumer Lag
 Critical Path</h3>
 <pre><code>Producer publishes message [T+0]
   ├─ Client serialise (Protobuf): 100 µs
@@ -891,7 +842,7 @@ Consumer lag definition:
   Acceptable lag: &lt; 1,000 messages (&lt; 10 ms at 100k msg/s)
   Warning threshold: 10,000 messages
   Critical threshold: 100,000 messages (signals consumer group falling behind)</code></pre>
-<h3 id="26-database-query-critical-path">2.6 Database Query Critical
+<h3 id="database-query-critical-path">2.6 Database Query Critical
 Path</h3>
 <pre><code>Go service executes query [T+0]
   │
@@ -931,9 +882,9 @@ Step 7: Network return [T+3ms]
 TOTAL HOT PATH (prepared stmt, index hit, 100 rows): ~2–3 ms
 TOTAL COLD PATH (sequential scan, 10M rows): 500–1000 ms</code></pre>
 <hr />
-<h2 id="3-identified-bottlenecks--danger-zones">3. Identified
-Bottlenecks &amp; Danger Zones</h2>
-<h3 id="31-ssh-proxy-goroutine-leaks-in-long-lived-connections">3.1 SSH
+<h2 id="identified-bottlenecks-danger-zones">3. Identified Bottlenecks
+&amp; Danger Zones</h2>
+<h3 id="ssh-proxy-goroutine-leaks-in-long-lived-connections">3.1 SSH
 Proxy: Goroutine Leaks in Long-Lived Connections</h3>
 <p><strong>Description:</strong> Each SSH session uses at minimum 3
 goroutines: one for reading from the SSH channel, one for writing, and
@@ -1115,7 +1066,7 @@ leaked goroutine stack. At 100k sessions/hour churn rate, a 1% leak rate
 = 1,000 leaked goroutines/hour = 8 MB/hour steady-state growth →
 OOMKilled within 24 hours.</p>
 <hr />
-<h3 id="32-ssh-proxy-file-descriptor-exhaustion">3.2 SSH Proxy: File
+<h3 id="ssh-proxy-file-descriptor-exhaustion">3.2 SSH Proxy: File
 Descriptor Exhaustion</h3>
 <p><strong>Description:</strong> Each SSH connection consumes 3–5 file
 descriptors (TCP socket to client, TCP socket to remote host, PTY
@@ -1157,7 +1108,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb17-1"><a href=
 <span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">privileged</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
 <span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">containers</span><span class="kw">:</span></span>
 <span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> ssh-proxy</span></span>
-<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> helixterm/ssh-proxy:latest</span></span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> helixterm/ssh-proxy:1.0.0</span></span>
 <span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">resources</span><span class="kw">:</span></span>
 <span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">requests</span><span class="kw">:</span></span>
 <span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a><span class="at">              </span><span class="fu">cpu</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;4&quot;</span></span>
@@ -1209,11 +1160,11 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb19-1"><a href="#cb
 <span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;soft&quot;</span><span class="op">,</span> rLimit<span class="op">.</span>Cur<span class="op">,</span> <span class="st">&quot;hard&quot;</span><span class="op">,</span> rLimit<span class="op">.</span>Max<span class="op">)</span></span>
 <span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="33-ssh-proxy-tcp-backlog-overflow">3.3 SSH Proxy: TCP Backlog
+<h3 id="ssh-proxy-tcp-backlog-overflow">3.3 SSH Proxy: TCP Backlog
 Overflow</h3>
 <p><strong>Description:</strong> During SSH connection storms (e.g.,
 mass reconnect after network partition), the TCP <code>accept()</code>
-backlog can fill up, causing new connections to be RST'd before the
+backlog can fill up, causing new connections to be RST’d before the
 application even sees them.</p>
 <p><strong>Detection:</strong></p>
 <div class="sourceCode" id="cb20"><pre
@@ -1249,8 +1200,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb21-1"><a href="#cb
 <span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> lc<span class="op">.</span>Listen<span class="op">(</span>context<span class="op">.</span>Background<span class="op">(),</span> <span class="st">&quot;tcp&quot;</span><span class="op">,</span> addr<span class="op">)</span></span>
 <span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="34-database-layer-n1-queries">3.4 Database Layer: N+1
-Queries</h3>
+<h3 id="database-layer-n1-queries">3.4 Database Layer: N+1 Queries</h3>
 <p><strong>Description:</strong> The host listing endpoint in
 <code>host-service</code> was found to execute 1 query to list hosts,
 then N queries to fetch the associated SSH key for each host — one query
@@ -1340,8 +1290,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb23-1"><a href="#cb
 <span id="cb23-60"><a href="#cb23-60" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> results<span class="op">,</span> rows<span class="op">.</span>Err<span class="op">()</span></span>
 <span id="cb23-61"><a href="#cb23-61" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="35-database-layer-connection-pool-starvation">3.5 Database
-Layer: Connection Pool Starvation</h3>
+<h3 id="database-layer-connection-pool-starvation">3.5 Database Layer:
+Connection Pool Starvation</h3>
 <p><strong>Description:</strong> Under high load, all pgx pool
 connections are in use. New requests queue indefinitely (or until
 timeout). This manifests as sudden latency spikes despite PostgreSQL
@@ -1438,7 +1388,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb25-1"><a href="#cb
 <span id="cb25-39"><a href="#cb25-39" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pool<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb25-40"><a href="#cb25-40" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="36-database-layer-lock-contention-on-vault_items">3.6 Database
+<h3 id="database-layer-lock-contention-on-vault_items">3.6 Database
 Layer: Lock Contention on vault_items</h3>
 <p><strong>Description:</strong> The <code>vault_items</code> table uses
 an advisory lock for CRDT merge operations. Under high concurrency (many
@@ -1525,10 +1475,10 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb27-1"><a href="#cb
 <span id="cb27-40"><a href="#cb27-40" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dt">int64</span><span class="op">(</span>h<span class="op">.</span>Sum64<span class="op">())</span></span>
 <span id="cb27-41"><a href="#cb27-41" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="37-database-layer-vacuum-bloat-on-audit_logs">3.7 Database
-Layer: Vacuum Bloat on audit_logs</h3>
+<h3 id="database-layer-vacuum-bloat-on-audit_logs">3.7 Database Layer:
+Vacuum Bloat on audit_logs</h3>
 <p><strong>Description:</strong> The <code>audit_logs</code> table
-receives 500,000+ rows per second under peak load. PostgreSQL's MVCC
+receives 500,000+ rows per second under peak load. PostgreSQL’s MVCC
 writes new row versions for every UPDATE (rare for audit logs, but
 DELETE for retention policy causes massive dead-tuple bloat).</p>
 <p><strong>Detection:</strong></p>
@@ -1578,7 +1528,7 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb29-1"><a href="#
 <span id="cb29-23"><a href="#cb29-23" aria-hidden="true" tabindex="-1"></a><span class="co">-- Run as a scheduled job (scheduler-service)</span></span>
 <span id="cb29-24"><a href="#cb29-24" aria-hidden="true" tabindex="-1"></a><span class="co">-- DROP TABLE audit_logs_2026_03; -- instantaneous, no VACUUM needed</span></span></code></pre></div>
 <hr />
-<h3 id="38-kafka-consumer-lag-under-burst">3.8 Kafka: Consumer Lag Under
+<h3 id="kafka-consumer-lag-under-burst">3.8 Kafka: Consumer Lag Under
 Burst</h3>
 <p><strong>Description:</strong> When SSH connection rate spikes (e.g.,
 after scheduled maintenance window ends and thousands of users
@@ -1671,7 +1621,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb31-1"><a href="#cb
 <span id="cb31-62"><a href="#cb31-62" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb31-63"><a href="#cb31-63" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="39-kafka-rebalancing-storms">3.9 Kafka: Rebalancing Storms</h3>
+<h3 id="kafka-rebalancing-storms">3.9 Kafka: Rebalancing Storms</h3>
 <p><strong>Description:</strong> Frequent Kafka consumer group
 rebalances (triggered by pod restarts, HPA scale-in, or GC pauses
 exceeding <code>max.poll.interval.ms</code>) cause all consumers in the
@@ -1714,7 +1664,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb32-1"><a href="#cb
 <span id="cb32-30"><a href="#cb32-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cfg</span>
 <span id="cb32-31"><a href="#cb32-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="310-kafka-large-message-impact">3.10 Kafka: Large Message
+<h3 id="kafka-large-message-impact">3.10 Kafka: Large Message
 Impact</h3>
 <p><strong>Description:</strong> Terminal session recordings published
 to the <code>terminal.recordings</code> topic can exceed 1 MB when
@@ -1754,8 +1704,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb33-1"><a href="#cb
 <span id="cb33-30"><a href="#cb33-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb33-31"><a href="#cb33-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="311-rabbitmq-queue-depth-explosion-under-ssh-storm">3.11
-RabbitMQ: Queue Depth Explosion Under SSH Storm</h3>
+<h3 id="rabbitmq-queue-depth-explosion-under-ssh-storm">3.11 RabbitMQ:
+Queue Depth Explosion Under SSH Storm</h3>
 <p><strong>Description:</strong> The <code>ssh.connect.requests</code>
 RabbitMQ queue accumulates millions of messages when the SSH proxy
 worker pool is saturated during a connection storm.</p>
@@ -1799,7 +1749,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb35-1"><a href="#cb
 <span id="cb35-30"><a href="#cb35-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> err</span>
 <span id="cb35-31"><a href="#cb35-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="312-redis-hot-key-problem-on-session-tokens">3.12 Redis: Hot Key
+<h3 id="redis-hot-key-problem-on-session-tokens">3.12 Redis: Hot Key
 Problem on Session Tokens</h3>
 <p><strong>Description:</strong> Session tokens are validated on every
 API request. If all requests are for the same (or few) user sessions, a
@@ -1858,8 +1808,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb37-1"><a href="#cb
 <span id="cb37-43"><a href="#cb37-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sess<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb37-44"><a href="#cb37-44" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="313-redis-lua-script-blocking">3.13 Redis: Lua Script
-Blocking</h3>
+<h3 id="redis-lua-script-blocking">3.13 Redis: Lua Script Blocking</h3>
 <p><strong>Description:</strong> Distributed rate limiter Lua scripts
 block the Redis event loop for the duration of their execution. Scripts
 exceeding 5 ms block all other Redis commands.</p>
@@ -1869,7 +1818,7 @@ Bucket:</strong></p>
 principle: execute Lua only once per 100ms window (batched updates)
 rather than on every request.</p>
 <hr />
-<h3 id="314-api-gateway-jwt-verification-cpu-cost">3.14 API Gateway: JWT
+<h3 id="api-gateway-jwt-verification-cpu-cost">3.14 API Gateway: JWT
 Verification CPU Cost</h3>
 <p><strong>Description:</strong> Under 500,000 req/s, JWT verification
 using RS256 (RSA-2048) costs ~2 ms per verification and saturates 4 CPU
@@ -1981,11 +1930,11 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb39-1"><a href="#cb
 <span id="cb39-30"><a href="#cb39-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
 <span id="cb39-31"><a href="#cb39-31" aria-hidden="true" tabindex="-1"></a><span class="co">// Result: 380 ns/op, 2 allocs/op</span></span></code></pre></div>
 <hr />
-<h3 id="315-istio-sidecar-proxy-cpu-overhead">3.15 Istio: sidecar Proxy
-CPU Overhead</h3>
+<h3 id="istio-sidecar-proxy-cpu-overhead">3.15 Istio: sidecar Proxy CPU
+Overhead</h3>
 <p><strong>Description:</strong> Each Envoy sidecar intercepts all
 inbound and outbound traffic, adding L7 processing overhead. At high
-request rates, sidecar CPU usage can exceed the application pod's own
+request rates, sidecar CPU usage can exceed the application pod’s own
 CPU.</p>
 <p><strong>Detection:</strong></p>
 <div class="sourceCode" id="cb40"><pre
@@ -2019,24 +1968,37 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb41-1"><a href=
 <span id="cb41-22"><a href="#cb41-22" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">hosts</span><span class="kw">:</span></span>
 <span id="cb41-23"><a href="#cb41-23" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;helixterm/*&quot;</span></span></code></pre></div>
 <hr />
-<h3
-id="316-flutter-client-excessive-terminal-widget-rebuild-cycles">3.16
+<h3 id="flutter-client-excessive-terminal-widget-rebuild-cycles">3.16
 Flutter Client: Excessive Terminal Widget Rebuild Cycles</h3>
 <p><strong>Description:</strong> The terminal widget re-renders on every
 keystroke and every output byte received. At 10,000 characters/second
 output from a chatty remote process, this causes 10,000
-<code>setState</code> calls per second, exceeding Flutter's 60/120 fps
+<code>setState</code> calls per second, exceeding Flutter’s 60/120 fps
 refresh budget.</p>
 <p><strong>Solution:</strong> See Section 10 for full Flutter
 performance analysis.</p>
 <hr />
-<h2 id="4-gap-analysis--whats-missing-vs-production-ready">4. Gap
-Analysis — What's Missing vs. Production-Ready</h2>
-<h3 id="41-missing-circuit-breakers">4.1 Missing Circuit Breakers</h3>
+<h2 id="gap-analysis-whats-missing-vs.-production-ready">4. Gap Analysis
+— What’s Missing vs. Production-Ready</h2>
+<p>Every item below is an <strong>open gap, not a shipped
+mitigation</strong> — none of the resilience patterns in this section
+are implemented today. They directly undercut the SLO ceilings in §1.2:
+a hung downstream call with no timeout (§4.8) cannot honor a documented
+≤2 ms/≤20 ms SLA, and the “not aspirational” alerting language in §1.1
+only covers <em>measurement</em>, not <em>enforcement</em>, of those
+SLOs.</p>
+<h3 id="missing-circuit-breakers">4.1 Missing Circuit Breakers</h3>
 <p>Circuit breakers are absent from the following critical inter-service
 call paths. Without them, a single slow downstream service causes
 cascading timeouts that exhaust all upstream goroutine pools.</p>
 <table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
 <thead>
 <tr>
 <th>Call Path</th>
@@ -2171,11 +2133,17 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb42-1"><a href="#cb
 <span id="cb42-69"><a href="#cb42-69" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result<span class="op">,</span> err</span>
 <span id="cb42-70"><a href="#cb42-70" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="42-missing-read-replicas-for-specific-services">4.2 Missing Read
+<h3 id="missing-read-replicas-for-specific-services">4.2 Missing Read
 Replicas for Specific Services</h3>
 <p>The following services perform read-heavy workloads against primary
 PostgreSQL but have not been configured to use read replicas.</p>
 <table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
 <thead>
 <tr>
 <th>Service</th>
@@ -2264,12 +2232,18 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb43-1"><a href="#cb
 <span id="cb43-43"><a href="#cb43-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> v</span>
 <span id="cb43-44"><a href="#cb43-44" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="43-missing-cache-warming-strategies">4.3 Missing Cache Warming
+<h3 id="missing-cache-warming-strategies">4.3 Missing Cache Warming
 Strategies</h3>
 <p>Upon pod restart or initial deployment, all caches are cold. This
 causes a thundering herd against the database as all pods simultaneously
 miss on every cache key.</p>
 <table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
 <thead>
 <tr>
 <th>Cache</th>
@@ -2373,9 +2347,15 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb44-1"><a href="#cb
 <span id="cb44-58"><a href="#cb44-58" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb44-59"><a href="#cb44-59" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="44-missing-connection-pooling-configurations">4.4 Missing
+<h3 id="missing-connection-pooling-configurations">4.4 Missing
 Connection Pooling Configurations</h3>
 <table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
 <thead>
 <tr>
 <th>Service</th>
@@ -2418,9 +2398,14 @@ Connection Pooling Configurations</h3>
 </tbody>
 </table>
 <hr />
-<h3 id="45-missing-backpressure-mechanisms">4.5 Missing Backpressure
+<h3 id="missing-backpressure-mechanisms">4.5 Missing Backpressure
 Mechanisms</h3>
 <table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
 <thead>
 <tr>
 <th>Component</th>
@@ -2506,9 +2491,15 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb45-1"><a href="#cb
 <span id="cb45-46"><a href="#cb45-46" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb45-47"><a href="#cb45-47" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="46-missing-graceful-degradation-paths">4.6 Missing Graceful
+<h3 id="missing-graceful-degradation-paths">4.6 Missing Graceful
 Degradation Paths</h3>
 <table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
 <thead>
 <tr>
 <th>Feature</th>
@@ -2557,9 +2548,9 @@ Degradation Paths</h3>
 </tbody>
 </table>
 <hr />
-<h3 id="47-missing-bulkhead-patterns">4.7 Missing Bulkhead Patterns</h3>
+<h3 id="missing-bulkhead-patterns">4.7 Missing Bulkhead Patterns</h3>
 <p>Bulkheads isolate resource pools so that a surge in one traffic type
-doesn't starve another.</p>
+doesn’t starve another.</p>
 <div class="sourceCode" id="cb46"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/api-gateway/internal/bulkhead/registry.go</span></span>
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -2584,11 +2575,17 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb46-1"><a href="#cb
 <span id="cb46-21"><a href="#cb46-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb46-22"><a href="#cb46-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h3 id="48-missing-timeout-hierarchies">4.8 Missing Timeout
+<h3 id="missing-timeout-hierarchies">4.8 Missing Timeout
 Hierarchies</h3>
 <p>Every network call must have a timeout. Currently, many services use
 the default Go HTTP client (no timeout = indefinite hang).</p>
 <table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
 <thead>
 <tr>
 <th>Operation</th>
@@ -2655,7 +2652,7 @@ the default Go HTTP client (no timeout = indefinite hang).</p>
 </tbody>
 </table>
 <hr />
-<h3 id="49-missing-retry-budgets">4.9 Missing Retry Budgets</h3>
+<h3 id="missing-retry-budgets">4.9 Missing Retry Budgets</h3>
 <p>Unbounded retries under load amplify failures into retry storms. Each
 service needs a capped retry budget.</p>
 <div class="sourceCode" id="cb47"><pre
@@ -2727,9 +2724,9 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb47-1"><a href="#cb
 <span id="cb47-66"><a href="#cb47-66" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> delay <span class="op">+</span> jitter</span>
 <span id="cb47-67"><a href="#cb47-67" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="5-database-performance-deep-dive">5. Database Performance
+<h2 id="database-performance-deep-dive">5. Database Performance
 Deep-Dive</h2>
-<h3 id="51-postgresql-tuning-parameters">5.1 PostgreSQL Tuning
+<h3 id="postgresql-tuning-parameters">5.1 PostgreSQL Tuning
 Parameters</h3>
 <p>The following configuration is tuned for a <strong>dedicated
 PostgreSQL server</strong> with 64 CPU cores, 256 GB RAM, and NVMe SSD
@@ -2827,7 +2824,7 @@ class="sourceCode ini"><code class="sourceCode ini"><span id="cb48-1"><a href="#
 <span id="cb48-90"><a href="#cb48-90" aria-hidden="true" tabindex="-1"></a><span class="dt">auto_explain.log_buffers </span><span class="ot">=</span><span class="st"> </span><span class="kw">on</span></span>
 <span id="cb48-91"><a href="#cb48-91" aria-hidden="true" tabindex="-1"></a><span class="dt">auto_explain.log_timing </span><span class="ot">=</span><span class="st"> </span><span class="kw">on</span></span>
 <span id="cb48-92"><a href="#cb48-92" aria-hidden="true" tabindex="-1"></a><span class="dt">auto_explain.log_nested_statements </span><span class="ot">=</span><span class="st"> </span><span class="kw">on</span></span></code></pre></div>
-<h3 id="52-index-strategy-for-critical-tables">5.2 Index Strategy for
+<h3 id="index-strategy-for-critical-tables">5.2 Index Strategy for
 Critical Tables</h3>
 <h4 id="vault_items">vault_items</h4>
 <div class="sourceCode" id="cb49"><pre
@@ -2965,7 +2962,7 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb53-1"><a href="#
 <span id="cb53-12"><a href="#cb53-12" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> CONCURRENTLY idx_users_team</span>
 <span id="cb53-13"><a href="#cb53-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">ON</span> users (team_id)</span>
 <span id="cb53-14"><a href="#cb53-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">WHERE</span> deleted_at <span class="kw">IS</span> <span class="kw">NULL</span>;</span></code></pre></div>
-<h3 id="53-partitioning-strategy">5.3 Partitioning Strategy</h3>
+<h3 id="partitioning-strategy">5.3 Partitioning Strategy</h3>
 <div class="sourceCode" id="cb54"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- audit_logs: RANGE partition by month, retain 90 days</span></span>
 <span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a><span class="co">-- Automated partition management via pg_partman</span></span>
@@ -2993,7 +2990,7 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb54-1"><a href="#
 <span id="cb54-24"><a href="#cb54-24" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb54-25"><a href="#cb54-25" aria-hidden="true" tabindex="-1"></a><span class="co">-- Maintenance job (runs nightly at 02:00 UTC via scheduler-service)</span></span>
 <span id="cb54-26"><a href="#cb54-26" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> partman.run_maintenance_proc();</span></code></pre></div>
-<h3 id="54-pgbouncer-configuration">5.4 PgBouncer Configuration</h3>
+<h3 id="pgbouncer-configuration">5.4 PgBouncer Configuration</h3>
 <div class="sourceCode" id="cb55"><pre
 class="sourceCode ini"><code class="sourceCode ini"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="co"># /etc/pgbouncer/pgbouncer.ini</span></span>
 <span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="co"># PgBouncer 1.22+ recommended</span></span>
@@ -3049,8 +3046,7 @@ class="sourceCode ini"><code class="sourceCode ini"><span id="cb55-1"><a href="#
 <span id="cb55-52"><a href="#cb55-52" aria-hidden="true" tabindex="-1"></a><span class="co"># Admin</span></span>
 <span id="cb55-53"><a href="#cb55-53" aria-hidden="true" tabindex="-1"></a><span class="dt">admin_users </span><span class="ot">=</span><span class="st"> pgbouncer_admin</span></span>
 <span id="cb55-54"><a href="#cb55-54" aria-hidden="true" tabindex="-1"></a><span class="dt">stats_users </span><span class="ot">=</span><span class="st"> pgbouncer_stats</span></span></code></pre></div>
-<h3 id="55-read-replica-routing-logic">5.5 Read Replica Routing
-Logic</h3>
+<h3 id="read-replica-routing-logic">5.5 Read Replica Routing Logic</h3>
 <div class="sourceCode" id="cb56"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/vault-service/internal/db/router.go</span></span>
 <span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -3119,7 +3115,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb56-1"><a href="#cb
 <span id="cb56-65"><a href="#cb56-65" aria-hidden="true" tabindex="-1"></a>    <span class="cf">defer</span> cancel<span class="op">()</span></span>
 <span id="cb56-66"><a href="#cb56-66" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pool<span class="op">.</span>Ping<span class="op">(</span>ctx<span class="op">)</span> <span class="op">==</span> <span class="ot">nil</span></span>
 <span id="cb56-67"><a href="#cb56-67" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="56-slow-query-detection">5.6 Slow Query Detection</h3>
+<h3 id="slow-query-detection">5.6 Slow Query Detection</h3>
 <div class="sourceCode" id="cb57"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Top 20 slowest queries by total execution time</span></span>
 <span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span></span>
@@ -3155,7 +3151,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb58-1"><a href=
 <span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> warning</span></span>
 <span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">annotations</span><span class="kw">:</span></span>
 <span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Slow PostgreSQL query detected (mean &gt; 100ms)&quot;</span></span></code></pre></div>
-<h3 id="57-vacuum-strategy">5.7 VACUUM Strategy</h3>
+<h3 id="vacuum-strategy">5.7 VACUUM Strategy</h3>
 <div class="sourceCode" id="cb59"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Per-table autovacuum overrides for high-write tables</span></span>
 <span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="kw">ALTER</span> <span class="kw">TABLE</span> audit_logs <span class="kw">SET</span> (</span>
@@ -3187,7 +3183,7 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb59-1"><a href="#
 <span id="cb59-28"><a href="#cb59-28" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb59-29"><a href="#cb59-29" aria-hidden="true" tabindex="-1"></a><span class="co">-- Freeze old tuples to prevent transaction ID wraparound</span></span>
 <span id="cb59-30"><a href="#cb59-30" aria-hidden="true" tabindex="-1"></a>VACUUM (FREEZE, <span class="kw">ANALYZE</span>, VERBOSE) users;</span></code></pre></div>
-<h3 id="58-explain-analyze-for-critical-queries">5.8 EXPLAIN ANALYZE for
+<h3 id="explain-analyze-for-critical-queries">5.8 EXPLAIN ANALYZE for
 Critical Queries</h3>
 <div class="sourceCode" id="cb60"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Query 1: List vault items for sync (most critical)</span></span>
@@ -3313,9 +3309,9 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb60-1"><a href="#
 <span id="cb60-121"><a href="#cb60-121" aria-hidden="true" tabindex="-1"></a><span class="co">-- Expected: Parallel Seq Scan on recent partitions only</span></span>
 <span id="cb60-122"><a href="#cb60-122" aria-hidden="true" tabindex="-1"></a><span class="co">-- Execution Time: ~50 ms with partitioning  ✓</span></span></code></pre></div>
 <hr />
-<h2 id="6-caching-strategy--cache-architecture">6. Caching Strategy
-&amp; Cache Architecture</h2>
-<h3 id="61-cache-architecture-overview">6.1 Cache Architecture
+<h2 id="caching-strategy-cache-architecture">6. Caching Strategy &amp;
+Cache Architecture</h2>
+<h3 id="cache-architecture-overview">6.1 Cache Architecture
 Overview</h3>
 <p>HelixTerminator uses a three-tier cache hierarchy:</p>
 <pre><code>Request
@@ -3349,7 +3345,7 @@ Overview</h3>
 │  Origin: PostgreSQL / Source of Truth    │
 │  Latency: 1–10 ms                        │
 └─────────────────────────────────────────┘</code></pre>
-<h3 id="62-l1-in-process-cache-ristretto">6.2 L1 In-Process Cache
+<h3 id="l1-in-process-cache-ristretto">6.2 L1 In-Process Cache
 (ristretto)</h3>
 <div class="sourceCode" id="cb62"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/vault-service/internal/cache/l1.go</span></span>
@@ -3414,7 +3410,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb62-1"><a href="#cb
 <span id="cb62-60"><a href="#cb62-60" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> SetHot<span class="op">(</span>key <span class="dt">string</span><span class="op">,</span> value <span class="kw">interface</span><span class="op">{})</span> <span class="op">{</span></span>
 <span id="cb62-61"><a href="#cb62-61" aria-hidden="true" tabindex="-1"></a>    globalHotCache<span class="op">.</span>Store<span class="op">(</span>key<span class="op">,</span> value<span class="op">)</span></span>
 <span id="cb62-62"><a href="#cb62-62" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="63-l2-redis-cluster-configuration">6.3 L2 Redis Cluster
+<h3 id="l2-redis-cluster-configuration">6.3 L2 Redis Cluster
 Configuration</h3>
 <div class="sourceCode" id="cb63"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co"># kubernetes/redis/cluster-config.yaml</span></span>
@@ -3433,7 +3429,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb63-1"><a href=
 <span id="cb63-14"><a href="#cb63-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">spec</span><span class="kw">:</span></span>
 <span id="cb63-15"><a href="#cb63-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">containers</span><span class="kw">:</span></span>
 <span id="cb63-16"><a href="#cb63-16" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> redis</span></span>
-<span id="cb63-17"><a href="#cb63-17" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> redis:7.4-alpine</span></span>
+<span id="cb63-17"><a href="#cb63-17" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">image</span><span class="kw">:</span><span class="at"> redis:8-alpine</span></span>
 <span id="cb63-18"><a href="#cb63-18" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">command</span><span class="kw">:</span></span>
 <span id="cb63-19"><a href="#cb63-19" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> redis-server</span></span>
 <span id="cb63-20"><a href="#cb63-20" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="kw">-</span><span class="at"> /etc/redis/redis.conf</span></span>
@@ -3500,9 +3496,14 @@ cert:{user_id}:{host_id}        → SSH certificate (TTL: cert expiry - 5min)
 ratelimit:{user_id}:{endpoint}  → Rate limit counter (TTL: window duration)
 ws:route:{session_id}           → WebSocket pod routing (TTL: session lifetime)
 singleflight:{key_hash}         → Cache stampede lock (TTL: 5s)</code></pre>
-<h3 id="64-cache-invalidation-strategies">6.4 Cache Invalidation
+<h3 id="cache-invalidation-strategies">6.4 Cache Invalidation
 Strategies</h3>
 <table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
 <thead>
 <tr>
 <th>Data Type</th>
@@ -3572,7 +3573,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb66-1"><a href="#cb
 <span id="cb66-26"><a href="#cb66-26" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb66-27"><a href="#cb66-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb66-28"><a href="#cb66-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="65-cache-stampede-prevention">6.5 Cache Stampede Prevention</h3>
+<h3 id="cache-stampede-prevention">6.5 Cache Stampede Prevention</h3>
 <div class="sourceCode" id="cb67"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/api-gateway/internal/cache/singleflight.go</span></span>
 <span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a><span class="co">// Uses digital.vasic.cache singleflight utilities</span></span>
@@ -3649,7 +3650,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb67-1"><a href="#cb
 <span id="cb67-73"><a href="#cb67-73" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb67-74"><a href="#cb67-74" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> entry<span class="op">.</span>Value<span class="op">,</span> <span class="ot">true</span></span>
 <span id="cb67-75"><a href="#cb67-75" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="66-full-cache-manager">6.6 Full Cache Manager</h3>
+<h3 id="full-cache-manager">6.6 Full Cache Manager</h3>
 <div class="sourceCode" id="cb68"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/vault-service/internal/cache/manager.go</span></span>
 <span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a><span class="co">// Orchestrates L1 + L2 with digital.vasic.cache</span></span>
@@ -3745,9 +3746,9 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb68-1"><a href="#cb
 <span id="cb68-92"><a href="#cb68-92" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> m<span class="op">.</span>Set<span class="op">(</span>ctx<span class="op">,</span> key<span class="op">,</span> result<span class="op">,</span> ttl<span class="op">)</span></span>
 <span id="cb68-93"><a href="#cb68-93" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="7-ssh-proxy-performance-engineering">7. SSH Proxy Performance
+<h2 id="ssh-proxy-performance-engineering">7. SSH Proxy Performance
 Engineering</h2>
-<h3 id="71-goroutine-pool-sizing">7.1 Goroutine Pool Sizing</h3>
+<h3 id="goroutine-pool-sizing">7.1 Goroutine Pool Sizing</h3>
 <div class="sourceCode" id="cb69"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/ssh-proxy/internal/pool/sizing.go</span></span>
 <span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="co">// Uses digital.vasic.concurrency submodule</span></span>
@@ -3785,8 +3786,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb69-1"><a href="#cb
 <span id="cb69-34"><a href="#cb69-34" aria-hidden="true" tabindex="-1"></a>        ScaleInterval<span class="op">:</span>      <span class="dv">10</span> <span class="op">*</span> time<span class="op">.</span>Second<span class="op">,</span></span>
 <span id="cb69-35"><a href="#cb69-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb69-36"><a href="#cb69-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="72-iocopy-vs-custom-buffer-strategy">7.2 io.Copy vs Custom
-Buffer Strategy</h3>
+<h3 id="io.copy-vs-custom-buffer-strategy">7.2 io.Copy vs Custom Buffer
+Strategy</h3>
 <p>The choice of buffer size has significant impact on throughput for
 SSH data forwarding.</p>
 <div class="sourceCode" id="cb70"><pre
@@ -3849,8 +3850,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb70-1"><a href="#cb
 <span id="cb70-57"><a href="#cb70-57" aria-hidden="true" tabindex="-1"></a>    stdBufPool   <span class="op">=</span> sync<span class="op">.</span>Pool<span class="op">{</span>New<span class="op">:</span> <span class="kw">func</span><span class="op">()</span> <span class="kw">interface</span><span class="op">{}</span> <span class="op">{</span> <span class="cf">return</span> <span class="bu">make</span><span class="op">([]</span><span class="dt">byte</span><span class="op">,</span> <span class="dv">32</span><span class="op">*</span><span class="dv">1024</span><span class="op">)</span> <span class="op">}}</span></span>
 <span id="cb70-58"><a href="#cb70-58" aria-hidden="true" tabindex="-1"></a>    largeBufPool <span class="op">=</span> sync<span class="op">.</span>Pool<span class="op">{</span>New<span class="op">:</span> <span class="kw">func</span><span class="op">()</span> <span class="kw">interface</span><span class="op">{}</span> <span class="op">{</span> <span class="cf">return</span> <span class="bu">make</span><span class="op">([]</span><span class="dt">byte</span><span class="op">,</span> <span class="dv">256</span><span class="op">*</span><span class="dv">1024</span><span class="op">)</span> <span class="op">}}</span></span>
 <span id="cb70-59"><a href="#cb70-59" aria-hidden="true" tabindex="-1"></a><span class="op">)</span></span></code></pre></div>
-<h3 id="73-tcp-keep-alive-and-so_keepalive-tuning">7.3 TCP Keep-Alive
-and SO_KEEPALIVE Tuning</h3>
+<h3 id="tcp-keep-alive-and-so_keepalive-tuning">7.3 TCP Keep-Alive and
+SO_KEEPALIVE Tuning</h3>
 <div class="sourceCode" id="cb71"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/ssh-proxy/internal/net/tcp.go</span></span>
 <span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -3896,8 +3897,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb71-1"><a href="#cb
 <span id="cb71-42"><a href="#cb71-42" aria-hidden="true" tabindex="-1"></a>        syscall<span class="op">.</span>SetsockoptInt<span class="op">(</span><span class="dt">int</span><span class="op">(</span>fd<span class="op">),</span> syscall<span class="op">.</span>SOL_SOCKET<span class="op">,</span> syscall<span class="op">.</span>SO_SNDBUF<span class="op">,</span> <span class="dv">256</span><span class="op">*</span><span class="dv">1024</span><span class="op">)</span></span>
 <span id="cb71-43"><a href="#cb71-43" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb71-44"><a href="#cb71-44" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="74-connection-draining-for-zero-downtime-restarts">7.4
-Connection Draining for Zero-Downtime Restarts</h3>
+<h3 id="connection-draining-for-zero-downtime-restarts">7.4 Connection
+Draining for Zero-Downtime Restarts</h3>
 <div class="sourceCode" id="cb72"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/ssh-proxy/internal/server/drain.go</span></span>
 <span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -3953,9 +3954,17 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb72-1"><a href="#cb
 <span id="cb72-52"><a href="#cb72-52" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
 <span id="cb72-53"><a href="#cb72-53" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb72-54"><a href="#cb72-54" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="75-benchmarks-concurrent-ssh-sessions">7.5 Benchmarks:
-Concurrent SSH Sessions</h3>
-<table>
+<h3 id="benchmarks-concurrent-ssh-sessions">7.5 Benchmarks: Concurrent
+SSH Sessions</h3>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
 <thead>
 <tr>
 <th>Concurrent Sessions</th>
@@ -4003,9 +4012,16 @@ Concurrent SSH Sessions</h3>
 </table>
 <p><em>Session mix: 80% interactive (low byte rate), 20% SCP transfer
 (high byte rate)</em></p>
+<blockquote>
+<p><strong>Coverage note:</strong> this table’s max row (150,000
+sessions) is 150% of the 100,000-session target — it does not reach the
+“300% load” ceiling named in the §1.5 Stress Testing tier. No 2–3×
+breaking-point data is reported here; treat 300%-of-target behavior as
+untested.</p>
+</blockquote>
 <hr />
-<h2 id="8-kafka-performance-tuning">8. Kafka Performance Tuning</h2>
-<h3 id="81-producer-configurations">8.1 Producer Configurations</h3>
+<h2 id="kafka-performance-tuning">8. Kafka Performance Tuning</h2>
+<h3 id="producer-configurations">8.1 Producer Configurations</h3>
 <div class="sourceCode" id="cb73"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/audit-service/internal/kafka/producer_config.go</span></span>
 <span id="cb73-2"><a href="#cb73-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -4071,7 +4087,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb73-1"><a href="#cb
 <span id="cb73-62"><a href="#cb73-62" aria-hidden="true" tabindex="-1"></a>    cfg<span class="op">.</span>ChannelBufferSize <span class="op">=</span> <span class="dv">4096</span></span>
 <span id="cb73-63"><a href="#cb73-63" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cfg</span>
 <span id="cb73-64"><a href="#cb73-64" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="82-topic-configuration">8.2 Topic Configuration</h3>
+<h3 id="topic-configuration">8.2 Topic Configuration</h3>
 <div class="sourceCode" id="cb74"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create topics with production-ready configuration</span></span>
 <span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -4110,8 +4126,15 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb74-1"><a href=
 <span id="cb74-35"><a href="#cb74-35" aria-hidden="true" tabindex="-1"></a>  <span class="at">--config</span> max.message.bytes=10485760 <span class="dt">\ </span># 10 MB max <span class="er">(</span><span class="ex">chunked</span> recordings<span class="kw">)</span></span>
 <span id="cb74-36"><a href="#cb74-36" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--config</span> compression.type=lz4 <span class="dt">\</span></span>
 <span id="cb74-37"><a href="#cb74-37" aria-hidden="true" tabindex="-1"></a>  <span class="at">--config</span> segment.bytes=536870912    <span class="co"># 512 MB segments for bulk data</span></span></code></pre></div>
-<h3 id="83-consumer-group-sizing">8.3 Consumer Group Sizing</h3>
+<h3 id="consumer-group-sizing">8.3 Consumer Group Sizing</h3>
 <table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
 <thead>
 <tr>
 <th>Topic</th>
@@ -4159,7 +4182,7 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb74-1"><a href=
 </tr>
 </tbody>
 </table>
-<h3 id="84-consumer-lag-monitoring">8.4 Consumer Lag Monitoring</h3>
+<h3 id="consumer-lag-monitoring">8.4 Consumer Lag Monitoring</h3>
 <div class="sourceCode" id="cb75"><pre
 class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="co"># prometheus/rules/kafka-lag.yaml</span></span>
 <span id="cb75-2"><a href="#cb75-2" aria-hidden="true" tabindex="-1"></a><span class="fu">groups</span><span class="kw">:</span></span>
@@ -4176,14 +4199,14 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb75-1"><a href=
 <span id="cb75-13"><a href="#cb75-13" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">team</span><span class="kw">:</span><span class="at"> platform</span></span>
 <span id="cb75-14"><a href="#cb75-14" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">annotations</span><span class="kw">:</span></span>
 <span id="cb75-15"><a href="#cb75-15" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;audit-service Kafka lag {{ $value }} on audit.events&quot;</span></span>
-<span id="cb75-16"><a href="#cb75-16" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">runbook</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://runbooks.helixterm.io/kafka/consumer-lag&quot;</span></span>
+<span id="cb75-16"><a href="#cb75-16" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">runbook</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://runbooks.helixterminator.io/kafka/consumer-lag&quot;</span></span>
 <span id="cb75-17"><a href="#cb75-17" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb75-18"><a href="#cb75-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> KafkaSSHConsumerLagCritical</span></span>
 <span id="cb75-19"><a href="#cb75-19" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">expr</span><span class="kw">:</span><span class="at"> kafka_consumer_group_lag{topic=&quot;ssh.events&quot;} &gt; 50000</span></span>
 <span id="cb75-20"><a href="#cb75-20" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 5m</span></span>
 <span id="cb75-21"><a href="#cb75-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">labels</span><span class="kw">:</span></span>
 <span id="cb75-22"><a href="#cb75-22" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> critical</span></span></code></pre></div>
-<h3 id="85-kafka-streams-for-session-analytics">8.5 Kafka Streams for
+<h3 id="kafka-streams-for-session-analytics">8.5 Kafka Streams for
 Session Analytics</h3>
 <div class="sourceCode" id="cb76"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/metrics-aggregator/internal/streams/session_analytics.go</span></span>
@@ -4217,11 +4240,19 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb76-1"><a href="#cb
 <span id="cb76-29"><a href="#cb76-29" aria-hidden="true" tabindex="-1"></a>        To<span class="op">(</span><span class="st">&quot;session.metrics&quot;</span><span class="op">)</span></span>
 <span id="cb76-30"><a href="#cb76-30" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="9-api-gateway--rate-limiting-performance">9. API Gateway &amp;
-Rate Limiting Performance</h2>
-<h3 id="91-rate-limiter-algorithm-comparison">9.1 Rate Limiter Algorithm
+<h2 id="api-gateway-rate-limiting-performance">9. API Gateway &amp; Rate
+Limiting Performance</h2>
+<h3 id="rate-limiter-algorithm-comparison">9.1 Rate Limiter Algorithm
 Comparison</h3>
-<table>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
 <thead>
 <tr>
 <th>Algorithm</th>
@@ -4279,7 +4310,7 @@ Comparison</h3>
 Algorithm) — it provides smooth rate limiting without burst artifacts,
 implements efficiently with a single Redis value, and handles
 distributed deployment without coordination overhead.</p>
-<h3 id="92-distributed-rate-limiter-implementation">9.2 Distributed Rate
+<h3 id="distributed-rate-limiter-implementation">9.2 Distributed Rate
 Limiter Implementation</h3>
 <div class="sourceCode" id="cb77"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/api-gateway/internal/ratelimit/gcra.go</span></span>
@@ -4374,7 +4405,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb77-1"><a href="#cb
 <span id="cb77-90"><a href="#cb77-90" aria-hidden="true" tabindex="-1"></a>        RetryAfter<span class="op">:</span> time<span class="op">.</span>Duration<span class="op">(</span>retryAfterNs<span class="op">)</span> <span class="op">*</span> time<span class="op">.</span>Nanosecond<span class="op">,</span></span>
 <span id="cb77-91"><a href="#cb77-91" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span> <span class="ot">nil</span></span>
 <span id="cb77-92"><a href="#cb77-92" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="93-gin-routing-performance-trie-vs-regexp">9.3 Gin Routing
+<h3 id="gin-routing-performance-trie-vs-regexp">9.3 Gin Routing
 Performance: Trie vs Regexp</h3>
 <div class="sourceCode" id="cb78"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/api-gateway/internal/router/bench_test.go</span></span>
@@ -4455,7 +4486,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb79-1"><a href="#cb
 <span id="cb79-40"><a href="#cb79-40" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb79-41"><a href="#cb79-41" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> r</span>
 <span id="cb79-42"><a href="#cb79-42" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="94-http2-multiplexing-configuration">9.4 HTTP/2 Multiplexing
+<h3 id="http2-multiplexing-configuration">9.4 HTTP/2 Multiplexing
 Configuration</h3>
 <div class="sourceCode" id="cb80"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/api-gateway/cmd/main.go</span></span>
@@ -4497,9 +4528,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb80-1"><a href="#cb
 <span id="cb80-37"><a href="#cb80-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> srv</span>
 <span id="cb80-38"><a href="#cb80-38" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="10-flutter-client-performance">10. Flutter Client
-Performance</h2>
-<h3 id="101-widget-rebuild-minimisation">10.1 Widget Rebuild
+<h2 id="flutter-client-performance">10. Flutter Client Performance</h2>
+<h3 id="widget-rebuild-minimisation">10.1 Widget Rebuild
 Minimisation</h3>
 <div class="sourceCode" id="cb81"><pre
 class="sourceCode dart"><code class="sourceCode dart"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="co">// lib/features/ssh/presentation/widgets/terminal_widget.dart</span></span>
@@ -4548,7 +4578,7 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb81-1"><a href=
 <span id="cb81-44"><a href="#cb81-44" aria-hidden="true" tabindex="-1"></a>    );</span>
 <span id="cb81-45"><a href="#cb81-45" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
 <span id="cb81-46"><a href="#cb81-46" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="102-terminal-canvas-performance-custompainter-vs-richtext">10.2
+<h3 id="terminal-canvas-performance-custompainter-vs-richtext">10.2
 Terminal Canvas Performance: CustomPainter vs RichText</h3>
 <div class="sourceCode" id="cb82"><pre
 class="sourceCode dart"><code class="sourceCode dart"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="co">// lib/features/ssh/presentation/widgets/terminal_canvas.dart</span></span>
@@ -4670,7 +4700,7 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb82-1"><a href=
 <span id="cb82-117"><a href="#cb82-117" aria-hidden="true" tabindex="-1"></a>        oldDelegate<span class="op">.</span>cursorPosition <span class="op">!=</span> cursorPosition;</span>
 <span id="cb82-118"><a href="#cb82-118" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
 <span id="cb82-119"><a href="#cb82-119" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="103-bloc-stream-optimisation">10.3 BLoC Stream Optimisation</h3>
+<h3 id="bloc-stream-optimisation">10.3 BLoC Stream Optimisation</h3>
 <div class="sourceCode" id="cb83"><pre
 class="sourceCode dart"><code class="sourceCode dart"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="co">// lib/features/ssh/bloc/terminal_bloc.dart</span></span>
 <span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -4733,7 +4763,7 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb83-1"><a href=
 <span id="cb83-59"><a href="#cb83-59" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="kw">super</span><span class="op">.</span>close();</span>
 <span id="cb83-60"><a href="#cb83-60" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
 <span id="cb83-61"><a href="#cb83-61" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="104-dart-isolates-for-ssh-crypto">10.4 Dart Isolates for SSH
+<h3 id="dart-isolates-for-ssh-crypto">10.4 Dart Isolates for SSH
 Crypto</h3>
 <div class="sourceCode" id="cb84"><pre
 class="sourceCode dart"><code class="sourceCode dart"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a><span class="co">// lib/features/ssh/infrastructure/crypto_isolate.dart</span></span>
@@ -4795,7 +4825,7 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb84-1"><a href=
 <span id="cb84-57"><a href="#cb84-57" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb84-58"><a href="#cb84-58" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span>);</span>
 <span id="cb84-59"><a href="#cb84-59" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="105-app-startup-optimisation">10.5 App Startup Optimisation</h3>
+<h3 id="app-startup-optimisation">10.5 App Startup Optimisation</h3>
 <div class="sourceCode" id="cb85"><pre
 class="sourceCode dart"><code class="sourceCode dart"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="co">// lib/main.dart</span></span>
 <span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -4829,9 +4859,14 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb85-1"><a href=
 <span id="cb85-30"><a href="#cb85-30" aria-hidden="true" tabindex="-1"></a>    ]);</span>
 <span id="cb85-31"><a href="#cb85-31" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span>);</span>
 <span id="cb85-32"><a href="#cb85-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="106-flutter-web-canvaskit-vs-html-renderer">10.6 Flutter Web:
+<h3 id="flutter-web-canvaskit-vs-html-renderer">10.6 Flutter Web:
 CanvasKit vs HTML Renderer</h3>
 <table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
 <thead>
 <tr>
 <th>Metric</th>
@@ -4879,13 +4914,13 @@ class="sourceCode html"><code class="sourceCode html"><span id="cb86-1"><a href=
 <span id="cb86-3"><a href="#cb86-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">window</span><span class="op">.</span><span class="at">flutterConfiguration</span> <span class="op">=</span> {</span>
 <span id="cb86-4"><a href="#cb86-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">renderer</span><span class="op">:</span> <span class="st">&quot;canvaskit&quot;</span><span class="op">,</span></span>
 <span id="cb86-5"><a href="#cb86-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Preload CanvasKit WASM in background while showing splash</span></span>
-<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">canvasKitBaseUrl</span><span class="op">:</span> <span class="st">&quot;https://cdn.helixterm.io/canvaskit/&quot;</span><span class="op">,</span></span>
+<span id="cb86-6"><a href="#cb86-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">canvasKitBaseUrl</span><span class="op">:</span> <span class="st">&quot;https://cdn.helixterminator.io/canvaskit/&quot;</span><span class="op">,</span></span>
 <span id="cb86-7"><a href="#cb86-7" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
 <span id="cb86-8"><a href="#cb86-8" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
 <hr />
-<h2 id="11-observability-for-performance">11. Observability for
+<h2 id="observability-for-performance">11. Observability for
 Performance</h2>
-<h3 id="111-prometheus-metric-definitions">11.1 Prometheus Metric
+<h3 id="prometheus-metric-definitions">11.1 Prometheus Metric
 Definitions</h3>
 <div class="sourceCode" id="cb87"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/api-gateway/internal/metrics/metrics.go</span></span>
@@ -5043,8 +5078,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb87-1"><a href="#cb
 <span id="cb87-153"><a href="#cb87-153" aria-hidden="true" tabindex="-1"></a>        <span class="op">[]</span><span class="dt">string</span><span class="op">{</span><span class="st">&quot;name&quot;</span><span class="op">},</span></span>
 <span id="cb87-154"><a href="#cb87-154" aria-hidden="true" tabindex="-1"></a>    <span class="op">)</span></span>
 <span id="cb87-155"><a href="#cb87-155" aria-hidden="true" tabindex="-1"></a><span class="op">)</span></span></code></pre></div>
-<h3 id="112-opentelemetry-trace-sampling-strategy">11.2 OpenTelemetry
-Trace Sampling Strategy</h3>
+<h3 id="opentelemetry-trace-sampling-strategy">11.2 OpenTelemetry Trace
+Sampling Strategy</h3>
 <div class="sourceCode" id="cb88"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb88-1"><a href="#cb88-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/api-gateway/internal/otel/sampling.go</span></span>
 <span id="cb88-2"><a href="#cb88-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -5120,8 +5155,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb88-1"><a href="#cb
 <span id="cb88-72"><a href="#cb88-72" aria-hidden="true" tabindex="-1"></a>        <span class="op">)),</span></span>
 <span id="cb88-73"><a href="#cb88-73" aria-hidden="true" tabindex="-1"></a>    <span class="op">),</span> <span class="ot">nil</span></span>
 <span id="cb88-74"><a href="#cb88-74" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="113-grafana-dashboard-json-key-panels">11.3 Grafana Dashboard
-JSON (Key Panels)</h3>
+<h3 id="grafana-dashboard-json-key-panels">11.3 Grafana Dashboard JSON
+(Key Panels)</h3>
 <p>The following panels form the core HelixTerminator Platform Overview
 dashboard. Import via Grafana UI → Dashboards → Import → Paste JSON.</p>
 <div class="sourceCode" id="cb89"><pre
@@ -5147,8 +5182,8 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb89-1"><a href=
 <span id="cb89-20"><a href="#cb89-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
 <span id="cb89-21"><a href="#cb89-21" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
 <span id="cb89-22"><a href="#cb89-22" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<h3 id="114-slo-burn-rate-alerting--multi-window-strategy">11.4 SLO Burn
-Rate Alerting — Multi-Window Strategy</h3>
+<h3 id="slo-burn-rate-alerting-multi-window-strategy">11.4 SLO Burn Rate
+Alerting — Multi-Window Strategy</h3>
 <p>Multi-window alerting detects SLO burns at both fast (1 h) and slow
 (6 h / 24 h) rates, eliminating both false positives and delayed
 pages.</p>
@@ -5178,7 +5213,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb90-1"><a href=
 <span id="cb90-23"><a href="#cb90-23" aria-hidden="true" tabindex="-1"></a><span class="fu">          description</span><span class="kw">: </span><span class="ch">|</span></span>
 <span id="cb90-24"><a href="#cb90-24" aria-hidden="true" tabindex="-1"></a>            Error rate {{ $value | humanizePercentage }} over 1h window.</span>
 <span id="cb90-25"><a href="#cb90-25" aria-hidden="true" tabindex="-1"></a>            At this rate the 30-day error budget will be exhausted in ~2 hours.</span>
-<span id="cb90-26"><a href="#cb90-26" aria-hidden="true" tabindex="-1"></a>            Runbook: https://runbooks.helixterm.io/api-gateway/fast-burn</span>
+<span id="cb90-26"><a href="#cb90-26" aria-hidden="true" tabindex="-1"></a>            Runbook: https://runbooks.helixterminator.io/api-gateway/fast-burn</span>
 <span id="cb90-27"><a href="#cb90-27" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb90-28"><a href="#cb90-28" aria-hidden="true" tabindex="-1"></a><span class="co">      # ── PAGE: Slow burn  (6h window)  ───────────────────────────────────</span></span>
 <span id="cb90-29"><a href="#cb90-29" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> APIGatewayErrorBudgetSlowBurn</span></span>
@@ -5197,7 +5232,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb90-1"><a href=
 <span id="cb90-42"><a href="#cb90-42" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;API Gateway burning error budget 6× rate (6h window)&quot;</span></span>
 <span id="cb90-43"><a href="#cb90-43" aria-hidden="true" tabindex="-1"></a><span class="fu">          description</span><span class="kw">: </span><span class="ch">|</span></span>
 <span id="cb90-44"><a href="#cb90-44" aria-hidden="true" tabindex="-1"></a>            Sustained elevated error rate over 6h.</span>
-<span id="cb90-45"><a href="#cb90-45" aria-hidden="true" tabindex="-1"></a>            Runbook: https://runbooks.helixterm.io/api-gateway/slow-burn</span>
+<span id="cb90-45"><a href="#cb90-45" aria-hidden="true" tabindex="-1"></a>            Runbook: https://runbooks.helixterminator.io/api-gateway/slow-burn</span>
 <span id="cb90-46"><a href="#cb90-46" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb90-47"><a href="#cb90-47" aria-hidden="true" tabindex="-1"></a><span class="co">      # ── TICKET: 24h burn rate watch ──────────────────────────────────────</span></span>
 <span id="cb90-48"><a href="#cb90-48" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> APIGatewayErrorBudgetDailyBurn</span></span>
@@ -5305,8 +5340,8 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb90-1"><a href=
 <span id="cb90-150"><a href="#cb90-150" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> warning</span></span>
 <span id="cb90-151"><a href="#cb90-151" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">annotations</span><span class="kw">:</span></span>
 <span id="cb90-152"><a href="#cb90-152" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Kafka consumer lag growing at {{ $value }} msg/s for {{ $labels.consumer_group }}&quot;</span></span></code></pre></div>
-<h3 id="115-continuous-profiling-with-pyroscope">11.5 Continuous
-Profiling with Pyroscope</h3>
+<h3 id="continuous-profiling-with-pyroscope">11.5 Continuous Profiling
+with Pyroscope</h3>
 <div class="sourceCode" id="cb91"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/internal/profiling/profiling.go</span></span>
 <span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a><span class="co">// Integrates Pyroscope (or Grafana Parca) for always-on Go profiling.</span></span>
@@ -5433,7 +5468,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb92-1"><a href=
 <span id="cb92-25"><a href="#cb92-25" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">compactor</span><span class="kw">:</span></span>
 <span id="cb92-26"><a href="#cb92-26" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">enabled</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
 <span id="cb92-27"><a href="#cb92-27" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">blockRetention</span><span class="kw">:</span><span class="at"> 720h</span><span class="co">  # 30 days</span></span></code></pre></div>
-<h3 id="116-otel-tail-sampling-collector-configuration">11.6 OTel
+<h3 id="otel-tail-sampling-collector-configuration">11.6 OTel
 Tail-Sampling Collector Configuration</h3>
 <div class="sourceCode" id="cb93"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/internal/tracing/sampler.go</span></span>
@@ -5517,9 +5552,9 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb94-1"><a href=
 <span id="cb94-30"><a href="#cb94-30" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> probabilistic</span></span>
 <span id="cb94-31"><a href="#cb94-31" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">probabilistic</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="fu">sampling_percentage</span><span class="kw">:</span><span class="at"> </span><span class="dv">1</span><span class="kw">}</span></span></code></pre></div>
 <hr />
-<h2 id="12-danger-zones--security-performance-tradeoffs">12. Danger
-Zones — Security-Performance Tradeoffs</h2>
-<h3 id="121-aes-256-gcm-encryption-overhead">12.1 AES-256-GCM Encryption
+<h2 id="danger-zones-security-performance-tradeoffs">12. Danger Zones —
+Security-Performance Tradeoffs</h2>
+<h3 id="aes-256-gcm-encryption-overhead">12.1 AES-256-GCM Encryption
 Overhead</h3>
 <p>AES-256-GCM is hardware-accelerated on modern x86-64 CPUs via AES-NI
 instructions. At 10,000 req/s with an average payload of 4 KB:</p>
@@ -5620,7 +5655,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb95-1"><a href="#cb
 <span id="cb95-68"><a href="#cb95-68" aria-hidden="true" tabindex="-1"></a><span class="co">//           - key: feature.node.kubernetes.io/cpu-cpuid.AESNI</span></span>
 <span id="cb95-69"><a href="#cb95-69" aria-hidden="true" tabindex="-1"></a><span class="co">//             operator: In</span></span>
 <span id="cb95-70"><a href="#cb95-70" aria-hidden="true" tabindex="-1"></a><span class="co">//             values: [&quot;true&quot;]</span></span></code></pre></div>
-<h3 id="122-argon2id-kdf-cost--brute-force-protection-vs-latency">12.2
+<h3 id="argon2id-kdf-cost-brute-force-protection-vs-latency">12.2
 Argon2id KDF Cost — Brute-Force Protection vs Latency</h3>
 <p>Argon2id is the OWASP-recommended KDF for password hashing. The
 parameters are a direct tradeoff between user latency and brute-force
@@ -5733,6 +5768,13 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb97-1"><a href="#cb
 <span id="cb97-61"><a href="#cb97-61" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> salt<span class="op">,</span> err</span>
 <span id="cb97-62"><a href="#cb97-62" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <table>
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 12%" />
+<col style="width: 14%" />
+<col style="width: 36%" />
+<col style="width: 19%" />
+</colgroup>
 <thead>
 <tr>
 <th>Parameter Set</th>
@@ -5766,7 +5808,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb97-1"><a href="#cb
 </tr>
 </tbody>
 </table>
-<h3 id="123-mtls-handshake-overhead-in-istio-service-mesh">12.3 mTLS
+<h3 id="mtls-handshake-overhead-in-istio-service-mesh">12.3 mTLS
 Handshake Overhead in Istio Service Mesh</h3>
 <div class="sourceCode" id="cb98"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/internal/perf/mtls_bench_test.go</span></span>
@@ -5821,7 +5863,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb99-1"><a href=
 <span id="cb99-30"><a href="#cb99-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">interval</span><span class="kw">:</span><span class="at"> 10s</span></span>
 <span id="cb99-31"><a href="#cb99-31" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">baseEjectionTime</span><span class="kw">:</span><span class="at"> 30s</span></span>
 <span id="cb99-32"><a href="#cb99-32" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">maxEjectionPercent</span><span class="kw">:</span><span class="at"> </span><span class="dv">50</span></span></code></pre></div>
-<h3 id="124-audit-logging-write-amplification">12.4 Audit Logging Write
+<h3 id="audit-logging-write-amplification">12.4 Audit Logging Write
 Amplification</h3>
 <div class="sourceCode" id="cb100"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/audit/internal/writer/async_writer.go</span></span>
@@ -5927,6 +5969,12 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb100-1"><a href="#c
 <span id="cb100-101"><a href="#cb100-101" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <p><strong>Write amplification risk table:</strong></p>
 <table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 20%" />
+<col style="width: 29%" />
+<col style="width: 30%" />
+</colgroup>
 <thead>
 <tr>
 <th>Compliance Mode</th>
@@ -5962,7 +6010,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb100-1"><a href="#c
 </tr>
 </tbody>
 </table>
-<h3 id="125-rbac-policy-evaluation-cost-opa">12.5 RBAC Policy Evaluation
+<h3 id="rbac-policy-evaluation-cost-opa">12.5 RBAC Policy Evaluation
 Cost (OPA)</h3>
 <div class="sourceCode" id="cb101"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb101-1"><a href="#cb101-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/authz/internal/opa/client.go</span></span>
@@ -6041,7 +6089,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb101-1"><a href="#c
 │ Attribute-based (full)        │ 2.00 ms  │ 2.00 cores  │ 10s       │
 │ Cached (any policy, hit)      │ 0.0002ms │ 0.0002 cores│ —         │
 └─────────────────────────────────────────────────────────────────────┘</code></pre>
-<h3 id="126-hsm-signing-latency-for-ssh-certificates">12.6 HSM Signing
+<h3 id="hsm-signing-latency-for-ssh-certificates">12.6 HSM Signing
 Latency for SSH Certificates</h3>
 <pre><code>HSM Operation Latency Profiles (measured on AWS CloudHSM, Thales Luna Network HSM):
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -6123,7 +6171,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb104-1"><a href="#c
 <span id="cb104-54"><a href="#cb104-54" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb104-55"><a href="#cb104-55" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cert<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb104-56"><a href="#cb104-56" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="127-full-text-search-pg_trgm-vs-elasticsearch">12.7 Full-Text
+<h3 id="full-text-search-pg_trgm-vs-elasticsearch">12.7 Full-Text
 Search: pg_trgm vs Elasticsearch</h3>
 <div class="sourceCode" id="cb105"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb105-1"><a href="#cb105-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- PostgreSQL pg_trgm approach</span></span>
@@ -6161,6 +6209,11 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb105-1"><a href="
 <span id="cb105-33"><a href="#cb105-33" aria-hidden="true" tabindex="-1"></a><span class="co">  Rows examined: ~2,400 (trigram filter is very selective)</span></span>
 <span id="cb105-34"><a href="#cb105-34" aria-hidden="true" tabindex="-1"></a><span class="co">*/</span></span></code></pre></div>
 <table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 25%" />
+<col style="width: 42%" />
+</colgroup>
 <thead>
 <tr>
 <th>Dimension</th>
@@ -6187,7 +6240,7 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb105-1"><a href="
 <tr>
 <td>Infrastructure cost</td>
 <td>Included in PostgreSQL</td>
-<td><span class="math inline">300–</span>3,000/mo additional</td>
+<td>$300–$3,000/mo additional</td>
 </tr>
 <tr>
 <td>Relevance ranking</td>
@@ -6215,9 +6268,22 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb105-1"><a href="
 50M items; add Elasticsearch for enterprise accounts exceeding that
 threshold or requiring advanced relevance ranking.</p>
 <hr />
-<h2 id="13-load-testing-results--benchmarks">13. Load Testing Results
-&amp; Benchmarks</h2>
-<h3 id="131-k6-test-scenarios">13.1 k6 Test Scenarios</h3>
+<h2 id="load-testing-plan-benchmarks">13. Load Testing Plan &amp;
+Benchmarks</h2>
+<blockquote>
+<p><strong>Status: DEFERRED (not yet executed).</strong> This section is
+a <strong>test plan</strong>, not a results report: §13.1 is k6
+scenario/threshold <em>configuration</em> that has not been run against
+a live environment, and the §13.2 table is an illustrative target shape
+for critical-function micro-benchmarks, not verified
+<code>go test -bench</code> output from a dated run. No scenario
+pass/fail outcome, achieved throughput, or measured percentile from an
+executed load test is reported anywhere in this section. Do not cite
+these numbers as achieved SLO validation until a dated
+benchmark/load-test run with provenance (commit, environment, timestamp)
+is attached.</p>
+</blockquote>
+<h3 id="k6-test-scenarios">13.1 k6 Test Scenarios</h3>
 <div class="sourceCode" id="cb106"><pre
 class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb106-1"><a href="#cb106-1" aria-hidden="true" tabindex="-1"></a><span class="co">// tests/k6/scenarios/api_gateway_load.js</span></span>
 <span id="cb106-2"><a href="#cb106-2" aria-hidden="true" tabindex="-1"></a><span class="co">// Run: k6 run --out prometheus=ns=helixterm tests/k6/scenarios/api_gateway_load.js</span></span>
@@ -6296,7 +6362,7 @@ class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb10
 <span id="cb106-75"><a href="#cb106-75" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
 <span id="cb106-76"><a href="#cb106-76" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb106-77"><a href="#cb106-77" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">function</span> <span class="fu">apiGatewayScenario</span>() {</span>
-<span id="cb106-78"><a href="#cb106-78" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> BASE <span class="op">=</span> <span class="st">&#39;https://api.helixterm.io&#39;</span><span class="op">;</span></span>
+<span id="cb106-78"><a href="#cb106-78" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> BASE <span class="op">=</span> <span class="st">&#39;https://api.helixterminator.io&#39;</span><span class="op">;</span></span>
 <span id="cb106-79"><a href="#cb106-79" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> token <span class="op">=</span> __ENV<span class="op">.</span><span class="at">TEST_JWT_TOKEN</span><span class="op">;</span></span>
 <span id="cb106-80"><a href="#cb106-80" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb106-81"><a href="#cb106-81" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Typical read-heavy API workload: 80% reads, 15% writes, 5% deletes</span></span>
@@ -6349,7 +6415,7 @@ class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb10
 <span id="cb106-128"><a href="#cb106-128" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb106-129"><a href="#cb106-129" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb106-130"><a href="#cb106-130" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">function</span> <span class="fu">sshConnectionScenario</span>() {</span>
-<span id="cb106-131"><a href="#cb106-131" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> BASE  <span class="op">=</span> <span class="st">&#39;https://api.helixterm.io&#39;</span><span class="op">;</span></span>
+<span id="cb106-131"><a href="#cb106-131" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> BASE  <span class="op">=</span> <span class="st">&#39;https://api.helixterminator.io&#39;</span><span class="op">;</span></span>
 <span id="cb106-132"><a href="#cb106-132" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> token <span class="op">=</span> __ENV<span class="op">.</span><span class="at">TEST_JWT_TOKEN</span><span class="op">;</span></span>
 <span id="cb106-133"><a href="#cb106-133" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb106-134"><a href="#cb106-134" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> startMs <span class="op">=</span> <span class="bu">Date</span><span class="op">.</span><span class="fu">now</span>()<span class="op">;</span></span>
@@ -6376,7 +6442,7 @@ class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb10
 <span id="cb106-155"><a href="#cb106-155" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb106-156"><a href="#cb106-156" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb106-157"><a href="#cb106-157" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">function</span> <span class="fu">vaultSyncScenario</span>() {</span>
-<span id="cb106-158"><a href="#cb106-158" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> BASE  <span class="op">=</span> <span class="st">&#39;https://api.helixterm.io&#39;</span><span class="op">;</span></span>
+<span id="cb106-158"><a href="#cb106-158" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> BASE  <span class="op">=</span> <span class="st">&#39;https://api.helixterminator.io&#39;</span><span class="op">;</span></span>
 <span id="cb106-159"><a href="#cb106-159" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> token <span class="op">=</span> __ENV<span class="op">.</span><span class="at">TEST_JWT_TOKEN</span><span class="op">;</span></span>
 <span id="cb106-160"><a href="#cb106-160" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb106-161"><a href="#cb106-161" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> startMs <span class="op">=</span> <span class="bu">Date</span><span class="op">.</span><span class="fu">now</span>()<span class="op">;</span></span>
@@ -6399,57 +6465,58 @@ class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb10
 <span id="cb106-178"><a href="#cb106-178" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;vault sync &lt;2s&#39;</span><span class="op">:</span>  (r) <span class="kw">=&gt;</span> r<span class="op">.</span><span class="at">timings</span><span class="op">.</span><span class="at">duration</span> <span class="op">&lt;</span> <span class="dv">2000</span><span class="op">,</span></span>
 <span id="cb106-179"><a href="#cb106-179" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
 <span id="cb106-180"><a href="#cb106-180" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<h3 id="132-go-benchmark-table--critical-functions">13.2 Go Benchmark
-Table — Critical Functions</h3>
+<h3 id="go-benchmark-table-critical-functions">13.2 Go Benchmark Table —
+Critical Functions</h3>
 <div class="sourceCode" id="cb107"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb107-1"><a href="#cb107-1" aria-hidden="true" tabindex="-1"></a><span class="co">// helixterm.io/services/benchmarks/critical_path_bench_test.go</span></span>
 <span id="cb107-2"><a href="#cb107-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb107-3"><a href="#cb107-3" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> benchmarks_test</span>
 <span id="cb107-4"><a href="#cb107-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb107-5"><a href="#cb107-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Benchmark results collected on c5.4xlarge (16 vCPU, 32 GB RAM), Go 1.25</span></span>
-<span id="cb107-6"><a href="#cb107-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Command: go test -bench=. -benchmem -benchtime=10s -count=5 ./...</span></span>
-<span id="cb107-7"><a href="#cb107-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb107-8"><a href="#cb107-8" aria-hidden="true" tabindex="-1"></a><span class="co">/*</span></span>
-<span id="cb107-9"><a href="#cb107-9" aria-hidden="true" tabindex="-1"></a><span class="co">┌──────────────────────────────────────────────────────────────────────────────────────────┐</span></span>
-<span id="cb107-10"><a href="#cb107-10" aria-hidden="true" tabindex="-1"></a><span class="co">│ Function                                         │ ns/op  │ allocs/op │ B/op   │ MB/s   │</span></span>
-<span id="cb107-11"><a href="#cb107-11" aria-hidden="true" tabindex="-1"></a><span class="co">├──────────────────────────────────────────────────┼────────┼───────────┼────────┼────────┤</span></span>
-<span id="cb107-12"><a href="#cb107-12" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkJWTValidateRS256-16                     │  42000 │        12 │   1536 │    —   │</span></span>
-<span id="cb107-13"><a href="#cb107-13" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkJWTValidateEd25519-16                   │   3100 │         8 │    896 │    —   │</span></span>
-<span id="cb107-14"><a href="#cb107-14" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkJWTValidateEd25519_Cached-16            │    280 │         2 │    128 │    —   │</span></span>
-<span id="cb107-15"><a href="#cb107-15" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkRateLimiterTokenBucket-16               │    320 │         0 │      0 │    —   │</span></span>
-<span id="cb107-16"><a href="#cb107-16" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkRateLimiterSlidingWindowRedis-16        │  18000 │        14 │    832 │    —   │</span></span>
-<span id="cb107-17"><a href="#cb107-17" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkAES256GCMEncrypt4KB-16                  │    780 │         0 │      0 │  5247  │</span></span>
-<span id="cb107-18"><a href="#cb107-18" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkAES256GCMDecrypt4KB-16                  │    760 │         0 │      0 │  5390  │</span></span>
-<span id="cb107-19"><a href="#cb107-19" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkSSHHandshakeECDSA-16                    │ 820000 │       240 │  32768 │    —   │</span></span>
-<span id="cb107-20"><a href="#cb107-20" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkSSHHandshakeEd25519-16                  │ 180000 │       180 │  24576 │    —   │</span></span>
-<span id="cb107-21"><a href="#cb107-21" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkTerminalDataForward1KB-16               │    420 │         0 │      0 │  2380  │</span></span>
-<span id="cb107-22"><a href="#cb107-22" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkTerminalDataForward64KB-16              │   8200 │         0 │      0 │  8000  │</span></span>
-<span id="cb107-23"><a href="#cb107-23" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkCRDTMerge100Ops-16                      │  15000 │        42 │   4096 │    —   │</span></span>
-<span id="cb107-24"><a href="#cb107-24" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkCRDTMerge10000Ops-16                    │1200000 │      3800 │ 327680 │    —   │</span></span>
-<span id="cb107-25"><a href="#cb107-25" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkRedisGet_Local-16                       │    210 │         4 │    256 │    —   │</span></span>
-<span id="cb107-26"><a href="#cb107-26" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkRedisGet_Remote-16                      │  18000 │         6 │    320 │    —   │</span></span>
-<span id="cb107-27"><a href="#cb107-27" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkPgQueryVaultItems_WithIndex-16          │  85000 │        28 │   3584 │    —   │</span></span>
-<span id="cb107-28"><a href="#cb107-28" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkPgQueryVaultItems_NoIndex-16            │9500000 │        28 │   3584 │    —   │</span></span>
-<span id="cb107-29"><a href="#cb107-29" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkKafkaProducerAsync_Audit-16             │   4200 │        12 │   1024 │    —   │</span></span>
-<span id="cb107-30"><a href="#cb107-30" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkKafkaProducerSync_Terminal-16           │  12000 │        14 │   1280 │    —   │</span></span>
-<span id="cb107-31"><a href="#cb107-31" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkOPAPolicyEval_Simple-16                 │  52000 │        38 │   6144 │    —   │</span></span>
-<span id="cb107-32"><a href="#cb107-32" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkOPAPolicyEval_Cached-16                 │    190 │         2 │    128 │    —   │</span></span>
-<span id="cb107-33"><a href="#cb107-33" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkGinRouter_1000Routes-16                 │   1800 │         4 │    384 │    —   │</span></span>
-<span id="cb107-34"><a href="#cb107-34" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkTLSHandshake_mTLS-16                    │ 950000 │       320 │  49152 │    —   │</span></span>
-<span id="cb107-35"><a href="#cb107-35" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkTLSResumption_SessionTicket-16          │  48000 │        80 │   8192 │    —   │</span></span>
-<span id="cb107-36"><a href="#cb107-36" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkArgon2id_OWASPMin-16                    │10200000│     10200 │ 19922944│   —   │</span></span>
-<span id="cb107-37"><a href="#cb107-37" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkArgon2id_HelixDefault-16                │34500000│     34500 │ 67108864│   —   │</span></span>
-<span id="cb107-38"><a href="#cb107-38" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkSingleflightCacheGet-16                 │    310 │         1 │    128 │    —   │</span></span>
-<span id="cb107-39"><a href="#cb107-39" aria-hidden="true" tabindex="-1"></a><span class="co">└──────────────────────────────────────────────────────────────────────────────────────────┘</span></span>
-<span id="cb107-40"><a href="#cb107-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb107-41"><a href="#cb107-41" aria-hidden="true" tabindex="-1"></a><span class="co">Key observations:</span></span>
-<span id="cb107-42"><a href="#cb107-42" aria-hidden="true" tabindex="-1"></a><span class="co">• Ed25519 JWT validation is 13.5× faster than RS256; always use Ed25519 for new tokens.</span></span>
-<span id="cb107-43"><a href="#cb107-43" aria-hidden="true" tabindex="-1"></a><span class="co">• OPA policy evaluation with caching is 273× faster than uncached; always cache decisions.</span></span>
-<span id="cb107-44"><a href="#cb107-44" aria-hidden="true" tabindex="-1"></a><span class="co">• AES-256-GCM at ~5 GB/s makes encryption cost negligible for payloads &lt; 1 MB.</span></span>
-<span id="cb107-45"><a href="#cb107-45" aria-hidden="true" tabindex="-1"></a><span class="co">• pg_trgm without index is 111× slower — GIN index is mandatory for vault search.</span></span>
-<span id="cb107-46"><a href="#cb107-46" aria-hidden="true" tabindex="-1"></a><span class="co">• CRDT merge scales O(n log n); for 10,000 ops it takes 1.2ms — acceptable for sync.</span></span>
-<span id="cb107-47"><a href="#cb107-47" aria-hidden="true" tabindex="-1"></a><span class="co">*/</span></span></code></pre></div>
-<h3 id="133-flamegraph-analysis-methodology">13.3 Flamegraph Analysis
+<span id="cb107-5"><a href="#cb107-5" aria-hidden="true" tabindex="-1"></a><span class="co">// DEFERRED (not yet executed): illustrative target shape, NOT a verified `go test -bench` run.</span></span>
+<span id="cb107-6"><a href="#cb107-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Assumed environment if/when run: c5.4xlarge (16 vCPU, 32 GB RAM), Go 1.25</span></span>
+<span id="cb107-7"><a href="#cb107-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Command: go test -bench=. -benchmem -benchtime=10s -count=5 ./...</span></span>
+<span id="cb107-8"><a href="#cb107-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-9"><a href="#cb107-9" aria-hidden="true" tabindex="-1"></a><span class="co">/*</span></span>
+<span id="cb107-10"><a href="#cb107-10" aria-hidden="true" tabindex="-1"></a><span class="co">┌──────────────────────────────────────────────────────────────────────────────────────────┐</span></span>
+<span id="cb107-11"><a href="#cb107-11" aria-hidden="true" tabindex="-1"></a><span class="co">│ Function                                         │ ns/op  │ allocs/op │ B/op   │ MB/s   │</span></span>
+<span id="cb107-12"><a href="#cb107-12" aria-hidden="true" tabindex="-1"></a><span class="co">├──────────────────────────────────────────────────┼────────┼───────────┼────────┼────────┤</span></span>
+<span id="cb107-13"><a href="#cb107-13" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkJWTValidateRS256-16                     │  42000 │        12 │   1536 │    —   │</span></span>
+<span id="cb107-14"><a href="#cb107-14" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkJWTValidateEd25519-16                   │   3100 │         8 │    896 │    —   │</span></span>
+<span id="cb107-15"><a href="#cb107-15" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkJWTValidateEd25519_Cached-16            │    280 │         2 │    128 │    —   │</span></span>
+<span id="cb107-16"><a href="#cb107-16" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkRateLimiterTokenBucket-16               │    320 │         0 │      0 │    —   │</span></span>
+<span id="cb107-17"><a href="#cb107-17" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkRateLimiterSlidingWindowRedis-16        │  18000 │        14 │    832 │    —   │</span></span>
+<span id="cb107-18"><a href="#cb107-18" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkAES256GCMEncrypt4KB-16                  │    780 │         0 │      0 │  5247  │</span></span>
+<span id="cb107-19"><a href="#cb107-19" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkAES256GCMDecrypt4KB-16                  │    760 │         0 │      0 │  5390  │</span></span>
+<span id="cb107-20"><a href="#cb107-20" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkSSHHandshakeECDSA-16                    │ 820000 │       240 │  32768 │    —   │</span></span>
+<span id="cb107-21"><a href="#cb107-21" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkSSHHandshakeEd25519-16                  │ 180000 │       180 │  24576 │    —   │</span></span>
+<span id="cb107-22"><a href="#cb107-22" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkTerminalDataForward1KB-16               │    420 │         0 │      0 │  2380  │</span></span>
+<span id="cb107-23"><a href="#cb107-23" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkTerminalDataForward64KB-16              │   8200 │         0 │      0 │  8000  │</span></span>
+<span id="cb107-24"><a href="#cb107-24" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkCRDTMerge100Ops-16                      │  15000 │        42 │   4096 │    —   │</span></span>
+<span id="cb107-25"><a href="#cb107-25" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkCRDTMerge10000Ops-16                    │1200000 │      3800 │ 327680 │    —   │</span></span>
+<span id="cb107-26"><a href="#cb107-26" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkRedisGet_Local-16                       │    210 │         4 │    256 │    —   │</span></span>
+<span id="cb107-27"><a href="#cb107-27" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkRedisGet_Remote-16                      │  18000 │         6 │    320 │    —   │</span></span>
+<span id="cb107-28"><a href="#cb107-28" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkPgQueryVaultItems_WithIndex-16          │  85000 │        28 │   3584 │    —   │</span></span>
+<span id="cb107-29"><a href="#cb107-29" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkPgQueryVaultItems_NoIndex-16            │9500000 │        28 │   3584 │    —   │</span></span>
+<span id="cb107-30"><a href="#cb107-30" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkKafkaProducerAsync_Audit-16             │   4200 │        12 │   1024 │    —   │</span></span>
+<span id="cb107-31"><a href="#cb107-31" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkKafkaProducerSync_Terminal-16           │  12000 │        14 │   1280 │    —   │</span></span>
+<span id="cb107-32"><a href="#cb107-32" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkOPAPolicyEval_Simple-16                 │  52000 │        38 │   6144 │    —   │</span></span>
+<span id="cb107-33"><a href="#cb107-33" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkOPAPolicyEval_Cached-16                 │    190 │         2 │    128 │    —   │</span></span>
+<span id="cb107-34"><a href="#cb107-34" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkGinRouter_1000Routes-16                 │   1800 │         4 │    384 │    —   │</span></span>
+<span id="cb107-35"><a href="#cb107-35" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkTLSHandshake_mTLS-16                    │ 950000 │       320 │  49152 │    —   │</span></span>
+<span id="cb107-36"><a href="#cb107-36" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkTLSResumption_SessionTicket-16          │  48000 │        80 │   8192 │    —   │</span></span>
+<span id="cb107-37"><a href="#cb107-37" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkArgon2id_OWASPMin-16                    │10200000│     10200 │ 19922944│   —   │</span></span>
+<span id="cb107-38"><a href="#cb107-38" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkArgon2id_HelixDefault-16                │34500000│     34500 │ 67108864│   —   │</span></span>
+<span id="cb107-39"><a href="#cb107-39" aria-hidden="true" tabindex="-1"></a><span class="co">│ BenchmarkSingleflightCacheGet-16                 │    310 │         1 │    128 │    —   │</span></span>
+<span id="cb107-40"><a href="#cb107-40" aria-hidden="true" tabindex="-1"></a><span class="co">└──────────────────────────────────────────────────────────────────────────────────────────┘</span></span>
+<span id="cb107-41"><a href="#cb107-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb107-42"><a href="#cb107-42" aria-hidden="true" tabindex="-1"></a><span class="co">Key observations (directional, from the illustrative target shape above — not a verified run):</span></span>
+<span id="cb107-43"><a href="#cb107-43" aria-hidden="true" tabindex="-1"></a><span class="co">• Ed25519 JWT validation is 13.5× faster than RS256; always use Ed25519 for new tokens.</span></span>
+<span id="cb107-44"><a href="#cb107-44" aria-hidden="true" tabindex="-1"></a><span class="co">• OPA policy evaluation with caching is 273× faster than uncached; always cache decisions.</span></span>
+<span id="cb107-45"><a href="#cb107-45" aria-hidden="true" tabindex="-1"></a><span class="co">• AES-256-GCM at ~5 GB/s makes encryption cost negligible for payloads &lt; 1 MB.</span></span>
+<span id="cb107-46"><a href="#cb107-46" aria-hidden="true" tabindex="-1"></a><span class="co">• pg_trgm without index is 111× slower — GIN index is mandatory for vault search.</span></span>
+<span id="cb107-47"><a href="#cb107-47" aria-hidden="true" tabindex="-1"></a><span class="co">• CRDT merge scales O(n log n); for 10,000 ops it takes 1.2ms — acceptable for sync.</span></span>
+<span id="cb107-48"><a href="#cb107-48" aria-hidden="true" tabindex="-1"></a><span class="co">*/</span></span></code></pre></div>
+<h3 id="flamegraph-analysis-methodology">13.3 Flamegraph Analysis
 Methodology</h3>
 <div class="sourceCode" id="cb108"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb108-1"><a href="#cb108-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/usr/bin/env bash</span></span>
@@ -6504,6 +6571,11 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb108-1"><a href
 <p><strong>Flamegraph interpretation guide for
 HelixTerminator:</strong></p>
 <table>
+<colgroup>
+<col style="width: 51%" />
+<col style="width: 29%" />
+<col style="width: 19%" />
+</colgroup>
 <thead>
 <tr>
 <th>Pattern to Look For</th>
@@ -6551,8 +6623,7 @@ structures</td>
 </tr>
 </tbody>
 </table>
-<h3 id="134-capacity-planning-formula">13.4 Capacity Planning
-Formula</h3>
+<h3 id="capacity-planning-formula">13.4 Capacity Planning Formula</h3>
 <pre><code>Capacity planning model for a single microservice:
 
 Given:
@@ -6590,9 +6661,15 @@ Example — API Gateway at 100,000 req/s peak:
   pods_goroutine = ceil(500×36 / 10000) = 2 (irrelevant)
 
   → min_replicas = 36, max_replicas = 108</code></pre>
-<h3 id="135-vertical-vs-horizontal-scale-break-even">13.5 Vertical vs.
-Horizontal Scale Break-Even</h3>
+<h3 id="vertical-vs.-horizontal-scale-break-even">13.5 Vertical
+vs. Horizontal Scale Break-Even</h3>
 <table>
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 32%" />
+<col style="width: 34%" />
+<col style="width: 18%" />
+</colgroup>
 <thead>
 <tr>
 <th>Service</th>
@@ -6641,13 +6718,20 @@ Horizontal Scale Break-Even</h3>
 </tbody>
 </table>
 <hr />
-<h2 id="14-performance-improvement-roadmap">14. Performance Improvement
+<h2 id="performance-improvement-roadmap">14. Performance Improvement
 Roadmap</h2>
-<h3 id="141-quick-wins--1-week-each">14.1 Quick Wins (&lt; 1 Week
-Each)</h3>
+<h3 id="quick-wins-1-week-each">14.1 Quick Wins (&lt; 1 Week Each)</h3>
 <p>Each item is achievable in ≤ 5 engineering-days and has a concrete,
 measurable expected gain.</p>
 <table>
+<colgroup>
+<col style="width: 5%" />
+<col style="width: 22%" />
+<col style="width: 15%" />
+<col style="width: 25%" />
+<col style="width: 13%" />
+<col style="width: 17%" />
+</colgroup>
 <thead>
 <tr>
 <th>#</th>
@@ -6837,9 +6921,16 @@ internal IP</td>
 </tr>
 </tbody>
 </table>
-<h3 id="142-medium-term-improvements-14-weeks-each">14.2 Medium-Term
+<h3 id="medium-term-improvements-14-weeks-each">14.2 Medium-Term
 Improvements (1–4 Weeks Each)</h3>
 <table>
+<colgroup>
+<col style="width: 4%" />
+<col style="width: 18%" />
+<col style="width: 42%" />
+<col style="width: 21%" />
+<col style="width: 14%" />
+</colgroup>
 <thead>
 <tr>
 <th>#</th>
@@ -6932,9 +7023,9 @@ services</td>
 </tr>
 </tbody>
 </table>
-<h3 id="143-long-term-improvements-1-months">14.3 Long-Term Improvements
-(1+ Months)</h3>
-<h4 id="1431-wasm-for-flutter-web-terminal">14.3.1 WASM for Flutter Web
+<h3 id="long-term-improvements-1-months">14.3 Long-Term Improvements (1+
+Months)</h3>
+<h4 id="wasm-for-flutter-web-terminal">14.3.1 WASM for Flutter Web
 Terminal</h4>
 <p>The Flutter Web terminal currently uses the HTML renderer which goes
 through the DOM for text rendering. Switching to CanvasKit (WASM)
@@ -6990,7 +7081,7 @@ class="sourceCode dart"><code class="sourceCode dart"><span id="cb111-1"><a href
 <span id="cb111-35"><a href="#cb111-35" aria-hidden="true" tabindex="-1"></a>    _pending<span class="op">.</span>remove(id)<span class="op">?.</span>complete(msg[<span class="st">&#39;result&#39;</span>] <span class="kw">as</span> Uint8List);</span>
 <span id="cb111-36"><a href="#cb111-36" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
 <span id="cb111-37"><a href="#cb111-37" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h4 id="1432-ebpf-for-network-observability">14.3.2 eBPF for Network
+<h4 id="ebpf-for-network-observability">14.3.2 eBPF for Network
 Observability</h4>
 <p>eBPF programs attached to the SSH proxy provide sub-microsecond
 network metrics without any changes to the application code:</p>
@@ -7122,8 +7213,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb113-1"><a href
 <span id="cb113-50"><a href="#cb113-50" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> proc</span></span>
 <span id="cb113-51"><a href="#cb113-51" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">hostPath</span><span class="kw">:</span></span>
 <span id="cb113-52"><a href="#cb113-52" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">path</span><span class="kw">:</span><span class="at"> /proc</span></span></code></pre></div>
-<h4 id="1433-custom-kafka-client-in-go">14.3.3 Custom Kafka Client in
-Go</h4>
+<h4 id="custom-kafka-client-in-go">14.3.3 Custom Kafka Client in Go</h4>
 <p>The Confluent/IBM Sarama Kafka clients have non-trivial per-message
 overhead from CGO (Confluent) and reflection-heavy encoding (Sarama). A
 purpose-built Go Kafka client for the terminal stream topic (highest
@@ -7155,6 +7245,14 @@ the producer.</code></pre>
 <h2 id="appendix-a-service-slo-reference-table">Appendix A: Service SLO
 Reference Table</h2>
 <table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 20%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 19%" />
+</colgroup>
 <thead>
 <tr>
 <th>Service</th>
@@ -7421,5 +7519,3 @@ Platform Performance Engineering</em> <em>Review cycle: Quarterly or
 after any incident with performance root cause</em> <em>Source of truth:
 this document + <code>helixterm.io/services/*/internal/metrics/</code>
 packages</em></p>
-</body>
-</html>

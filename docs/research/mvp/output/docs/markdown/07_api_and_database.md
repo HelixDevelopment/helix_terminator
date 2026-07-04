@@ -3,8 +3,8 @@
 
 **Project:** HelixTerminator  
 **Backend:** Go 1.25, Gin Gonic framework  
-**Module:** `helixterm.io/core`  
-**Database Stack:** PostgreSQL 16 (primary), SQLite (dev/embedded), Redis 7 (cache/sessions)  
+**Module:** `helixterminator.io/core`  
+**Database Stack:** PostgreSQL 17.2 (primary), SQLite (dev/embedded), Redis 8 (cache/sessions)  
 **Architecture:** Database-per-service microservices (25 services)  
 **API Style:** REST (external clients) + gRPC (internal service-to-service)  
 **Version:** 1.0.0  
@@ -130,8 +130,8 @@ Rules:
 HelixTerminator uses **URI path versioning**. The version segment is the second path component after the API root:
 
 ```
-https://api.helixterm.io/api/v1/hosts
-https://api.helixterm.io/api/v2/hosts
+https://api.helixterminator.io/api/v1/hosts
+https://api.helixterminator.io/api/v2/hosts
 ```
 
 **Version lifecycle:**
@@ -146,7 +146,7 @@ Deprecated endpoints include:
 ```
 Deprecation: Sat, 01 Jan 2028 00:00:00 GMT
 Sunset: Sat, 01 Apr 2028 00:00:00 GMT
-Link: <https://docs.helixterm.io/migration/v1-to-v2>; rel="deprecation"
+Link: <https://docs.helixterminator.io/migration/v1-to-v2>; rel="deprecation"
 ```
 
 **Breaking vs. non-breaking changes:**
@@ -321,7 +321,7 @@ All errors follow RFC 7807 "Problem Details for HTTP APIs". The `Content-Type` i
 
 ```json
 {
-  "type": "https://errors.helixterm.io/v1/validation-error",
+  "type": "https://errors.helixterminator.io/v1/validation-error",
   "title": "Validation Error",
   "status": 422,
   "detail": "The request body contains invalid field values.",
@@ -347,15 +347,15 @@ All errors follow RFC 7807 "Problem Details for HTTP APIs". The `Content-Type` i
 
 | Type URI | HTTP Status | Description |
 |---|---|---|
-| `errors.helixterm.io/v1/validation-error` | 422 | Field-level validation failures |
-| `errors.helixterm.io/v1/authentication-required` | 401 | No valid authentication credentials |
-| `errors.helixterm.io/v1/forbidden` | 403 | Authenticated but lacks permission |
-| `errors.helixterm.io/v1/not-found` | 404 | Resource does not exist |
-| `errors.helixterm.io/v1/conflict` | 409 | Conflicting state (duplicate, optimistic lock) |
-| `errors.helixterm.io/v1/rate-limit-exceeded` | 429 | Rate limit hit |
-| `errors.helixterm.io/v1/internal-error` | 500 | Server error (sanitized — no stack trace) |
-| `errors.helixterm.io/v1/upstream-error` | 502 | Dependent service unavailable |
-| `errors.helixterm.io/v1/timeout` | 504 | Request processing exceeded deadline |
+| `errors.helixterminator.io/v1/validation-error` | 422 | Field-level validation failures |
+| `errors.helixterminator.io/v1/authentication-required` | 401 | No valid authentication credentials |
+| `errors.helixterminator.io/v1/forbidden` | 403 | Authenticated but lacks permission |
+| `errors.helixterminator.io/v1/not-found` | 404 | Resource does not exist |
+| `errors.helixterminator.io/v1/conflict` | 409 | Conflicting state (duplicate, optimistic lock) |
+| `errors.helixterminator.io/v1/rate-limit-exceeded` | 429 | Rate limit hit |
+| `errors.helixterminator.io/v1/internal-error` | 500 | Server error (sanitized — no stack trace) |
+| `errors.helixterminator.io/v1/upstream-error` | 502 | Dependent service unavailable |
+| `errors.helixterminator.io/v1/timeout` | 504 | Request processing exceeded deadline |
 
 ### 1.7 Authentication
 
@@ -369,7 +369,7 @@ HelixTerminator uses **EdDSA (Ed25519) signed JWTs** (RFC 8037). Token structure
 
 ```json
 {
-  "iss": "https://api.helixterm.io",
+  "iss": "https://auth.helixterminator.io",
   "sub": "550e8400-e29b-41d4-a716-446655440000",
   "aud": ["helixterm:api"],
   "exp": 1751120400,
@@ -427,7 +427,7 @@ Retry-After: 47
 On `429 Too Many Requests`:
 ```json
 {
-  "type": "https://errors.helixterm.io/v1/rate-limit-exceeded",
+  "type": "https://errors.helixterminator.io/v1/rate-limit-exceeded",
   "title": "Rate Limit Exceeded",
   "status": 429,
   "detail": "You have exceeded the rate limit of 1000 requests per 60 seconds.",
@@ -450,16 +450,16 @@ Responses include a `_links` object following the HAL (Hypertext Application Lan
   "hostname": "192.168.1.100",
   "_links": {
     "self": {
-      "href": "https://api.helixterm.io/api/v1/hosts/550e8400-e29b-41d4-a716-446655440000"
+      "href": "https://api.helixterminator.io/api/v1/hosts/550e8400-e29b-41d4-a716-446655440000"
     },
     "connections": {
-      "href": "https://api.helixterm.io/api/v1/hosts/550e8400-e29b-41d4-a716-446655440000/connections"
+      "href": "https://api.helixterminator.io/api/v1/hosts/550e8400-e29b-41d4-a716-446655440000/connections"
     },
     "group": {
-      "href": "https://api.helixterm.io/api/v1/groups/88e7f30c-1234-5678-abcd-ef0123456789"
+      "href": "https://api.helixterminator.io/api/v1/groups/88e7f30c-1234-5678-abcd-ef0123456789"
     },
     "vault": {
-      "href": "https://api.helixterm.io/api/v1/vaults/aabbccdd-0011-2233-4455-66778899aabb"
+      "href": "https://api.helixterminator.io/api/v1/vaults/aabbccdd-0011-2233-4455-66778899aabb"
     }
   }
 }
@@ -469,9 +469,9 @@ Collection responses include pagination links:
 ```json
 {
   "_links": {
-    "self": { "href": "https://api.helixterm.io/api/v1/hosts?cursor=abc&limit=25" },
-    "next": { "href": "https://api.helixterm.io/api/v1/hosts?cursor=def&limit=25" },
-    "prev": { "href": "https://api.helixterm.io/api/v1/hosts?cursor=xyz&limit=25&direction=prev" }
+    "self": { "href": "https://api.helixterminator.io/api/v1/hosts?cursor=abc&limit=25" },
+    "next": { "href": "https://api.helixterminator.io/api/v1/hosts?cursor=def&limit=25" },
+    "prev": { "href": "https://api.helixterminator.io/api/v1/hosts?cursor=xyz&limit=25&direction=prev" }
   }
 }
 ```
@@ -523,14 +523,14 @@ info:
   version: "1.0.0"
   contact:
     name: HelixTerminator Engineering
-    email: api@helixterm.io
+    email: api@helixterminator.io
   license:
     name: Proprietary
 
 servers:
-  - url: https://api.helixterm.io/api/v1
+  - url: https://api.helixterminator.io/api/v1
     description: Production
-  - url: https://staging-api.helixterm.io/api/v1
+  - url: https://staging-api.helixterminator.io/api/v1
     description: Staging
   - url: http://localhost:8080/api/v1
     description: Local development
@@ -550,6 +550,11 @@ security:
   - BearerAuth: []
 ```
 
+> **DEFERRED (next increment):** Only the top-level OpenAPI document structure and security schemes are
+> shown above. The full `components.schemas` request/response JSON Schema definitions for every endpoint
+> in §2–§14 are not yet authored in this document; treat the per-endpoint JSON examples in this spec as
+> illustrative, not as a substitute for a generated/validated schema.
+
 ### 1.13 Idempotency Keys
 
 Mutating operations (POST, PATCH) that create resources or trigger actions support idempotency keys to prevent duplicate processing on retry:
@@ -564,6 +569,11 @@ The server caches the response for 24 hours keyed by `{user_id}:{idempotency_key
 Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 Idempotency-Replayed: true
 ```
+
+> **DEFERRED (next increment):** "Support" above is described generically for all mutating operations;
+> a definitive per-endpoint matrix stating which POST/PATCH operations *require* an `Idempotency-Key`
+> (vs merely accept one) is not yet authored across §2–§14. Do not assume every mutating endpoint enforces
+> it until that matrix exists.
 
 ### 1.14 Conditional Requests and ETags
 
@@ -597,7 +607,7 @@ Returns `412 Precondition Failed` if the resource was modified since the ETag wa
 Cross-Origin Resource Sharing is configured as follows:
 
 ```
-Access-Control-Allow-Origin: https://app.helixterm.io
+Access-Control-Allow-Origin: https://app.helixterminator.io
 Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
 Access-Control-Allow-Headers: Authorization, Content-Type, X-Request-ID, Idempotency-Key, X-API-Key
 Access-Control-Expose-Headers: X-Request-ID, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, ETag
@@ -672,8 +682,8 @@ X-Request-ID: <uuid> (optional)
   },
   "requires_email_verification": true,
   "_links": {
-    "self": { "href": "https://api.helixterm.io/api/v1/users/me" },
-    "verify_email": { "href": "https://api.helixterm.io/api/v1/auth/email/verify" }
+    "self": { "href": "https://api.helixterminator.io/api/v1/users/me" },
+    "verify_email": { "href": "https://api.helixterminator.io/api/v1/auth/email/verify" }
   }
 }
 ```
@@ -722,7 +732,7 @@ X-Device-ID: <client-device-uuid> (optional, for trusted device tracking)
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "email": "alice@example.com",
     "display_name": "Alice Smith",
-    "avatar_url": "https://cdn.helixterm.io/avatars/alice.jpg",
+    "avatar_url": "https://cdn.helixterminator.io/avatars/alice.jpg",
     "status": "active",
     "email_verified": true,
     "last_login_at": "2026-06-27T09:00:00Z",
@@ -844,7 +854,7 @@ Initiate TOTP (Time-based One-Time Password) setup. Returns the secret and provi
 {
   "secret": "JBSWY3DPEHPK3PXP",
   "provisioning_uri": "otpauth://totp/HelixTerminator:alice%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=HelixTerminator&algorithm=SHA1&digits=6&period=30",
-  "qr_code_url": "https://api.helixterm.io/api/v1/auth/mfa/totp/qr?token=setup-xyz",
+  "qr_code_url": "https://api.helixterminator.io/api/v1/auth/mfa/totp/qr?token=setup-xyz",
   "backup_codes": [
     "AAAA-BBBB-CCCC",
     "DDDD-EEEE-FFFF",
@@ -945,7 +955,7 @@ Begin WebAuthn/FIDO2 credential registration. Returns a challenge for the authen
   "options": {
     "challenge": "dGhpcyBpcyBhIHRlc3QgY2hhbGxlbmdl",
     "rp": {
-      "id": "helixterm.io",
+      "id": "helixterminator.io",
       "name": "HelixTerminator"
     },
     "user": {
@@ -1036,7 +1046,7 @@ Begin FIDO2 authentication challenge.
   "options": {
     "challenge": "bGV0J3MgdGVzdCBGSURPMiBhdXRoZW50aWNhdGlvbg==",
     "timeout": 60000,
-    "rpId": "helixterm.io",
+    "rpId": "helixterminator.io",
     "allowCredentials": [
       {
         "type": "public-key",
@@ -1168,7 +1178,7 @@ Initiate SSO OAuth2/OIDC authorization flow.
 **Request Body:**
 ```json
 {
-  "redirect_uri": "https://app.helixterm.io/auth/callback",
+  "redirect_uri": "https://app.helixterminator.io/auth/callback",
   "state": "client-generated-random-state",
   "org_slug": "mycompany"
 }
@@ -1196,7 +1206,7 @@ Handle SSO callback with authorization code.
 {
   "code": "oauth2-authorization-code",
   "state": "server-generated-state-token",
-  "redirect_uri": "https://app.helixterm.io/auth/callback"
+  "redirect_uri": "https://app.helixterminator.io/auth/callback"
 }
 ```
 
@@ -1390,7 +1400,7 @@ Get the authenticated user's profile.
   "email": "alice@example.com",
   "email_verified": true,
   "display_name": "Alice Smith",
-  "avatar_url": "https://cdn.helixterm.io/avatars/550e8400.jpg",
+  "avatar_url": "https://cdn.helixterminator.io/avatars/550e8400.jpg",
   "status": "active",
   "bio": "Infrastructure engineer at ExampleCorp",
   "locale": "en-US",
@@ -1406,12 +1416,12 @@ Get the authenticated user's profile.
     "id": "org-550e8400-0000-0000-0000-000000000001",
     "name": "ExampleCorp",
     "slug": "examplecorp",
-    "role": "admin"
+    "role": "org_admin"
   },
   "_links": {
-    "self": { "href": "https://api.helixterm.io/api/v1/users/me" },
-    "preferences": { "href": "https://api.helixterm.io/api/v1/users/me/preferences" },
-    "data_export": { "href": "https://api.helixterm.io/api/v1/users/me/data-export" }
+    "self": { "href": "https://api.helixterminator.io/api/v1/users/me" },
+    "preferences": { "href": "https://api.helixterminator.io/api/v1/users/me/preferences" },
+    "data_export": { "href": "https://api.helixterminator.io/api/v1/users/me/data-export" }
   }
 }
 ```
@@ -1578,7 +1588,7 @@ Content-Type: image/jpeg
 **Success Response — 200 OK:**
 ```json
 {
-  "avatar_url": "https://cdn.helixterm.io/avatars/550e8400-e29b-41d4-a716-446655440000.jpg",
+  "avatar_url": "https://cdn.helixterminator.io/avatars/550e8400-e29b-41d4-a716-446655440000.jpg",
   "updated_at": "2026-06-28T17:45:00Z"
 }
 ```
@@ -1619,7 +1629,7 @@ Request account deletion (GDPR Article 17 — Right to Erasure).
   "message": "Account deletion scheduled. Your data will be permanently deleted within 30 days.",
   "deletion_scheduled_at": "2026-06-28T17:40:00Z",
   "permanent_deletion_at": "2026-07-28T17:40:00Z",
-  "cancellation_url": "https://app.helixterm.io/account/cancel-deletion?token=xxxx"
+  "cancellation_url": "https://app.helixterminator.io/account/cancel-deletion?token=xxxx"
 }
 ```
 
@@ -1658,7 +1668,7 @@ When ready, the user receives an email with a signed download URL. The download 
 {
   "export_id": "exp-550e8400-0000-0000-0000-aabbccddeeff",
   "status": "completed",
-  "download_url": "https://cdn.helixterm.io/exports/exp-xxx.json.zip?token=signed-url",
+  "download_url": "https://cdn.helixterminator.io/exports/exp-xxx.json.zip?token=signed-url",
   "download_expires_at": "2026-06-30T18:10:00Z",
   "file_size_bytes": 2457600
 }
@@ -1709,8 +1719,8 @@ List all vaults accessible to the authenticated user (owned + shared).
       "created_at": "2026-01-15T09:00:00Z",
       "updated_at": "2026-06-28T17:00:00Z",
       "_links": {
-        "self": { "href": "https://api.helixterm.io/api/v1/vaults/vault-550e8400-0000-0000-0000-aabbccddeeff" },
-        "members": { "href": "https://api.helixterm.io/api/v1/vaults/vault-550e8400-0000-0000-0000-aabbccddeeff/members" }
+        "self": { "href": "https://api.helixterminator.io/api/v1/vaults/vault-550e8400-0000-0000-0000-aabbccddeeff" },
+        "members": { "href": "https://api.helixterminator.io/api/v1/vaults/vault-550e8400-0000-0000-0000-aabbccddeeff/members" }
       }
     }
   ],
@@ -1877,7 +1887,7 @@ List vault members.
       "user_id": "550e8400-e29b-41d4-a716-446655440000",
       "email": "alice@example.com",
       "display_name": "Alice Smith",
-      "avatar_url": "https://cdn.helixterm.io/avatars/alice.jpg",
+      "avatar_url": "https://cdn.helixterminator.io/avatars/alice.jpg",
       "permission": "admin",
       "invited_by": null,
       "joined_at": "2026-01-15T09:00:00Z",
@@ -2012,8 +2022,8 @@ List hosts with filtering, sorting, and pagination.
       "created_at": "2026-01-15T09:00:00Z",
       "updated_at": "2026-06-28T10:00:00Z",
       "_links": {
-        "self": { "href": "https://api.helixterm.io/api/v1/hosts/host-550e8400-0000-0000-0000-aabbccddeeff" },
-        "connections": { "href": "https://api.helixterm.io/api/v1/hosts/host-550e8400-0000-0000-0000-aabbccddeeff/connections" }
+        "self": { "href": "https://api.helixterminator.io/api/v1/hosts/host-550e8400-0000-0000-0000-aabbccddeeff" },
+        "connections": { "href": "https://api.helixterminator.io/api/v1/hosts/host-550e8400-0000-0000-0000-aabbccddeeff/connections" }
       }
     }
   ],
@@ -2525,8 +2535,8 @@ Initiate an SSH session. Returns a session token and WebSocket URL for terminal 
 {
   "session_id": "sess-550e8400-0000-0000-0000-aabbccddeeff",
   "session_token": "st_v1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "websocket_url": "wss://proxy.helixterm.io/api/v1/sessions/sess-550e8400/terminal",
-  "collab_url": "wss://proxy.helixterm.io/api/v1/sessions/sess-550e8400/collab",
+  "websocket_url": "wss://proxy.helixterminator.io/api/v1/sessions/sess-550e8400/terminal",
+  "collab_url": "wss://proxy.helixterminator.io/api/v1/sessions/sess-550e8400/collab",
   "status": "connecting",
   "host": {
     "id": "host-550e8400-0000-0000-0000-aabbccddeeff",
@@ -2636,9 +2646,9 @@ Resize the terminal window for an active session.
 
 ### POST /api/v1/sessions/{sessionId}/broadcast
 
-Broadcast input to multiple sessions simultaneously (requires admin permission).
+Broadcast input to multiple sessions simultaneously (requires org_admin permission).
 
-**Authentication:** Bearer token required; requires org admin
+**Authentication:** Bearer token required; requires org `org_admin` role
 
 **Request Body:**
 ```json
@@ -3206,8 +3216,8 @@ List SSH keys and certificates.
       "expires_at": null,
       "created_at": "2026-01-15T09:00:00Z",
       "_links": {
-        "self": { "href": "https://api.helixterm.io/api/v1/keys/key-550e8400-0000-0000-0000-112233445566" },
-        "public_key": { "href": "https://api.helixterm.io/api/v1/keys/key-550e8400-0000-0000-0000-112233445566/public" }
+        "self": { "href": "https://api.helixterminator.io/api/v1/keys/key-550e8400-0000-0000-0000-112233445566" },
+        "public_key": { "href": "https://api.helixterminator.io/api/v1/keys/key-550e8400-0000-0000-0000-112233445566/public" }
       }
     }
   ],
@@ -3604,7 +3614,7 @@ List all workspaces.
       "id": "ws-550e8400-0000-0000-0000-aabbccddeeff",
       "name": "Production Debug Session",
       "description": "4-pane layout for production debugging",
-      "thumbnail_url": "https://cdn.helixterm.io/ws-thumbnails/ws-550e8400.png",
+      "thumbnail_url": "https://cdn.helixterminator.io/ws-thumbnails/ws-550e8400.png",
       "layout": {
         "type": "grid",
         "panels": 4,
@@ -3727,7 +3737,7 @@ List available workspace templates.
       "description": "Connect to 4 servers in a 2x2 grid",
       "category": "monitoring",
       "pane_count": 4,
-      "preview_url": "https://cdn.helixterm.io/templates/4pane-preview.png",
+      "preview_url": "https://cdn.helixterminator.io/templates/4pane-preview.png",
       "usage_count": 1247,
       "created_by": "system",
       "created_at": "2026-01-01T00:00:00Z"
@@ -3799,12 +3809,12 @@ Get the authenticated user's organization.
 
 List organization members.
 
-**Authentication:** Bearer token required; requires org `admin` or `member` role
+**Authentication:** Bearer token required; requires org `org_admin` or `member` role
 
 **Query Parameters:**
 | Parameter | Type | Description |
 |---|---|---|
-| `role` | string | Filter by role: `admin`, `member`, `viewer` |
+| `role` | string | Filter by role: `org_admin`, `team_admin`, `member`, `auditor`, `api_user` |
 | `team_id` | UUID | Filter by team membership |
 | `q` | string | Search by name or email |
 | `cursor` | string | Pagination cursor |
@@ -3819,7 +3829,7 @@ List organization members.
       "user_id": "550e8400-e29b-41d4-a716-446655440000",
       "email": "alice@example.com",
       "display_name": "Alice Smith",
-      "role": "admin",
+      "role": "org_admin",
       "teams": ["platform", "sre"],
       "invited_by": null,
       "joined_at": "2025-06-01T00:00:00Z",
@@ -3837,7 +3847,7 @@ List organization members.
 
 Invite a new member to the organization.
 
-**Authentication:** Bearer token required; requires `admin` role
+**Authentication:** Bearer token required; requires `org_admin` role
 
 **Request Body:**
 ```json
@@ -3899,7 +3909,7 @@ List teams in the organization.
 
 Create a new team.
 
-**Authentication:** Bearer token required; requires `admin` role
+**Authentication:** Bearer token required; requires `org_admin` role
 
 **Request Body:**
 ```json
@@ -3928,7 +3938,7 @@ Get a specific team.
 
 Update a team.
 
-**Authentication:** Bearer token required; requires `admin` role
+**Authentication:** Bearer token required; requires `org_admin` role
 
 **Success Response — 200 OK:** Updated team.
 
@@ -3938,7 +3948,7 @@ Update a team.
 
 Delete a team.
 
-**Authentication:** Bearer token required; requires `admin` role
+**Authentication:** Bearer token required; requires `org_admin` role
 
 **Success Response — 204 No Content**
 
@@ -3948,7 +3958,7 @@ Delete a team.
 
 Add a member to a team.
 
-**Authentication:** Bearer token required; requires `admin` role
+**Authentication:** Bearer token required; requires `org_admin` role
 
 **Request Body:**
 ```json
@@ -3966,7 +3976,7 @@ Add a member to a team.
 
 Remove a member from a team.
 
-**Authentication:** Bearer token required; requires `admin` role
+**Authentication:** Bearer token required; requires `org_admin` role
 
 **Success Response — 204 No Content**
 
@@ -3984,7 +3994,7 @@ Database: `audit_db` (PostgreSQL, append-only, partitioned)
 
 Query audit events with comprehensive filtering.
 
-**Authentication:** Bearer token required; requires org `admin` role
+**Authentication:** Bearer token required; requires org `org_admin` role
 
 **Query Parameters:**
 | Parameter | Type | Description |
@@ -4042,7 +4052,7 @@ Query audit events with comprehensive filtering.
 
 Get a specific audit event by ID.
 
-**Authentication:** Bearer token required; requires org `admin` role
+**Authentication:** Bearer token required; requires org `org_admin` role
 
 **Success Response — 200 OK:** Full audit event object.
 
@@ -4052,7 +4062,7 @@ Get a specific audit event by ID.
 
 Export audit events to a file.
 
-**Authentication:** Bearer token required; requires org `admin` role
+**Authentication:** Bearer token required; requires org `org_admin` role
 
 **Query Parameters:**
 | Parameter | Type | Description |
@@ -4240,7 +4250,7 @@ HelixTerminator uses WebSocket connections for real-time terminal I/O, collabora
 ### Authentication
 
 All WebSocket connections require authentication via:
-1. **Query parameter:** `wss://proxy.helixterm.io/...?token=<session_token>`
+1. **Query parameter:** `wss://proxy.helixterminator.io/...?token=<session_token>`
 2. **First message:** Send `{"type":"auth","token":"<session_token>"}` within 5 seconds of connecting.
 
 ### WS /api/v1/sessions/{sessionId}/terminal
@@ -4249,7 +4259,7 @@ Bidirectional terminal I/O stream. Protocol: Binary and text frames.
 
 **Connection URL:**
 ```
-wss://proxy.helixterm.io/api/v1/sessions/sess-550e8400/terminal?token=st_v1_xxx
+wss://proxy.helixterminator.io/api/v1/sessions/sess-550e8400/terminal?token=st_v1_xxx
 ```
 
 **Client → Server messages:**
@@ -4312,7 +4322,7 @@ Collaboration channel for shared terminal sessions.
 
 **Connection URL:**
 ```
-wss://proxy.helixterm.io/api/v1/sessions/sess-550e8400/collab?token=st_v1_xxx
+wss://proxy.helixterminator.io/api/v1/sessions/sess-550e8400/collab?token=st_v1_xxx
 ```
 
 **Server → Client messages:**
@@ -4357,7 +4367,7 @@ Vault sync channel for real-time vault synchronization across clients.
 
 **Connection URL:**
 ```
-wss://api.helixterm.io/api/v1/sync?token=<access_token>&vault_id=<vault_id>
+wss://api.helixterminator.io/api/v1/sync?token=<access_token>&vault_id=<vault_id>
 ```
 
 **Client → Server messages:**
@@ -4412,7 +4422,7 @@ Internal gRPC services communicate over mTLS on the internal Kubernetes network.
 ```proto
 syntax = "proto3";
 package helixterm.v1;
-option go_package = "helixterm.io/core/internal/proto;proto";
+option go_package = "helixterminator.io/core/internal/proto;proto";
 ```
 
 ---
@@ -4422,7 +4432,7 @@ option go_package = "helixterm.io/core/internal/proto;proto";
 ```proto
 syntax = "proto3";
 package helixterm.v1;
-option go_package = "helixterm.io/core/internal/proto;proto";
+option go_package = "helixterminator.io/core/internal/proto;proto";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
@@ -4563,7 +4573,7 @@ message BulkCheckPermissionResponse {
 ```proto
 syntax = "proto3";
 package helixterm.v1;
-option go_package = "helixterm.io/core/internal/proto;proto";
+option go_package = "helixterminator.io/core/internal/proto;proto";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
@@ -4691,7 +4701,7 @@ message ListVaultMembersResponse {
 ```proto
 syntax = "proto3";
 package helixterm.v1;
-option go_package = "helixterm.io/core/internal/proto;proto";
+option go_package = "helixterminator.io/core/internal/proto;proto";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
@@ -4854,7 +4864,7 @@ message RotateCAResponse {
 ```proto
 syntax = "proto3";
 package helixterm.v1;
-option go_package = "helixterm.io/core/internal/proto;proto";
+option go_package = "helixterminator.io/core/internal/proto;proto";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
@@ -5038,7 +5048,7 @@ message UpdatePortForwardStatusRequest {
 ```proto
 syntax = "proto3";
 package helixterm.v1;
-option go_package = "helixterm.io/core/internal/proto;proto";
+option go_package = "helixterminator.io/core/internal/proto;proto";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
@@ -5172,7 +5182,17 @@ message ExportEventsResponse {
 ---
 ## 17. PostgreSQL Database Schemas
 
-Each microservice owns its own PostgreSQL 16 database. In production, each runs on a dedicated cluster or schema. In development, all schemas live in a single PostgreSQL instance with separate databases.
+Each microservice owns its own PostgreSQL 17.2 database. In production, each runs on a dedicated cluster or schema. In development, all schemas live in a single PostgreSQL instance with separate databases.
+
+> **DEFERRED (next increment):** Multi-tenant isolation below is **app-layer `WHERE org_id = …` only** — no
+> table in §17 has `ROW LEVEL SECURITY` enabled or a `CREATE POLICY` defined. A missing/incorrect `WHERE`
+> clause in application code is a cross-tenant data leak (IDOR) today; do not read the schemas below as
+> DB-enforced isolation. Adding RLS policies (mirroring the intended `audit_events` pattern) to every
+> multi-tenant table in §17 is deferred to the next increment.
+>
+> **DEFERRED (next increment):** No backup/restore or Point-In-Time-Recovery (PITR) procedure is specified
+> for any of the per-service PostgreSQL databases below (or for Redis in §18). Authoring RPO/RTO targets
+> and a concrete backup/PITR runbook is deferred; until then, assume no tested recovery path exists.
 
 **Conventions:**
 - All primary keys are `UUID` using `gen_random_uuid()` (pgcrypto / pg 13+).
@@ -6635,8 +6655,11 @@ CREATE TABLE org_members (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id        UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id       UUID NOT NULL,
+  -- Canonical 6-role vocabulary (CD-8; single RBAC schema, reconciles the prior
+  -- owner/admin/member/viewer/billing set). 'billing' is a permission, not a
+  -- role — granted via `roles` / `role_assignments`, not this column.
   role          VARCHAR(20) NOT NULL DEFAULT 'member'
-                  CHECK (role IN ('owner', 'admin', 'member', 'viewer', 'billing')),
+                  CHECK (role IN ('super_admin', 'org_admin', 'team_admin', 'member', 'auditor', 'api_user')),
   invited_by    UUID,
   joined_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   status        VARCHAR(20) NOT NULL DEFAULT 'active'
@@ -6678,8 +6701,9 @@ CREATE INDEX idx_teams_org_id ON teams(org_id) WHERE deleted_at IS NULL;
 CREATE TABLE team_members (
   team_id     UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   user_id     UUID NOT NULL,
+  -- Canonical 6-role vocabulary (CD-8): 'lead' reconciled to 'team_admin'.
   role        VARCHAR(20) NOT NULL DEFAULT 'member'
-                CHECK (role IN ('lead', 'member')),
+                CHECK (role IN ('team_admin', 'member')),
   added_by    UUID NOT NULL,
   added_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   PRIMARY KEY (team_id, user_id)
@@ -6759,6 +6783,12 @@ CREATE INDEX idx_invitations_expires_at ON invitations(expires_at)
 ---
 
 ### 17.10 audit_db
+
+> **DEFERRED (next increment):** The `hash`/`prev_hash` chain below is an in-table integrity check only —
+> it has no external/independent anchoring (e.g. S3 Object Lock compliance mode, HSM signature, or
+> off-DB notarization). A DB principal with write access to `audit_db` can rewrite the chain, including
+> the genesis row, undetected. Do not read "Immutable" in the comment below as tamper-proof; it is
+> tamper-*evident* against non-privileged writers only. External WORM anchoring is deferred.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -6974,7 +7004,7 @@ CREATE INDEX idx_crl_entries_ca_key_id ON crl_entries(ca_key_id);
 ---
 ## 18. Redis Data Structures
 
-Redis 7 is used for ephemeral, high-throughput data: session state, rate limiting, distributed locks, caching, pub/sub, and real-time presence. All keys use a `{service}:{type}:{identifier}` namespace convention to enable Redis Cluster key sharding where appropriate.
+Redis 8 is used for ephemeral, high-throughput data: session state, rate limiting, distributed locks, caching, pub/sub, and real-time presence. All keys use a `{service}:{type}:{identifier}` namespace convention to enable Redis Cluster key sharding where appropriate.
 
 Keys are prefixed by service to enable logical separation. TTLs are always set; no key should be persisted indefinitely without explicit review.
 
@@ -7132,7 +7162,7 @@ EXPIRE mfa:challenge:mfa-chal-550e8400 300
 HSET fido2:challenge:fido2-chal-550e8400
   challenge_b64   "bGV0J3MgdGVzdA=="
   user_id         "550e8400-e29b-41d4-a716-446655440000"
-  rp_id           "helixterm.io"
+  rp_id           "helixterminator.io"
   user_verification "preferred"
   mfa_challenge_id "mfa-chal-550e8400"
 
@@ -7238,7 +7268,7 @@ HSET proxy:node:proxy-node-2:info
   active_sessions "47"
   max_sessions  "200"
   cpu_percent   "23"
-  region        "us-west-2"
+  region        "us-east-1"
   version       "1.2.3"
 
 EXPIRE proxy:node:proxy-node-2:info 60
@@ -8736,9 +8766,9 @@ ANALYZE VERBOSE host_connection_history;
 |---|---|
 | Document Version | 1.0.0 |
 | Project | HelixTerminator |
-| Module | `helixterm.io/core` |
+| Module | `helixterminator.io/core` |
 | Backend | Go 1.25, Gin Gonic |
-| Database | PostgreSQL 16, Redis 7, SQLite (dev) |
+| Database | PostgreSQL 17.2, Redis 8, SQLite (dev) |
 | Prepared By | Engineering Team |
 | Classification | Internal — Engineering Confidential |
 | Last Updated | 2026-06-28 |

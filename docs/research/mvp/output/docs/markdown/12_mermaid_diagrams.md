@@ -155,7 +155,7 @@ graph TB
     end
 
     subgraph DataStores["Data Stores"]
-        PG[("PostgreSQL 16\nPrimary DB\n:5432")]
+        PG[("PostgreSQL 17.2\nPrimary DB\n:5432")]
         REDIS[("Redis Cluster\nSessions/Cache\n:6379")]
         S3_STORE[("S3 / MinIO\nRecordings/Files\n:9000")]
     end
@@ -233,7 +233,7 @@ graph TB
     end
 
     subgraph PLATFORM["Platform Domain"]
-        P1["API Gateway\n:8000\nRoute · Rate-limit · Auth MW"]
+        P1["API Gateway\n:8080\nRoute · Rate-limit · Auth MW"]
         P2["Config Service\n:8030\nFeature flags · Remote config"]
         P3["Health Service\n:8031\nLiveness · Readiness · Deps"]
         P4["Notification Service\n:8032\nEmail · Webhook · Push"]
@@ -1004,12 +1004,12 @@ sequenceDiagram
     SPIRE_A->>SPIRE_A: Attest workload (verify pod UID, SA token)
     SPIRE_A->>SPIRE_SRV: AttestAgent + NodeAttestation (EC2/K8s)
     SPIRE_SRV->>SPIRE_SRV: Verify node identity + check registration entries
-    SPIRE_SRV-->>SPIRE_A: X.509-SVID {spiffe://helixterm.io/ns/prod/sa/ssh-proxy, cert, key, bundle}
+    SPIRE_SRV-->>SPIRE_A: X.509-SVID {spiffe://helixterminator.io/ns/prod/sa/ssh-proxy, cert, key, bundle}
     SPIRE_A-->>SA: X509SVIDResponse {svid_pem, key_pem, bundle_pem, expires_at}
 
     SB->>SPIRE_B: FetchX509SVID{workload_selector: k8s:sa:pki-service}
     SPIRE_B->>SPIRE_SRV: Attest + fetch SVID
-    SPIRE_SRV-->>SPIRE_B: X.509-SVID {spiffe://helixterm.io/ns/prod/sa/pki-service, cert, key}
+    SPIRE_SRV-->>SPIRE_B: X.509-SVID {spiffe://helixterminator.io/ns/prod/sa/pki-service, cert, key}
     SPIRE_B-->>SB: X509SVIDResponse
 
     Note over SA,SB: Service-to-service call with mTLS
@@ -2263,7 +2263,7 @@ graph TB
     classDef infra fill:#4a148c,stroke:#311b92,color:#fff
     classDef monitoring fill:#006064,stroke:#004d40,color:#fff
 
-    subgraph CLUSTER["Kubernetes Cluster (EKS v1.30)"]
+    subgraph CLUSTER["Kubernetes Cluster (EKS v1.31)"]
 
         subgraph INFRA_NS["Namespace: kube-system / istio-system"]
             ISTIOD["istiod\n(Deployment, 3 replicas)"]
@@ -2384,7 +2384,7 @@ graph LR
     ISTIO_MESH["Istio Service Mesh\nEnvoy sidecars on all pods\nmTLS (SPIFFE/X.509)\nTraffic mirroring\nCircuit breaking"]
 
     subgraph SERVICES["Microservices Layer (helixterm-prod)"]
-        API_GW["API Gateway\n:8000"]
+        API_GW["API Gateway\n:8080"]
         CORE_SVCS["Core Services\nAuth/User/PKI/Org\n:8001-8004"]
         TERM_SVCS["Terminal Services\nSSH Proxy/Terminal\n:8010-8013"]
         DATA_SVCS["Data Services\nVault/Keys/Hosts\n:8020-8024"]
@@ -2455,7 +2455,7 @@ graph LR
 
 ## 28. Multi-Region Deployment
 
-Primary (eu-west-1) and disaster recovery (us-east-1) regions with replication, failover, and traffic routing.
+Primary (us-east-1) and disaster recovery (eu-west-1) regions with replication, failover, and traffic routing.
 
 ```mermaid
 graph TB
@@ -2475,20 +2475,20 @@ graph TB
     CF --> PRIMARY_LB
     CF -.->|"failover (RTO < 5min)"| DR_LB
 
-    subgraph PRIMARY["Primary Region: eu-west-1 (Ireland) — ACTIVE"]
-        PRIMARY_LB["ALB (eu-west-1)\nhelixterm.io → :443"]
+    subgraph PRIMARY["Primary Region: us-east-1 (N. Virginia) — ACTIVE"]
+        PRIMARY_LB["ALB (us-east-1)\nhelixterminator.io → :443"]
 
-        subgraph AZ1["AZ: eu-west-1a"]
+        subgraph AZ1["AZ: us-east-1a"]
             P_GW1["api-gateway-1\n(pod)"]
             P_APP1["app-services-1\n(3-5 pods/svc)"]
         end
 
-        subgraph AZ2["AZ: eu-west-1b"]
+        subgraph AZ2["AZ: us-east-1b"]
             P_GW2["api-gateway-2\n(pod)"]
             P_APP2["app-services-2\n(3-5 pods/svc)"]
         end
 
-        subgraph AZ3["AZ: eu-west-1c"]
+        subgraph AZ3["AZ: us-east-1c"]
             P_GW3["api-gateway-3\n(pod)"]
             P_APP3["app-services-3\n(3-5 pods/svc)"]
         end
@@ -2500,18 +2500,18 @@ graph TB
             P_KAFKA["Kafka Cluster\n(3 brokers, RF=3)"]
         end
 
-        P_S3["S3 Bucket (eu-west-1)\nCross-region replication ON"]
+        P_S3["S3 Bucket (us-east-1)\nCross-region replication ON"]
     end
 
-    subgraph DR["DR Region: us-east-1 (N. Virginia) — STANDBY"]
-        DR_LB["ALB (us-east-1)\ndr.helixterm.io → :443\n(traffic off in normal operation)"]
+    subgraph DR["DR Region: eu-west-1 (Ireland) — STANDBY"]
+        DR_LB["ALB (eu-west-1)\ndr.helixterminator.io → :443\n(traffic off in normal operation)"]
 
-        subgraph DR_AZ1["AZ: us-east-1a"]
+        subgraph DR_AZ1["AZ: eu-west-1a"]
             DR_GW1["api-gateway-1\n(scaled to 0 in standby)"]
             DR_APP1["app-services-1\n(scaled to 0 in standby)"]
         end
 
-        subgraph DR_AZ2["AZ: us-east-1b"]
+        subgraph DR_AZ2["AZ: eu-west-1b"]
             DR_GW2["api-gateway-2\n(scaled to 0 in standby)"]
             DR_APP2["app-services-2\n(scaled to 0 in standby)"]
         end
@@ -2522,11 +2522,11 @@ graph TB
             DR_KAFKA["Kafka MirrorMaker 2\n(topic replication)"]
         end
 
-        DR_S3["S3 Bucket (us-east-1)\nCross-region replica\n(replication lag < 15 min)"]
+        DR_S3["S3 Bucket (eu-west-1)\nCross-region replica\n(replication lag < 15 min)"]
     end
 
     subgraph SHARED["Global Shared Services"]
-        GLOBAL_CF_CERTS["AWS Certificate Manager\nWildcard TLS certs\n*.helixterm.io"]
+        GLOBAL_CF_CERTS["AWS Certificate Manager\nWildcard TLS certs\n*.helixterminator.io"]
         GLOBAL_SECRETS["AWS Secrets Manager\n(cross-region replication)"]
         GLOBAL_KMS["AWS KMS\n(multi-region keys\nfor vault encryption)"]
     end
@@ -2678,9 +2678,9 @@ flowchart LR
 
     subgraph PROD["Production Deploy"]
         PUSH_PROD["Push to ECR\n(prod + semver tag)"]
-        DEPLOY_PRIMARY["Deploy Primary\neu-west-1\n• helm upgrade\n• Rolling (1 pod at a time)"]
+        DEPLOY_PRIMARY["Deploy Primary\nus-east-1\n• helm upgrade\n• Rolling (1 pod at a time)"]
         HEALTHCHECK["Production Health\n• All /healthz 200\n• Datadog synthetic\n• Error rate < 0.1%"]
-        DEPLOY_DR["Deploy DR\nus-east-1\n• 10 min after primary\n• Verify replication"]
+        DEPLOY_DR["Deploy DR\neu-west-1\n• 10 min after primary\n• Verify replication"]
         NOTIFY_SUCCESS["Notify Success\n• Slack #deployments\n• Jira release ticket\n• GitHub release notes"]
     end
 

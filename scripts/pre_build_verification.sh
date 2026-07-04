@@ -31,4 +31,17 @@ if ! bash "${GATE_SCRIPT}"; then
     exit 1
 fi
 
-echo "Pre-build verification passed: constitution-inheritance gate OK."
+DOCS_GATE="tests/docs_consistency_gate.sh"
+if [ -f "${DOCS_GATE}" ]; then
+    if ! bash "${DOCS_GATE}"; then
+        echo "============================================================"
+        echo " PRE-BUILD BLOCKED"
+        echo "============================================================"
+        echo "Docs consistency gate FAILED: ${DOCS_GATE}"
+        echo "Fix the reported DUP/ANCHOR/LATEST/EMPTYTEST issues before building or committing."
+        echo "============================================================"
+        exit 1
+    fi
+fi
+
+echo "Pre-build verification passed: constitution-inheritance + docs-consistency gates OK."

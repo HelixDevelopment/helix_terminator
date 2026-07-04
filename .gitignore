@@ -33,3 +33,6 @@ go.work.sum
 
 # Superpowers SDD controller scratch (ledger, not source)
 .superpowers/
+
+# pandoc/weasyprint PDF-engine temp artifacts
+toPdfViaTempFile*

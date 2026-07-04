@@ -5,7 +5,7 @@
 **Effective Date:** 2026-06-28  
 **Owner:** Platform Security Team  
 **Review Cycle:** Quarterly  
-**Trust Domain:** `helixterm.io`
+**Trust Domain:** `helixterminator.io`
 
 ---
 
@@ -71,22 +71,22 @@ Threat actors modeled in this specification:
 
 SPIFFE (Secure Production Identity Framework for Everyone) provides a universal workload identity standard. Every HelixTerminator workload receives a SPIFFE Verifiable Identity Document (SVID) cryptographically signed by the trust domain root. This eliminates the need for static secrets in service-to-service communication entirely.
 
-**Trust Domain:** `helixterm.io`
+**Trust Domain:** `helixterminator.io`
 
 All SPIFFE IDs follow the format:
 ```
-spiffe://helixterm.io/<service-path>
+spiffe://helixterminator.io/<service-path>
 ```
 
 Service identity examples:
 ```
-spiffe://helixterm.io/ns/default/sa/auth-service
-spiffe://helixterm.io/ns/default/sa/pki-service
-spiffe://helixterm.io/ns/default/sa/vault-service
-spiffe://helixterm.io/ns/default/sa/session-manager
-spiffe://helixterm.io/ns/default/sa/audit-service
-spiffe://helixterm.io/ns/vault/sa/vault-api
-spiffe://helixterm.io/ns/pki/sa/ca-signer
+spiffe://helixterminator.io/ns/default/sa/auth-service
+spiffe://helixterminator.io/ns/default/sa/pki-service
+spiffe://helixterminator.io/ns/default/sa/vault-service
+spiffe://helixterminator.io/ns/default/sa/session-manager
+spiffe://helixterminator.io/ns/default/sa/audit-service
+spiffe://helixterminator.io/ns/vault/sa/vault-api
+spiffe://helixterminator.io/ns/pki/sa/ca-signer
 ```
 
 #### 1.3.2 SPIRE Server High-Availability Configuration
@@ -100,7 +100,7 @@ The SPIRE server is the root of workload identity issuance. It must be highly av
 server {
   bind_address    = "0.0.0.0"
   bind_port       = "8081"
-  trust_domain    = "helixterm.io"
+  trust_domain    = "helixterminator.io"
   data_dir        = "/run/spire/data"
   log_level       = "INFO"
   log_format      = "json"
@@ -360,7 +360,7 @@ agent {
   data_dir       = "/run/spire/data"
   log_level      = "INFO"
   log_format     = "json"
-  trust_domain   = "helixterm.io"
+  trust_domain   = "helixterminator.io"
   server_address = "spire-server.spire.svc.cluster.local"
   server_port    = "8081"
   socket_path    = "/run/spire/sockets/agent.sock"
@@ -407,8 +407,8 @@ Registration entries map workload attestation selectors to SPIFFE IDs:
 ```bash
 # Register auth-service
 spire-server entry create \
-  -spiffeID spiffe://helixterm.io/ns/default/sa/auth-service \
-  -parentID spiffe://helixterm.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID \
+  -spiffeID spiffe://helixterminator.io/ns/default/sa/auth-service \
+  -parentID spiffe://helixterminator.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID \
   -selector k8s:ns:default \
   -selector k8s:sa:auth-service \
   -selector k8s:pod-label:app:auth-service \
@@ -416,8 +416,8 @@ spire-server entry create \
 
 # Register vault-service
 spire-server entry create \
-  -spiffeID spiffe://helixterm.io/ns/vault/sa/vault-api \
-  -parentID spiffe://helixterm.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID \
+  -spiffeID spiffe://helixterminator.io/ns/vault/sa/vault-api \
+  -parentID spiffe://helixterminator.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID \
   -selector k8s:ns:vault \
   -selector k8s:sa:vault-service \
   -selector k8s:pod-label:app:vault-service \
@@ -425,8 +425,8 @@ spire-server entry create \
 
 # Register PKI CA service (higher privilege — shorter TTL)
 spire-server entry create \
-  -spiffeID spiffe://helixterm.io/ns/pki/sa/ca-signer \
-  -parentID spiffe://helixterm.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID \
+  -spiffeID spiffe://helixterminator.io/ns/pki/sa/ca-signer \
+  -parentID spiffe://helixterminator.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID \
   -selector k8s:ns:pki \
   -selector k8s:sa:pki-ca-signer \
   -selector k8s:pod-label:app:pki-ca \
@@ -477,10 +477,10 @@ func NewWorkloadIdentity(ctx context.Context) (*WorkloadIdentity, error) {
 }
 
 // ServerTLSConfig returns a *tls.Config for use as a TLS server, enforcing
-// mTLS with SPIFFE peer authentication. Only peers from the helixterm.io
+// mTLS with SPIFFE peer authentication. Only peers from the helixterminator.io
 // trust domain are accepted.
 func (w *WorkloadIdentity) ServerTLSConfig() *tls.Config {
-	trustDomain := spiffeid.RequireTrustDomainFromString("helixterm.io")
+	trustDomain := spiffeid.RequireTrustDomainFromString("helixterminator.io")
 	return tlsconfig.MTLSServerConfig(w.source, w.source, tlsconfig.AuthorizeMemberOf(trustDomain))
 }
 
@@ -670,7 +670,7 @@ spec:
     - source:
         principals:
           - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
-          - "spiffe://helixterm.io/ns/default/sa/api-gateway"
+          - "spiffe://helixterminator.io/ns/default/sa/api-gateway"
     to:
     - operation:
         methods: ["POST", "GET"]
@@ -694,9 +694,9 @@ spec:
   - from:
     - source:
         principals:
-          - "spiffe://helixterm.io/ns/default/sa/api-gateway"
-          - "spiffe://helixterm.io/ns/default/sa/auth-service"
-          - "spiffe://helixterm.io/ns/vault/sa/sync-service"
+          - "spiffe://helixterminator.io/ns/default/sa/api-gateway"
+          - "spiffe://helixterminator.io/ns/default/sa/auth-service"
+          - "spiffe://helixterminator.io/ns/vault/sa/sync-service"
     to:
     - operation:
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
@@ -719,8 +719,8 @@ spec:
   - from:
     - source:
         principals:
-          - "spiffe://helixterm.io/ns/default/sa/auth-service"
-          - "spiffe://helixterm.io/ns/default/sa/session-manager"
+          - "spiffe://helixterminator.io/ns/default/sa/auth-service"
+          - "spiffe://helixterminator.io/ns/default/sa/session-manager"
     to:
     - operation:
         methods: ["POST"]
@@ -790,8 +790,8 @@ Issued upon successful device enrollment. Bound to a specific device instance.
 ```
 Device Certificate fields:
   Subject:    CN=<device-uuid>, O=HelixTerminator, OU=<org-id>
-  SAN:        URI: spiffe://helixterm.io/device/<device-uuid>
-              URI: spiffe://helixterm.io/org/<org-id>/device/<device-uuid>
+  SAN:        URI: spiffe://helixterminator.io/device/<device-uuid>
+              URI: spiffe://helixterminator.io/org/<org-id>/device/<device-uuid>
   Extensions:
     DeviceOS:        macOS 14.5 / Windows 11 / Linux (kernel 6.x)
     DeviceName:      User-assigned friendly name
@@ -810,10 +810,10 @@ Issued by SPIRE to each service instance. Machine-to-machine only.
 ```
 SVID fields:
   Subject:      SPIFFE URI SAN
-  SAN:          URI: spiffe://helixterm.io/ns/<ns>/sa/<service>
+  SAN:          URI: spiffe://helixterminator.io/ns/<ns>/sa/<service>
   Not Before:   issuance time
   Not After:    issuance time + TTL (1h)
-  Issuer:       CN=SPIRE Intermediate CA, O=helixterm.io
+  Issuer:       CN=SPIRE Intermediate CA, O=helixterminator.io
   Key Usage:    Digital Signature, Key Encipherment
   Extended KU:  TLS Web Client Authentication, TLS Web Server Authentication
 ```
@@ -1259,16 +1259,16 @@ func generateHOTP(secret []byte, counter uint64, digits int) string {
 #### 2.3.1 Architecture Overview
 
 FIDO2 is the strongest authentication factor supported by HelixTerminator. It is:
-- **Phishing-resistant**: the challenge is cryptographically bound to the origin (`app.helixterm.io`), preventing replay across origins
+- **Phishing-resistant**: the challenge is cryptographically bound to the origin (`app.helixterminator.io`), preventing replay across origins
 - **Credential-bound**: the private key never leaves the authenticator
 - **Biometric capable**: supports platform authenticators (TouchID, FaceID, Windows Hello) and roaming authenticators (YubiKey)
 
 **Relying Party configuration:**
 ```json
 {
-  "rpId": "helixterm.io",
+  "rpId": "helixterminator.io",
   "rpName": "HelixTerminator",
-  "origin": "https://app.helixterm.io",
+  "origin": "https://app.helixterminator.io",
   "attestationConveyancePreference": "direct",
   "authenticatorSelection": {
     "authenticatorAttachment": "cross-platform",
@@ -1291,7 +1291,7 @@ Client (Browser/App)              API Backend                    Database
       |                                |<-- challenge stored ----------|
       |<-- 200 {                       |                              |
       |    challenge,                  |                              |
-      |    rpId: "helixterm.io",        |                              |
+      |    rpId: "helixterminator.io", |                              |
       |    userId,                     |                              |
       |    excludeCredentials: [...]   |                              |
       |   } ---------------------------|                              |
@@ -1337,7 +1337,7 @@ Client (Browser/App)              API Backend                    Database
       |<-- 200 {                       |                              |
       |    challenge,                  |                              |
       |    timeout: 120000,            |                              |
-      |    rpId: "helixterm.io",        |                              |
+      |    rpId: "helixterminator.io", |                              |
       |    allowCredentials: [...]     |                              |
       |   }                            |                              |
       |                                |                              |
@@ -1386,8 +1386,8 @@ import (
 
 var WebAuthnConfig = &webauthn.Config{
 	RPDisplayName: "HelixTerminator",
-	RPID:          "helixterm.io",
-	RPOrigins:     []string{"https://app.helixterm.io"},
+	RPID:          "helixterminator.io",
+	RPOrigins:     []string{"https://app.helixterminator.io"},
 	
 	// Attestation: "direct" to verify authenticator model for enterprise
 	// policy enforcement (e.g., require YubiKey 5 series)
@@ -1480,9 +1480,9 @@ func (d *DuoClient) SendPush(ctx context.Context, username string) (bool, error)
 
 HelixTerminator acts as a SAML 2.0 Service Provider (SP). It does not act as an IdP.
 
-**SP Metadata endpoint:** `https://app.helixterm.io/saml/metadata`
-**ACS endpoint:** `https://app.helixterm.io/saml/acs`
-**SLO endpoint:** `https://app.helixterm.io/saml/slo`
+**SP Metadata endpoint:** `https://app.helixterminator.io/saml/metadata`
+**ACS endpoint:** `https://app.helixterminator.io/saml/acs`
+**SLO endpoint:** `https://app.helixterminator.io/saml/slo`
 
 ```go
 // pkg/auth/saml.go
@@ -1497,7 +1497,7 @@ import (
 )
 
 func NewSAMLMiddleware(spKeyPair tls.Certificate, idpMetadataURL string) (*samlsp.Middleware, error) {
-	rootURL, _ := url.Parse("https://app.helixterm.io")
+	rootURL, _ := url.Parse("https://app.helixterminator.io")
 	idpMetadataURL_parsed, _ := url.Parse(idpMetadataURL)
 
 	idpMetadata, err := samlsp.FetchMetadata(context.Background(), http.DefaultClient,
@@ -1605,7 +1605,7 @@ func (o *OIDCProvider) VerifyIDToken(ctx context.Context, rawIDToken string) (*o
 
 HelixTerminator exposes a SCIM 2.0 endpoint for automated user provisioning and deprovisioning from enterprise IdPs.
 
-**SCIM base URL:** `https://api.helixterm.io/scim/v2`
+**SCIM base URL:** `https://api.helixterminator.io/scim/v2`
 
 Supported operations:
 - `GET /Users` — list users
@@ -1680,17 +1680,17 @@ func JITProvisionUser(ctx context.Context, assertion *SAMLAssertion, orgID strin
 
 ### 2.6 Token Architecture
 
-#### 2.6.1 Access Tokens (JWT, RS256, 15-minute TTL)
+#### 2.6.1 Access Tokens (JWT, EdDSA/Ed25519, 15-minute TTL)
 
-Access tokens are signed JWTs using RS256. The signing key is a 4096-bit RSA key pair managed by the Auth service. Public keys are exposed at `https://auth.helixterm.io/.well-known/jwks.json` for token verification by resource services.
+Access tokens are signed JWTs using **EdDSA (Ed25519)** (RFC 8032/RFC 8037) — the canonical signing algorithm for HelixTerminator access tokens. The signing key is an Ed25519 key pair managed by the Auth service. Public keys are exposed at `https://auth.helixterminator.io/.well-known/jwks.json` for token verification by resource services. (RS256/ES256/HS256 appear elsewhere in this document only as legacy/negative examples, never as the signing choice.)
 
 **Complete JWT payload schema:**
 
 ```json
 {
-  "iss": "https://auth.helixterm.io",
+  "iss": "https://auth.helixterminator.io",
   "sub": "usr_01HQZ7VBKF2MXKPTCG4N5Y8R00",
-  "aud": ["https://api.helixterm.io", "https://vault.helixterm.io"],
+  "aud": ["https://api.helixterminator.io", "https://vault.helixterminator.io"],
   "iat": 1751124000,
   "nbf": 1751124000,
   "exp": 1751124900,
@@ -1748,7 +1748,7 @@ Access tokens are signed JWTs using RS256. The signing key is a 4096-bit RSA key
 **JWT Header:**
 ```json
 {
-  "alg": "RS256",
+  "alg": "EdDSA",
   "typ": "JWT",
   "kid": "helixterm-access-2026-06-key-001"
 }
@@ -1892,7 +1892,7 @@ CREATE INDEX api_keys_user_id_idx  ON api_keys (user_id) WHERE revoked_at IS NUL
 
 ### 3.1 Architecture Overview
 
-HelixTerminator operates its own SSH Certificate Authority (`helixterm.io/services/pki`). SSH certificates eliminate the need to distribute public keys to every server — instead, servers trust the CA, and users present certificates signed by that CA. This enables:
+HelixTerminator operates its own SSH Certificate Authority (`helixterminator.io/services/pki`). SSH certificates eliminate the need to distribute public keys to every server — instead, servers trust the CA, and users present certificates signed by that CA. This enables:
 
 - **Centralized revocation**: revoke a CA key to instantly block all associated users
 - **Short-lived credentials**: 8-hour certificates expire automatically; no cleanup needed
@@ -2026,12 +2026,12 @@ func buildExtensions(req *UserCertRequest) map[string]string {
 	}
 
 	// HelixTerminator custom extensions (informational, prefixed with custom@)
-	exts["helixterm-user-id@helixterm.io"]    = req.UserID
-	exts["helixterm-session-id@helixterm.io"] = req.SessionID
-	exts["helixterm-org-id@helixterm.io"]     = req.OrgID
-	exts["helixterm-device-id@helixterm.io"]  = req.DeviceID
-	exts["helixterm-issued-by@helixterm.io"]  = "pki.helixterm.io/v1"
-	exts["helixterm-policy-version@helixterm.io"] = req.PolicyVersion
+	exts["helixterm-user-id@helixterminator.io"]    = req.UserID
+	exts["helixterm-session-id@helixterminator.io"] = req.SessionID
+	exts["helixterm-org-id@helixterminator.io"]     = req.OrgID
+	exts["helixterm-device-id@helixterminator.io"]  = req.DeviceID
+	exts["helixterm-issued-by@helixterminator.io"]  = "pki.helixterminator.io/v1"
+	exts["helixterm-policy-version@helixterminator.io"] = req.PolicyVersion
 
 	return exts
 }
@@ -2083,8 +2083,8 @@ ssh-keygen -L -f /path/to/certificate-cert.pub
 #         Extensions:
 #                 permit-pty
 #                 permit-user-rc
-#                 helixterm-user-id@helixterm.io
-#                 helixterm-session-id@helixterm.io
+#                 helixterm-user-id@helixterminator.io
+#                 helixterm-session-id@helixterminator.io
 ```
 
 ### 3.4 Certificate Issuance API
@@ -2099,8 +2099,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"helixterm.io/services/pki/internal/ca"
-	"helixterm.io/services/pki/internal/policy"
+	"helixterminator.io/services/pki/internal/ca"
+	"helixterminator.io/services/pki/internal/policy"
 )
 
 type SignUserCertRequest struct {
@@ -2273,16 +2273,16 @@ Host certificates prevent man-in-the-middle attacks by cryptographically verifyi
 ```bash
 # Sign a host certificate (performed by PKI service during host enrollment)
 ssh-keygen -s /path/to/host_ca_signing_key \
-  -I "web-01.prod.acme.helixterm.io" \
+  -I "web-01.prod.acme.helixterminator.io" \
   -h \
-  -n "web-01.prod.acme.helixterm.io,10.0.1.42" \
+  -n "web-01.prod.acme.helixterminator.io,10.0.1.42" \
   -V +52w \    # 1 year validity for host certs
   /etc/ssh/ssh_host_ed25519_key.pub
 ```
 
 **Client `~/.ssh/known_hosts` configuration:**
 ```
-@cert-authority *.helixterm.io ssh-ed25519 AAAA... HelixTerminator Host CA
+@cert-authority *.helixterminator.io ssh-ed25519 AAAA... HelixTerminator Host CA
 ```
 
 ### 3.7 Certificate Transparency Log
@@ -2348,6 +2348,10 @@ The HelixTerminator vault is **zero-knowledge** with respect to the server:
 > The server stores only encrypted data and encrypted keys. The server **cannot** decrypt any vault content, and no HelixTerminator employee can access plaintext user data.
 
 This is achieved through client-side encryption: all encryption and decryption operations happen on the client device. The server only stores and retrieves ciphertext.
+
+**Scope of this guarantee (per CANONICAL_FACTS CD-10):** zero-knowledge is a **HARD** requirement for *vault items* — client-side encryption/decryption only, with the server relaying ciphertext it cannot open. This guarantee does **not** extend to SSH host credentials under password-based host authentication, nor to server-side SSH key generation (see `07_api_and_database.md` §4 and `POST /keys/generate`): those are a distinct, lower-assurance credential class that requires the server to handle plaintext at connection time. This document, and every sibling document, must stop describing password-based SSH host authentication as zero-knowledge — it explicitly is not.
+
+> **DEFERRED (next increment):** the vault's zero-knowledge posture stated above is the design target but is not yet fully realized by the implementation shown in §4.6–§4.7 below — see the inline `DEFERRED` notes there for the specific server-side key-handling gaps (a plaintext `VaultKey` field in a backend-looking struct, and a re-wrap flow that can execute server-side) that must be removed to make this guarantee true rather than aspirational.
 
 ### 4.2 Key Hierarchy
 
@@ -2700,6 +2704,8 @@ func (tv *TeamVault) RevokeMember(ctx context.Context, revokedUserID string) err
 }
 ```
 
+> **DEFERRED (next increment):** security redesign — `TeamVault.VaultKey []byte` holds the plaintext vault key in memory inside a `vault` package with no client-boundary marker, and `AddMember`/`RevokeMember` call `WrapVaultKeyForDevice`/`scheduleKeyRotation` in a way that reads as server-executable code. Per CANONICAL_FACTS CD-10 (zero-knowledge is HARD for vault items), this must be redesigned so key-wrap and key-combination operations are provably client-side only, with the server acting solely as a relay for opaque ciphertext it cannot open. Not done this increment.
+
 ### 4.7 Key Rotation Procedure
 
 Full key rotation procedure (triggered by member revocation, periodic rotation policy, or manual trigger):
@@ -2717,6 +2723,8 @@ Full key rotation procedure (triggered by member revocation, periodic rotation p
 5. Log rotation event to audit log
 6. Notify all active sessions of key rotation (triggers client re-sync)
 ```
+
+> **DEFERRED (next increment):** security redesign — steps 2a/2b (Item Key decrypt/re-wrap under the new Vault Key) are described without a stated execution boundary and, combined with §4.6's server-callable `RevokeMember`/`scheduleKeyRotation`, currently read as server-side operations on decrypted key material. Per CANONICAL_FACTS CD-10, re-wrap must be performed client-side (or via blinded/opaque server relay only); the server must never hold an unwrapped Item Key or Vault Key. Not done this increment.
 
 ### 4.8 Recovery Code Mechanism
 
@@ -3022,8 +3030,10 @@ type KeyUseEvent struct {
 | `org_admin` | Full administration of a specific organization: user management, billing, SSO configuration, audit log access |
 | `team_admin` | Team-scoped administration: invite/remove members, manage team vaults and hosts |
 | `member` | Standard team member: use vaults, connect to hosts, manage own SSH keys |
-| `guest` | Limited read-only access to specific shared resources; cannot create or delete |
+| `auditor` | Read-only compliance/audit-log access across the organization; cannot create, modify, or delete any resource |
 | `api_user` | Service account for programmatic API access; no interactive access |
+
+> **DEFERRED (next increment):** the canonical 6-role vocabulary (`super_admin`, `org_admin`, `team_admin`, `member`, `auditor`, `api_user` — per CANONICAL_FACTS CD-8) replaces the prior `guest` role name here. This pass renames the role and grants `auditor` `audit_log` read access (§6.2); a full re-derivation of the permission matrix (removing the old `guest`'s shared-resource read/connect/start grants, which do not belong to an audit-only role) is deferred to the next increment.
 
 #### Resource Types and Actions
 
@@ -3044,7 +3054,7 @@ type KeyUseEvent struct {
 
 ### 6.2 Permission Matrix
 
-| Resource | Action | `super_admin` | `org_admin` | `team_admin` | `member` | `guest` | `api_user` |
+| Resource | Action | `super_admin` | `org_admin` | `team_admin` | `member` | `auditor` | `api_user` |
 |----------|--------|:---:|:---:|:---:|:---:|:---:|:---:|
 | vault | create | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | vault | read | ✓ | ✓ | ✓ | ✓ (own/team) | ✓ (shared) | ✓ (scoped) |
@@ -3061,7 +3071,7 @@ type KeyUseEvent struct {
 | session | view | ✓ | ✓ | ✓ (team) | ✓ (own) | ✗ | ✗ |
 | session | record | ✓ | ✓ | ✓ (team) | ✗ | ✗ | ✗ |
 | session | terminate | ✓ | ✓ | ✓ (team) | ✓ (own) | ✗ | ✗ |
-| audit_log | view | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ |
+| audit_log | view | ✓ | ✓ | ✗ | ✗ | ✓ | ✗ |
 | audit_log | export | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ |
 | organization | update | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ |
 | team | invite | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
@@ -3099,7 +3109,7 @@ INSERT INTO roles (name, display_name, is_system) VALUES
     ('org_admin',   'Organization Administrator', TRUE),
     ('team_admin',  'Team Administrator', TRUE),
     ('member',      'Member', TRUE),
-    ('guest',       'Guest', TRUE),
+    ('auditor',     'Auditor', TRUE),
     ('api_user',    'API User', TRUE);
 
 -- Permissions: atomic action on a resource type
@@ -3706,10 +3716,10 @@ func (s *SplunkForwarder) batchWorker(ctx context.Context) {
 ```nginx
 server {
     listen 443 ssl;
-    server_name api.helixterm.io;
+    server_name api.helixterminator.io;
 
-    ssl_certificate     /etc/nginx/ssl/api.helixterm.io.crt;
-    ssl_certificate_key /etc/nginx/ssl/api.helixterm.io.key;
+    ssl_certificate     /etc/nginx/ssl/api.helixterminator.io.crt;
+    ssl_certificate_key /etc/nginx/ssl/api.helixterminator.io.key;
 
     # TLS 1.3 only
     ssl_protocols TLSv1.3;
@@ -3825,8 +3835,8 @@ package middleware
 func CORSMiddleware() func(http.Handler) http.Handler {
 	return cors.Handler(cors.Options{
 		AllowedOrigins: []string{
-			"https://app.helixterm.io",
-			"https://admin.helixterm.io",
+			"https://app.helixterminator.io",
+			"https://admin.helixterminator.io",
 		},
 		AllowedMethods: []string{
 			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
@@ -3860,7 +3870,7 @@ Content-Security-Policy:
   style-src 'self' 'nonce-{RANDOM_NONCE}';
   img-src 'self' data: https://secure.gravatar.com;
   font-src 'self';
-  connect-src 'self' https://api.helixterm.io https://auth.helixterm.io wss://terminal.helixterm.io;
+  connect-src 'self' https://api.helixterminator.io https://auth.helixterminator.io wss://terminal.helixterminator.io;
   frame-src 'none';
   object-src 'none';
   base-uri 'self';
@@ -3917,7 +3927,7 @@ Mobile applications (iOS and Android) pin to the HelixTerminator TLS certificate
 class PinnedURLSession: NSObject, URLSessionDelegate {
     // SHA-256 hashes of the Subject Public Key Info (SPKI) of pinned certificates
     private let pinnedHashes: Set<String> = [
-        "sha256/AAAA...=", // api.helixterm.io leaf cert
+        "sha256/AAAA...=", // api.helixterminator.io leaf cert
         "sha256/BBBB...=", // intermediate CA
         "sha256/CCCC...=", // root CA (backup pin)
     ]
@@ -4029,7 +4039,7 @@ Users can export their data at any time via `GET /v1/me/export`. The export incl
 - Audit log of their own activities
 - Connected devices list
 
-**Data processing agreements:** Available for enterprise customers at `legal.helixterm.io/dpa`.
+**Data processing agreements:** Available for enterprise customers at `legal.helixterminator.io/dpa`.
 
 **Data residency:** Customer data can be pinned to EU (Frankfurt + Dublin), US (us-east-1 + us-west-2), or APAC (ap-southeast-1 + ap-northeast-1). Data residency is enforced at the infrastructure level via AWS region selection and Kafka partition key routing.
 
@@ -4227,8 +4237,8 @@ func RespondToAccountTakeover(ctx context.Context, userID string, confidence ATO
 
 HelixTerminator operates a coordinated vulnerability disclosure program:
 
-**Disclosure endpoint:** `security@helixterm.io` / `https://security.helixterm.io/report`  
-**PGP Key:** Published at `https://security.helixterm.io/pgp-key.txt`
+**Disclosure endpoint:** `security@helixterminator.io` / `https://security.helixterminator.io/report`  
+**PGP Key:** Published at `https://security.helixterminator.io/pgp-key.txt`
 
 **Response SLAs:**
 - Initial acknowledgment: 24 hours
@@ -4288,7 +4298,7 @@ All breach notifications include:
 | SSH key generation | Ed25519 | 255-bit | Preferred |
 | SSH key generation | ECDSA P-384 | 384-bit | FIPS alternative |
 | SSH key generation | RSA | 4096-bit | Legacy systems only |
-| JWT signing | RS256 | 4096-bit RSA | Access tokens |
+| JWT signing | EdDSA (Ed25519) | 256-bit | Access tokens; RFC 8037. (RS256/ES256/HS256 used only in negative/attack-test examples elsewhere in this document.) |
 | TLS (external) | TLS 1.3 | N/A | AEAD ciphers mandated |
 | Workload identity | ECDSA P-256 | 256-bit | SPIFFE SVIDs |
 | Audit hash chain | SHA-256 | 256-bit | Tamper detection |
@@ -4317,14 +4327,14 @@ All breach notifications include:
 
 | Role | Contact | PGP |
 |------|---------|-----|
-| Security Team | security@helixterm.io | Published at security.helixterm.io |
-| Vulnerability Disclosure | security@helixterm.io | Same |
-| Data Protection Officer | dpo@helixterm.io | Published at legal.helixterm.io |
-| Legal | legal@helixterm.io | — |
-| Status Page | status.helixterm.io | — |
+| Security Team | security@helixterminator.io | Published at security.helixterminator.io |
+| Vulnerability Disclosure | security@helixterminator.io | Same |
+| Data Protection Officer | dpo@helixterminator.io | Published at legal.helixterminator.io |
+| Legal | legal@helixterminator.io | — |
+| Status Page | status.helixterminator.io | — |
 
 ---
 
-*Document maintained by the HelixTerminator Platform Security Team. For questions or proposed changes, open a PR against the `platform-security` repository or email security@helixterm.io.*
+*Document maintained by the HelixTerminator Platform Security Team. For questions or proposed changes, open a PR against the `platform-security` repository or email security@helixterminator.io.*
 
 *Last updated: 2026-06-28 | Next review: 2026-09-28 | Document version: 1.0.0*

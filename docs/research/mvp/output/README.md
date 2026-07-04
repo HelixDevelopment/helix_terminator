@@ -5,6 +5,10 @@
 **Version:** 1.0.0  
 **Status:** Complete — Ready for immediate use by all technical teams
 
+> **Note:** `helix_terminator` is a dual-scope product (Secure Terminal Platform + Zero-Trust Connection
+> Broker); see [`CANONICAL_FACTS.md`](CANONICAL_FACTS.md) for the canonical, reconciled facts
+> (identity, versions, networking, and scope) that every document in this package must conform to.
+
 ---
 
 ## Package Contents
@@ -92,9 +96,9 @@ All 12 documents are available in 4 formats:
 
 | Layer | Technology |
 |-------|-----------|
-| **Backend** | Go 1.25, Gin Gonic, module path `helixterm.io` |
+| **Backend** | Go 1.25, Gin Gonic, module path `helixterminator.io` |
 | **Messaging** | Apache Kafka (events/fan-out) + RabbitMQ (commands/point-to-point) |
-| **Database** | PostgreSQL 16 (11 databases) + Redis 7 Cluster |
+| **Database** | PostgreSQL 17.2 (11 databases) + Redis 8 Cluster |
 | **Infrastructure** | Kubernetes + Helm + Podman/Docker + Terraform (EKS) |
 | **Client** | Flutter/Dart — Web, macOS, Windows, Linux, iOS, Android |
 | **Security** | SPIFFE/SPIRE, Istio mTLS, RBAC/ABAC, Vault E2E encryption |

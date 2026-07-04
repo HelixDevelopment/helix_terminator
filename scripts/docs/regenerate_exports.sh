@@ -6,10 +6,12 @@
 #   - Markdown  (docs/markdown/*.md)      -> HTML + DOCX + PDF (docs/html, docs/docx, docs/pdf)
 #   - Mermaid   (diagrams/mermaid/*.mmd)  -> SVG + PNG (+ best-effort PDF)
 #
-# Never overwrites an existing export: if the target file already exists it is
-# skipped (SKIP), making the script safe to re-run and safe to point at the
-# real, committed output/ tree without clobbering anything. Point --out-dir at
-# a scratch mirror to force full regeneration.
+# By default never overwrites an existing export: if the target file already
+# exists it is skipped (SKIP), making the script safe to re-run and safe to
+# point at the real, committed output/ tree without clobbering anything. Pass
+# --force to regenerate in place (overwrite existing exports) — used to keep
+# exports in sync after their markdown source changes (§11.4.12). Point
+# --out-dir at a scratch mirror for a clobber-free full regeneration.
 #
 # Usage:
 #   regenerate_exports.sh [--out-dir DIR] [--only md|mermaid]
@@ -26,9 +28,10 @@ export PATH="$HOME/Factory/software/pandoc/bin:$HOME/Factory/software/weasyprint
 
 ROOT_DIR="$REPO_ROOT/docs/research/mvp/output"
 ONLY="all"
+FORCE=0
 
 usage() {
-    echo "Usage: $0 [--out-dir DIR] [--only md|mermaid]" >&2
+    echo "Usage: $0 [--out-dir DIR] [--only md|mermaid] [--force]" >&2
     exit 1
 }
 
@@ -47,6 +50,10 @@ while [[ $# -gt 0 ]]; do
                 *) echo "ERROR: --only must be 'md' or 'mermaid'" >&2; exit 1 ;;
             esac
             shift 2
+            ;;
+        --force)
+            FORCE=1
+            shift
             ;;
         -h|--help)
             usage
@@ -101,7 +108,7 @@ run_conversion() {
     shift 4
     if [[ "$1" == "--" ]]; then shift; fi
 
-    if [[ -e "$out_file" ]]; then
+    if [[ -e "$out_file" && "$FORCE" != "1" ]]; then
         echo "SKIP  $label (exists: $out_file)"
         eval "count_skip_${prefix}=\$((count_skip_${prefix} + 1))"
         return 0

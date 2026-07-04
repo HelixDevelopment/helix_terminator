@@ -1,99 +1,5 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
-<head>
-  <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>HelixTerminator — 05_security_zero_trust</title>
-  <style>
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    html { -webkit-text-size-adjust: 100%; }
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-      }
-    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-    div.sourceCode
-      { color: #cccccc; background-color: #303030; }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ffcfaf; } /* Alert */
-    code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
-    code span.at { } /* Attribute */
-    code span.bn { color: #dca3a3; } /* BaseN */
-    code span.bu { } /* BuiltIn */
-    code span.cf { color: #f0dfaf; } /* ControlFlow */
-    code span.ch { color: #dca3a3; } /* Char */
-    code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
-    code span.co { color: #7f9f7f; } /* Comment */
-    code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
-    code span.do { color: #7f9f7f; } /* Documentation */
-    code span.dt { color: #dfdfbf; } /* DataType */
-    code span.dv { color: #dcdccc; } /* DecVal */
-    code span.er { color: #c3bf9f; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #c0bed1; } /* Float */
-    code span.fu { color: #efef8f; } /* Function */
-    code span.im { } /* Import */
-    code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
-    code span.kw { color: #f0dfaf; } /* Keyword */
-    code span.op { color: #f0efd0; } /* Operator */
-    code span.ot { color: #efef8f; } /* Other */
-    code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
-    code span.sc { color: #dca3a3; } /* SpecialChar */
-    code span.ss { color: #cc9393; } /* SpecialString */
-    code span.st { color: #cc9393; } /* String */
-    code span.va { } /* Variable */
-    code span.vs { color: #cc9393; } /* VerbatimString */
-    code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
-  </style>
-  <link rel="stylesheet" href="/tmp/helix_style.css" />
-</head>
-<body>
-<header id="title-block-header">
-<h1 class="title">HelixTerminator — 05_security_zero_trust</h1>
-</header>
 <h1
-id="helixterminator-security--zero-trust-architecture-specification">HelixTerminator
+id="helixterminator-security-zero-trust-architecture-specification">HelixTerminator
 Security &amp; Zero Trust Architecture Specification</h1>
 <p><strong>Document Version:</strong> 1.0.0<br />
 <strong>Classification:</strong> Internal — Engineering
@@ -101,7 +7,7 @@ Confidential<br />
 <strong>Effective Date:</strong> 2026-06-28<br />
 <strong>Owner:</strong> Platform Security Team<br />
 <strong>Review Cycle:</strong> Quarterly<br />
-<strong>Trust Domain:</strong> <code>helixterm.io</code></p>
+<strong>Trust Domain:</strong> <code>helixterminator.io</code></p>
 <hr />
 <h2 id="table-of-contents">Table of Contents</h2>
 <ol type="1">
@@ -141,8 +47,8 @@ Every access decision is made fresh, based on verified identity, device
 health, network context, and policy. Trust is never implicit, always
 explicitly granted, and continuously re-evaluated.</p>
 <hr />
-<h2 id="1-zero-trust-architecture">1. Zero Trust Architecture</h2>
-<h3 id="11-principles-and-philosophy">1.1 Principles and Philosophy</h3>
+<h2 id="zero-trust-architecture">1. Zero Trust Architecture</h2>
+<h3 id="principles-and-philosophy">1.1 Principles and Philosophy</h3>
 <p>Zero Trust is not a product or a network zone — it is a security
 model predicated on the assumption that the network perimeter has
 already been breached. Every request, regardless of origin, is treated
@@ -152,7 +58,7 @@ Trust implementation embodies three foundational axioms:</p>
 <li><p><strong>Never Trust, Always Verify.</strong> Every
 service-to-service call, every user request, every device connection
 must present verifiable proof of identity. Network location — being
-"inside" the VPC — confers no implicit trust.</p></li>
+“inside” the VPC — confers no implicit trust.</p></li>
 <li><p><strong>Assume Breach.</strong> Design all systems assuming an
 adversary has already established a foothold somewhere in the
 environment. Lateral movement must be impossible even from a compromised
@@ -163,11 +69,16 @@ device, or workload — operates with the minimum permissions required.
 Permissions are time-bound, scoped to specific resources, and revocable
 without restart.</p></li>
 </ol>
-<h3 id="12-trust-boundaries-and-threat-model">1.2 Trust Boundaries and
+<h3 id="trust-boundaries-and-threat-model">1.2 Trust Boundaries and
 Threat Model</h3>
 <p>HelixTerminator operates across four trust zones, each with strictly
 enforced boundaries:</p>
 <table>
+<colgroup>
+<col style="width: 18%" />
+<col style="width: 40%" />
+<col style="width: 40%" />
+</colgroup>
 <thead>
 <tr>
 <th>Zone</th>
@@ -211,27 +122,27 @@ credentials acting outside their authorization</li>
 <li><strong>Nation-state adversary</strong>: Advanced persistent threat
 with long time horizons and sophisticated techniques</li>
 </ul>
-<h3 id="13-spiffespire-workload-identity">1.3 SPIFFE/SPIRE Workload
+<h3 id="spiffespire-workload-identity">1.3 SPIFFE/SPIRE Workload
 Identity</h3>
-<h4 id="131-overview">1.3.1 Overview</h4>
+<h4 id="overview">1.3.1 Overview</h4>
 <p>SPIFFE (Secure Production Identity Framework for Everyone) provides a
 universal workload identity standard. Every HelixTerminator workload
 receives a SPIFFE Verifiable Identity Document (SVID) cryptographically
 signed by the trust domain root. This eliminates the need for static
 secrets in service-to-service communication entirely.</p>
-<p><strong>Trust Domain:</strong> <code>helixterm.io</code></p>
+<p><strong>Trust Domain:</strong> <code>helixterminator.io</code></p>
 <p>All SPIFFE IDs follow the format:</p>
-<pre><code>spiffe://helixterm.io/&lt;service-path&gt;</code></pre>
+<pre><code>spiffe://helixterminator.io/&lt;service-path&gt;</code></pre>
 <p>Service identity examples:</p>
-<pre><code>spiffe://helixterm.io/ns/default/sa/auth-service
-spiffe://helixterm.io/ns/default/sa/pki-service
-spiffe://helixterm.io/ns/default/sa/vault-service
-spiffe://helixterm.io/ns/default/sa/session-manager
-spiffe://helixterm.io/ns/default/sa/audit-service
-spiffe://helixterm.io/ns/vault/sa/vault-api
-spiffe://helixterm.io/ns/pki/sa/ca-signer</code></pre>
-<h4 id="132-spire-server-high-availability-configuration">1.3.2 SPIRE
-Server High-Availability Configuration</h4>
+<pre><code>spiffe://helixterminator.io/ns/default/sa/auth-service
+spiffe://helixterminator.io/ns/default/sa/pki-service
+spiffe://helixterminator.io/ns/default/sa/vault-service
+spiffe://helixterminator.io/ns/default/sa/session-manager
+spiffe://helixterminator.io/ns/default/sa/audit-service
+spiffe://helixterminator.io/ns/vault/sa/vault-api
+spiffe://helixterminator.io/ns/pki/sa/ca-signer</code></pre>
+<h4 id="spire-server-high-availability-configuration">1.3.2 SPIRE Server
+High-Availability Configuration</h4>
 <p>The SPIRE server is the root of workload identity issuance. It must
 be highly available, as a SPIRE server outage prevents new SVIDs from
 being issued and prevents existing SVIDs from rotating, eventually
@@ -244,7 +155,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb3-1"><a href="
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="at">server {</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="at">  bind_address    = &quot;0.0.0.0&quot;</span></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="at">  bind_port       = &quot;8081&quot;</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="at">  trust_domain    = &quot;helixterm.io&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="at">  trust_domain    = &quot;helixterminator.io&quot;</span></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="at">  data_dir        = &quot;/run/spire/data&quot;</span></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="at">  log_level       = &quot;INFO&quot;</span></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="at">  log_format      = &quot;json&quot;</span></span>
@@ -409,7 +320,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="
 <span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">resources</span><span class="kw">:</span></span>
 <span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">requests</span><span class="kw">:</span></span>
 <span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="fu">storage</span><span class="kw">:</span><span class="at"> 1Gi</span></span></code></pre></div>
-<h4 id="133-spire-agent-daemonset">1.3.3 SPIRE Agent DaemonSet</h4>
+<h4 id="spire-agent-daemonset">1.3.3 SPIRE Agent DaemonSet</h4>
 <p>A SPIRE agent runs on every node in the cluster, exposing the
 Workload API (Unix domain socket) to workloads on that node.</p>
 <div class="sourceCode" id="cb5"><pre
@@ -494,7 +405,7 @@ agent {
   data_dir       = &quot;/run/spire/data&quot;
   log_level      = &quot;INFO&quot;
   log_format     = &quot;json&quot;
-  trust_domain   = &quot;helixterm.io&quot;
+  trust_domain   = &quot;helixterminator.io&quot;
   server_address = &quot;spire-server.spire.svc.cluster.local&quot;
   server_port    = &quot;8081&quot;
   socket_path    = &quot;/run/spire/sockets/agent.sock&quot;
@@ -532,15 +443,14 @@ agent {
     ready_path       = &quot;/ready&quot;
   }
 }</code></pre>
-<h4 id="134-svid-registration-entries">1.3.4 SVID Registration
-Entries</h4>
+<h4 id="svid-registration-entries">1.3.4 SVID Registration Entries</h4>
 <p>Registration entries map workload attestation selectors to SPIFFE
 IDs:</p>
 <div class="sourceCode" id="cb7"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Register auth-service</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="ex">spire-server</span> entry create <span class="dt">\</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-spiffeID</span> spiffe://helixterm.io/ns/default/sa/auth-service <span class="dt">\</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-parentID</span> spiffe://helixterm.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID <span class="dt">\</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-spiffeID</span> spiffe://helixterminator.io/ns/default/sa/auth-service <span class="dt">\</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-parentID</span> spiffe://helixterminator.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID <span class="dt">\</span></span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:ns:default <span class="dt">\</span></span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:sa:auth-service <span class="dt">\</span></span>
 <span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:pod-label:app:auth-service <span class="dt">\</span></span>
@@ -548,8 +458,8 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="
 <span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Register vault-service</span></span>
 <span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="ex">spire-server</span> entry create <span class="dt">\</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">-spiffeID</span> spiffe://helixterm.io/ns/vault/sa/vault-api <span class="dt">\</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">-parentID</span> spiffe://helixterm.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID <span class="dt">\</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">-spiffeID</span> spiffe://helixterminator.io/ns/vault/sa/vault-api <span class="dt">\</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">-parentID</span> spiffe://helixterminator.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID <span class="dt">\</span></span>
 <span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:ns:vault <span class="dt">\</span></span>
 <span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:sa:vault-service <span class="dt">\</span></span>
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:pod-label:app:vault-service <span class="dt">\</span></span>
@@ -557,13 +467,13 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="
 <span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Register PKI CA service (higher privilege — shorter TTL)</span></span>
 <span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="ex">spire-server</span> entry create <span class="dt">\</span></span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">-spiffeID</span> spiffe://helixterm.io/ns/pki/sa/ca-signer <span class="dt">\</span></span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">-parentID</span> spiffe://helixterm.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID <span class="dt">\</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">-spiffeID</span> spiffe://helixterminator.io/ns/pki/sa/ca-signer <span class="dt">\</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">-parentID</span> spiffe://helixterminator.io/spire/agent/k8s_psat/helixterm-prod/NODE_ID <span class="dt">\</span></span>
 <span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:ns:pki <span class="dt">\</span></span>
 <span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:sa:pki-ca-signer <span class="dt">\</span></span>
 <span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">-selector</span> k8s:pod-label:app:pki-ca <span class="dt">\</span></span>
 <span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">-ttl</span> 1800</span></code></pre></div>
-<h4 id="135-svid-rotation">1.3.5 SVID Rotation</h4>
+<h4 id="svid-rotation">1.3.5 SVID Rotation</h4>
 <p>SVIDs are short-lived (1 hour TTL) and rotated automatically by the
 SPIRE agent. The Go SDK for SVID rotation in HelixTerminator
 services:</p>
@@ -606,10 +516,10 @@ services:</p>
 <span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
 <span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="co">// ServerTLSConfig returns a *tls.Config for use as a TLS server, enforcing</span></span>
-<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="co">// mTLS with SPIFFE peer authentication. Only peers from the helixterm.io</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a><span class="co">// mTLS with SPIFFE peer authentication. Only peers from the helixterminator.io</span></span>
 <span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a><span class="co">// trust domain are accepted.</span></span>
 <span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> <span class="op">(</span>w <span class="op">*</span>WorkloadIdentity<span class="op">)</span> ServerTLSConfig<span class="op">()</span> <span class="op">*</span>tls<span class="op">.</span>Config <span class="op">{</span></span>
-<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>    trustDomain <span class="op">:=</span> spiffeid<span class="op">.</span>RequireTrustDomainFromString<span class="op">(</span><span class="st">&quot;helixterm.io&quot;</span><span class="op">)</span></span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>    trustDomain <span class="op">:=</span> spiffeid<span class="op">.</span>RequireTrustDomainFromString<span class="op">(</span><span class="st">&quot;helixterminator.io&quot;</span><span class="op">)</span></span>
 <span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> tlsconfig<span class="op">.</span>MTLSServerConfig<span class="op">(</span>w<span class="op">.</span>source<span class="op">,</span> w<span class="op">.</span>source<span class="op">,</span> tlsconfig<span class="op">.</span>AuthorizeMemberOf<span class="op">(</span>trustDomain<span class="op">))</span></span>
 <span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
 <span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a></span>
@@ -649,10 +559,10 @@ services:</p>
 <span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;peer SPIFFE ID not authorized: expected %s&quot;</span><span class="op">,</span> expectedID<span class="op">)</span></span>
 <span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="14-mutual-tls-mtls-via-istio-service-mesh">1.4 Mutual TLS (mTLS)
+<h3 id="mutual-tls-mtls-via-istio-service-mesh">1.4 Mutual TLS (mTLS)
 via Istio Service Mesh</h3>
-<h4 id="141-istio-installation-and-configuration">1.4.1 Istio
-Installation and Configuration</h4>
+<h4 id="istio-installation-and-configuration">1.4.1 Istio Installation
+and Configuration</h4>
 <p>HelixTerminator uses Istio as the service mesh layer, enforcing mTLS
 between all services. Istio integrates with SPIRE via the SPIFFE CSI
 driver for certificate provisioning.</p>
@@ -722,7 +632,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="
 <span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">15443</span></span>
 <span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">targetPort</span><span class="kw">:</span><span class="at"> </span><span class="dv">15443</span></span>
 <span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">name</span><span class="kw">:</span><span class="at"> tls</span></span></code></pre></div>
-<h4 id="142-peerauthentication--strict-mtls">1.4.2 PeerAuthentication —
+<h4 id="peerauthentication-strict-mtls">1.4.2 PeerAuthentication —
 STRICT mTLS</h4>
 <p>All namespaces enforce <code>STRICT</code> mTLS — no plaintext
 traffic is accepted:</p>
@@ -773,7 +683,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb10-1"><a href=
 <span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span></span>
 <span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">mtls</span><span class="kw">:</span></span>
 <span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">mode</span><span class="kw">:</span><span class="at"> STRICT</span></span></code></pre></div>
-<h4 id="143-authorizationpolicy--least-privilege-per-service">1.4.3
+<h4 id="authorizationpolicy-least-privilege-per-service">1.4.3
 AuthorizationPolicy — Least-Privilege per Service</h4>
 <p>Each service declares the exact source principals allowed to call
 it:</p>
@@ -794,7 +704,7 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb11-1"><a href=
 <span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">source</span><span class="kw">:</span></span>
 <span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">principals</span><span class="kw">:</span></span>
 <span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account&quot;</span></span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterm.io/ns/default/sa/api-gateway&quot;</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterminator.io/ns/default/sa/api-gateway&quot;</span></span>
 <span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">to</span><span class="kw">:</span></span>
 <span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">operation</span><span class="kw">:</span></span>
 <span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">methods</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;POST&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;GET&quot;</span><span class="kw">]</span></span>
@@ -818,9 +728,9 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb11-1"><a href=
 <span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">from</span><span class="kw">:</span></span>
 <span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">source</span><span class="kw">:</span></span>
 <span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">principals</span><span class="kw">:</span></span>
-<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterm.io/ns/default/sa/api-gateway&quot;</span></span>
-<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterm.io/ns/default/sa/auth-service&quot;</span></span>
-<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterm.io/ns/vault/sa/sync-service&quot;</span></span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterminator.io/ns/default/sa/api-gateway&quot;</span></span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterminator.io/ns/default/sa/auth-service&quot;</span></span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterminator.io/ns/vault/sa/sync-service&quot;</span></span>
 <span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">to</span><span class="kw">:</span></span>
 <span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">operation</span><span class="kw">:</span></span>
 <span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">methods</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;GET&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;POST&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;PUT&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;DELETE&quot;</span><span class="kw">,</span><span class="at"> </span><span class="st">&quot;PATCH&quot;</span><span class="kw">]</span></span>
@@ -843,8 +753,8 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb11-1"><a href=
 <span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">from</span><span class="kw">:</span></span>
 <span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">source</span><span class="kw">:</span></span>
 <span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">principals</span><span class="kw">:</span></span>
-<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterm.io/ns/default/sa/auth-service&quot;</span></span>
-<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterm.io/ns/default/sa/session-manager&quot;</span></span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterminator.io/ns/default/sa/auth-service&quot;</span></span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;spiffe://helixterminator.io/ns/default/sa/session-manager&quot;</span></span>
 <span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">to</span><span class="kw">:</span></span>
 <span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">operation</span><span class="kw">:</span></span>
 <span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">methods</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">&quot;POST&quot;</span><span class="kw">]</span></span>
@@ -860,8 +770,8 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb11-1"><a href=
 <span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> deny-all</span></span>
 <span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">namespace</span><span class="kw">:</span><span class="at"> default</span></span>
 <span id="cb11-82"><a href="#cb11-82" aria-hidden="true" tabindex="-1"></a><span class="fu">spec</span><span class="kw">:</span><span class="at"> </span><span class="kw">{}</span><span class="co">   # Empty spec = deny all traffic</span></span></code></pre></div>
-<h4 id="144-certificate-rotation--24-hour-ttl">1.4.4 Certificate
-Rotation — 24-Hour TTL</h4>
+<h4 id="certificate-rotation-24-hour-ttl">1.4.4 Certificate Rotation —
+24-Hour TTL</h4>
 <p>Istio certificates (used for the sidecar proxy mTLS) are configured
 for 24-hour TTL with automatic rotation:</p>
 <div class="sourceCode" id="cb12"><pre
@@ -877,13 +787,13 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb12-1"><a href=
 <span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      proxyMetadata:</span>
 <span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        SECRET_TTL: &quot;24h&quot;</span>
 <span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>        SECRET_GRACE_PERIOD_RATIO: &quot;0.5&quot;   # Rotate at 12h (50% of TTL)</span></code></pre></div>
-<p>The SPIRE-issued SVIDs (1h TTL) rotate more aggressively than Istio's
+<p>The SPIRE-issued SVIDs (1h TTL) rotate more aggressively than Istio’s
 internal certificates. In production, all service-to-service TLS uses
 SPIRE-issued SVIDs through the SPIFFE CSI driver.</p>
-<h3 id="15-identity-hierarchy">1.5 Identity Hierarchy</h3>
+<h3 id="identity-hierarchy">1.5 Identity Hierarchy</h3>
 <p>HelixTerminator recognizes four distinct identity types, each with
 different trust characteristics and lifecycle properties:</p>
-<h4 id="151-user-identity-oidc-jwt">1.5.1 User Identity (OIDC JWT)</h4>
+<h4 id="user-identity-oidc-jwt">1.5.1 User Identity (OIDC JWT)</h4>
 <p>Issued upon successful authentication. Bound to a human user.</p>
 <pre><code>Identity attributes:
   sub:     Stable user UUID (never changes, even after email change)
@@ -898,14 +808,14 @@ different trust characteristics and lifecycle properties:</p>
 days (rotating).</p>
 <p><strong>Binding:</strong> Tied to a device and session. Cross-device
 re-authentication required.</p>
-<h4 id="152-device-identity-device-certificate">1.5.2 Device Identity
+<h4 id="device-identity-device-certificate">1.5.2 Device Identity
 (Device Certificate)</h4>
 <p>Issued upon successful device enrollment. Bound to a specific device
 instance.</p>
 <pre><code>Device Certificate fields:
   Subject:    CN=&lt;device-uuid&gt;, O=HelixTerminator, OU=&lt;org-id&gt;
-  SAN:        URI: spiffe://helixterm.io/device/&lt;device-uuid&gt;
-              URI: spiffe://helixterm.io/org/&lt;org-id&gt;/device/&lt;device-uuid&gt;
+  SAN:        URI: spiffe://helixterminator.io/device/&lt;device-uuid&gt;
+              URI: spiffe://helixterminator.io/org/&lt;org-id&gt;/device/&lt;device-uuid&gt;
   Extensions:
     DeviceOS:        macOS 14.5 / Windows 11 / Linux (kernel 6.x)
     DeviceName:      User-assigned friendly name
@@ -913,22 +823,22 @@ instance.</p>
     Compliance:      boolean (MDM-reported)
   TTL:        90 days
   Issuer:     HelixTerminator Device CA</code></pre>
-<p>Device certificates are stored in the platform's secure enclave
+<p>Device certificates are stored in the platform’s secure enclave
 (macOS Keychain / Windows CNG / Linux TPM) and are non-exportable. The
 private key never leaves the device.</p>
-<h4 id="153-workload-identity-spiffe-svid">1.5.3 Workload Identity
-(SPIFFE SVID)</h4>
+<h4 id="workload-identity-spiffe-svid">1.5.3 Workload Identity (SPIFFE
+SVID)</h4>
 <p>Issued by SPIRE to each service instance. Machine-to-machine
 only.</p>
 <pre><code>SVID fields:
   Subject:      SPIFFE URI SAN
-  SAN:          URI: spiffe://helixterm.io/ns/&lt;ns&gt;/sa/&lt;service&gt;
+  SAN:          URI: spiffe://helixterminator.io/ns/&lt;ns&gt;/sa/&lt;service&gt;
   Not Before:   issuance time
   Not After:    issuance time + TTL (1h)
-  Issuer:       CN=SPIRE Intermediate CA, O=helixterm.io
+  Issuer:       CN=SPIRE Intermediate CA, O=helixterminator.io
   Key Usage:    Digital Signature, Key Encipherment
   Extended KU:  TLS Web Client Authentication, TLS Web Server Authentication</code></pre>
-<h4 id="154-session-identity-short-lived-session-token">1.5.4 Session
+<h4 id="session-identity-short-lived-session-token">1.5.4 Session
 Identity (Short-Lived Session Token)</h4>
 <p>Issued when a user starts an SSH session. Ties together user, device,
 and target host.</p>
@@ -949,11 +859,15 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb16-1"><a href=
 <p><strong>Lifetime:</strong> Matches the SSH certificate TTL (8 hours
 for standard user sessions, configurable down to 30 minutes for
 high-privilege access).</p>
-<h3 id="16-continuous-verification">1.6 Continuous Verification</h3>
+<h3 id="continuous-verification">1.6 Continuous Verification</h3>
 <p>Zero Trust requires that authentication is not a one-time event at
 login. HelixTerminator implements continuous verification across the
 following triggers:</p>
 <table>
+<colgroup>
+<col style="width: 52%" />
+<col style="width: 47%" />
+</colgroup>
 <thead>
 <tr>
 <th>Trigger</th>
@@ -1067,8 +981,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb17-1"><a href="#cb
 <span id="cb17-64"><a href="#cb17-64" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb17-65"><a href="#cb17-65" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb17-66"><a href="#cb17-66" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="17-network-micro-segmentation">1.7 Network
-Micro-Segmentation</h3>
+<h3 id="network-micro-segmentation">1.7 Network Micro-Segmentation</h3>
 <p>Every service is isolated in its own Kubernetes namespace with a
 default-deny NetworkPolicy. Egress is explicitly allowed only to known
 service endpoints.</p>
@@ -1139,24 +1052,17 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb18-1"><a href=
 <span id="cb18-64"><a href="#cb18-64" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="kw">-</span><span class="at"> </span><span class="fu">protocol</span><span class="kw">:</span><span class="at"> TCP</span></span>
 <span id="cb18-65"><a href="#cb18-65" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">port</span><span class="kw">:</span><span class="at"> </span><span class="dv">8081</span></span></code></pre></div>
 <hr />
-<h2 id="2-authentication-architecture">2. Authentication
-Architecture</h2>
-<h3 id="21-email--password-authentication">2.1 Email + Password
+<h2 id="authentication-architecture">2. Authentication Architecture</h2>
+<h3 id="email-password-authentication">2.1 Email + Password
 Authentication</h3>
-<h4 id="211-password-hashing--argon2id">2.1.1 Password Hashing —
+<h4 id="password-hashing-argon2id">2.1.1 Password Hashing —
 Argon2id</h4>
 <p>All passwords are hashed using <strong>Argon2id</strong> (RFC 9106),
 the winner of the Password Hashing Competition and the current
 best-practice recommendation for password storage.</p>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li>Algorithm: Argon2id</li>
-<li>Time (iterations): 3</li>
-<li>Memory: 65,536 KiB (64 MB)</li>
-<li>Parallelism: 4 threads</li>
-<li>Output length: 32 bytes</li>
-<li>Salt: 16 bytes (crypto/rand)</li>
-</ul>
+<p><strong>Parameters:</strong> - Algorithm: Argon2id - Time
+(iterations): 3 - Memory: 65,536 KiB (64 MB) - Parallelism: 4 threads -
+Output length: 32 bytes - Salt: 16 bytes (crypto/rand)</p>
 <p>These parameters meet the OWASP recommendation and are calibrated to
 take approximately 500ms–1s on modern server hardware, making
 brute-force attacks prohibitively expensive.</p>
@@ -1270,7 +1176,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb19-1"><a href="#cb
 <span id="cb19-107"><a href="#cb19-107" aria-hidden="true" tabindex="-1"></a>    params<span class="op">.</span>keyLen <span class="op">=</span> <span class="dt">uint32</span><span class="op">(</span><span class="bu">len</span><span class="op">(</span>hash<span class="op">))</span></span>
 <span id="cb19-108"><a href="#cb19-108" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">&amp;</span>params<span class="op">,</span> salt<span class="op">,</span> hash<span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb19-109"><a href="#cb19-109" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h4 id="212-login-flow">2.1.2 Login Flow</h4>
+<h4 id="login-flow">2.1.2 Login Flow</h4>
 <pre><code>Client                     API Gateway            Auth Service         Database
   |                              |                      |                  |
   |-- POST /v1/auth/login ------&gt;|                      |                  |
@@ -1295,16 +1201,13 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb19-1"><a href="#cb
   |&lt;-- 200 {access_token,        |&lt;-- tokens ------------|                  |
   |         refresh_token,       |                      |                  |
   |         device_token}        |                      |                  |</code></pre>
-<p><strong>Login rate limiting:</strong></p>
-<ul>
-<li>5 failed attempts per 15 minutes per IP → temporary block</li>
-<li>10 failed attempts per 24 hours per account → account lock + admin
-alert</li>
-<li>Exponential backoff response: 200ms → 400ms → 800ms → 1600ms</li>
-</ul>
-<h3 id="22-totp-authentication-rfc-6238">2.2 TOTP Authentication (RFC
+<p><strong>Login rate limiting:</strong> - 5 failed attempts per 15
+minutes per IP → temporary block - 10 failed attempts per 24 hours per
+account → account lock + admin alert - Exponential backoff response:
+200ms → 400ms → 800ms → 1600ms</p>
+<h3 id="totp-authentication-rfc-6238">2.2 TOTP Authentication (RFC
 6238)</h3>
-<h4 id="221-totp-implementation">2.2.1 TOTP Implementation</h4>
+<h4 id="totp-implementation">2.2.1 TOTP Implementation</h4>
 <div class="sourceCode" id="cb21"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/auth/totp.go</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> auth</span>
@@ -1384,34 +1287,27 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb21-1"><a href="#cb
 <span id="cb21-76"><a href="#cb21-76" aria-hidden="true" tabindex="-1"></a>    otp <span class="op">:=</span> code <span class="op">%</span> <span class="dt">uint32</span><span class="op">(</span>math<span class="op">.</span>Pow10<span class="op">(</span>digits<span class="op">))</span></span>
 <span id="cb21-77"><a href="#cb21-77" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fmt<span class="op">.</span>Sprintf<span class="op">(</span><span class="st">&quot;%0*d&quot;</span><span class="op">,</span> digits<span class="op">,</span> otp<span class="op">)</span></span>
 <span id="cb21-78"><a href="#cb21-78" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<p><strong>TOTP Backup Codes:</strong></p>
-<ul>
-<li>10 single-use backup codes, 10 characters each</li>
-<li>Stored as Argon2id hashes (same parameters as password hashing)</li>
-<li>Each code invalidated after single use</li>
-<li>User must re-generate all codes at once (regeneration invalidates
-remaining codes)</li>
-</ul>
-<h3 id="23-fido2webauthn">2.3 FIDO2/WebAuthn</h3>
-<h4 id="231-architecture-overview">2.3.1 Architecture Overview</h4>
+<p><strong>TOTP Backup Codes:</strong> - 10 single-use backup codes, 10
+characters each - Stored as Argon2id hashes (same parameters as password
+hashing) - Each code invalidated after single use - User must
+re-generate all codes at once (regeneration invalidates remaining
+codes)</p>
+<h3 id="fido2webauthn">2.3 FIDO2/WebAuthn</h3>
+<h4 id="architecture-overview">2.3.1 Architecture Overview</h4>
 <p>FIDO2 is the strongest authentication factor supported by
-HelixTerminator. It is:</p>
-<ul>
-<li><strong>Phishing-resistant</strong>: the challenge is
-cryptographically bound to the origin (<code>app.helixterm.io</code>),
-preventing replay across origins</li>
-<li><strong>Credential-bound</strong>: the private key never leaves the
-authenticator</li>
-<li><strong>Biometric capable</strong>: supports platform authenticators
-(TouchID, FaceID, Windows Hello) and roaming authenticators
-(YubiKey)</li>
-</ul>
+HelixTerminator. It is: - <strong>Phishing-resistant</strong>: the
+challenge is cryptographically bound to the origin
+(<code>app.helixterminator.io</code>), preventing replay across origins
+- <strong>Credential-bound</strong>: the private key never leaves the
+authenticator - <strong>Biometric capable</strong>: supports platform
+authenticators (TouchID, FaceID, Windows Hello) and roaming
+authenticators (YubiKey)</p>
 <p><strong>Relying Party configuration:</strong></p>
 <div class="sourceCode" id="cb22"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;rpId&quot;</span><span class="fu">:</span> <span class="st">&quot;helixterm.io&quot;</span><span class="fu">,</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;rpId&quot;</span><span class="fu">:</span> <span class="st">&quot;helixterminator.io&quot;</span><span class="fu">,</span></span>
 <span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;rpName&quot;</span><span class="fu">:</span> <span class="st">&quot;HelixTerminator&quot;</span><span class="fu">,</span></span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;origin&quot;</span><span class="fu">:</span> <span class="st">&quot;https://app.helixterm.io&quot;</span><span class="fu">,</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;origin&quot;</span><span class="fu">:</span> <span class="st">&quot;https://app.helixterminator.io&quot;</span><span class="fu">,</span></span>
 <span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;attestationConveyancePreference&quot;</span><span class="fu">:</span> <span class="st">&quot;direct&quot;</span><span class="fu">,</span></span>
 <span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;authenticatorSelection&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
 <span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;authenticatorAttachment&quot;</span><span class="fu">:</span> <span class="st">&quot;cross-platform&quot;</span><span class="fu">,</span></span>
@@ -1421,7 +1317,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb22-1"><a href=
 <span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
 <span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;timeout&quot;</span><span class="fu">:</span> <span class="dv">120000</span></span>
 <span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<h4 id="232-webauthn-registration-flow">2.3.2 WebAuthn Registration
+<h4 id="webauthn-registration-flow">2.3.2 WebAuthn Registration
 Flow</h4>
 <pre><code>Client (Browser/App)              API Backend                    Database
       |                                |                              |
@@ -1431,7 +1327,7 @@ Flow</h4>
       |                                |&lt;-- challenge stored ----------|
       |&lt;-- 200 {                       |                              |
       |    challenge,                  |                              |
-      |    rpId: &quot;helixterm.io&quot;,        |                              |
+      |    rpId: &quot;helixterminator.io&quot;, |                              |
       |    userId,                     |                              |
       |    excludeCredentials: [...]   |                              |
       |   } ---------------------------|                              |
@@ -1462,7 +1358,7 @@ Flow</h4>
       |                                |-- store credential ----------&gt;|
       |&lt;-- 200 {credentialId, backed   |&lt;-- stored --------------------|
       |         up: true/false}        |                              |</code></pre>
-<h4 id="233-webauthn-authentication-flow">2.3.3 WebAuthn Authentication
+<h4 id="webauthn-authentication-flow">2.3.3 WebAuthn Authentication
 Flow</h4>
 <pre><code>Client (Browser/App)              API Backend                    Database
       |                                |                              |
@@ -1474,7 +1370,7 @@ Flow</h4>
       |&lt;-- 200 {                       |                              |
       |    challenge,                  |                              |
       |    timeout: 120000,            |                              |
-      |    rpId: &quot;helixterm.io&quot;,        |                              |
+      |    rpId: &quot;helixterminator.io&quot;, |                              |
       |    allowCredentials: [...]     |                              |
       |   }                            |                              |
       |                                |                              |
@@ -1507,7 +1403,7 @@ Flow</h4>
       |                                |-- update signCount ----------&gt;|
       |&lt;-- 200 {access_token,          |                              |
       |         refresh_token}         |                              |</code></pre>
-<h4 id="234-resident-keys-discoverable-credentials">2.3.4 Resident Keys
+<h4 id="resident-keys-discoverable-credentials">2.3.4 Resident Keys
 (Discoverable Credentials)</h4>
 <p>HelixTerminator supports WebAuthn resident keys (FIDO2 discoverable
 credentials), which allow passwordless login without first entering an
@@ -1522,8 +1418,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb25-1"><a href="#cb
 <span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> WebAuthnConfig <span class="op">=</span> <span class="op">&amp;</span>webauthn<span class="op">.</span>Config<span class="op">{</span></span>
 <span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>    RPDisplayName<span class="op">:</span> <span class="st">&quot;HelixTerminator&quot;</span><span class="op">,</span></span>
-<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>    RPID<span class="op">:</span>          <span class="st">&quot;helixterm.io&quot;</span><span class="op">,</span></span>
-<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    RPOrigins<span class="op">:</span>     <span class="op">[]</span><span class="dt">string</span><span class="op">{</span><span class="st">&quot;https://app.helixterm.io&quot;</span><span class="op">},</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>    RPID<span class="op">:</span>          <span class="st">&quot;helixterminator.io&quot;</span><span class="op">,</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    RPOrigins<span class="op">:</span>     <span class="op">[]</span><span class="dt">string</span><span class="op">{</span><span class="st">&quot;https://app.helixterminator.io&quot;</span><span class="op">},</span></span>
 <span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Attestation: &quot;direct&quot; to verify authenticator model for enterprise</span></span>
 <span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// policy enforcement (e.g., require YubiKey 5 series)</span></span>
@@ -1541,15 +1437,12 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb25-1"><a href="#cb
 <span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>        <span class="op">},</span></span>
 <span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span></span>
 <span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<p><strong>Supported authenticators:</strong></p>
-<ul>
-<li>YubiKey 5 series (NFC, USB-A, USB-C, Nano)</li>
-<li>Apple Touch ID / Face ID (platform authenticator, macOS/iOS)</li>
-<li>Windows Hello (Face, Fingerprint, PIN — platform authenticator)</li>
-<li>Google Titan Security Keys</li>
-<li>Any FIDO2-compliant authenticator</li>
-</ul>
-<h3 id="24-push-notifications-duo-security-integration">2.4 Push
+<p><strong>Supported authenticators:</strong> - YubiKey 5 series (NFC,
+USB-A, USB-C, Nano) - Apple Touch ID / Face ID (platform authenticator,
+macOS/iOS) - Windows Hello (Face, Fingerprint, PIN — platform
+authenticator) - Google Titan Security Keys - Any FIDO2-compliant
+authenticator</p>
+<h3 id="push-notifications-duo-security-integration">2.4 Push
 Notifications (Duo Security Integration)</h3>
 <p>For organizations that have deployed Duo Security, HelixTerminator
 integrates the Duo Auth API for push-based MFA.</p>
@@ -1607,16 +1500,16 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb26-1"><a href="#cb
 <span id="cb26-51"><a href="#cb26-51" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb26-52"><a href="#cb26-52" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result<span class="op">.</span>Response<span class="op">.</span>Result <span class="op">==</span> <span class="st">&quot;allow&quot;</span><span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb26-53"><a href="#cb26-53" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="25-ssofederation">2.5 SSO/Federation</h3>
-<h4 id="251-saml-20-service-provider-implementation">2.5.1 SAML 2.0
-Service Provider Implementation</h4>
+<h3 id="ssofederation">2.5 SSO/Federation</h3>
+<h4 id="saml-2.0-service-provider-implementation">2.5.1 SAML 2.0 Service
+Provider Implementation</h4>
 <p>HelixTerminator acts as a SAML 2.0 Service Provider (SP). It does not
 act as an IdP.</p>
 <p><strong>SP Metadata endpoint:</strong>
-<code>https://app.helixterm.io/saml/metadata</code> <strong>ACS
-endpoint:</strong> <code>https://app.helixterm.io/saml/acs</code>
+<code>https://app.helixterminator.io/saml/metadata</code> <strong>ACS
+endpoint:</strong> <code>https://app.helixterminator.io/saml/acs</code>
 <strong>SLO endpoint:</strong>
-<code>https://app.helixterm.io/saml/slo</code></p>
+<code>https://app.helixterminator.io/saml/slo</code></p>
 <div class="sourceCode" id="cb27"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/auth/saml.go</span></span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> auth</span>
@@ -1630,7 +1523,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb27-1"><a href="#cb
 <span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a><span class="op">)</span></span>
 <span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> NewSAMLMiddleware<span class="op">(</span>spKeyPair tls<span class="op">.</span>Certificate<span class="op">,</span> idpMetadataURL <span class="dt">string</span><span class="op">)</span> <span class="op">(*</span>samlsp<span class="op">.</span>Middleware<span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
-<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>    rootURL<span class="op">,</span> _ <span class="op">:=</span> url<span class="op">.</span>Parse<span class="op">(</span><span class="st">&quot;https://app.helixterm.io&quot;</span><span class="op">)</span></span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>    rootURL<span class="op">,</span> _ <span class="op">:=</span> url<span class="op">.</span>Parse<span class="op">(</span><span class="st">&quot;https://app.helixterminator.io&quot;</span><span class="op">)</span></span>
 <span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>    idpMetadataURL_parsed<span class="op">,</span> _ <span class="op">:=</span> url<span class="op">.</span>Parse<span class="op">(</span>idpMetadataURL<span class="op">)</span></span>
 <span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>    idpMetadata<span class="op">,</span> err <span class="op">:=</span> samlsp<span class="op">.</span>FetchMetadata<span class="op">(</span>context<span class="op">.</span>Background<span class="op">(),</span> http<span class="op">.</span>DefaultClient<span class="op">,</span></span>
@@ -1653,15 +1546,11 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb27-1"><a href="#cb
 <span id="cb27-33"><a href="#cb27-33" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb27-34"><a href="#cb27-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> samlsp<span class="op">.</span>New<span class="op">(</span>opts<span class="op">)</span></span>
 <span id="cb27-35"><a href="#cb27-35" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<p><strong>Required SAML attributes (must be asserted by
-IdP):</strong></p>
-<ul>
-<li><code>email</code> (NameID or attribute)</li>
-<li><code>firstName</code></li>
-<li><code>lastName</code></li>
-<li><code>groups</code> (for JIT group assignment)</li>
-</ul>
-<h4 id="252-oidc-service-provider">2.5.2 OIDC Service Provider</h4>
+<p><strong>Required SAML attributes (must be asserted by IdP):</strong>
+- <code>email</code> (NameID or attribute) - <code>firstName</code> -
+<code>lastName</code> - <code>groups</code> (for JIT group
+assignment)</p>
+<h4 id="oidc-service-provider">2.5.2 OIDC Service Provider</h4>
 <div class="sourceCode" id="cb28"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/auth/oidc.go</span></span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> auth</span>
@@ -1724,6 +1613,10 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb28-1"><a href="#cb
 <p><strong>Supported IdPs and their OIDC discovery
 endpoints:</strong></p>
 <table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 73%" />
+</colgroup>
 <thead>
 <tr>
 <th>IdP</th>
@@ -1753,31 +1646,23 @@ endpoints:</strong></p>
 </tr>
 </tbody>
 </table>
-<h4 id="253-scim-20-user-provisioning">2.5.3 SCIM 2.0 User
+<h4 id="scim-2.0-user-provisioning">2.5.3 SCIM 2.0 User
 Provisioning</h4>
 <p>HelixTerminator exposes a SCIM 2.0 endpoint for automated user
 provisioning and deprovisioning from enterprise IdPs.</p>
 <p><strong>SCIM base URL:</strong>
-<code>https://api.helixterm.io/scim/v2</code></p>
-<p>Supported operations:</p>
-<ul>
-<li><code>GET /Users</code> — list users</li>
-<li><code>POST /Users</code> — provision new user</li>
-<li><code>GET /Users/{id}</code> — fetch user</li>
-<li><code>PUT /Users/{id}</code> — replace user</li>
-<li><code>PATCH /Users/{id}</code> — update user</li>
-<li><code>DELETE /Users/{id}</code> — deprovision user</li>
-<li><code>GET /Groups</code> — list groups</li>
-<li><code>POST /Groups</code> — create group</li>
-</ul>
-<p><strong>Deprovisioning triggers immediate:</strong></p>
-<ol type="1">
-<li>Session invalidation for all active sessions</li>
-<li>SSH certificate revocation via CRL delta</li>
-<li>Refresh token revocation</li>
-<li>Audit log entry</li>
-</ol>
-<h4 id="254-jit-just-in-time-provisioning">2.5.4 JIT (Just-In-Time)
+<code>https://api.helixterminator.io/scim/v2</code></p>
+<p>Supported operations: - <code>GET /Users</code> — list users -
+<code>POST /Users</code> — provision new user -
+<code>GET /Users/{id}</code> — fetch user - <code>PUT /Users/{id}</code>
+— replace user - <code>PATCH /Users/{id}</code> — update user -
+<code>DELETE /Users/{id}</code> — deprovision user -
+<code>GET /Groups</code> — list groups - <code>POST /Groups</code> —
+create group</p>
+<p><strong>Deprovisioning triggers immediate:</strong> 1. Session
+invalidation for all active sessions 2. SSH certificate revocation via
+CRL delta 3. Refresh token revocation 4. Audit log entry</p>
+<h4 id="jit-just-in-time-provisioning">2.5.4 JIT (Just-In-Time)
 Provisioning</h4>
 <p>When a user authenticates via SAML or OIDC for the first time,
 HelixTerminator can automatically create their account based on
@@ -1831,19 +1716,23 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb29-1"><a href="#cb
 <span id="cb29-46"><a href="#cb29-46" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb29-47"><a href="#cb29-47" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> users<span class="op">.</span>Create<span class="op">(</span>ctx<span class="op">,</span> user<span class="op">)</span></span>
 <span id="cb29-48"><a href="#cb29-48" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="26-token-architecture">2.6 Token Architecture</h3>
-<h4 id="261-access-tokens-jwt-rs256-15-minute-ttl">2.6.1 Access Tokens
-(JWT, RS256, 15-minute TTL)</h4>
-<p>Access tokens are signed JWTs using RS256. The signing key is a
-4096-bit RSA key pair managed by the Auth service. Public keys are
-exposed at <code>https://auth.helixterm.io/.well-known/jwks.json</code>
-for token verification by resource services.</p>
+<h3 id="token-architecture">2.6 Token Architecture</h3>
+<h4 id="access-tokens-jwt-eddsaed25519-15-minute-ttl">2.6.1 Access
+Tokens (JWT, EdDSA/Ed25519, 15-minute TTL)</h4>
+<p>Access tokens are signed JWTs using <strong>EdDSA (Ed25519)</strong>
+(RFC 8032/RFC 8037) — the canonical signing algorithm for
+HelixTerminator access tokens. The signing key is an Ed25519 key pair
+managed by the Auth service. Public keys are exposed at
+<code>https://auth.helixterminator.io/.well-known/jwks.json</code> for
+token verification by resource services. (RS256/ES256/HS256 appear
+elsewhere in this document only as legacy/negative examples, never as
+the signing choice.)</p>
 <p><strong>Complete JWT payload schema:</strong></p>
 <div class="sourceCode" id="cb30"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;iss&quot;</span><span class="fu">:</span> <span class="st">&quot;https://auth.helixterm.io&quot;</span><span class="fu">,</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;iss&quot;</span><span class="fu">:</span> <span class="st">&quot;https://auth.helixterminator.io&quot;</span><span class="fu">,</span></span>
 <span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;sub&quot;</span><span class="fu">:</span> <span class="st">&quot;usr_01HQZ7VBKF2MXKPTCG4N5Y8R00&quot;</span><span class="fu">,</span></span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;aud&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;https://api.helixterm.io&quot;</span><span class="ot">,</span> <span class="st">&quot;https://vault.helixterm.io&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;aud&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;https://api.helixterminator.io&quot;</span><span class="ot">,</span> <span class="st">&quot;https://vault.helixterminator.io&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
 <span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;iat&quot;</span><span class="fu">:</span> <span class="dv">1751124000</span><span class="fu">,</span></span>
 <span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;nbf&quot;</span><span class="fu">:</span> <span class="dv">1751124000</span><span class="fu">,</span></span>
 <span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;exp&quot;</span><span class="fu">:</span> <span class="dv">1751124900</span><span class="fu">,</span></span>
@@ -1899,11 +1788,11 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb30-1"><a href=
 <p><strong>JWT Header:</strong></p>
 <div class="sourceCode" id="cb31"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;alg&quot;</span><span class="fu">:</span> <span class="st">&quot;RS256&quot;</span><span class="fu">,</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;alg&quot;</span><span class="fu">:</span> <span class="st">&quot;EdDSA&quot;</span><span class="fu">,</span></span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;typ&quot;</span><span class="fu">:</span> <span class="st">&quot;JWT&quot;</span><span class="fu">,</span></span>
 <span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;kid&quot;</span><span class="fu">:</span> <span class="st">&quot;helixterm-access-2026-06-key-001&quot;</span></span>
 <span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
-<h4 id="262-refresh-token-architecture">2.6.2 Refresh Token
+<h4 id="refresh-token-architecture">2.6.2 Refresh Token
 Architecture</h4>
 <p>Refresh tokens are opaque (not JWTs), stored in Redis with a
 reference to the token binding:</p>
@@ -1999,24 +1888,18 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb32-1"><a href="#cb
 <span id="cb32-89"><a href="#cb32-89" aria-hidden="true" tabindex="-1"></a>    newToken<span class="op">,</span> err <span class="op">:=</span> s<span class="op">.</span>Issue<span class="op">(</span>ctx<span class="op">,</span> record<span class="op">)</span></span>
 <span id="cb32-90"><a href="#cb32-90" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> newToken<span class="op">,</span> <span class="op">&amp;</span>record<span class="op">,</span> err</span>
 <span id="cb32-91"><a href="#cb32-91" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h4 id="263-api-keys">2.6.3 API Keys</h4>
+<h4 id="api-keys">2.6.3 API Keys</h4>
 <p>API keys are used for programmatic/service-to-service access where
 OAuth flows are impractical.</p>
 <p><strong>Format:</strong>
-<code>htk_&lt;prefix&gt;_&lt;secret&gt;</code></p>
-<ul>
-<li>Prefix: 8 random alphanumeric characters (visible in UI for
-identification)</li>
-<li>Secret: 32 random bytes, base62-encoded (43 characters)</li>
-<li>Example:
-<code>htk_a4Bx9Km2_3vMpQrY7nZ2wXcT8dFhJ1kL9bNsE4oR5uA</code></li>
-</ul>
-<p><strong>Storage:</strong></p>
-<ul>
-<li>Only the SHA-256 hash of the full key is stored in the database</li>
-<li>The prefix is stored in plaintext for UI display</li>
-<li>The full key is shown to the user exactly once upon creation</li>
-</ul>
+<code>htk_&lt;prefix&gt;_&lt;secret&gt;</code> - Prefix: 8 random
+alphanumeric characters (visible in UI for identification) - Secret: 32
+random bytes, base62-encoded (43 characters) - Example:
+<code>htk_a4Bx9Km2_3vMpQrY7nZ2wXcT8dFhJ1kL9bNsE4oR5uA</code></p>
+<p><strong>Storage:</strong> - Only the SHA-256 hash of the full key is
+stored in the database - The prefix is stored in plaintext for UI
+display - The full key is shown to the user exactly once upon
+creation</p>
 <div class="sourceCode" id="cb33"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> api_keys (</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span>            UUID <span class="kw">PRIMARY</span> <span class="kw">KEY</span> <span class="kw">DEFAULT</span> gen_random_uuid(),</span>
@@ -2036,13 +1919,13 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb33-1"><a href="#
 <span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> api_keys_key_hash_idx <span class="kw">ON</span> api_keys (key_hash);</span>
 <span id="cb33-17"><a href="#cb33-17" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> api_keys_user_id_idx  <span class="kw">ON</span> api_keys (user_id) <span class="kw">WHERE</span> revoked_at <span class="kw">IS</span> <span class="kw">NULL</span>;</span></code></pre></div>
 <hr />
-<h2 id="3-ssh-certificate-authority">3. SSH Certificate Authority</h2>
-<h3 id="31-architecture-overview">3.1 Architecture Overview</h3>
+<h2 id="ssh-certificate-authority">3. SSH Certificate Authority</h2>
+<h3 id="architecture-overview-1">3.1 Architecture Overview</h3>
 <p>HelixTerminator operates its own SSH Certificate Authority
-(<code>helixterm.io/services/pki</code>). SSH certificates eliminate the
-need to distribute public keys to every server — instead, servers trust
-the CA, and users present certificates signed by that CA. This
-enables:</p>
+(<code>helixterminator.io/services/pki</code>). SSH certificates
+eliminate the need to distribute public keys to every server — instead,
+servers trust the CA, and users present certificates signed by that CA.
+This enables:</p>
 <ul>
 <li><strong>Centralized revocation</strong>: revoke a CA key to
 instantly block all associated users</li>
@@ -2054,7 +1937,7 @@ HelixTerminator-specific policy data</li>
 <li><strong>MITM prevention</strong>: host certificates
 cryptographically verify server identity</li>
 </ul>
-<h3 id="32-ca-hierarchy">3.2 CA Hierarchy</h3>
+<h3 id="ca-hierarchy">3.2 CA Hierarchy</h3>
 <pre><code>Root CA (Offline, HSM-backed)
 ├── User Intermediate CA (Online, monthly rotation)
 │   ├── User Signing Key (Daily rotation)
@@ -2062,18 +1945,14 @@ cryptographically verify server identity</li>
 └── Host Intermediate CA (Online, monthly rotation)
     ├── Host Signing Key (Weekly rotation)
     └── (Historical Host Signing Keys)</code></pre>
-<h4 id="321-root-ca">3.2.1 Root CA</h4>
-<p>The Root CA is:</p>
-<ul>
-<li><strong>Offline</strong>: the signing key is stored in an HSM (AWS
-CloudHSM or YubiHSM 2) and is never accessible over the network</li>
-<li><strong>Long-lived</strong>: 10-year certificate validity</li>
-<li><strong>Ceremony-based</strong>: any operation requiring the Root CA
-requires a formal key ceremony with multiple signatories (N-of-M
-quorum)</li>
-<li><strong>Air-gapped</strong>: the Root CA signing machine has no
-network interface</li>
-</ul>
+<h4 id="root-ca">3.2.1 Root CA</h4>
+<p>The Root CA is: - <strong>Offline</strong>: the signing key is stored
+in an HSM (AWS CloudHSM or YubiHSM 2) and is never accessible over the
+network - <strong>Long-lived</strong>: 10-year certificate validity -
+<strong>Ceremony-based</strong>: any operation requiring the Root CA
+requires a formal key ceremony with multiple signatories (N-of-M quorum)
+- <strong>Air-gapped</strong>: the Root CA signing machine has no
+network interface</p>
 <div class="sourceCode" id="cb35"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Root CA generation (performed offline, during key ceremony)</span></span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate 4096-bit RSA root CA key</span></span>
@@ -2083,7 +1962,7 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb35-1"><a href=
 <span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate Ed25519 root CA (preferred; smaller, faster, equally secure)</span></span>
 <span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-t</span> ed25519 <span class="at">-C</span> <span class="st">&quot;HelixTerminator Root CA v1&quot;</span> <span class="dt">\</span></span>
 <span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">-f</span> /secure/offline/helixterm_root_ca_ed25519</span></code></pre></div>
-<h4 id="322-intermediate-ca">3.2.2 Intermediate CA</h4>
+<h4 id="intermediate-ca">3.2.2 Intermediate CA</h4>
 <div class="sourceCode" id="cb36"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co">// services/pki/internal/ca/intermediate.go</span></span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> ca</span>
@@ -2178,17 +2057,16 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb36-1"><a href="#cb
 <span id="cb36-91"><a href="#cb36-91" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb36-92"><a href="#cb36-92" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb36-93"><a href="#cb36-93" aria-hidden="true" tabindex="-1"></a>    <span class="co">// HelixTerminator custom extensions (informational, prefixed with custom@)</span></span>
-<span id="cb36-94"><a href="#cb36-94" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-user-id@helixterm.io&quot;</span><span class="op">]</span>    <span class="op">=</span> req<span class="op">.</span>UserID</span>
-<span id="cb36-95"><a href="#cb36-95" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-session-id@helixterm.io&quot;</span><span class="op">]</span> <span class="op">=</span> req<span class="op">.</span>SessionID</span>
-<span id="cb36-96"><a href="#cb36-96" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-org-id@helixterm.io&quot;</span><span class="op">]</span>     <span class="op">=</span> req<span class="op">.</span>OrgID</span>
-<span id="cb36-97"><a href="#cb36-97" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-device-id@helixterm.io&quot;</span><span class="op">]</span>  <span class="op">=</span> req<span class="op">.</span>DeviceID</span>
-<span id="cb36-98"><a href="#cb36-98" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-issued-by@helixterm.io&quot;</span><span class="op">]</span>  <span class="op">=</span> <span class="st">&quot;pki.helixterm.io/v1&quot;</span></span>
-<span id="cb36-99"><a href="#cb36-99" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-policy-version@helixterm.io&quot;</span><span class="op">]</span> <span class="op">=</span> req<span class="op">.</span>PolicyVersion</span>
+<span id="cb36-94"><a href="#cb36-94" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-user-id@helixterminator.io&quot;</span><span class="op">]</span>    <span class="op">=</span> req<span class="op">.</span>UserID</span>
+<span id="cb36-95"><a href="#cb36-95" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-session-id@helixterminator.io&quot;</span><span class="op">]</span> <span class="op">=</span> req<span class="op">.</span>SessionID</span>
+<span id="cb36-96"><a href="#cb36-96" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-org-id@helixterminator.io&quot;</span><span class="op">]</span>     <span class="op">=</span> req<span class="op">.</span>OrgID</span>
+<span id="cb36-97"><a href="#cb36-97" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-device-id@helixterminator.io&quot;</span><span class="op">]</span>  <span class="op">=</span> req<span class="op">.</span>DeviceID</span>
+<span id="cb36-98"><a href="#cb36-98" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-issued-by@helixterminator.io&quot;</span><span class="op">]</span>  <span class="op">=</span> <span class="st">&quot;pki.helixterminator.io/v1&quot;</span></span>
+<span id="cb36-99"><a href="#cb36-99" aria-hidden="true" tabindex="-1"></a>    exts<span class="op">[</span><span class="st">&quot;helixterm-policy-version@helixterminator.io&quot;</span><span class="op">]</span> <span class="op">=</span> req<span class="op">.</span>PolicyVersion</span>
 <span id="cb36-100"><a href="#cb36-100" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb36-101"><a href="#cb36-101" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> exts</span>
 <span id="cb36-102"><a href="#cb36-102" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="33-openssh-certificate-format">3.3 OpenSSH Certificate
-Format</h3>
+<h3 id="openssh-certificate-format">3.3 OpenSSH Certificate Format</h3>
 <p>OpenSSH certificates have a specific binary wire format.
 Understanding this format is essential for debugging and implementing
 certificate parsing.</p>
@@ -2230,9 +2108,9 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb38-1"><a href=
 <span id="cb38-17"><a href="#cb38-17" aria-hidden="true" tabindex="-1"></a><span class="co">#         Extensions:</span></span>
 <span id="cb38-18"><a href="#cb38-18" aria-hidden="true" tabindex="-1"></a><span class="co">#                 permit-pty</span></span>
 <span id="cb38-19"><a href="#cb38-19" aria-hidden="true" tabindex="-1"></a><span class="co">#                 permit-user-rc</span></span>
-<span id="cb38-20"><a href="#cb38-20" aria-hidden="true" tabindex="-1"></a><span class="co">#                 helixterm-user-id@helixterm.io</span></span>
-<span id="cb38-21"><a href="#cb38-21" aria-hidden="true" tabindex="-1"></a><span class="co">#                 helixterm-session-id@helixterm.io</span></span></code></pre></div>
-<h3 id="34-certificate-issuance-api">3.4 Certificate Issuance API</h3>
+<span id="cb38-20"><a href="#cb38-20" aria-hidden="true" tabindex="-1"></a><span class="co">#                 helixterm-user-id@helixterminator.io</span></span>
+<span id="cb38-21"><a href="#cb38-21" aria-hidden="true" tabindex="-1"></a><span class="co">#                 helixterm-session-id@helixterminator.io</span></span></code></pre></div>
+<h3 id="certificate-issuance-api">3.4 Certificate Issuance API</h3>
 <div class="sourceCode" id="cb39"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co">// services/pki/api/v1/sign.go</span></span>
 <span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> v1</span>
@@ -2243,8 +2121,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb39-1"><a href="#cb
 <span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;time&quot;</span></span>
 <span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;github.com/go-chi/chi/v5&quot;</span></span>
-<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;helixterm.io/services/pki/internal/ca&quot;</span></span>
-<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;helixterm.io/services/pki/internal/policy&quot;</span></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;helixterminator.io/services/pki/internal/ca&quot;</span></span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;helixterminator.io/services/pki/internal/policy&quot;</span></span>
 <span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a><span class="op">)</span></span>
 <span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> SignUserCertRequest <span class="kw">struct</span> <span class="op">{</span></span>
@@ -2333,8 +2211,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb39-1"><a href="#cb
 <span id="cb39-97"><a href="#cb39-97" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb39-98"><a href="#cb39-98" aria-hidden="true" tabindex="-1"></a>    json<span class="op">.</span>NewEncoder<span class="op">(</span>w<span class="op">).</span>Encode<span class="op">(</span>resp<span class="op">)</span></span>
 <span id="cb39-99"><a href="#cb39-99" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="35-certificate-revocation">3.5 Certificate Revocation</h3>
-<h4 id="351-crl-certificate-revocation-list">3.5.1 CRL (Certificate
+<h3 id="certificate-revocation">3.5 Certificate Revocation</h3>
+<h4 id="crl-certificate-revocation-list">3.5.1 CRL (Certificate
 Revocation List)</h4>
 <p>A CRL is a signed list of revoked certificate serial numbers.
 HelixTerminator publishes CRLs via an HTTP endpoint that SSH servers can
@@ -2391,7 +2269,7 @@ RevokedKeys /etc/ssh/helixterm_krl.bin
 
 # AuthorizedPrincipalsFile — maps cert principals to Unix users
 AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u</code></pre>
-<h4 id="352-ocsp-stapling">3.5.2 OCSP Stapling</h4>
+<h4 id="ocsp-stapling">3.5.2 OCSP Stapling</h4>
 <p>For X.509 certificates used in the TLS layer, OCSP stapling is
 configured to eliminate the client-side OCSP lookup latency:</p>
 <pre class="nginx"><code># nginx.conf TLS configuration
@@ -2400,23 +2278,23 @@ ssl_stapling_verify on;
 ssl_trusted_certificate /etc/nginx/ssl/chain.pem;
 resolver 8.8.8.8 8.8.4.4 valid=300s;
 resolver_timeout 10s;</code></pre>
-<h3 id="36-host-certificates">3.6 Host Certificates</h3>
+<h3 id="host-certificates">3.6 Host Certificates</h3>
 <p>Host certificates prevent man-in-the-middle attacks by
-cryptographically verifying the SSH server's identity. When a user
+cryptographically verifying the SSH server’s identity. When a user
 connects to a server through HelixTerminator, the client verifies the
 host certificate against the HelixTerminator Host CA.</p>
 <div class="sourceCode" id="cb43"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Sign a host certificate (performed by PKI service during host enrollment)</span></span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh-keygen</span> <span class="at">-s</span> /path/to/host_ca_signing_key <span class="dt">\</span></span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-I</span> <span class="st">&quot;web-01.prod.acme.helixterm.io&quot;</span> <span class="dt">\</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">-I</span> <span class="st">&quot;web-01.prod.acme.helixterminator.io&quot;</span> <span class="dt">\</span></span>
 <span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-h</span> <span class="dt">\</span></span>
-<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-n</span> <span class="st">&quot;web-01.prod.acme.helixterm.io,10.0.1.42&quot;</span> <span class="dt">\</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">-n</span> <span class="st">&quot;web-01.prod.acme.helixterminator.io,10.0.1.42&quot;</span> <span class="dt">\</span></span>
 <span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-V</span> +52w <span class="dt">\ </span>   <span class="co"># 1 year validity for host certs</span></span>
 <span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>  <span class="ex">/etc/ssh/ssh_host_ed25519_key.pub</span></span></code></pre></div>
 <p><strong>Client <code>~/.ssh/known_hosts</code>
 configuration:</strong></p>
-<pre><code>@cert-authority *.helixterm.io ssh-ed25519 AAAA... HelixTerminator Host CA</code></pre>
-<h3 id="37-certificate-transparency-log">3.7 Certificate Transparency
+<pre><code>@cert-authority *.helixterminator.io ssh-ed25519 AAAA... HelixTerminator Host CA</code></pre>
+<h3 id="certificate-transparency-log">3.7 Certificate Transparency
 Log</h3>
 <p>All issued certificates are logged to an append-only transparency
 log, enabling detection of unauthorized certificate issuance.</p>
@@ -2467,9 +2345,9 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb45-1"><a href="#cb
 <span id="cb45-44"><a href="#cb45-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> l<span class="op">.</span>writeEntry<span class="op">(</span>ctx<span class="op">,</span> entry<span class="op">)</span></span>
 <span id="cb45-45"><a href="#cb45-45" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="4-vault-encryption-architecture">4. Vault Encryption
+<h2 id="vault-encryption-architecture">4. Vault Encryption
 Architecture</h2>
-<h3 id="41-zero-knowledge-design-principle">4.1 Zero-Knowledge Design
+<h3 id="zero-knowledge-design-principle">4.1 Zero-Knowledge Design
 Principle</h3>
 <p>The HelixTerminator vault is <strong>zero-knowledge</strong> with
 respect to the server:</p>
@@ -2481,7 +2359,29 @@ HelixTerminator employee can access plaintext user data.</p>
 <p>This is achieved through client-side encryption: all encryption and
 decryption operations happen on the client device. The server only
 stores and retrieves ciphertext.</p>
-<h3 id="42-key-hierarchy">4.2 Key Hierarchy</h3>
+<p><strong>Scope of this guarantee (per CANONICAL_FACTS CD-10):</strong>
+zero-knowledge is a <strong>HARD</strong> requirement for <em>vault
+items</em> — client-side encryption/decryption only, with the server
+relaying ciphertext it cannot open. This guarantee does
+<strong>not</strong> extend to SSH host credentials under password-based
+host authentication, nor to server-side SSH key generation (see
+<code>07_api_and_database.md</code> §4 and
+<code>POST /keys/generate</code>): those are a distinct, lower-assurance
+credential class that requires the server to handle plaintext at
+connection time. This document, and every sibling document, must stop
+describing password-based SSH host authentication as zero-knowledge — it
+explicitly is not.</p>
+<blockquote>
+<p><strong>DEFERRED (next increment):</strong> the vault’s
+zero-knowledge posture stated above is the design target but is not yet
+fully realized by the implementation shown in §4.6–§4.7 below — see the
+inline <code>DEFERRED</code> notes there for the specific server-side
+key-handling gaps (a plaintext <code>VaultKey</code> field in a
+backend-looking struct, and a re-wrap flow that can execute server-side)
+that must be removed to make this guarantee true rather than
+aspirational.</p>
+</blockquote>
+<h3 id="key-hierarchy">4.2 Key Hierarchy</h3>
 <pre><code>User Password (never stored)
     │
     ▼ Argon2id(password, user_salt, t=3, m=64MB, p=4) → 32 bytes
@@ -2496,14 +2396,13 @@ Item Key (AES-256, one per vault item)
     ▼ AES-256-GCM decrypt(Encrypted Item Data, Item Key)
 Plaintext Item Data</code></pre>
 <p><strong>Key storage model:</strong> | Key | Stored Where | Encrypted
-With | Notes | |-----|-------------|---------------|-------| | Master
-Key | Never stored | Derived from password | Reconstructed on each
-unlock | | Vault Key | Server (encrypted) | Master Key or Device Key |
-Per-vault | | Item Key | Server (encrypted) | Vault Key | Per-item | |
-Item Data | Server (encrypted) | Item Key | Ciphertext only | | Device
-Key | Platform Keychain/KeyStore | Biometric/PIN | For biometric unlock
-|</p>
-<h3 id="43-complete-encryption-implementation">4.3 Complete Encryption
+With | Notes | |—–|————-|—————|——-| | Master Key | Never stored |
+Derived from password | Reconstructed on each unlock | | Vault Key |
+Server (encrypted) | Master Key or Device Key | Per-vault | | Item Key |
+Server (encrypted) | Vault Key | Per-item | | Item Data | Server
+(encrypted) | Item Key | Ciphertext only | | Device Key | Platform
+Keychain/KeyStore | Biometric/PIN | For biometric unlock |</p>
+<h3 id="complete-encryption-implementation">4.3 Complete Encryption
 Implementation</h3>
 <div class="sourceCode" id="cb47"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="co">// digital.vasic.security/vault/crypto.go</span></span>
@@ -2642,10 +2541,10 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb47-1"><a href="#cb
 <span id="cb47-134"><a href="#cb47-134" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> UnwrapKey<span class="op">(</span>wrappingKey <span class="op">[]</span><span class="dt">byte</span><span class="op">,</span> wrapped <span class="op">*</span>EncryptedBlob<span class="op">)</span> <span class="op">([]</span><span class="dt">byte</span><span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
 <span id="cb47-135"><a href="#cb47-135" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Decrypt<span class="op">(</span>wrappingKey<span class="op">,</span> wrapped<span class="op">)</span></span>
 <span id="cb47-136"><a href="#cb47-136" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="44-multi-device-key-sharing-via-x25519-ecdh">4.4 Multi-Device
-Key Sharing via X25519 ECDH</h3>
+<h3 id="multi-device-key-sharing-via-x25519-ecdh">4.4 Multi-Device Key
+Sharing via X25519 ECDH</h3>
 <p>When a user registers a second device, the Vault Key is re-wrapped
-with the new device's public key using X25519 Elliptic Curve
+with the new device’s public key using X25519 Elliptic Curve
 Diffie-Hellman key exchange.</p>
 <div class="sourceCode" id="cb48"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="co">// digital.vasic.security/vault/multidevice.go</span></span>
@@ -2748,10 +2647,10 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb48-1"><a href="#cb
 <span id="cb48-98"><a href="#cb48-98" aria-hidden="true" tabindex="-1"></a>    EphemeralPublicKey <span class="op">[]</span><span class="dt">byte</span>         <span class="st">`json:&quot;ephemeral_pub&quot;`</span> <span class="co">// 32 bytes, base64</span></span>
 <span id="cb48-99"><a href="#cb48-99" aria-hidden="true" tabindex="-1"></a>    EncryptedKey       <span class="op">*</span>EncryptedBlob <span class="st">`json:&quot;encrypted_key&quot;`</span></span>
 <span id="cb48-100"><a href="#cb48-100" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="45-shamirs-secret-sharing-for-multi-device-recovery">4.5
-Shamir's Secret Sharing for Multi-Device Recovery</h3>
+<h3 id="shamirs-secret-sharing-for-multi-device-recovery">4.5 Shamir’s
+Secret Sharing for Multi-Device Recovery</h3>
 <p>For vault recovery across devices, the Vault Key is split using
-Shamir's Secret Sharing with a threshold of 2-of-N devices. This means
+Shamir’s Secret Sharing with a threshold of 2-of-N devices. This means
 any 2 registered devices can reconstruct the Vault Key, but no single
 device alone can.</p>
 <div class="sourceCode" id="cb49"><pre
@@ -2781,7 +2680,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb49-1"><a href="#cb
 <span id="cb49-24"><a href="#cb49-24" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> CombineShares<span class="op">(</span>shares <span class="op">[][]</span><span class="dt">byte</span><span class="op">)</span> <span class="op">([]</span><span class="dt">byte</span><span class="op">,</span> <span class="dt">error</span><span class="op">)</span> <span class="op">{</span></span>
 <span id="cb49-25"><a href="#cb49-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> shamir<span class="op">.</span>Combine<span class="op">(</span>shares<span class="op">)</span></span>
 <span id="cb49-26"><a href="#cb49-26" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="46-team-vault-key-sharing">4.6 Team Vault Key Sharing</h3>
+<h3 id="team-vault-key-sharing">4.6 Team Vault Key Sharing</h3>
 <div class="sourceCode" id="cb50"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co">// digital.vasic.security/vault/team.go</span></span>
 <span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> vault</span>
@@ -2821,7 +2720,19 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb50-1"><a href="#cb
 <span id="cb50-36"><a href="#cb50-36" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Step 2: Trigger vault key rotation</span></span>
 <span id="cb50-37"><a href="#cb50-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> scheduleKeyRotation<span class="op">(</span>ctx<span class="op">,</span> tv<span class="op">.</span>VaultID<span class="op">,</span> KeyRotationReasonMemberRevoked<span class="op">)</span></span>
 <span id="cb50-38"><a href="#cb50-38" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="47-key-rotation-procedure">4.7 Key Rotation Procedure</h3>
+<blockquote>
+<p><strong>DEFERRED (next increment):</strong> security redesign —
+<code>TeamVault.VaultKey []byte</code> holds the plaintext vault key in
+memory inside a <code>vault</code> package with no client-boundary
+marker, and <code>AddMember</code>/<code>RevokeMember</code> call
+<code>WrapVaultKeyForDevice</code>/<code>scheduleKeyRotation</code> in a
+way that reads as server-executable code. Per CANONICAL_FACTS CD-10
+(zero-knowledge is HARD for vault items), this must be redesigned so
+key-wrap and key-combination operations are provably client-side only,
+with the server acting solely as a relay for opaque ciphertext it cannot
+open. Not done this increment.</p>
+</blockquote>
+<h3 id="key-rotation-procedure">4.7 Key Rotation Procedure</h3>
 <p>Full key rotation procedure (triggered by member revocation, periodic
 rotation policy, or manual trigger):</p>
 <pre><code>1. Generate new Vault Key (32 random bytes)
@@ -2835,7 +2746,18 @@ rotation policy, or manual trigger):</p>
 4. Delete old wrapped Vault Keys
 5. Log rotation event to audit log
 6. Notify all active sessions of key rotation (triggers client re-sync)</code></pre>
-<h3 id="48-recovery-code-mechanism">4.8 Recovery Code Mechanism</h3>
+<blockquote>
+<p><strong>DEFERRED (next increment):</strong> security redesign — steps
+2a/2b (Item Key decrypt/re-wrap under the new Vault Key) are described
+without a stated execution boundary and, combined with §4.6’s
+server-callable
+<code>RevokeMember</code>/<code>scheduleKeyRotation</code>, currently
+read as server-side operations on decrypted key material. Per
+CANONICAL_FACTS CD-10, re-wrap must be performed client-side (or via
+blinded/opaque server relay only); the server must never hold an
+unwrapped Item Key or Vault Key. Not done this increment.</p>
+</blockquote>
+<h3 id="recovery-code-mechanism">4.8 Recovery Code Mechanism</h3>
 <p>Recovery codes provide offline emergency access when all devices are
 lost:</p>
 <div class="sourceCode" id="cb52"><pre
@@ -2894,12 +2816,16 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb52-1"><a href="#cb
 <span id="cb52-53"><a href="#cb52-53" aria-hidden="true" tabindex="-1"></a>    <span class="op">},</span> <span class="ot">nil</span></span>
 <span id="cb52-54"><a href="#cb52-54" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="5-ssh-key-management-security">5. SSH Key Management
-Security</h2>
-<h3 id="51-supported-and-rejected-key-types">5.1 Supported and Rejected
-Key Types</h3>
+<h2 id="ssh-key-management-security">5. SSH Key Management Security</h2>
+<h3 id="supported-and-rejected-key-types">5.1 Supported and Rejected Key
+Types</h3>
 <p><strong>Approved key types:</strong></p>
 <table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 50%" />
+<col style="width: 26%" />
+</colgroup>
 <thead>
 <tr>
 <th>Type</th>
@@ -2933,6 +2859,10 @@ Key Types</h3>
 <p><strong>Rejected key types (will not import or
 generate):</strong></p>
 <table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
 <thead>
 <tr>
 <th>Type</th>
@@ -2962,7 +2892,7 @@ generate):</strong></p>
 </tr>
 </tbody>
 </table>
-<h3 id="52-key-generation">5.2 Key Generation</h3>
+<h3 id="key-generation">5.2 Key Generation</h3>
 <div class="sourceCode" id="cb53"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="co">// digital.vasic.security/sshkeys/generate.go</span></span>
 <span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> sshkeys</span>
@@ -3023,7 +2953,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb53-1"><a href="#cb
 <span id="cb53-57"><a href="#cb53-57" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ot">nil</span><span class="op">,</span> fmt<span class="op">.</span>Errorf<span class="op">(</span><span class="st">&quot;unsupported key type: %d&quot;</span><span class="op">,</span> keyType<span class="op">)</span></span>
 <span id="cb53-58"><a href="#cb53-58" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb53-59"><a href="#cb53-59" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="53-passphrase-protection">5.3 Passphrase Protection</h3>
+<h3 id="passphrase-protection">5.3 Passphrase Protection</h3>
 <p>Private keys are encrypted using the OpenSSH key format v2, which
 uses bcrypt for key derivation and AES-256-CBC + SHA-512 HMAC for
 encryption.</p>
@@ -3054,10 +2984,10 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb54-1"><a href="#cb
 <span id="cb54-24"><a href="#cb54-24" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb54-25"><a href="#cb54-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> pem<span class="op">.</span>EncodeToMemory<span class="op">(</span>pemBlock<span class="op">),</span> <span class="ot">nil</span></span>
 <span id="cb54-26"><a href="#cb54-26" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="54-biometric-key-unlock-via-platform-secure-enclave">5.4
-Biometric Key Unlock via Platform Secure Enclave</h3>
+<h3 id="biometric-key-unlock-via-platform-secure-enclave">5.4 Biometric
+Key Unlock via Platform Secure Enclave</h3>
 <p>On platforms that support it, SSH key material is stored in the
-platform's secure enclave (hardware-isolated key storage):</p>
+platform’s secure enclave (hardware-isolated key storage):</p>
 <div class="sourceCode" id="cb55"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="co">// digital.vasic.security/platform/keychain_darwin.go</span></span>
 <span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="co">//go:build darwin</span></span>
@@ -3095,8 +3025,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb55-1"><a href="#cb
 <span id="cb55-34"><a href="#cb55-34" aria-hidden="true" tabindex="-1"></a>    <span class="co">// ... (Keychain API calls)</span></span>
 <span id="cb55-35"><a href="#cb55-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb55-36"><a href="#cb55-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="55-ssh-agent-key-forwarding-security">5.5 SSH Agent Key
-Forwarding Security</h3>
+<h3 id="ssh-agent-key-forwarding-security">5.5 SSH Agent Key Forwarding
+Security</h3>
 <p>Key forwarding poses significant security risks — a compromised
 intermediate host could use the forwarded agent to authenticate to other
 hosts. HelixTerminator enforces:</p>
@@ -3106,7 +3036,7 @@ request through the forwarded agent requires the user to confirm</li>
 <li><strong>Forwarding lifetime limit</strong>: forwarded keys expire
 after the SSH session ends (not persisted)</li>
 <li><strong>Trusted host list</strong>: forwarding is only permitted to
-hosts tagged as "trusted" in the HelixTerminator host inventory</li>
+hosts tagged as “trusted” in the HelixTerminator host inventory</li>
 </ol>
 <div class="sourceCode" id="cb56"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="co">// digital.vasic.security/agent/confirming_agent.go</span></span>
@@ -3138,7 +3068,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb56-1"><a href="#cb
 <span id="cb56-27"><a href="#cb56-27" aria-hidden="true" tabindex="-1"></a>    a<span class="op">.</span>signOps<span class="op">++</span></span>
 <span id="cb56-28"><a href="#cb56-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> a<span class="op">.</span>inner<span class="op">.</span>Sign<span class="op">(</span>key<span class="op">,</span> data<span class="op">)</span></span>
 <span id="cb56-29"><a href="#cb56-29" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="56-key-audit-trail">5.6 Key Audit Trail</h3>
+<h3 id="key-audit-trail">5.6 Key Audit Trail</h3>
 <p>Every SSH key use is logged to the audit service:</p>
 <div class="sourceCode" id="cb57"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co">// digital.vasic.security/sshkeys/audit.go</span></span>
@@ -3159,10 +3089,14 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb57-1"><a href="#cb
 <span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a>    Error       <span class="dt">string</span>    <span class="st">`json:&quot;error,omitempty&quot;`</span></span>
 <span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="6-rbac-model">6. RBAC Model</h2>
-<h3 id="61-role-definitions">6.1 Role Definitions</h3>
+<h2 id="rbac-model">6. RBAC Model</h2>
+<h3 id="role-definitions">6.1 Role Definitions</h3>
 <h4 id="system-wide-roles">System-Wide Roles</h4>
 <table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 68%" />
+</colgroup>
 <thead>
 <tr>
 <th>Role</th>
@@ -3191,9 +3125,9 @@ vaults and hosts</td>
 keys</td>
 </tr>
 <tr>
-<td><code>guest</code></td>
-<td>Limited read-only access to specific shared resources; cannot create
-or delete</td>
+<td><code>auditor</code></td>
+<td>Read-only compliance/audit-log access across the organization;
+cannot create, modify, or delete any resource</td>
 </tr>
 <tr>
 <td><code>api_user</code></td>
@@ -3202,8 +3136,23 @@ access</td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>DEFERRED (next increment):</strong> the canonical 6-role
+vocabulary (<code>super_admin</code>, <code>org_admin</code>,
+<code>team_admin</code>, <code>member</code>, <code>auditor</code>,
+<code>api_user</code> — per CANONICAL_FACTS CD-8) replaces the prior
+<code>guest</code> role name here. This pass renames the role and grants
+<code>auditor</code> <code>audit_log</code> read access (§6.2); a full
+re-derivation of the permission matrix (removing the old
+<code>guest</code>’s shared-resource read/connect/start grants, which do
+not belong to an audit-only role) is deferred to the next increment.</p>
+</blockquote>
 <h4 id="resource-types-and-actions">Resource Types and Actions</h4>
 <table>
+<colgroup>
+<col style="width: 52%" />
+<col style="width: 47%" />
+</colgroup>
 <thead>
 <tr>
 <th>Resource</th>
@@ -3271,8 +3220,18 @@ access</td>
 </tr>
 </tbody>
 </table>
-<h3 id="62-permission-matrix">6.2 Permission Matrix</h3>
-<table>
+<h3 id="permission-matrix">6.2 Permission Matrix</h3>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 16%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+</colgroup>
 <thead>
 <tr>
 <th>Resource</th>
@@ -3281,7 +3240,7 @@ access</td>
 <th style="text-align: center;"><code>org_admin</code></th>
 <th style="text-align: center;"><code>team_admin</code></th>
 <th style="text-align: center;"><code>member</code></th>
-<th style="text-align: center;"><code>guest</code></th>
+<th style="text-align: center;"><code>auditor</code></th>
 <th style="text-align: center;"><code>api_user</code></th>
 </tr>
 </thead>
@@ -3443,7 +3402,7 @@ access</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✗</td>
 <td style="text-align: center;">✗</td>
-<td style="text-align: center;">✗</td>
+<td style="text-align: center;">✓</td>
 <td style="text-align: center;">✗</td>
 </tr>
 <tr>
@@ -3518,7 +3477,7 @@ access</td>
 </tr>
 </tbody>
 </table>
-<h3 id="63-complete-sql-schema">6.3 Complete SQL Schema</h3>
+<h3 id="complete-sql-schema">6.3 Complete SQL Schema</h3>
 <div class="sourceCode" id="cb58"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- ============================================================</span></span>
 <span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a><span class="co">-- HelixTerminator RBAC Schema</span></span>
@@ -3546,7 +3505,7 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb58-1"><a href="#
 <span id="cb58-24"><a href="#cb58-24" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;org_admin&#39;</span>,   <span class="st">&#39;Organization Administrator&#39;</span>, <span class="kw">TRUE</span>),</span>
 <span id="cb58-25"><a href="#cb58-25" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;team_admin&#39;</span>,  <span class="st">&#39;Team Administrator&#39;</span>, <span class="kw">TRUE</span>),</span>
 <span id="cb58-26"><a href="#cb58-26" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;member&#39;</span>,      <span class="st">&#39;Member&#39;</span>, <span class="kw">TRUE</span>),</span>
-<span id="cb58-27"><a href="#cb58-27" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;guest&#39;</span>,       <span class="st">&#39;Guest&#39;</span>, <span class="kw">TRUE</span>),</span>
+<span id="cb58-27"><a href="#cb58-27" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;auditor&#39;</span>,     <span class="st">&#39;Auditor&#39;</span>, <span class="kw">TRUE</span>),</span>
 <span id="cb58-28"><a href="#cb58-28" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;api_user&#39;</span>,    <span class="st">&#39;API User&#39;</span>, <span class="kw">TRUE</span>);</span>
 <span id="cb58-29"><a href="#cb58-29" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb58-30"><a href="#cb58-30" aria-hidden="true" tabindex="-1"></a><span class="co">-- Permissions: atomic action on a resource type</span></span>
@@ -3680,7 +3639,7 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb58-1"><a href="#
 <span id="cb58-158"><a href="#cb58-158" aria-hidden="true" tabindex="-1"></a><span class="kw">JOIN</span> role_permissions rp <span class="kw">ON</span> rp.role_id <span class="op">=</span> ra.role_id</span>
 <span id="cb58-159"><a href="#cb58-159" aria-hidden="true" tabindex="-1"></a><span class="kw">JOIN</span> permissions p <span class="kw">ON</span> p.<span class="kw">id</span> <span class="op">=</span> rp.permission_id</span>
 <span id="cb58-160"><a href="#cb58-160" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> (ra.expires_at <span class="kw">IS</span> <span class="kw">NULL</span> <span class="kw">OR</span> ra.expires_at <span class="op">&gt;</span> NOW());</span></code></pre></div>
-<h3 id="64-policy-evaluation-engine">6.4 Policy Evaluation Engine</h3>
+<h3 id="policy-evaluation-engine">6.4 Policy Evaluation Engine</h3>
 <div class="sourceCode" id="cb59"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/rbac/engine.go</span></span>
 <span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> rbac</span>
@@ -3771,8 +3730,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb59-1"><a href="#cb
 <span id="cb59-87"><a href="#cb59-87" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">true</span><span class="op">,</span> <span class="st">&quot;&quot;</span><span class="op">,</span> <span class="ot">nil</span></span>
 <span id="cb59-88"><a href="#cb59-88" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <hr />
-<h2 id="7-audit-logging">7. Audit Logging</h2>
-<h3 id="71-architecture">7.1 Architecture</h3>
+<h2 id="audit-logging">7. Audit Logging</h2>
+<h3 id="architecture">7.1 Architecture</h3>
 <p>The audit log is the authoritative record of all security-relevant
 events in HelixTerminator. Its design requirements are:</p>
 <ul>
@@ -3790,8 +3749,8 @@ with optional SIEM export</li>
 <pre><code>Service → Audit SDK → Kafka (audit-events topic) → Audit Consumer → PostgreSQL
                                                   → SIEM (Splunk/Datadog)
                                                   → S3 (long-term archive)</code></pre>
-<h3 id="72-complete-postgresql-audit-schema">7.2 Complete PostgreSQL
-Audit Schema</h3>
+<h3 id="complete-postgresql-audit-schema">7.2 Complete PostgreSQL Audit
+Schema</h3>
 <div class="sourceCode" id="cb61"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- ============================================================</span></span>
 <span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a><span class="co">-- HelixTerminator Audit Log Schema</span></span>
@@ -3955,7 +3914,7 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb61-1"><a href="#
 <span id="cb61-160"><a href="#cb61-160" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;admin.sso.configured&#39;</span>,        <span class="st">&#39;SSO integration configured&#39;</span>, <span class="st">&#39;warning&#39;</span>, <span class="st">&#39;compliance&#39;</span>, <span class="dv">7</span>),</span>
 <span id="cb61-161"><a href="#cb61-161" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;admin.scim.provisioned&#39;</span>,      <span class="st">&#39;User provisioned via SCIM&#39;</span>, <span class="st">&#39;info&#39;</span>, <span class="st">&#39;compliance&#39;</span>, <span class="dv">7</span>),</span>
 <span id="cb61-162"><a href="#cb61-162" aria-hidden="true" tabindex="-1"></a>    (<span class="st">&#39;admin.scim.deprovisioned&#39;</span>,    <span class="st">&#39;User deprovisioned via SCIM&#39;</span>, <span class="st">&#39;warning&#39;</span>, <span class="st">&#39;compliance&#39;</span>, <span class="dv">7</span>);</span></code></pre></div>
-<h3 id="73-hash-chain-implementation">7.3 Hash Chain Implementation</h3>
+<h3 id="hash-chain-implementation">7.3 Hash Chain Implementation</h3>
 <div class="sourceCode" id="cb62"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/audit/hashchain.go</span></span>
 <span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> audit</span>
@@ -4059,7 +4018,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb62-1"><a href="#cb
 <span id="cb62-100"><a href="#cb62-100" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb62-101"><a href="#cb62-101" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">&amp;</span>ChainVerificationResult<span class="op">{</span>Valid<span class="op">:</span> <span class="ot">true</span><span class="op">,</span> EventsVerified<span class="op">:</span> count<span class="op">},</span> <span class="ot">nil</span></span>
 <span id="cb62-102"><a href="#cb62-102" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="74-siem-integration">7.4 SIEM Integration</h3>
+<h3 id="siem-integration">7.4 SIEM Integration</h3>
 <div class="sourceCode" id="cb63"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/audit/siem/splunk.go</span></span>
 <span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> siem</span>
@@ -4109,8 +4068,14 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb63-1"><a href="#cb
 <span id="cb63-46"><a href="#cb63-46" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
 <span id="cb63-47"><a href="#cb63-47" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb63-48"><a href="#cb63-48" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="75-retention-and-archival">7.5 Retention and Archival</h3>
+<h3 id="retention-and-archival">7.5 Retention and Archival</h3>
 <table>
+<colgroup>
+<col style="width: 34%" />
+<col style="width: 20%" />
+<col style="width: 25%" />
+<col style="width: 20%" />
+</colgroup>
 <thead>
 <tr>
 <th>Classification</th>
@@ -4147,30 +4112,23 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb63-1"><a href="#cb
 </tbody>
 </table>
 <hr />
-<h2 id="8-network-security">8. Network Security</h2>
-<h3 id="81-tls-configuration">8.1 TLS Configuration</h3>
-<p><strong>External endpoints (API, web client, SCIM):</strong></p>
-<ul>
-<li>TLS 1.3 only — TLS 1.2 and below are rejected</li>
-<li>No cipher suite negotiation for TLS 1.3 (the protocol mandates AEAD
-ciphers)</li>
-<li>OCSP stapling enabled</li>
-<li>HSTS:
-<code>Strict-Transport-Security: max-age=63072000; includeSubDomains; preload</code></li>
-</ul>
-<p><strong>Internal service mesh:</strong></p>
-<ul>
-<li>mTLS via Istio/SPIRE (see Section 1.4)</li>
-<li>TLS 1.3 between all service pairs</li>
-<li>Certificate TTL: 24 hours</li>
-</ul>
+<h2 id="network-security">8. Network Security</h2>
+<h3 id="tls-configuration">8.1 TLS Configuration</h3>
+<p><strong>External endpoints (API, web client, SCIM):</strong> - TLS
+1.3 only — TLS 1.2 and below are rejected - No cipher suite negotiation
+for TLS 1.3 (the protocol mandates AEAD ciphers) - OCSP stapling enabled
+- HSTS:
+<code>Strict-Transport-Security: max-age=63072000; includeSubDomains; preload</code></p>
+<p><strong>Internal service mesh:</strong> - mTLS via Istio/SPIRE (see
+Section 1.4) - TLS 1.3 between all service pairs - Certificate TTL: 24
+hours</p>
 <p><strong>Nginx TLS configuration for external endpoints:</strong></p>
 <pre class="nginx"><code>server {
     listen 443 ssl;
-    server_name api.helixterm.io;
+    server_name api.helixterminator.io;
 
-    ssl_certificate     /etc/nginx/ssl/api.helixterm.io.crt;
-    ssl_certificate_key /etc/nginx/ssl/api.helixterm.io.key;
+    ssl_certificate     /etc/nginx/ssl/api.helixterminator.io.crt;
+    ssl_certificate_key /etc/nginx/ssl/api.helixterminator.io.key;
 
     # TLS 1.3 only
     ssl_protocols TLSv1.3;
@@ -4196,7 +4154,7 @@ ciphers)</li>
     # DH parameters (not used with TLS 1.3, but included for safety)
     ssl_dhparam /etc/nginx/ssl/dhparam4096.pem;
 }</code></pre>
-<h3 id="82-ssh-protocol-hardening">8.2 SSH Protocol Hardening</h3>
+<h3 id="ssh-protocol-hardening">8.2 SSH Protocol Hardening</h3>
 <p>SSH connections managed by HelixTerminator to target servers enforce
 strict protocol parameters:</p>
 <div class="sourceCode" id="cb65"><pre
@@ -4270,7 +4228,7 @@ LoginGraceTime 30
 # Logging
 LogLevel VERBOSE
 SyslogFacility AUTH</code></pre>
-<h3 id="83-cors-policy">8.3 CORS Policy</h3>
+<h3 id="cors-policy">8.3 CORS Policy</h3>
 <div class="sourceCode" id="cb67"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/middleware/cors.go</span></span>
 <span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> middleware</span>
@@ -4278,8 +4236,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb67-1"><a href="#cb
 <span id="cb67-4"><a href="#cb67-4" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> CORSMiddleware<span class="op">()</span> <span class="kw">func</span><span class="op">(</span>http<span class="op">.</span>Handler<span class="op">)</span> http<span class="op">.</span>Handler <span class="op">{</span></span>
 <span id="cb67-5"><a href="#cb67-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cors<span class="op">.</span>Handler<span class="op">(</span>cors<span class="op">.</span>Options<span class="op">{</span></span>
 <span id="cb67-6"><a href="#cb67-6" aria-hidden="true" tabindex="-1"></a>        AllowedOrigins<span class="op">:</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span></span>
-<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;https://app.helixterm.io&quot;</span><span class="op">,</span></span>
-<span id="cb67-8"><a href="#cb67-8" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;https://admin.helixterm.io&quot;</span><span class="op">,</span></span>
+<span id="cb67-7"><a href="#cb67-7" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;https://app.helixterminator.io&quot;</span><span class="op">,</span></span>
+<span id="cb67-8"><a href="#cb67-8" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;https://admin.helixterminator.io&quot;</span><span class="op">,</span></span>
 <span id="cb67-9"><a href="#cb67-9" aria-hidden="true" tabindex="-1"></a>        <span class="op">},</span></span>
 <span id="cb67-10"><a href="#cb67-10" aria-hidden="true" tabindex="-1"></a>        AllowedMethods<span class="op">:</span> <span class="op">[]</span><span class="dt">string</span><span class="op">{</span></span>
 <span id="cb67-11"><a href="#cb67-11" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;GET&quot;</span><span class="op">,</span> <span class="st">&quot;POST&quot;</span><span class="op">,</span> <span class="st">&quot;PUT&quot;</span><span class="op">,</span> <span class="st">&quot;PATCH&quot;</span><span class="op">,</span> <span class="st">&quot;DELETE&quot;</span><span class="op">,</span> <span class="st">&quot;OPTIONS&quot;</span><span class="op">,</span></span>
@@ -4300,7 +4258,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb67-1"><a href="#cb
 <span id="cb67-26"><a href="#cb67-26" aria-hidden="true" tabindex="-1"></a>        MaxAge<span class="op">:</span>           <span class="dv">86400</span><span class="op">,</span> <span class="co">// 24 hours preflight cache</span></span>
 <span id="cb67-27"><a href="#cb67-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">})</span></span>
 <span id="cb67-28"><a href="#cb67-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="84-content-security-policy">8.4 Content Security Policy</h3>
+<h3 id="content-security-policy">8.4 Content Security Policy</h3>
 <p>The HelixTerminator web client sends the following CSP headers:</p>
 <pre><code>Content-Security-Policy:
   default-src &#39;self&#39;;
@@ -4308,7 +4266,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb67-1"><a href="#cb
   style-src &#39;self&#39; &#39;nonce-{RANDOM_NONCE}&#39;;
   img-src &#39;self&#39; data: https://secure.gravatar.com;
   font-src &#39;self&#39;;
-  connect-src &#39;self&#39; https://api.helixterm.io https://auth.helixterm.io wss://terminal.helixterm.io;
+  connect-src &#39;self&#39; https://api.helixterminator.io https://auth.helixterminator.io wss://terminal.helixterminator.io;
   frame-src &#39;none&#39;;
   object-src &#39;none&#39;;
   base-uri &#39;self&#39;;
@@ -4325,14 +4283,10 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 Cross-Origin-Resource-Policy: same-site</code></pre>
-<h3 id="85-ddos-protection">8.5 DDoS Protection</h3>
-<p><strong>Layer 1 — Cloudflare:</strong></p>
-<ul>
-<li>DDoS protection at edge (L3/L4 and L7)</li>
-<li>Rate limiting at CDN level</li>
-<li>Bot management (challenge suspicious traffic)</li>
-<li>IP reputation blocking</li>
-</ul>
+<h3 id="ddos-protection">8.5 DDoS Protection</h3>
+<p><strong>Layer 1 — Cloudflare:</strong> - DDoS protection at edge
+(L3/L4 and L7) - Rate limiting at CDN level - Bot management (challenge
+suspicious traffic) - IP reputation blocking</p>
 <p><strong>Layer 2 — Application-level rate limiting:</strong></p>
 <div class="sourceCode" id="cb70"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/middleware/ratelimit.go</span></span>
@@ -4348,8 +4302,8 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb70-1"><a href="#cb
 <span id="cb70-11"><a href="#cb70-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;cert.sign&quot;</span><span class="op">:</span>           <span class="op">{</span>Requests<span class="op">:</span> <span class="dv">60</span><span class="op">,</span>  Window<span class="op">:</span> <span class="dv">1</span> <span class="op">*</span> time<span class="op">.</span>Minute<span class="op">,</span>  Key<span class="op">:</span> <span class="st">&quot;user&quot;</span><span class="op">},</span></span>
 <span id="cb70-12"><a href="#cb70-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;websocket.terminal&quot;</span><span class="op">:</span>  <span class="op">{</span>Requests<span class="op">:</span> <span class="dv">10</span><span class="op">,</span>  Window<span class="op">:</span> <span class="dv">1</span> <span class="op">*</span> time<span class="op">.</span>Minute<span class="op">,</span>  Key<span class="op">:</span> <span class="st">&quot;user&quot;</span><span class="op">},</span></span>
 <span id="cb70-13"><a href="#cb70-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="86-certificate-pinning-mobile-apps">8.6 Certificate Pinning
-(Mobile Apps)</h3>
+<h3 id="certificate-pinning-mobile-apps">8.6 Certificate Pinning (Mobile
+Apps)</h3>
 <p>Mobile applications (iOS and Android) pin to the HelixTerminator TLS
 certificate chain:</p>
 <div class="sourceCode" id="cb71"><pre
@@ -4357,7 +4311,7 @@ class="sourceCode swift"><code class="sourceCode swift"><span id="cb71-1"><a hre
 <span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PinnedURLSession<span class="op">:</span> <span class="dt">NSObject</span><span class="op">,</span> <span class="dt">URLSessionDelegate</span> <span class="op">{</span></span>
 <span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// SHA-256 hashes of the Subject Public Key Info (SPKI) of pinned certificates</span></span>
 <span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">let</span> <span class="va">pinnedHashes</span><span class="op">:</span> Set<span class="op">&lt;</span>String<span class="op">&gt;</span> <span class="op">=</span> <span class="op">[</span></span>
-<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;sha256/AAAA...=&quot;</span><span class="op">,</span> <span class="co">// api.helixterm.io leaf cert</span></span>
+<span id="cb71-5"><a href="#cb71-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;sha256/AAAA...=&quot;</span><span class="op">,</span> <span class="co">// api.helixterminator.io leaf cert</span></span>
 <span id="cb71-6"><a href="#cb71-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;sha256/BBBB...=&quot;</span><span class="op">,</span> <span class="co">// intermediate CA</span></span>
 <span id="cb71-7"><a href="#cb71-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">&quot;sha256/CCCC...=&quot;</span><span class="op">,</span> <span class="co">// root CA (backup pin)</span></span>
 <span id="cb71-8"><a href="#cb71-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">]</span></span>
@@ -4379,7 +4333,7 @@ class="sourceCode swift"><code class="sourceCode swift"><span id="cb71-1"><a hre
 <span id="cb71-24"><a href="#cb71-24" aria-hidden="true" tabindex="-1"></a>        completionHandler<span class="op">(.</span>useCredential<span class="op">,</span> URLCredential<span class="op">(</span>trust<span class="op">:</span> serverTrust<span class="op">))</span></span>
 <span id="cb71-25"><a href="#cb71-25" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb71-26"><a href="#cb71-26" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="87-subresource-integrity">8.7 Subresource Integrity</h3>
+<h3 id="subresource-integrity">8.7 Subresource Integrity</h3>
 <p>All third-party assets loaded by the web client use SRI hashes:</p>
 <div class="sourceCode" id="cb72"><pre
 class="sourceCode html"><code class="sourceCode html"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;</span><span class="kw">script</span></span>
@@ -4388,12 +4342,17 @@ class="sourceCode html"><code class="sourceCode html"><span id="cb72-1"><a href=
 <span id="cb72-4"><a href="#cb72-4" aria-hidden="true" tabindex="-1"></a><span class="ot">  crossorigin</span><span class="op">=</span><span class="st">&quot;anonymous&quot;</span><span class="dt">&gt;</span></span>
 <span id="cb72-5"><a href="#cb72-5" aria-hidden="true" tabindex="-1"></a><span class="dt">&lt;/</span><span class="kw">script</span><span class="dt">&gt;</span></span></code></pre></div>
 <hr />
-<h2 id="9-compliance">9. Compliance</h2>
-<h3 id="91-soc-2-type-ii-controls-mapping">9.1 SOC 2 Type II Controls
+<h2 id="compliance">9. Compliance</h2>
+<h3 id="soc-2-type-ii-controls-mapping">9.1 SOC 2 Type II Controls
 Mapping</h3>
 <p>HelixTerminator maps its controls to the AICPA Trust Services
 Criteria (SOC 2):</p>
 <table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
 <thead>
 <tr>
 <th>Control Domain</th>
@@ -4466,16 +4425,12 @@ compromise</td>
 </tr>
 </tbody>
 </table>
-<h3 id="92-gdpr-compliance">9.2 GDPR Compliance</h3>
-<p><strong>Data minimization:</strong></p>
-<ul>
-<li>User profile data: name, email, organization — no tracking or
-behavioral analytics beyond what is necessary for the service</li>
-<li>IP addresses in audit logs anonymized after 90 days (last octet
-zeroed)</li>
-<li>Session recording requires explicit opt-in and is disclosed to
-users</li>
-</ul>
+<h3 id="gdpr-compliance">9.2 GDPR Compliance</h3>
+<p><strong>Data minimization:</strong> - User profile data: name, email,
+organization — no tracking or behavioral analytics beyond what is
+necessary for the service - IP addresses in audit logs anonymized after
+90 days (last octet zeroed) - Session recording requires explicit opt-in
+and is disclosed to users</p>
 <p><strong>Right to erasure (GDPR Article 17):</strong></p>
 <div class="sourceCode" id="cb73"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/gdpr/erasure.go</span></span>
@@ -4512,22 +4467,18 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb73-1"><a href="#cb
 <span id="cb73-32"><a href="#cb73-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <p><strong>Data portability (GDPR Article 20):</strong></p>
 <p>Users can export their data at any time via
-<code>GET /v1/me/export</code>. The export includes:</p>
-<ul>
-<li>Profile information</li>
-<li>Vault items (plaintext, after authentication)</li>
-<li>SSH key fingerprints (not private keys)</li>
-<li>Audit log of their own activities</li>
-<li>Connected devices list</li>
-</ul>
+<code>GET /v1/me/export</code>. The export includes: - Profile
+information - Vault items (plaintext, after authentication) - SSH key
+fingerprints (not private keys) - Audit log of their own activities -
+Connected devices list</p>
 <p><strong>Data processing agreements:</strong> Available for enterprise
-customers at <code>legal.helixterm.io/dpa</code>.</p>
+customers at <code>legal.helixterminator.io/dpa</code>.</p>
 <p><strong>Data residency:</strong> Customer data can be pinned to EU
 (Frankfurt + Dublin), US (us-east-1 + us-west-2), or APAC
 (ap-southeast-1 + ap-northeast-1). Data residency is enforced at the
 infrastructure level via AWS region selection and Kafka partition key
 routing.</p>
-<h3 id="93-hipaa-compliance">9.3 HIPAA Compliance</h3>
+<h3 id="hipaa-compliance">9.3 HIPAA Compliance</h3>
 <p>For healthcare customers, HelixTerminator offers a HIPAA-eligible
 deployment configuration:</p>
 <ul>
@@ -4552,12 +4503,16 @@ timeline to HHS (Section 10)</li>
 PHI directly. However, because HelixTerminator provides access to
 systems that may process PHI, the platform is classified as a HIPAA
 business associate when used by covered entities.</p>
-<h3 id="94-pci-dss-payment-card-industry">9.4 PCI DSS (Payment Card
+<h3 id="pci-dss-payment-card-industry">9.4 PCI DSS (Payment Card
 Industry)</h3>
-<p>HelixTerminator's payment processing is handled by Stripe (a PCI DSS
+<p>HelixTerminator’s payment processing is handled by Stripe (a PCI DSS
 Level 1 certified processor). HelixTerminator does not store card
 numbers. Relevant PCI DSS controls:</p>
 <table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
 <thead>
 <tr>
 <th>Requirement</th>
@@ -4591,10 +4546,14 @@ numbers. Relevant PCI DSS controls:</p>
 </tr>
 </tbody>
 </table>
-<h3 id="95-iso-27001-alignment">9.5 ISO 27001 Alignment</h3>
-<p>HelixTerminator's security controls align with ISO/IEC 27001:2022
+<h3 id="iso-27001-alignment">9.5 ISO 27001 Alignment</h3>
+<p>HelixTerminator’s security controls align with ISO/IEC 27001:2022
 Annex A:</p>
 <table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
 <thead>
 <tr>
 <th>ISO 27001 Control</th>
@@ -4633,7 +4592,7 @@ governance</td>
 </tr>
 </tbody>
 </table>
-<h3 id="96-encryption-at-rest">9.6 Encryption at Rest</h3>
+<h3 id="encryption-at-rest">9.6 Encryption at Rest</h3>
 <p><strong>PostgreSQL:</strong></p>
 <div class="sourceCode" id="cb74"><pre
 class="sourceCode sql"><code class="sourceCode sql"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Column-level encryption for sensitive fields using pgcrypto</span></span>
@@ -4642,16 +4601,20 @@ class="sourceCode sql"><code class="sourceCode sql"><span id="cb74-1"><a href="#
 <span id="cb74-4"><a href="#cb74-4" aria-hidden="true" tabindex="-1"></a>    totp_secret:<span class="ch">:text</span>,</span>
 <span id="cb74-5"><a href="#cb74-5" aria-hidden="true" tabindex="-1"></a>    current_setting(<span class="st">&#39;app.encryption_key&#39;</span>)</span>
 <span id="cb74-6"><a href="#cb74-6" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
-<p><strong>Volume encryption:</strong></p>
-<ul>
-<li>All AWS EBS volumes use AES-256 encryption with CMKs in AWS KMS</li>
-<li>All AWS S3 buckets use SSE-KMS with customer-managed keys</li>
-<li>PostgreSQL RDS instances use AES-256 encryption</li>
-</ul>
+<p><strong>Volume encryption:</strong> - All AWS EBS volumes use AES-256
+encryption with CMKs in AWS KMS - All AWS S3 buckets use SSE-KMS with
+customer-managed keys - PostgreSQL RDS instances use AES-256
+encryption</p>
 <hr />
-<h2 id="10-incident-response">10. Incident Response</h2>
-<h3 id="101-incident-classification">10.1 Incident Classification</h3>
+<h2 id="incident-response">10. Incident Response</h2>
+<h3 id="incident-classification">10.1 Incident Classification</h3>
 <table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 12%" />
+<col style="width: 26%" />
+<col style="width: 42%" />
+</colgroup>
 <thead>
 <tr>
 <th>Priority</th>
@@ -4695,7 +4658,7 @@ exploitation)</td>
 </tr>
 </tbody>
 </table>
-<h3 id="102-p0--critical-incident-response-procedure">10.2 P0 — Critical
+<h3 id="p0-critical-incident-response-procedure">10.2 P0 — Critical
 Incident Response Procedure</h3>
 <p><strong>0–15 minutes (Detection and Initial
 Containment):</strong></p>
@@ -4750,16 +4713,15 @@ deploy</li>
 <li><strong>Post-Mortem</strong>: Blameless post-mortem published to
 internal wiki within 5 business days</li>
 </ol>
-<h3 id="103-p1--high-incident-response">10.3 P1 — High Incident
-Response</h3>
+<h3 id="p1-high-incident-response">10.3 P1 — High Incident Response</h3>
 <pre><code>Hour 0-1:   Security engineer paged; initial scoping
 Hour 1-2:   Targeted containment (affected user/service only)
 Hour 2-4:   Evidence collection; vendor notification if third-party involved
 Hour 4-8:   Eradication and recovery
 Hour 8-24:  Enhanced monitoring; root cause analysis begins
 Day 2-5:    Post-mortem; remediation deployed</code></pre>
-<h3 id="104-ca-compromise-emergency-procedure">10.4 CA Compromise
-Emergency Procedure</h3>
+<h3 id="ca-compromise-emergency-procedure">10.4 CA Compromise Emergency
+Procedure</h3>
 <p>A compromise of the SSH Certificate Authority is a P0-critical
 incident that invalidates all issued certificates. The procedure:</p>
 <pre><code>1. IMMEDIATE (within 15 minutes):
@@ -4783,8 +4745,7 @@ incident that invalidates all issued certificates. The procedure:</p>
    a. Full forensic analysis of how CA was compromised
    b. Revoke and rotate any credentials that had access to CA signing keys
    c. Audit all certificates issued in the 30 days prior to compromise</code></pre>
-<h3 id="105-account-takeover-response">10.5 Account Takeover
-Response</h3>
+<h3 id="account-takeover-response">10.5 Account Takeover Response</h3>
 <div class="sourceCode" id="cb77"><pre
 class="sourceCode go"><code class="sourceCode go"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="co">// pkg/incident/ato.go</span></span>
 <span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> incident</span>
@@ -4825,41 +4786,37 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb77-1"><a href="#cb
 <span id="cb77-37"><a href="#cb77-37" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
 <span id="cb77-38"><a href="#cb77-38" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ot">nil</span></span>
 <span id="cb77-39"><a href="#cb77-39" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
-<h3 id="106-vulnerability-disclosure-policy">10.6 Vulnerability
-Disclosure Policy</h3>
+<h3 id="vulnerability-disclosure-policy">10.6 Vulnerability Disclosure
+Policy</h3>
 <p>HelixTerminator operates a coordinated vulnerability disclosure
 program:</p>
 <p><strong>Disclosure endpoint:</strong>
-<code>security@helixterm.io</code> /
-<code>https://security.helixterm.io/report</code><br />
+<code>security@helixterminator.io</code> /
+<code>https://security.helixterminator.io/report</code><br />
 <strong>PGP Key:</strong> Published at
-<code>https://security.helixterm.io/pgp-key.txt</code></p>
-<p><strong>Response SLAs:</strong></p>
-<ul>
-<li>Initial acknowledgment: 24 hours</li>
-<li>Triage and severity assessment: 72 hours</li>
-<li>Remediation timeline provided: 7 days</li>
-<li>Fix deployed (critical): 30 days</li>
-<li>Fix deployed (high): 60 days</li>
-<li>Fix deployed (medium/low): 90 days</li>
-<li>Public disclosure (coordinated): 90 days from report (may be
-extended by mutual agreement)</li>
-</ul>
+<code>https://security.helixterminator.io/pgp-key.txt</code></p>
+<p><strong>Response SLAs:</strong> - Initial acknowledgment: 24 hours -
+Triage and severity assessment: 72 hours - Remediation timeline
+provided: 7 days - Fix deployed (critical): 30 days - Fix deployed
+(high): 60 days - Fix deployed (medium/low): 90 days - Public disclosure
+(coordinated): 90 days from report (may be extended by mutual
+agreement)</p>
 <p><strong>Safe Harbor:</strong> HelixTerminator will not pursue legal
-action against security researchers who:</p>
-<ol type="1">
-<li>Report through the coordinated disclosure program</li>
-<li>Do not access, exfiltrate, or modify customer data</li>
-<li>Do not perform denial-of-service attacks</li>
-<li>Do not disclose findings publicly before the remediation window
-expires</li>
-</ol>
+action against security researchers who: 1. Report through the
+coordinated disclosure program 2. Do not access, exfiltrate, or modify
+customer data 3. Do not perform denial-of-service attacks 4. Do not
+disclose findings publicly before the remediation window expires</p>
 <p><strong>Bug Bounty:</strong> HelixTerminator operates a private bug
 bounty program through HackerOne. Payouts range from $100
 (informational) to $20,000 (critical, RCE, CA compromise).</p>
-<h3 id="107-breach-notification">10.7 Breach Notification</h3>
+<h3 id="breach-notification">10.7 Breach Notification</h3>
 <p><strong>Regulatory requirements by jurisdiction:</strong></p>
 <table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 46%" />
+<col style="width: 24%" />
+</colgroup>
 <thead>
 <tr>
 <th>Regulation</th>
@@ -4876,7 +4833,7 @@ bounty program through HackerOne. Payouts range from $100
 <tr>
 <td>GDPR Art. 34</td>
 <td>Affected individuals</td>
-<td>"Without undue delay"</td>
+<td>“Without undue delay”</td>
 </tr>
 <tr>
 <td>HIPAA Breach Rule</td>
@@ -4886,12 +4843,12 @@ bounty program through HackerOne. Payouts range from $100
 <tr>
 <td>CCPA</td>
 <td>California AG (&gt;500 CA residents)</td>
-<td>"Expedient" (30 days practical)</td>
+<td>“Expedient” (30 days practical)</td>
 </tr>
 <tr>
 <td>NY SHIELD Act</td>
 <td>NY AG</td>
-<td>"Most expedient time possible"</td>
+<td>“Most expedient time possible”</td>
 </tr>
 </tbody>
 </table>
@@ -4900,19 +4857,21 @@ bounty program through HackerOne. Payouts range from $100
                                               → Customer Success (affected customers)
                                               → Marketing (public statement if needed)</code></pre>
 <p><strong>Customer notification template:</strong> All breach
-notifications include:</p>
-<ul>
-<li>What happened (factual, no speculation)</li>
-<li>What data was affected (specific categories)</li>
-<li>What HelixTerminator has done in response</li>
-<li>What the customer should do (action items)</li>
-<li>Contact information for questions</li>
-<li>Reference to regulatory rights (GDPR, CCPA, etc.)</li>
-</ul>
+notifications include: - What happened (factual, no speculation) - What
+data was affected (specific categories) - What HelixTerminator has done
+in response - What the customer should do (action items) - Contact
+information for questions - Reference to regulatory rights (GDPR, CCPA,
+etc.)</p>
 <hr />
 <h2 id="appendix-a-cryptographic-algorithm-summary">Appendix A:
 Cryptographic Algorithm Summary</h2>
-<table>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 28%" />
+<col style="width: 26%" />
+<col style="width: 18%" />
+</colgroup>
 <thead>
 <tr>
 <th>Use Case</th>
@@ -4966,9 +4925,10 @@ Cryptographic Algorithm Summary</h2>
 </tr>
 <tr>
 <td>JWT signing</td>
-<td>RS256</td>
-<td>4096-bit RSA</td>
-<td>Access tokens</td>
+<td>EdDSA (Ed25519)</td>
+<td>256-bit</td>
+<td>Access tokens; RFC 8037. (RS256/ES256/HS256 used only in
+negative/attack-test examples elsewhere in this document.)</td>
 </tr>
 <tr>
 <td>TLS (external)</td>
@@ -5006,6 +4966,11 @@ Cryptographic Algorithm Summary</h2>
 <h2 id="appendix-b-security-dependencies">Appendix B: Security
 Dependencies</h2>
 <table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
 <thead>
 <tr>
 <th>Package</th>
@@ -5042,7 +5007,7 @@ Dependencies</h2>
 <tr>
 <td><code>github.com/hashicorp/vault/shamir</code></td>
 <td>latest</td>
-<td>Shamir's Secret Sharing</td>
+<td>Shamir’s Secret Sharing</td>
 </tr>
 <tr>
 <td><code>golang.org/x/crypto/hkdf</code></td>
@@ -5065,6 +5030,11 @@ Dependencies</h2>
 <h2 id="appendix-c-security-contact-information">Appendix C: Security
 Contact Information</h2>
 <table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 45%" />
+<col style="width: 25%" />
+</colgroup>
 <thead>
 <tr>
 <th>Role</th>
@@ -5075,29 +5045,27 @@ Contact Information</h2>
 <tbody>
 <tr>
 <td>Security Team</td>
-<td><a
-href="mailto:security@helixterm.io">security@helixterm.io</a></td>
-<td>Published at security.helixterm.io</td>
+<td>security@helixterminator.io</td>
+<td>Published at security.helixterminator.io</td>
 </tr>
 <tr>
 <td>Vulnerability Disclosure</td>
-<td><a
-href="mailto:security@helixterm.io">security@helixterm.io</a></td>
+<td>security@helixterminator.io</td>
 <td>Same</td>
 </tr>
 <tr>
 <td>Data Protection Officer</td>
-<td><a href="mailto:dpo@helixterm.io">dpo@helixterm.io</a></td>
-<td>Published at legal.helixterm.io</td>
+<td>dpo@helixterminator.io</td>
+<td>Published at legal.helixterminator.io</td>
 </tr>
 <tr>
 <td>Legal</td>
-<td><a href="mailto:legal@helixterm.io">legal@helixterm.io</a></td>
+<td>legal@helixterminator.io</td>
 <td>—</td>
 </tr>
 <tr>
 <td>Status Page</td>
-<td>status.helixterm.io</td>
+<td>status.helixterminator.io</td>
 <td>—</td>
 </tr>
 </tbody>
@@ -5105,9 +5073,7 @@ href="mailto:security@helixterm.io">security@helixterm.io</a></td>
 <hr />
 <p><em>Document maintained by the HelixTerminator Platform Security
 Team. For questions or proposed changes, open a PR against the
-<code>platform-security</code> repository or email <a
-href="mailto:security@helixterm.io">security@helixterm.io</a>.</em></p>
+<code>platform-security</code> repository or email
+security@helixterminator.io.</em></p>
 <p><em>Last updated: 2026-06-28 | Next review: 2026-09-28 | Document
 version: 1.0.0</em></p>
-</body>
-</html>
