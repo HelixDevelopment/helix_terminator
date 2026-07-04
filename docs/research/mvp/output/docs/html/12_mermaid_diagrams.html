@@ -1,0 +1,2774 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>HelixTerminator — 12_mermaid_diagrams</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="/tmp/helix_style.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">HelixTerminator — 12_mermaid_diagrams</h1>
+</header>
+<h1 id="helixterminator--complete-mermaid-diagram-suite">HelixTerminator
+— Complete Mermaid Diagram Suite</h1>
+<blockquote>
+<p><strong>Project:</strong> HelixTerminator — Next-Generation
+Enterprise SSH Client<br />
+<strong>Architecture:</strong> 25 Go microservices + Flutter clients,
+Kafka + RabbitMQ, PostgreSQL + Redis, Kubernetes, Zero Trust /
+mTLS<br />
+<strong>Generated:</strong> 2026-06-28</p>
+</blockquote>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Diagram</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>High-Level System Context (C4 L1)</td>
+<td>graph TB</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Container Diagram (C4 L2)</td>
+<td>graph TB</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Microservices Architecture</td>
+<td>graph TB</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Kafka Topic Flow</td>
+<td>flowchart LR</td>
+</tr>
+<tr>
+<td>5</td>
+<td>RabbitMQ Exchange/Queue Flow</td>
+<td>flowchart LR</td>
+</tr>
+<tr>
+<td>6</td>
+<td>SSH Connection Establishment</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>7</td>
+<td>User Login with MFA</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Vault Sync Flow</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>9</td>
+<td>SFTP File Transfer</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Real-time Collaboration (Terminal Sharing)</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Certificate Issuance (SSH Cert CA)</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Vault Encryption Flow</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>13</td>
+<td>API Gateway Request Flow</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Zero Trust mTLS Flow</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Session Recording Flow</td>
+<td>sequenceDiagram</td>
+</tr>
+<tr>
+<td>16</td>
+<td>SSH Connection State Machine</td>
+<td>stateDiagram-v2</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Vault State Machine</td>
+<td>stateDiagram-v2</td>
+</tr>
+<tr>
+<td>18</td>
+<td>SFTP Transfer State Machine</td>
+<td>stateDiagram-v2</td>
+</tr>
+<tr>
+<td>19</td>
+<td>User Authentication State</td>
+<td>stateDiagram-v2</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Service Health State</td>
+<td>stateDiagram-v2</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Core Data Model ER Diagram</td>
+<td>erDiagram</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Auth Domain ER</td>
+<td>erDiagram</td>
+</tr>
+<tr>
+<td>23</td>
+<td>SSH/Terminal Domain ER</td>
+<td>erDiagram</td>
+</tr>
+<tr>
+<td>24</td>
+<td>Go Service Interface Hierarchy</td>
+<td>classDiagram</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Flutter BLoC Architecture</td>
+<td>classDiagram</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Kubernetes Cluster Layout</td>
+<td>graph TB</td>
+</tr>
+<tr>
+<td>27</td>
+<td>Network Architecture</td>
+<td>graph LR</td>
+</tr>
+<tr>
+<td>28</td>
+<td>Multi-Region Deployment</td>
+<td>graph TB</td>
+</tr>
+<tr>
+<td>29</td>
+<td>Development Phase Plan</td>
+<td>gantt</td>
+</tr>
+<tr>
+<td>30</td>
+<td>CI/CD Pipeline Flow</td>
+<td>flowchart LR</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-high-level-system-context-c4-level-1">1. High-Level System
+Context (C4 Level 1)</h2>
+<p>Shows HelixTerminator as a system-in-context with all external actors
+and external systems it interacts with.</p>
+<pre class="mermaid"><code>graph TB
+    classDef person fill:#08427b,stroke:#052e56,color:#fff,rx:50
+    classDef system fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef external fill:#999,stroke:#666,color:#fff
+    classDef boundary fill:none,stroke:#1168bd,stroke-dasharray:5 5,color:#1168bd
+
+    subgraph Users[&quot;External Users&quot;]
+        DEV[&quot;👤 Developer\nIndividual engineer\nmanaging SSH infrastructure&quot;]
+        ADMIN[&quot;👤 Team Admin\nManages team members,\nhosts and permissions&quot;]
+        ENTERPRISE[&quot;👤 Enterprise User\nLarge-scale org admin\nwith SSO &amp; compliance needs&quot;]
+    end
+
+    subgraph HT[&quot;HelixTerminator System&quot;]
+        CORE[&quot;[Software System]\nHelixTerminator\n\nNext-generation enterprise SSH client\nproviding secure terminal access,\nvault, SFTP, and collaboration&quot;]
+    end
+
+    subgraph External[&quot;External Systems&quot;]
+        SSH[&quot;[External System]\nSSH Servers\nLinux/Unix hosts,\nnetwork devices&quot;]
+        LDAP[&quot;[External System]\nLDAP / Active Directory\nCorporate identity\nand directory service&quot;]
+        SAML[&quot;[External System]\nSAML Identity Provider\nOkta, Azure AD,\nPingFederate&quot;]
+        SMTP[&quot;[External System]\nSMTP / Email\nTransactional email\nfor alerts &amp; invites&quot;]
+        S3[&quot;[External System]\nObject Storage (S3)\nSession recordings,\nbackups, exports&quot;]
+        SPIRE[&quot;[External System]\nSPIRE / SPIFFE\nWorkload identity\nand SVID issuance&quot;]
+    end
+
+    DEV --&gt;|&quot;Uses [HTTPS/WSS]&quot;| CORE
+    ADMIN --&gt;|&quot;Manages via [HTTPS]&quot;| CORE
+    ENTERPRISE --&gt;|&quot;Administers via [HTTPS/SAML]&quot;| CORE
+
+    CORE --&gt;|&quot;Opens SSH tunnels [SSH/22]&quot;| SSH
+    CORE --&gt;|&quot;Authenticates users [LDAPS/636]&quot;| LDAP
+    CORE --&gt;|&quot;SSO federation [SAML 2.0/OIDC]&quot;| SAML
+    CORE --&gt;|&quot;Sends notifications [SMTP/587]&quot;| SMTP
+    CORE --&gt;|&quot;Stores recordings [HTTPS/S3 API]&quot;| S3
+    CORE --&gt;|&quot;Fetches SVIDs [gRPC]&quot;| SPIRE
+
+    class DEV,ADMIN,ENTERPRISE person
+    class CORE system
+    class SSH,LDAP,SAML,SMTP,S3,SPIRE external</code></pre>
+<hr />
+<h2 id="2-container-diagram-c4-level-2">2. Container Diagram (C4 Level
+2)</h2>
+<p>Shows all major containers (client apps, API gateway, microservice
+groups, data stores, and messaging) and their primary communication
+channels.</p>
+<pre class="mermaid"><code>graph TB
+    classDef client fill:#08427b,stroke:#052e56,color:#fff
+    classDef gateway fill:#b05a08,stroke:#7a3f06,color:#fff
+    classDef service fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef datastore fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef messaging fill:#6a1b9a,stroke:#4a148c,color:#fff
+    classDef external fill:#888,stroke:#555,color:#fff
+
+    subgraph Clients[&quot;Client Applications&quot;]
+        FLUTTER_DESKTOP[&quot;Flutter Desktop\n(macOS/Windows/Linux)\nDart/Flutter&quot;]
+        FLUTTER_MOBILE[&quot;Flutter Mobile\n(iOS/Android)\nDart/Flutter&quot;]
+        WEB_APP[&quot;Web Application\n(Browser WASM)\nDart/Flutter Web&quot;]
+    end
+
+    subgraph Gateway[&quot;API Gateway Layer&quot;]
+        GW[&quot;API Gateway Service\nGo + Envoy\nHTTPS/WSS :443&quot;]
+    end
+
+    subgraph AuthDomain[&quot;Auth Domain&quot;]
+        AUTH_SVC[&quot;Auth Service\nGo :8001\nJWT/OAuth2/SAML&quot;]
+        USER_SVC[&quot;User Service\nGo :8002\nUser management&quot;]
+        PKI_SVC[&quot;PKI Service\nGo :8003\nCert CA&quot;]
+        ORG_SVC[&quot;Org Service\nGo :8004\nOrg/team RBAC&quot;]
+    end
+
+    subgraph TerminalDomain[&quot;Terminal Domain&quot;]
+        SSH_PROXY[&quot;SSH Proxy Service\nGo :8010\nlibssh2/crypto/ssh&quot;]
+        TERMINAL_SVC[&quot;Terminal Service\nGo :8011\nWebSocket PTY&quot;]
+        SFTP_SVC[&quot;SFTP Service\nGo :8012\nFile transfer&quot;]
+        PF_SVC[&quot;Port Forward Service\nGo :8013\nTCP tunneling&quot;]
+    end
+
+    subgraph DataDomain[&quot;Data Domain&quot;]
+        VAULT_SVC[&quot;Vault Service\nGo :8020\nE2EE secret store&quot;]
+        KEYCHAIN_SVC[&quot;Keychain Service\nGo :8021\nSSH key mgmt&quot;]
+        SNIPPET_SVC[&quot;Snippet Service\nGo :8022\nCommand library&quot;]
+        HOST_SVC[&quot;Host Service\nGo :8023\nHost inventory&quot;]
+        WS_SVC[&quot;Workspace Service\nGo :8024\nWorkspace mgmt&quot;]
+    end
+
+    subgraph PlatformDomain[&quot;Platform Domain&quot;]
+        CONFIG_SVC[&quot;Config Service\nGo :8030\nFeature flags&quot;]
+        HEALTH_SVC[&quot;Health Service\nGo :8031\nService health&quot;]
+        NOTIF_SVC[&quot;Notification Service\nGo :8032\nAlerts/webhooks&quot;]
+        AUDIT_SVC[&quot;Audit Service\nGo :8033\nCompliance logs&quot;]
+        ANALYTICS_SVC[&quot;Analytics Service\nGo :8034\nUsage metrics&quot;]
+    end
+
+    subgraph AIDomain[&quot;AI Domain&quot;]
+        AI_SVC[&quot;AI/Autocomplete Service\nGo :8040\nLLM integration&quot;]
+        REC_SVC[&quot;Recording Service\nGo :8041\nSession replay&quot;]
+    end
+
+    subgraph IntegrationDomain[&quot;Integration Domain&quot;]
+        TRACK_SVC[&quot;HelixTrack Bridge\nGo :8050\nIssue tracker sync&quot;]
+        CONTAINER_SVC[&quot;Container Bridge\nGo :8051\nDocker/K8s exec&quot;]
+    end
+
+    subgraph DataStores[&quot;Data Stores&quot;]
+        PG[(&quot;PostgreSQL 16\nPrimary DB\n:5432&quot;)]
+        REDIS[(&quot;Redis Cluster\nSessions/Cache\n:6379&quot;)]
+        S3_STORE[(&quot;S3 / MinIO\nRecordings/Files\n:9000&quot;)]
+    end
+
+    subgraph Messaging[&quot;Messaging Layer&quot;]
+        KAFKA[&quot;Apache Kafka\nEvent streaming\n:9092&quot;]
+        RABBIT[&quot;RabbitMQ\nCommand queues\n:5672&quot;]
+    end
+
+    FLUTTER_DESKTOP &amp; FLUTTER_MOBILE &amp; WEB_APP --&gt;|&quot;HTTPS/WSS&quot;| GW
+
+    GW --&gt;|&quot;gRPC/HTTP2&quot;| AUTH_SVC &amp; USER_SVC &amp; PKI_SVC &amp; ORG_SVC
+    GW --&gt;|&quot;gRPC/WSS&quot;| SSH_PROXY &amp; TERMINAL_SVC &amp; SFTP_SVC &amp; PF_SVC
+    GW --&gt;|&quot;gRPC/HTTP2&quot;| VAULT_SVC &amp; KEYCHAIN_SVC &amp; SNIPPET_SVC &amp; HOST_SVC &amp; WS_SVC
+    GW --&gt;|&quot;gRPC/HTTP2&quot;| CONFIG_SVC &amp; HEALTH_SVC &amp; NOTIF_SVC &amp; AUDIT_SVC &amp; ANALYTICS_SVC
+    GW --&gt;|&quot;gRPC/HTTP2&quot;| AI_SVC &amp; REC_SVC
+    GW --&gt;|&quot;gRPC/HTTP2&quot;| TRACK_SVC &amp; CONTAINER_SVC
+
+    AUTH_SVC &amp; USER_SVC &amp; PKI_SVC &amp; ORG_SVC --&gt; PG
+    VAULT_SVC &amp; KEYCHAIN_SVC &amp; SNIPPET_SVC &amp; HOST_SVC &amp; WS_SVC --&gt; PG
+    AUDIT_SVC &amp; ANALYTICS_SVC &amp; TRACK_SVC --&gt; PG
+    AUTH_SVC &amp; SSH_PROXY &amp; TERMINAL_SVC --&gt; REDIS
+    REC_SVC --&gt; S3_STORE
+
+    SSH_PROXY &amp; TERMINAL_SVC &amp; VAULT_SVC &amp; AUDIT_SVC --&gt; KAFKA
+    NOTIF_SVC &amp; SSH_PROXY &amp; CONTAINER_SVC --&gt; RABBIT
+
+    class FLUTTER_DESKTOP,FLUTTER_MOBILE,WEB_APP client
+    class GW gateway
+    class AUTH_SVC,USER_SVC,PKI_SVC,ORG_SVC,SSH_PROXY,TERMINAL_SVC,SFTP_SVC,PF_SVC,VAULT_SVC,KEYCHAIN_SVC,SNIPPET_SVC,HOST_SVC,WS_SVC,CONFIG_SVC,HEALTH_SVC,NOTIF_SVC,AUDIT_SVC,ANALYTICS_SVC,AI_SVC,REC_SVC,TRACK_SVC,CONTAINER_SVC service
+    class PG,REDIS,S3_STORE datastore
+    class KAFKA,RABBIT messaging</code></pre>
+<hr />
+<h2 id="3-microservices-architecture--full-domain-map">3. Microservices
+Architecture — Full Domain Map</h2>
+<p>All 25 microservices grouped by domain, with inter-service gRPC/event
+connections labeled.</p>
+<pre class="mermaid"><code>graph TB
+    classDef authDomain fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef termDomain fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef dataDomain fill:#e65100,stroke:#bf360c,color:#fff
+    classDef platformDomain fill:#4a148c,stroke:#311b92,color:#fff
+    classDef aiDomain fill:#880e4f,stroke:#560027,color:#fff
+    classDef integDomain fill:#4e342e,stroke:#3e2723,color:#fff
+    classDef infra fill:#37474f,stroke:#263238,color:#fff
+    classDef client fill:#006064,stroke:#004d40,color:#fff
+
+    CLIENT[&quot;Flutter Clients\n(Desktop/Mobile/Web)&quot;]
+    GW[&quot;API Gateway\n:443&quot;]
+
+    subgraph AUTH[&quot;Auth Domain&quot;]
+        A1[&quot;Auth Service\n:8001\nOAuth2 · SAML · OIDC&quot;]
+        A2[&quot;User Service\n:8002\nProfile · Preferences · MFA&quot;]
+        A3[&quot;PKI Service\n:8003\nSSH CA · TLS CA · CRL&quot;]
+        A4[&quot;Org Service\n:8004\nOrgs · Teams · RBAC · Quotas&quot;]
+    end
+
+    subgraph TERM[&quot;Terminal Domain&quot;]
+        T1[&quot;SSH Proxy Service\n:8010\nSSH tunnels · Jump hosts · Agent fwd&quot;]
+        T2[&quot;Terminal Service\n:8011\nPTY · WebSocket · Collab&quot;]
+        T3[&quot;SFTP Service\n:8012\nUpload · Download · Sync&quot;]
+        T4[&quot;Port Forward Service\n:8013\nLocal · Remote · Dynamic&quot;]
+    end
+
+    subgraph DATA[&quot;Data Domain&quot;]
+        D1[&quot;Vault Service\n:8020\nE2EE · Argon2id · AES-256-GCM&quot;]
+        D2[&quot;Keychain Service\n:8021\nSSH keys · Passphrases · Agent&quot;]
+        D3[&quot;Snippet Service\n:8022\nCommands · Templates · Tags&quot;]
+        D4[&quot;Host Service\n:8023\nInventory · Groups · Labels&quot;]
+        D5[&quot;Workspace Service\n:8024\nLayouts · Tabs · Sessions&quot;]
+    end
+
+    subgraph PLATFORM[&quot;Platform Domain&quot;]
+        P1[&quot;API Gateway\n:8000\nRoute · Rate-limit · Auth MW&quot;]
+        P2[&quot;Config Service\n:8030\nFeature flags · Remote config&quot;]
+        P3[&quot;Health Service\n:8031\nLiveness · Readiness · Deps&quot;]
+        P4[&quot;Notification Service\n:8032\nEmail · Webhook · Push&quot;]
+        P5[&quot;Audit Service\n:8033\nCompliance · SIEM · Export&quot;]
+        P6[&quot;Analytics Service\n:8034\nEvents · Funnels · Reports&quot;]
+    end
+
+    subgraph AI[&quot;AI Domain&quot;]
+        AI1[&quot;AI/Autocomplete Service\n:8040\nCommand suggest · Shell AI&quot;]
+        AI2[&quot;Recording Service\n:8041\nAsciinema · Replay · Search&quot;]
+    end
+
+    subgraph INTEG[&quot;Integration Domain&quot;]
+        I1[&quot;HelixTrack Bridge\n:8050\nJira · GitHub · Linear&quot;]
+        I2[&quot;Container Bridge\n:8051\nDocker exec · K8s pod exec&quot;]
+    end
+
+    CLIENT --&gt;|&quot;HTTPS/WSS&quot;| GW
+    GW --&gt;|&quot;gRPC&quot;| A1 &amp; A2 &amp; A3 &amp; A4
+    GW --&gt;|&quot;gRPC/WSS&quot;| T1 &amp; T2 &amp; T3 &amp; T4
+    GW --&gt;|&quot;gRPC&quot;| D1 &amp; D2 &amp; D3 &amp; D4 &amp; D5
+    GW --&gt;|&quot;gRPC&quot;| P2 &amp; P3 &amp; P4 &amp; P5 &amp; P6
+    GW --&gt;|&quot;gRPC&quot;| AI1 &amp; AI2
+    GW --&gt;|&quot;gRPC&quot;| I1 &amp; I2
+
+    A1 --&gt;|&quot;validate user&quot;| A2
+    A1 --&gt;|&quot;issue SSH cert&quot;| A3
+    A1 --&gt;|&quot;check permissions&quot;| A4
+    T1 --&gt;|&quot;verify cert&quot;| A3
+    T1 --&gt;|&quot;log session&quot;| P5
+    T2 --&gt;|&quot;spawn proxy&quot;| T1
+    T3 --&gt;|&quot;use proxy&quot;| T1
+    T4 --&gt;|&quot;use proxy&quot;| T1
+    D1 --&gt;|&quot;fetch key&quot;| D2
+    D4 --&gt;|&quot;check host cert&quot;| A3
+    P4 --&gt;|&quot;user lookup&quot;| A2
+    AI1 --&gt;|&quot;session context&quot;| T2
+    AI2 --&gt;|&quot;stream from proxy&quot;| T1
+    I2 --&gt;|&quot;use proxy&quot;| T1
+    P5 --&gt;|&quot;org context&quot;| A4
+    P6 --&gt;|&quot;org context&quot;| A4
+
+    class A1,A2,A3,A4 authDomain
+    class T1,T2,T3,T4 termDomain
+    class D1,D2,D3,D4,D5 dataDomain
+    class P1,P2,P3,P4,P5,P6 platformDomain
+    class AI1,AI2 aiDomain
+    class I1,I2 integDomain
+    class GW infra
+    class CLIENT client</code></pre>
+<hr />
+<h2 id="4-kafka-topic-flow-diagram">4. Kafka Topic Flow Diagram</h2>
+<p>Shows all Kafka producers, topics, and consumers for event-driven
+flows across the platform.</p>
+<pre class="mermaid"><code>flowchart LR
+    classDef producer fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef topic fill:#f57f17,stroke:#e65100,color:#000
+    classDef consumer fill:#2e7d32,stroke:#1b5e20,color:#fff
+
+    subgraph Producers[&quot;Kafka Producers&quot;]
+        P_SSH[&quot;SSH Proxy Service&quot;]
+        P_AUTH[&quot;Auth Service&quot;]
+        P_VAULT[&quot;Vault Service&quot;]
+        P_AUDIT[&quot;Audit Service&quot;]
+        P_TERMINAL[&quot;Terminal Service&quot;]
+        P_HOST[&quot;Host Service&quot;]
+        P_USER[&quot;User Service&quot;]
+        P_SFTP[&quot;SFTP Service&quot;]
+    end
+
+    subgraph Topics[&quot;Kafka Topics&quot;]
+        T1[[&quot;ssh.sessions.events\n(partition: org_id)&quot;]]
+        T2[[&quot;auth.login.events\n(partition: user_id)&quot;]]
+        T3[[&quot;vault.sync.events\n(partition: vault_id)&quot;]]
+        T4[[&quot;audit.compliance.events\n(partition: org_id)&quot;]]
+        T5[[&quot;terminal.output.stream\n(partition: session_id)&quot;]]
+        T6[[&quot;host.inventory.changes\n(partition: org_id)&quot;]]
+        T7[[&quot;user.lifecycle.events\n(partition: user_id)&quot;]]
+        T8[[&quot;sftp.transfer.events\n(partition: session_id)&quot;]]
+        T9[[&quot;notifications.dispatch\n(partition: user_id)&quot;]]
+        T10[[&quot;analytics.raw.events\n(partition: org_id)&quot;]]
+        T11[[&quot;recording.chunks\n(partition: session_id)&quot;]]
+    end
+
+    subgraph Consumers[&quot;Kafka Consumers (Consumer Groups)&quot;]
+        C_REC[&quot;Recording Service\n[helix-recording-cg]&quot;]
+        C_ANALYTICS[&quot;Analytics Service\n[helix-analytics-cg]&quot;]
+        C_NOTIF[&quot;Notification Service\n[helix-notification-cg]&quot;]
+        C_AUDIT_SINK[&quot;Audit SIEM Sink\n[helix-audit-siem-cg]&quot;]
+        C_VAULT_SYNC[&quot;Vault Sync Workers\n[helix-vault-sync-cg]&quot;]
+        C_HOST_CACHE[&quot;Host Cache Invalidator\n[helix-host-cache-cg]&quot;]
+        C_USER_PROJ[&quot;User Projector\n[helix-user-proj-cg]&quot;]
+        C_AI[&quot;AI Context Builder\n[helix-ai-context-cg]&quot;]
+        C_SEARCH[&quot;Search Indexer\n[helix-search-idx-cg]&quot;]
+    end
+
+    P_SSH --&gt;|&quot;produce&quot;| T1
+    P_SSH --&gt;|&quot;produce&quot;| T11
+    P_AUTH --&gt;|&quot;produce&quot;| T2
+    P_AUTH --&gt;|&quot;produce&quot;| T4
+    P_VAULT --&gt;|&quot;produce&quot;| T3
+    P_VAULT --&gt;|&quot;produce&quot;| T4
+    P_AUDIT --&gt;|&quot;produce&quot;| T4
+    P_TERMINAL --&gt;|&quot;produce&quot;| T5
+    P_TERMINAL --&gt;|&quot;produce&quot;| T10
+    P_HOST --&gt;|&quot;produce&quot;| T6
+    P_USER --&gt;|&quot;produce&quot;| T7
+    P_USER --&gt;|&quot;produce&quot;| T9
+    P_SFTP --&gt;|&quot;produce&quot;| T8
+    P_SFTP --&gt;|&quot;produce&quot;| T4
+
+    T1 --&gt;|&quot;consume&quot;| C_ANALYTICS
+    T1 --&gt;|&quot;consume&quot;| C_NOTIF
+    T2 --&gt;|&quot;consume&quot;| C_ANALYTICS
+    T2 --&gt;|&quot;consume&quot;| C_AUDIT_SINK
+    T3 --&gt;|&quot;consume&quot;| C_VAULT_SYNC
+    T4 --&gt;|&quot;consume&quot;| C_AUDIT_SINK
+    T5 --&gt;|&quot;consume&quot;| C_REC
+    T5 --&gt;|&quot;consume&quot;| C_AI
+    T6 --&gt;|&quot;consume&quot;| C_HOST_CACHE
+    T6 --&gt;|&quot;consume&quot;| C_SEARCH
+    T7 --&gt;|&quot;consume&quot;| C_USER_PROJ
+    T7 --&gt;|&quot;consume&quot;| C_NOTIF
+    T8 --&gt;|&quot;consume&quot;| C_ANALYTICS
+    T9 --&gt;|&quot;consume&quot;| C_NOTIF
+    T10 --&gt;|&quot;consume&quot;| C_ANALYTICS
+    T11 --&gt;|&quot;consume&quot;| C_REC
+
+    class P_SSH,P_AUTH,P_VAULT,P_AUDIT,P_TERMINAL,P_HOST,P_USER,P_SFTP producer
+    class T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11 topic
+    class C_REC,C_ANALYTICS,C_NOTIF,C_AUDIT_SINK,C_VAULT_SYNC,C_HOST_CACHE,C_USER_PROJ,C_AI,C_SEARCH consumer</code></pre>
+<hr />
+<h2 id="5-rabbitmq-exchangequeue-flow">5. RabbitMQ Exchange/Queue
+Flow</h2>
+<p>Shows RabbitMQ exchanges, routing keys, queues, and consumers for
+command and notification flows.</p>
+<pre class="mermaid"><code>flowchart LR
+    classDef exchange fill:#7b1fa2,stroke:#4a148c,color:#fff
+    classDef queue fill:#ef6c00,stroke:#e65100,color:#fff
+    classDef consumer fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef producer fill:#2e7d32,stroke:#1b5e20,color:#fff
+
+    subgraph PUBS[&quot;Publishers&quot;]
+        PUB_GW[&quot;API Gateway&quot;]
+        PUB_SSH[&quot;SSH Proxy&quot;]
+        PUB_NOTIF[&quot;Notification Service&quot;]
+        PUB_SCHED[&quot;Scheduler&quot;]
+    end
+
+    subgraph EXCHANGES[&quot;Exchanges&quot;]
+        EX_CMD[&quot;helix.commands\n[direct exchange]&quot;]
+        EX_EVENTS[&quot;helix.events\n[topic exchange]&quot;]
+        EX_NOTIF[&quot;helix.notifications\n[fanout exchange]&quot;]
+        EX_DLX[&quot;helix.dlx\n[dead-letter exchange]&quot;]
+    end
+
+    subgraph QUEUES[&quot;Queues&quot;]
+        Q_SSH[&quot;q.ssh.connect\n[durable, priority=10]&quot;]
+        Q_SFTP[&quot;q.sftp.transfer\n[durable, priority=5]&quot;]
+        Q_PF[&quot;q.portforward.open\n[durable, priority=5]&quot;]
+        Q_CERT[&quot;q.pki.issue\n[durable, priority=8]&quot;]
+        Q_NOTIF_EMAIL[&quot;q.notify.email\n[durable]&quot;]
+        Q_NOTIF_PUSH[&quot;q.notify.push\n[durable]&quot;]
+        Q_NOTIF_WEBHOOK[&quot;q.notify.webhook\n[durable]&quot;]
+        Q_CONTAINER[&quot;q.container.exec\n[durable]&quot;]
+        Q_DEAD[&quot;q.dlx.failed\n[durable, ttl=7d]&quot;]
+        Q_HEALTH[&quot;q.health.check\n[transient, ttl=30s]&quot;]
+    end
+
+    subgraph CONSUMERS[&quot;Consumers&quot;]
+        CON_SSH[&quot;SSH Proxy Workers\n[concurrency=50]&quot;]
+        CON_SFTP[&quot;SFTP Workers\n[concurrency=20]&quot;]
+        CON_PF[&quot;Port Forward Workers\n[concurrency=30]&quot;]
+        CON_PKI[&quot;PKI Service Workers\n[concurrency=10]&quot;]
+        CON_EMAIL[&quot;Email Dispatcher\n[concurrency=5]&quot;]
+        CON_PUSH[&quot;Push Dispatcher\n[concurrency=10]&quot;]
+        CON_WEBHOOK[&quot;Webhook Dispatcher\n[concurrency=15]&quot;]
+        CON_CONTAINER[&quot;Container Bridge Workers\n[concurrency=20]&quot;]
+        CON_RETRY[&quot;Retry Processor\n[concurrency=3]&quot;]
+        CON_HEALTH[&quot;Health Checker\n[concurrency=25]&quot;]
+    end
+
+    PUB_GW --&gt;|&quot;rk: ssh.connect&quot;| EX_CMD
+    PUB_GW --&gt;|&quot;rk: sftp.transfer&quot;| EX_CMD
+    PUB_GW --&gt;|&quot;rk: portforward.open&quot;| EX_CMD
+    PUB_GW --&gt;|&quot;rk: pki.issue&quot;| EX_CMD
+    PUB_GW --&gt;|&quot;rk: container.exec&quot;| EX_CMD
+    PUB_SSH --&gt;|&quot;rk: session.*&quot;| EX_EVENTS
+    PUB_NOTIF --&gt;|&quot;fanout&quot;| EX_NOTIF
+    PUB_SCHED --&gt;|&quot;rk: health.check&quot;| EX_EVENTS
+
+    EX_CMD --&gt;|&quot;rk: ssh.connect&quot;| Q_SSH
+    EX_CMD --&gt;|&quot;rk: sftp.transfer&quot;| Q_SFTP
+    EX_CMD --&gt;|&quot;rk: portforward.open&quot;| Q_PF
+    EX_CMD --&gt;|&quot;rk: pki.issue&quot;| Q_CERT
+    EX_CMD --&gt;|&quot;rk: container.exec&quot;| Q_CONTAINER
+    EX_EVENTS --&gt;|&quot;rk: health.check&quot;| Q_HEALTH
+    EX_NOTIF --&gt; Q_NOTIF_EMAIL
+    EX_NOTIF --&gt; Q_NOTIF_PUSH
+    EX_NOTIF --&gt; Q_NOTIF_WEBHOOK
+    EX_DLX --&gt; Q_DEAD
+
+    Q_SSH --&gt;|&quot;ack/nack&quot;| CON_SSH
+    Q_SFTP --&gt;|&quot;ack/nack&quot;| CON_SFTP
+    Q_PF --&gt;|&quot;ack/nack&quot;| CON_PF
+    Q_CERT --&gt;|&quot;ack/nack&quot;| CON_PKI
+    Q_NOTIF_EMAIL --&gt;|&quot;ack/nack&quot;| CON_EMAIL
+    Q_NOTIF_PUSH --&gt;|&quot;ack/nack&quot;| CON_PUSH
+    Q_NOTIF_WEBHOOK --&gt;|&quot;ack/nack&quot;| CON_WEBHOOK
+    Q_CONTAINER --&gt;|&quot;ack/nack&quot;| CON_CONTAINER
+    Q_DEAD --&gt;|&quot;process&quot;| CON_RETRY
+    Q_HEALTH --&gt;|&quot;ack/nack&quot;| CON_HEALTH
+
+    CON_SSH -.-&gt;|&quot;nack → DLX&quot;| EX_DLX
+    CON_SFTP -.-&gt;|&quot;nack → DLX&quot;| EX_DLX
+    CON_PKI -.-&gt;|&quot;nack → DLX&quot;| EX_DLX
+
+    class EX_CMD,EX_EVENTS,EX_NOTIF,EX_DLX exchange
+    class Q_SSH,Q_SFTP,Q_PF,Q_CERT,Q_NOTIF_EMAIL,Q_NOTIF_PUSH,Q_NOTIF_WEBHOOK,Q_CONTAINER,Q_DEAD,Q_HEALTH queue
+    class CON_SSH,CON_SFTP,CON_PF,CON_PKI,CON_EMAIL,CON_PUSH,CON_WEBHOOK,CON_CONTAINER,CON_RETRY,CON_HEALTH consumer
+    class PUB_GW,PUB_SSH,PUB_NOTIF,PUB_SCHED producer</code></pre>
+<hr />
+<h2 id="6-ssh-connection-establishment">6. SSH Connection
+Establishment</h2>
+<p>Full sequence from client initiating connection through
+authentication, jump host traversal, and active shell.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant C as Flutter Client
+    participant GW as API Gateway
+    participant AUTH as Auth Service
+    participant PKI as PKI Service
+    participant PROXY as SSH Proxy
+    participant JUMP as Jump Host (Bastion)
+    participant TARGET as Target SSH Server
+    participant REDIS as Redis (Sessions)
+    participant KAFKA as Kafka
+
+    C-&gt;&gt;GW: POST /v1/ssh/connect {host_id, user, auth_method}
+    GW-&gt;&gt;AUTH: ValidateJWT(bearer_token)
+    AUTH-&gt;&gt;REDIS: GET session:{token_id}
+    REDIS--&gt;&gt;AUTH: session data (valid, not expired)
+    AUTH--&gt;&gt;GW: {user_id, org_id, permissions:[ssh:connect]}
+    GW-&gt;&gt;PROXY: gRPC ConnectRequest{host_id, user_id, auth_method}
+
+    alt Certificate Authentication
+        PROXY-&gt;&gt;PKI: IssueCertificate{user_id, host_id, ttl=3600}
+        PKI-&gt;&gt;PKI: Sign with SSH CA key (ECDSA P-384)
+        PKI--&gt;&gt;PROXY: SignedCertificate{cert_pem, serial}
+    else Key Authentication
+        PROXY-&gt;&gt;PROXY: Load key from Keychain Service
+    else Password Authentication
+        PROXY-&gt;&gt;PROXY: Retrieve from Vault Service (E2EE)
+    end
+
+    alt Jump Host Required
+        PROXY-&gt;&gt;JUMP: SSH Connect (direct-tcpip) :22
+        JUMP-&gt;&gt;JUMP: Validate host certificate
+        JUMP--&gt;&gt;PROXY: TCP channel established
+        PROXY-&gt;&gt;TARGET: SSH Connect via jump channel
+    else Direct Connection
+        PROXY-&gt;&gt;TARGET: SSH Connect :22 (TCP)
+    end
+
+    TARGET-&gt;&gt;PROXY: SSH version exchange (SSH-2.0)
+    PROXY-&gt;&gt;TARGET: Key exchange (curve25519-sha256)
+    TARGET--&gt;&gt;PROXY: KEX complete, session keys established
+    PROXY-&gt;&gt;TARGET: Authenticate (certificate/key/password)
+    TARGET--&gt;&gt;PROXY: Authentication success
+    PROXY-&gt;&gt;TARGET: Request PTY (xterm-256color, 80x24)
+    TARGET--&gt;&gt;PROXY: PTY granted
+    PROXY-&gt;&gt;TARGET: Start shell
+    TARGET--&gt;&gt;PROXY: Shell active (channel open)
+
+    PROXY-&gt;&gt;REDIS: SET session:{session_id} {proxy_addr, host, user, started_at} EX 86400
+    PROXY-&gt;&gt;KAFKA: Produce ssh.sessions.events {type:CONNECTED, session_id, host_id, user_id}
+
+    PROXY--&gt;&gt;GW: ConnectResponse{session_id, websocket_token}
+    GW--&gt;&gt;C: 101 Upgrade WebSocket {session_id, ws_token}
+    C-&gt;&gt;GW: WSS Connect /v1/ssh/stream/{session_id}
+    GW-&gt;&gt;PROXY: Stream attach {session_id}
+    Note over C,TARGET: Bidirectional WebSocket ↔ SSH channel active</code></pre>
+<hr />
+<h2 id="7-user-login-with-mfa">7. User Login with MFA</h2>
+<p>Full authentication flow covering credential validation, TOTP/FIDO2
+verification, JWT issuance, and session creation.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant C as Flutter Client
+    participant GW as API Gateway
+    participant AUTH as Auth Service
+    participant USER as User Service
+    participant REDIS as Redis
+    participant PG as PostgreSQL
+    participant NOTIF as Notification Service
+
+    C-&gt;&gt;GW: POST /v1/auth/login {email, password_hash}
+    GW-&gt;&gt;AUTH: Login{email, password_hash, device_fingerprint}
+    AUTH-&gt;&gt;USER: GetUserByEmail{email}
+    USER-&gt;&gt;PG: SELECT * FROM users WHERE email=$1
+    PG--&gt;&gt;USER: user record {id, password_hash, mfa_enabled, status}
+    USER--&gt;&gt;AUTH: UserRecord
+
+    AUTH-&gt;&gt;AUTH: Verify Argon2id(password, stored_hash)
+    alt Password Invalid
+        AUTH-&gt;&gt;PG: INSERT login_attempts (user_id, ip, failed=true)
+        AUTH--&gt;&gt;GW: 401 InvalidCredentials
+        GW--&gt;&gt;C: 401 {error: &quot;invalid_credentials&quot;}
+    else Account Locked
+        AUTH--&gt;&gt;GW: 423 AccountLocked {retry_after}
+        GW--&gt;&gt;C: 423 {error: &quot;account_locked&quot;, retry_after}
+    else Password Valid
+        AUTH-&gt;&gt;PG: INSERT login_attempts (user_id, ip, failed=false)
+
+        alt MFA Enabled (TOTP)
+            AUTH--&gt;&gt;GW: 200 {mfa_required: true, mfa_token, methods:[&quot;totp&quot;,&quot;fido2&quot;]}
+            GW--&gt;&gt;C: 200 MFA challenge (totp)
+            C-&gt;&gt;GW: POST /v1/auth/mfa/totp {mfa_token, totp_code}
+            GW-&gt;&gt;AUTH: VerifyTOTP{mfa_token, totp_code}
+            AUTH-&gt;&gt;PG: SELECT mfa_credentials WHERE user_id=$1 AND type=&#39;totp&#39;
+            PG--&gt;&gt;AUTH: {totp_secret_encrypted}
+            AUTH-&gt;&gt;AUTH: Decrypt TOTP secret, verify RFC 6238 code (±1 window)
+        else MFA Enabled (FIDO2/WebAuthn)
+            AUTH--&gt;&gt;GW: 200 {mfa_required: true, mfa_token, challenge, rp_id}
+            GW--&gt;&gt;C: 200 FIDO2 challenge
+            C-&gt;&gt;GW: POST /v1/auth/mfa/fido2 {mfa_token, assertion}
+            GW-&gt;&gt;AUTH: VerifyFIDO2{mfa_token, assertion}
+            AUTH-&gt;&gt;PG: SELECT fido2_credentials WHERE user_id=$1
+            PG--&gt;&gt;AUTH: {credential_id, public_key, sign_count}
+            AUTH-&gt;&gt;AUTH: Verify assertion signature (ES256/RS256)
+        else No MFA
+            Note over AUTH: Proceed directly to JWT issuance
+        end
+
+        AUTH-&gt;&gt;AUTH: Issue JWT {sub:user_id, org_id, roles, exp:3600}
+        AUTH-&gt;&gt;AUTH: Issue RefreshToken {jti, exp:2592000}
+        AUTH-&gt;&gt;REDIS: SET session:{jti} {user_id,org_id,device} EX 86400
+        AUTH-&gt;&gt;PG: INSERT refresh_tokens {jti, user_id, device_id, exp}
+        AUTH-&gt;&gt;NOTIF: PublishEvent{type:LOGIN_SUCCESS, user_id, device}
+
+        AUTH--&gt;&gt;GW: AuthResponse{access_token, refresh_token, expires_in:3600}
+        GW--&gt;&gt;C: 200 {access_token, refresh_token, user_profile}
+    end</code></pre>
+<hr />
+<h2 id="8-vault-sync-flow">8. Vault Sync Flow</h2>
+<p>End-to-end vault synchronization from client write through
+encryption, persistence, Kafka event propagation, and multi-device
+sync.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant C1 as Client A (Desktop)
+    participant GW as API Gateway
+    participant VAULT as Vault Service
+    participant KEY as Keychain Service
+    participant PG as PostgreSQL
+    participant KAFKA as Kafka
+    participant SYNC as Vault Sync Worker
+    participant C2 as Client B (Mobile)
+
+    C1-&gt;&gt;C1: Generate Item Key (AES-256)
+    C1-&gt;&gt;C1: Encrypt plaintext with Item Key (AES-256-GCM)
+    C1-&gt;&gt;C1: Encrypt Item Key with Vault Key (client-side)
+    C1-&gt;&gt;GW: PUT /v1/vault/items/{item_id} {encrypted_blob, enc_item_key, version}
+    GW-&gt;&gt;VAULT: UpdateItem{item_id, encrypted_blob, enc_item_key, version, user_id}
+
+    VAULT-&gt;&gt;PG: SELECT vault_items WHERE id=$1 FOR UPDATE
+    PG--&gt;&gt;VAULT: {current_version, updated_at}
+
+    alt Version Conflict
+        VAULT--&gt;&gt;GW: 409 Conflict {server_version, client_version}
+        GW--&gt;&gt;C1: 409 {conflict: true, server_item}
+        C1-&gt;&gt;C1: Merge conflict (CRDT / last-write-wins)
+        C1-&gt;&gt;GW: PUT /v1/vault/items/{item_id} {merged_blob, base_version}
+    else No Conflict
+        VAULT-&gt;&gt;VAULT: Validate encrypted blob integrity (HMAC-SHA256)
+        VAULT-&gt;&gt;PG: BEGIN TRANSACTION
+        VAULT-&gt;&gt;PG: UPDATE vault_items SET blob=$1, version=$2, updated_at=NOW()
+        VAULT-&gt;&gt;PG: INSERT vault_item_history {item_id, version, blob, changed_by}
+        VAULT-&gt;&gt;PG: COMMIT
+
+        VAULT-&gt;&gt;KAFKA: Produce vault.sync.events {type:ITEM_UPDATED, vault_id, item_id, version, org_id}
+
+        VAULT--&gt;&gt;GW: 200 {item_id, version, updated_at}
+        GW--&gt;&gt;C1: 200 {synced: true, version}
+
+        KAFKA-&gt;&gt;SYNC: Consume vault.sync.events
+        SYNC-&gt;&gt;PG: SELECT vault_devices WHERE vault_id=$1 AND device_id != $2
+        PG--&gt;&gt;SYNC: [{device_id, push_token, last_seen}]
+
+        loop For each device
+            SYNC-&gt;&gt;SYNC: Build sync payload for device
+            SYNC-&gt;&gt;C2: WebSocket PUSH {type:VAULT_UPDATED, item_id, version}
+        end
+
+        C2-&gt;&gt;GW: GET /v1/vault/items/{item_id}?since={last_sync}
+        GW-&gt;&gt;VAULT: GetItem{item_id, user_id}
+        VAULT-&gt;&gt;PG: SELECT vault_items WHERE id=$1
+        PG--&gt;&gt;VAULT: {encrypted_blob, enc_item_key, version}
+        VAULT--&gt;&gt;GW: VaultItem{encrypted_blob, enc_item_key, version}
+        GW--&gt;&gt;C2: 200 VaultItem
+        C2-&gt;&gt;C2: Decrypt with local Vault Key → Item Key → plaintext
+    end</code></pre>
+<hr />
+<h2 id="9-sftp-file-transfer">9. SFTP File Transfer</h2>
+<p>Full SFTP upload/download flow including authentication, channel
+setup, progress tracking, and error handling.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant C as Flutter Client
+    participant GW as API Gateway
+    participant SFTP as SFTP Service
+    participant PROXY as SSH Proxy Service
+    participant REMOTE as Remote SSH Server
+    participant PG as PostgreSQL
+    participant KAFKA as Kafka
+
+    C-&gt;&gt;GW: POST /v1/sftp/transfers {host_id, operation:UPLOAD, local_path, remote_path}
+    GW-&gt;&gt;SFTP: InitTransfer{host_id, operation, local_path, remote_path, user_id}
+
+    SFTP-&gt;&gt;PROXY: GetOrCreateSession{host_id, user_id}
+    PROXY-&gt;&gt;REMOTE: SSH Connect + Authenticate
+    REMOTE--&gt;&gt;PROXY: SSH session established
+    PROXY-&gt;&gt;REMOTE: Open SFTP subsystem channel
+    REMOTE--&gt;&gt;PROXY: SFTP subsystem ready (SSH_MSG_CHANNEL_REQUEST sftp)
+    PROXY--&gt;&gt;SFTP: SFTPSession{session_id, channel_id}
+
+    SFTP-&gt;&gt;PG: INSERT sftp_transfers {id, session_id, operation, status:STARTING, size}
+    SFTP--&gt;&gt;GW: 202 Accepted {transfer_id, websocket_url}
+    GW--&gt;&gt;C: 202 {transfer_id}
+
+    C-&gt;&gt;GW: WSS Connect /v1/sftp/progress/{transfer_id}
+
+    alt UPLOAD
+        loop Chunked Upload (8 MB chunks)
+            C-&gt;&gt;GW: Binary chunk data (WebSocket)
+            GW-&gt;&gt;SFTP: WriteChunk{transfer_id, offset, data}
+            SFTP-&gt;&gt;PROXY: sftp.Write{remote_path, offset, data}
+            PROXY-&gt;&gt;REMOTE: SSH_FXP_WRITE {handle, offset, data}
+            REMOTE--&gt;&gt;PROXY: SSH_FXP_STATUS OK
+            PROXY--&gt;&gt;SFTP: WriteAck{bytes_written}
+            SFTP-&gt;&gt;PG: UPDATE sftp_transfers SET bytes_transferred=$1
+            SFTP-&gt;&gt;GW: Progress{transfer_id, bytes_transferred, total_bytes, speed}
+            GW-&gt;&gt;C: WS Progress {percent, speed_bps, eta_seconds}
+        end
+    else DOWNLOAD
+        SFTP-&gt;&gt;PROXY: sftp.Stat{remote_path}
+        PROXY-&gt;&gt;REMOTE: SSH_FXP_STAT {remote_path}
+        REMOTE--&gt;&gt;PROXY: SSH_FXP_ATTRS {size, permissions, mtime}
+        PROXY--&gt;&gt;SFTP: FileAttrs{size, mtime}
+        SFTP--&gt;&gt;GW: DownloadStream initiation
+        loop Chunked Download
+            SFTP-&gt;&gt;PROXY: sftp.Read{remote_path, offset, 8MB}
+            PROXY-&gt;&gt;REMOTE: SSH_FXP_READ {handle, offset, length}
+            REMOTE--&gt;&gt;PROXY: SSH_FXP_DATA {data}
+            PROXY--&gt;&gt;SFTP: DataChunk
+            SFTP-&gt;&gt;C: Stream chunk via WebSocket / HTTP range response
+        end
+    end
+
+    SFTP-&gt;&gt;REMOTE: Close SFTP handle (SSH_FXP_CLOSE)
+    SFTP-&gt;&gt;PG: UPDATE sftp_transfers SET status:COMPLETED, completed_at=NOW()
+    SFTP-&gt;&gt;KAFKA: Produce sftp.transfer.events {type:COMPLETED, transfer_id, bytes, duration}
+    SFTP-&gt;&gt;C: WS {status:COMPLETED, checksum_sha256}</code></pre>
+<hr />
+<h2 id="10-real-time-collaboration-terminal-sharing">10. Real-time
+Collaboration (Terminal Sharing)</h2>
+<p>Sequence for initiating a collaborative terminal session, observer
+join flow, and data multiplexing.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant INIT as Initiator Client
+    participant GW as API Gateway
+    participant AUTH as Auth Service
+    participant TERM as Terminal Service
+    participant PG as PostgreSQL
+    participant KAFKA as Kafka
+    participant NOTIF as Notification Service
+    participant OBS as Observer Client
+
+    INIT-&gt;&gt;GW: POST /v1/collab/sessions {session_id, mode:READ_ONLY, invite_emails:[]}
+    GW-&gt;&gt;AUTH: ValidatePermission{user_id, action:collab:create}
+    AUTH--&gt;&gt;GW: Allowed
+
+    GW-&gt;&gt;TERM: CreateCollabSession{ssh_session_id, owner_id, mode, acl}
+    TERM-&gt;&gt;PG: INSERT collaboration_sessions {id, ssh_session_id, owner_id, mode, share_token}
+    PG--&gt;&gt;TERM: {collab_id, share_token}
+
+    TERM-&gt;&gt;KAFKA: Produce {type:COLLAB_CREATED, collab_id, owner_id, share_token}
+    KAFKA-&gt;&gt;NOTIF: Consume {type:COLLAB_CREATED}
+    NOTIF-&gt;&gt;OBS: Send invite email / in-app notification {join_url, share_token}
+
+    TERM--&gt;&gt;GW: CollabSession{collab_id, share_token, join_url}
+    GW--&gt;&gt;INIT: 201 {collab_id, share_token, join_url}
+
+    OBS-&gt;&gt;GW: POST /v1/collab/join {share_token}
+    GW-&gt;&gt;AUTH: ValidateJWT + permission check
+    AUTH--&gt;&gt;GW: {user_id, valid}
+    GW-&gt;&gt;TERM: JoinCollabSession{share_token, observer_id}
+
+    TERM-&gt;&gt;PG: SELECT collaboration_sessions WHERE share_token=$1
+    PG--&gt;&gt;TERM: {collab_id, ssh_session_id, mode, owner_id}
+    TERM-&gt;&gt;PG: INSERT collaboration_participants {collab_id, user_id:observer_id, role:OBSERVER}
+
+    TERM-&gt;&gt;INIT: WS PUSH {type:OBSERVER_JOINED, user_id:observer_id, display_name}
+
+    TERM--&gt;&gt;GW: JoinResponse{websocket_url, terminal_snapshot}
+    GW--&gt;&gt;OBS: 200 {ws_url, snapshot: base64_terminal_state}
+    OBS-&gt;&gt;GW: WSS Connect /v1/collab/stream/{collab_id}
+
+    loop Live Terminal Data
+        INIT-&gt;&gt;GW: Keystrokes → SSH session data
+        GW-&gt;&gt;TERM: Input → SSH Proxy
+        TERM-&gt;&gt;TERM: Broadcast terminal output
+        TERM-&gt;&gt;OBS: WS {type:TERMINAL_DATA, data:base64_vt100}
+        OBS-&gt;&gt;OBS: Render terminal output (read-only)
+    end
+
+    alt Observer requests write access
+        OBS-&gt;&gt;GW: POST /v1/collab/{collab_id}/request-write
+        GW-&gt;&gt;TERM: RequestWriteAccess{collab_id, observer_id}
+        TERM-&gt;&gt;INIT: WS PUSH {type:WRITE_REQUEST, from:observer_id}
+        INIT-&gt;&gt;GW: POST /v1/collab/{collab_id}/grant-write {user_id:observer_id}
+        GW-&gt;&gt;TERM: GrantWriteAccess{collab_id, observer_id}
+        TERM-&gt;&gt;PG: UPDATE collaboration_participants SET role=WRITER WHERE user_id=$1
+        TERM-&gt;&gt;OBS: WS {type:WRITE_GRANTED}
+        Note over OBS: Observer can now send input
+    end</code></pre>
+<hr />
+<h2 id="11-certificate-issuance-ssh-cert-ca">11. Certificate Issuance
+(SSH Cert CA)</h2>
+<p>Flow from client requesting an SSH certificate through signing and
+deployment to SSH Proxy.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant C as Client / SSH Proxy
+    participant GW as API Gateway
+    participant PKI as PKI Service
+    participant AUTH as Auth Service
+    participant PG as PostgreSQL
+    participant HSM as HSM / KMS (AWS KMS)
+    participant PROXY as SSH Proxy
+
+    C-&gt;&gt;GW: POST /v1/pki/certificates {type:SSH_USER, public_key_pem, principals:[], ttl:3600}
+    GW-&gt;&gt;AUTH: ValidateJWT + check pki:issue permission
+    AUTH--&gt;&gt;GW: {user_id, org_id, roles}
+
+    GW-&gt;&gt;PKI: IssueCertificate{user_id, org_id, public_key_pem, principals, ttl, extensions}
+
+    PKI-&gt;&gt;AUTH: GetUserPrincipals{user_id}
+    AUTH-&gt;&gt;PG: SELECT users u JOIN teams t ON ... WHERE u.id=$1
+    PG--&gt;&gt;AUTH: {principals:[&quot;ubuntu&quot;,&quot;ec2-user&quot;,&quot;admin&quot;], force_command, source_address}
+    AUTH--&gt;&gt;PKI: Principals{list}
+
+    PKI-&gt;&gt;PG: SELECT ca_keys WHERE org_id=$1 AND type=SSH_USER AND status=ACTIVE
+    PG--&gt;&gt;PKI: {ca_key_id, kms_key_arn, public_key}
+
+    PKI-&gt;&gt;PKI: Build certificate {serial, key_id, principals, valid_after, valid_before, extensions}
+    PKI-&gt;&gt;HSM: Sign{kms_key_arn, certificate_tbs, algorithm:ECDSA_SHA_512}
+    HSM--&gt;&gt;PKI: Signature{sig_bytes}
+
+    PKI-&gt;&gt;PKI: Assemble signed SSH certificate (OpenSSH wire format)
+    PKI-&gt;&gt;PG: INSERT issued_certificates {serial, user_id, org_id, fingerprint, valid_before, revoked:false}
+    PKI-&gt;&gt;PG: INSERT audit_events {type:CERT_ISSUED, user_id, serial, principals, ttl}
+
+    PKI--&gt;&gt;GW: Certificate{cert_pem, serial, fingerprint, valid_before}
+    GW--&gt;&gt;C: 201 {certificate_pem, serial, valid_before}
+
+    C-&gt;&gt;PROXY: ConnectWithCert{host_id, certificate_pem, private_key}
+    PROXY-&gt;&gt;PROXY: Verify certificate signature against known CA public key
+    PROXY-&gt;&gt;PROXY: Check validity window + revocation list (CRL / OCSP)
+    PROXY-&gt;&gt;PKI: CheckRevocation{serial}
+    PKI-&gt;&gt;PG: SELECT issued_certificates WHERE serial=$1
+    PG--&gt;&gt;PKI: {revoked: false}
+    PKI--&gt;&gt;PROXY: NotRevoked
+    PROXY-&gt;&gt;PROXY: Certificate valid — proceed with SSH authentication</code></pre>
+<hr />
+<h2 id="12-vault-encryption-flow">12. Vault Encryption Flow</h2>
+<p>Detailed cryptographic flow showing how plaintext is protected
+through multiple layers of key hierarchy.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant C as Client
+    participant MP as Master Password Input
+    participant KDF as Argon2id KDF
+    participant MK as Master Key (256-bit)
+    participant VKE as Vault Key Encrypt Layer
+    participant VK as Vault Key (256-bit)
+    participant IKE as Item Key Encrypt Layer
+    participant IK as Item Key (256-bit)
+    participant ENC as AES-256-GCM Encrypt
+    participant PT as Plaintext Item
+    participant VAULT as Vault Service
+    participant PG as PostgreSQL
+
+    C-&gt;&gt;MP: User enters Master Password
+    MP-&gt;&gt;KDF: Argon2id{password, salt:user_uuid, memory:65536, time:3, threads:4}
+    KDF--&gt;&gt;MK: Master Key (256-bit, derived, never sent to server)
+
+    Note over MK: Master Key exists only in client memory
+
+    C-&gt;&gt;C: Generate random Vault Key (32 bytes, /dev/urandom)
+    MK-&gt;&gt;VKE: Wrap Vault Key: AES-256-GCM-KW(Vault Key, Master Key)
+    VKE--&gt;&gt;VAULT: Encrypted Vault Key blob (sent to server on registration)
+    VAULT-&gt;&gt;PG: Store enc_vault_key per user/vault
+
+    Note over C: Vault Unlock flow
+
+    VAULT-&gt;&gt;C: GET enc_vault_key from server
+    MK-&gt;&gt;VKE: Unwrap: AES-256-GCM-Decrypt(enc_vault_key, Master Key)
+    VKE--&gt;&gt;VK: Vault Key (plaintext, in memory only)
+
+    Note over C: Item read/write flow
+
+    C-&gt;&gt;C: Generate random Item Key (32 bytes) per vault item
+    VK-&gt;&gt;IKE: Wrap Item Key: AES-256-GCM-KW(Item Key, Vault Key)
+    IKE--&gt;&gt;VAULT: enc_item_key (stored per item in DB)
+
+    PT-&gt;&gt;ENC: AES-256-GCM Encrypt{plaintext, Item Key, random nonce}
+    ENC--&gt;&gt;VAULT: {ciphertext, nonce, auth_tag}
+    VAULT-&gt;&gt;PG: INSERT vault_items{enc_item_key, ciphertext, nonce, auth_tag, hmac}
+
+    Note over C: Item decrypt flow
+
+    PG--&gt;&gt;VAULT: {enc_item_key, ciphertext, nonce, auth_tag}
+    VAULT--&gt;&gt;C: encrypted item
+    VK-&gt;&gt;IKE: Unwrap: AES-256-GCM-Decrypt(enc_item_key, Vault Key)
+    IKE--&gt;&gt;IK: Item Key
+    IK-&gt;&gt;ENC: AES-256-GCM Decrypt{ciphertext, nonce, auth_tag, Item Key}
+    ENC--&gt;&gt;PT: Plaintext (visible in UI only)</code></pre>
+<hr />
+<h2 id="13-api-gateway-request-flow">13. API Gateway Request Flow</h2>
+<p>Request lifecycle from client through rate limiting, authentication
+middleware, routing, and response.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant C as Client
+    participant RL as Rate Limiter (Redis)
+    participant JWTmw as JWT Middleware
+    participant AUTH as Auth Service
+    participant ROUTER as Service Router
+    participant CACHE as Response Cache (Redis)
+    participant SVC as Target Microservice
+    participant AUDIT as Audit Service
+
+    C-&gt;&gt;GW: HTTPS Request {method, path, Authorization: Bearer &lt;token&gt;}
+
+    rect rgb(200, 230, 200)
+        Note over GW,RL: Rate Limiting Phase
+        GW-&gt;&gt;RL: INCR rate:{ip}:{window} + EXPIRE
+        RL--&gt;&gt;GW: {count: 47, limit: 100, window: 60s}
+        alt Rate limit exceeded
+            GW--&gt;&gt;C: 429 Too Many Requests {Retry-After: 13}
+        end
+    end
+
+    rect rgb(200, 200, 230)
+        Note over GW,AUTH: Authentication Phase
+        GW-&gt;&gt;JWTmw: Validate JWT signature (RS256, verify exp/nbf/iss)
+        JWTmw-&gt;&gt;JWTmw: Parse claims {sub, org_id, roles, jti, exp}
+        JWTmw-&gt;&gt;RL: Check token blacklist: GET blacklist:{jti}
+        RL--&gt;&gt;JWTmw: nil (not revoked)
+        alt Token expired
+            GW--&gt;&gt;C: 401 Unauthorized {error: token_expired}
+        end
+        JWTmw-&gt;&gt;AUTH: ValidateSession{jti} (async, sampled 10%)
+        AUTH--&gt;&gt;JWTmw: Session valid
+    end
+
+    rect rgb(230, 200, 200)
+        Note over GW,ROUTER: Authorization Phase
+        GW-&gt;&gt;ROUTER: CheckPermission{user_id, org_id, method, path}
+        ROUTER-&gt;&gt;ROUTER: RBAC policy eval (Open Policy Agent / Rego)
+        alt Permission denied
+            GW--&gt;&gt;C: 403 Forbidden {required_permission}
+        end
+    end
+
+    rect rgb(230, 230, 200)
+        Note over GW,CACHE: Cache Lookup (GET only)
+        alt GET request
+            GW-&gt;&gt;CACHE: GET cache:{method}:{path}:{user_id}
+            alt Cache hit
+                CACHE--&gt;&gt;GW: Cached response
+                GW--&gt;&gt;C: 200 {X-Cache: HIT, response}
+            end
+        end
+    end
+
+    GW-&gt;&gt;ROUTER: Route request → target service
+    ROUTER-&gt;&gt;ROUTER: Service discovery (Consul/K8s DNS)
+    ROUTER-&gt;&gt;SVC: gRPC/HTTP2 forward {request + injected headers: X-User-ID, X-Org-ID, X-Request-ID}
+    SVC-&gt;&gt;SVC: Process request
+    SVC--&gt;&gt;ROUTER: Response {body, status, headers}
+    ROUTER--&gt;&gt;GW: Response
+
+    alt Cacheable (GET + 2xx)
+        GW-&gt;&gt;CACHE: SET cache:{key} {response} EX 300
+    end
+
+    GW-&gt;&gt;AUDIT: async log {request_id, user_id, method, path, status, latency_ms}
+    GW--&gt;&gt;C: HTTP Response {status, body, X-Request-ID, X-RateLimit-Remaining}</code></pre>
+<hr />
+<h2 id="14-zero-trust-mtls-flow">14. Zero Trust mTLS Flow</h2>
+<p>SPIRE/SPIFFE workload identity verification and mTLS establishment
+between two internal microservices.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant SA as Service A (SSH Proxy)
+    participant SPIRE_A as SPIRE Agent (Node A)
+    participant SPIRE_SRV as SPIRE Server
+    participant POLICY as OPA Policy Engine
+    participant SPIRE_B as SPIRE Agent (Node B)
+    participant SB as Service B (PKI Service)
+
+    Note over SA,SB: SVID Bootstrap phase (at service startup)
+
+    SA-&gt;&gt;SPIRE_A: FetchX509SVID{workload_selector: k8s:ns:helixterm-prod, k8s:sa:ssh-proxy}
+    SPIRE_A-&gt;&gt;SPIRE_A: Attest workload (verify pod UID, SA token)
+    SPIRE_A-&gt;&gt;SPIRE_SRV: AttestAgent + NodeAttestation (EC2/K8s)
+    SPIRE_SRV-&gt;&gt;SPIRE_SRV: Verify node identity + check registration entries
+    SPIRE_SRV--&gt;&gt;SPIRE_A: X.509-SVID {spiffe://helixterm.io/ns/prod/sa/ssh-proxy, cert, key, bundle}
+    SPIRE_A--&gt;&gt;SA: X509SVIDResponse {svid_pem, key_pem, bundle_pem, expires_at}
+
+    SB-&gt;&gt;SPIRE_B: FetchX509SVID{workload_selector: k8s:sa:pki-service}
+    SPIRE_B-&gt;&gt;SPIRE_SRV: Attest + fetch SVID
+    SPIRE_SRV--&gt;&gt;SPIRE_B: X.509-SVID {spiffe://helixterm.io/ns/prod/sa/pki-service, cert, key}
+    SPIRE_B--&gt;&gt;SB: X509SVIDResponse
+
+    Note over SA,SB: Service-to-service call with mTLS
+
+    SA-&gt;&gt;SA: Load SVID {spiffe://...ssh-proxy} as TLS client cert
+    SA-&gt;&gt;SB: TLS ClientHello (SNI: pki-service.helixterm-prod.svc.cluster.local)
+    SB-&gt;&gt;SB: Present SVID {spiffe://...pki-service} as TLS server cert
+    SA-&gt;&gt;SA: Verify server cert SAN contains expected SPIFFE ID
+    SB-&gt;&gt;SB: Verify client cert SAN (mTLS — both sides authenticate)
+    SA--&gt;&gt;SB: TLS handshake complete (TLS 1.3, ECDHE + AES-256-GCM)
+
+    SA-&gt;&gt;POLICY: AuthorizeRequest{source_spiffe_id, dest_spiffe_id, method:/PKI/IssueCertificate}
+    POLICY-&gt;&gt;POLICY: Evaluate Rego policy {allow if ssh-proxy → pki-service, method in allowlist}
+    POLICY--&gt;&gt;SA: {allowed: true}
+
+    SA-&gt;&gt;SB: gRPC IssueCertificate{...} (over established mTLS channel)
+    SB-&gt;&gt;SB: Re-verify caller SPIFFE ID from TLS peer cert
+    SB--&gt;&gt;SA: CertificateResponse{cert_pem, serial}
+
+    Note over SA,SB: SVID auto-rotation (before expiry)
+    SPIRE_A-&gt;&gt;SA: Push updated SVID (hot-reload, zero downtime)
+    SA-&gt;&gt;SA: Replace TLS credentials in connection pool</code></pre>
+<hr />
+<h2 id="15-session-recording-flow">15. Session Recording Flow</h2>
+<p>Full pipeline from SSH Proxy capturing terminal data through Kafka to
+persistent storage and replay.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    participant SSH as SSH Proxy Service
+    participant TERM as Terminal Service
+    participant KAFKA as Kafka (recording.chunks)
+    participant REC as Recording Service
+    participant PG as PostgreSQL
+    participant S3 as S3 / MinIO
+    participant C as Client (Replay)
+    participant GW as API Gateway
+
+    SSH-&gt;&gt;SSH: SSH session active, intercept PTY output
+    SSH-&gt;&gt;KAFKA: Produce recording.chunks {session_id, seq:0, timestamp, data:base64_vt100, type:OUTPUT}
+    Note over SSH,KAFKA: Produce every ~100ms or 64KB chunk, whichever first
+
+    loop Streaming Phase
+        SSH-&gt;&gt;KAFKA: Produce chunk {session_id, seq:N, timestamp, data, timing_delta}
+        KAFKA-&gt;&gt;REC: Consume chunk [helix-recording-cg]
+        REC-&gt;&gt;REC: Buffer chunks in memory (order by seq)
+        REC-&gt;&gt;PG: UPDATE session_recordings SET last_chunk_seq=$1, last_seen=NOW()
+    end
+
+    SSH-&gt;&gt;KAFKA: Produce {type:SESSION_ENDED, session_id, total_bytes, duration_ms}
+    KAFKA-&gt;&gt;REC: Consume SESSION_ENDED
+    REC-&gt;&gt;REC: Flush buffer, sort all chunks by seq
+    REC-&gt;&gt;REC: Encode as Asciinema v3 JSON (header + event stream)
+    REC-&gt;&gt;REC: Compress with zstd (level 6)
+    REC-&gt;&gt;S3: PutObject {key: recordings/{org_id}/{session_id}.cast.zst, body, ContentType:application/zstd}
+    S3--&gt;&gt;REC: {etag, size_bytes}
+
+    REC-&gt;&gt;PG: UPDATE session_recordings SET status:COMPLETED, s3_key, size_bytes, duration_ms, checksum_sha256
+
+    alt Audit / Compliance Policy requires indexed content
+        REC-&gt;&gt;REC: Extract text output from Asciinema events
+        REC-&gt;&gt;PG: INSERT terminal_outputs {session_id, text_content, created_at} (for search)
+    end
+
+    Note over C,GW: Replay flow
+
+    C-&gt;&gt;GW: GET /v1/recordings/{session_id}/stream?t=0
+    GW-&gt;&gt;REC: GetRecording{session_id, user_id}
+    REC-&gt;&gt;PG: SELECT session_recordings WHERE session_id=$1 (check access policy)
+    PG--&gt;&gt;REC: {s3_key, org_id, owner_id}
+    REC-&gt;&gt;REC: Check permission (org admin or session owner)
+    REC-&gt;&gt;S3: GetObject{key:s3_key}
+    S3--&gt;&gt;REC: Compressed Asciinema stream
+    REC-&gt;&gt;REC: Decompress zstd
+    REC--&gt;&gt;GW: Stream Asciinema JSON events
+    GW--&gt;&gt;C: Chunked transfer (play at recorded timing or N× speed)</code></pre>
+<hr />
+<h2 id="16-ssh-connection-state-machine">16. SSH Connection State
+Machine</h2>
+<p>Complete state machine for an SSH connection lifecycle, including
+error recovery paths.</p>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; IDLE : initialized
+
+    IDLE --&gt; CONNECTING : user initiates connect()
+    IDLE --&gt; [*] : dispose()
+
+    CONNECTING --&gt; RESOLVING_DNS : TCP connect started
+    RESOLVING_DNS --&gt; TCP_CONNECTING : DNS resolved
+    RESOLVING_DNS --&gt; ERROR : DNS failure
+
+    TCP_CONNECTING --&gt; KEX_NEGOTIATING : TCP connected
+    TCP_CONNECTING --&gt; ERROR : TCP refused / timeout
+
+    KEX_NEGOTIATING --&gt; AUTHENTICATING : Key exchange complete\n(curve25519-sha256)
+    KEX_NEGOTIATING --&gt; ERROR : KEX failed / algo mismatch
+
+    AUTHENTICATING --&gt; AUTHENTICATED : Auth success\n(cert/key/password)
+    AUTHENTICATING --&gt; MFA_REQUIRED : Server requests\nkeyboard-interactive
+    AUTHENTICATING --&gt; AUTH_FAILED : Max retries exceeded
+    AUTHENTICATING --&gt; ERROR : Protocol error
+
+    MFA_REQUIRED --&gt; AUTHENTICATING : MFA code submitted
+    MFA_REQUIRED --&gt; AUTH_FAILED : MFA timeout / wrong code
+
+    AUTH_FAILED --&gt; IDLE : reset()
+    AUTH_FAILED --&gt; [*] : give_up()
+
+    AUTHENTICATED --&gt; CHANNEL_OPENING : Request PTY channel
+    CHANNEL_OPENING --&gt; ACTIVE : Channel + shell open
+    CHANNEL_OPENING --&gt; ERROR : Channel open failure
+
+    ACTIVE --&gt; EXECUTING : Shell command running
+    ACTIVE --&gt; SUSPENDED : User suspends (Ctrl+Z)
+    ACTIVE --&gt; DISCONNECTING : user disconnect()
+    ACTIVE --&gt; ERROR : Network interruption
+
+    EXECUTING --&gt; ACTIVE : Command completed
+    SUSPENDED --&gt; ACTIVE : resume()
+
+    ERROR --&gt; RECONNECTING : auto-reconnect enabled\n(attempt 1..5)
+    ERROR --&gt; DISCONNECTED : reconnect disabled / max retries
+    RECONNECTING --&gt; CONNECTING : retry after backoff\n(exponential: 1s,2s,4s,8s,16s)
+    RECONNECTING --&gt; DISCONNECTED : max retries exceeded
+
+    DISCONNECTING --&gt; DRAINING : Flush pending writes
+    DRAINING --&gt; CLOSING_CHANNELS : All writes flushed
+    CLOSING_CHANNELS --&gt; CLOSED : All channels closed
+    CLOSED --&gt; DISCONNECTED : cleanup complete
+    DISCONNECTED --&gt; [*]
+
+    note right of ACTIVE
+        Keepalive: every 30s
+        ServerAliveCountMax: 3
+        TCP keepalive: enabled
+    end note
+
+    note right of RECONNECTING
+        Jitter: ±20% of backoff
+        Preserves session state
+        Re-opens PTY on reconnect
+    end note</code></pre>
+<hr />
+<h2 id="17-vault-state-machine">17. Vault State Machine</h2>
+<p>State machine for vault lifecycle — from locked state through unlock,
+sync, and conflict resolution.</p>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; LOCKED : vault created / app launch
+
+    LOCKED --&gt; UNLOCKING : user enters master password\n(or biometric trigger)
+    LOCKED --&gt; [*] : vault deleted
+
+    UNLOCKING --&gt; DERIVING_KEY : Argon2id KDF started\n(memory: 64MB, time: 3)
+    DERIVING_KEY --&gt; FETCHING_VAULT_KEY : KDF complete → Master Key
+    FETCHING_VAULT_KEY --&gt; DECRYPTING_VAULT_KEY : enc_vault_key fetched from server
+    DECRYPTING_VAULT_KEY --&gt; UNLOCKED : Vault Key decrypted ✓
+    DECRYPTING_VAULT_KEY --&gt; UNLOCK_FAILED : Wrong password (HMAC mismatch)
+    UNLOCK_FAILED --&gt; LOCKED : reset after 3 failures\n(progressive lockout)
+
+    UNLOCKED --&gt; SYNCING : sync triggered\n(manual / timer / push event)
+    UNLOCKED --&gt; WRITING : user modifies item
+    UNLOCKED --&gt; LOCKING : timeout / user locks\n(idle: 5 min default)
+    UNLOCKED --&gt; LOCKED : app background\n(grace period: 30s)
+
+    WRITING --&gt; ENCRYPTING_ITEM : serialize plaintext
+    ENCRYPTING_ITEM --&gt; UPLOADING : item encrypted (AES-256-GCM)
+    UPLOADING --&gt; UNLOCKED : server ACK (200 OK)
+    UPLOADING --&gt; SYNC_CONFLICT : server returns 409\n(version conflict)
+    UPLOADING --&gt; SYNC_ERROR : server error / network
+
+    SYNC_ERROR --&gt; UNLOCKED : retry queued (offline queue)
+
+    SYNCING --&gt; DOWNLOADING_DELTA : fetch changes since last_sync
+    DOWNLOADING_DELTA --&gt; DECRYPTING_ITEMS : delta received
+    DECRYPTING_ITEMS --&gt; UNLOCKED : all items decrypted and merged
+    DECRYPTING_ITEMS --&gt; SYNC_CONFLICT : local/remote diverge
+
+    SYNC_CONFLICT --&gt; RESOLVING : CRDT merge / LWW policy
+    RESOLVING --&gt; UNLOCKED : conflict resolved automatically
+    RESOLVING --&gt; MANUAL_MERGE : irresolvable conflict\n(user intervention needed)
+    MANUAL_MERGE --&gt; UNLOCKED : user picks winner
+
+    LOCKING --&gt; WIPING_MEMORY : zero vault key from RAM
+    WIPING_MEMORY --&gt; LOCKED : memory wiped ✓
+
+    note right of UNLOCKED
+        Vault Key held in
+        SecureEnclave / Keychain
+        (platform secure storage)
+    end note
+
+    note right of SYNC_CONFLICT
+        Conflict strategy:
+        - Passwords: LWW by updated_at
+        - Collections: union merge
+        - Deletions: tombstone wins
+    end note</code></pre>
+<hr />
+<h2 id="18-sftp-transfer-state-machine">18. SFTP Transfer State
+Machine</h2>
+<p>Full state machine for an SFTP file transfer including pause, resume,
+retry, and failure paths.</p>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; QUEUED : transfer enqueued
+
+    QUEUED --&gt; STARTING : worker picks up transfer
+    QUEUED --&gt; CANCELLED : user cancels before start
+
+    STARTING --&gt; CONNECTING : acquire SSH session
+    CONNECTING --&gt; OPENING_CHANNEL : SSH session acquired
+    CONNECTING --&gt; FAILED : SSH connection failed
+
+    OPENING_CHANNEL --&gt; NEGOTIATING : SFTP subsystem requested
+    NEGOTIATING --&gt; TRANSFERRING : SFTP init/version exchange OK
+    NEGOTIATING --&gt; FAILED : subsystem rejected
+
+    TRANSFERRING --&gt; PAUSED : user pauses / bandwidth limit
+    TRANSFERRING --&gt; COMPLETING : last byte sent/received
+    TRANSFERRING --&gt; ERROR : network error / server error
+    TRANSFERRING --&gt; CANCELLED : user cancels mid-transfer
+
+    PAUSED --&gt; TRANSFERRING : user resumes
+    PAUSED --&gt; CANCELLED : user cancels while paused
+    PAUSED --&gt; FAILED : pause timeout (10 min)
+
+    ERROR --&gt; RETRYING : transient error + retry &lt; 3
+    RETRYING --&gt; TRANSFERRING : retry succeeded (resume from offset)
+    RETRYING --&gt; FAILED : retry exhausted or permanent error
+
+    COMPLETING --&gt; VERIFYING : compute checksum (SHA-256)
+    VERIFYING --&gt; COMPLETED : checksum match ✓
+    VERIFYING --&gt; FAILED : checksum mismatch (data corruption)
+
+    COMPLETED --&gt; [*]
+    FAILED --&gt; [*]
+    CANCELLED --&gt; [*]
+
+    note right of TRANSFERRING
+        Progress events:
+        - bytes_transferred
+        - speed_bps
+        - eta_seconds
+        emitted every 500ms
+    end note
+
+    note right of RETRYING
+        Backoff: 2^attempt seconds
+        Resume from last ACK offset
+        (concurrent writes: 4 streams)
+    end note</code></pre>
+<hr />
+<h2 id="19-user-authentication-state-machine">19. User Authentication
+State Machine</h2>
+<p>State machine for the full user authentication lifecycle from
+anonymous to authenticated session.</p>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; ANONYMOUS : app launch / no session
+
+    ANONYMOUS --&gt; CREDENTIALS_SUBMITTED : user submits email + password
+    ANONYMOUS --&gt; SSO_REDIRECT : user clicks SSO / SAML login
+
+    SSO_REDIRECT --&gt; SAML_ASSERTION_RECEIVED : IdP redirects back with assertion
+    SAML_ASSERTION_RECEIVED --&gt; CREDENTIALS_SUBMITTED : SAML assertion validated\n(map to local user)
+    SAML_ASSERTION_RECEIVED --&gt; ANONYMOUS : invalid assertion / signature fail
+
+    CREDENTIALS_SUBMITTED --&gt; VALIDATING : server validates password (Argon2id)
+    VALIDATING --&gt; MFA_REQUIRED : credentials valid + MFA enrolled
+    VALIDATING --&gt; AUTHENTICATED : credentials valid + no MFA
+    VALIDATING --&gt; ANONYMOUS : invalid credentials (show error)
+    VALIDATING --&gt; LOCKED_OUT : too many failures\n(≥5 attempts in 15 min)
+
+    LOCKED_OUT --&gt; ANONYMOUS : lockout expires (15 min)\nor admin unlocks
+
+    MFA_REQUIRED --&gt; TOTP_SUBMITTED : user enters TOTP code
+    MFA_REQUIRED --&gt; FIDO2_ASSERTING : user touches security key
+    MFA_REQUIRED --&gt; ANONYMOUS : user cancels MFA
+    MFA_REQUIRED --&gt; MFA_TIMED_OUT : no response in 5 min
+
+    MFA_TIMED_OUT --&gt; ANONYMOUS : timeout → restart login
+
+    TOTP_SUBMITTED --&gt; AUTHENTICATED : TOTP valid (±1 window)
+    TOTP_SUBMITTED --&gt; MFA_REQUIRED : TOTP invalid (show error, retry)
+    TOTP_SUBMITTED --&gt; LOCKED_OUT : ≥3 TOTP failures
+
+    FIDO2_ASSERTING --&gt; AUTHENTICATED : assertion valid
+    FIDO2_ASSERTING --&gt; MFA_REQUIRED : assertion failed
+
+    AUTHENTICATED --&gt; ACTIVE_SESSION : JWT + refresh token stored\nRedis session created
+    ACTIVE_SESSION --&gt; TOKEN_REFRESHING : access token expires (1h)\nrefresh token still valid
+    TOKEN_REFRESHING --&gt; ACTIVE_SESSION : new JWT issued
+    TOKEN_REFRESHING --&gt; SESSION_EXPIRED : refresh token revoked/expired
+
+    ACTIVE_SESSION --&gt; SESSION_EXPIRED : admin revokes session\nor inactivity timeout
+    ACTIVE_SESSION --&gt; ANONYMOUS : user logs out (token revoked)
+
+    SESSION_EXPIRED --&gt; ANONYMOUS : redirect to login
+
+    note right of ACTIVE_SESSION
+        JWT TTL: 3600s
+        Refresh TTL: 30 days
+        Max concurrent sessions: 10
+        Session stored in Redis
+    end note</code></pre>
+<hr />
+<h2 id="20-service-health-state-machine">20. Service Health State
+Machine</h2>
+<p>State machine for any HelixTerminator microservice from startup
+through healthy operation to failure and recovery.</p>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; INITIALIZING : process start / pod scheduled
+
+    INITIALIZING --&gt; LOADING_CONFIG : read config (env + config-service)
+    LOADING_CONFIG --&gt; CONNECTING_DEPS : config loaded
+    LOADING_CONFIG --&gt; INIT_FAILED : config invalid / missing
+
+    CONNECTING_DEPS --&gt; STARTING : all dependencies connected\n(DB, Redis, Kafka, SPIRE)
+    CONNECTING_DEPS --&gt; INIT_FAILED : dependency connection failed\n(after 3 retries)
+
+    INIT_FAILED --&gt; [*] : process exits (CrashLoopBackOff)
+
+    STARTING --&gt; HEALTHY : HTTP /healthz returns 200\nreadiness probe passes
+    STARTING --&gt; INIT_FAILED : startup timeout (60s)
+
+    HEALTHY --&gt; DEGRADED : partial failure detected\n(one dep slow/failing)
+    HEALTHY --&gt; UNHEALTHY : critical failure\n(DB unreachable, OOM)
+    HEALTHY --&gt; SHUTTING_DOWN : SIGTERM received\n(rolling update / scale down)
+
+    DEGRADED --&gt; HEALTHY : root cause resolved\n(dep recovers, circuit closes)
+    DEGRADED --&gt; UNHEALTHY : degradation worsens\n(error rate &gt; 50%)
+
+    UNHEALTHY --&gt; RECOVERING : automatic recovery attempt\n(reconnect, cache clear)
+    UNHEALTHY --&gt; SHUTTING_DOWN : liveness probe fails ×3\n(K8s kills pod)
+
+    RECOVERING --&gt; HEALTHY : recovery successful\n(/healthz returns 200)
+    RECOVERING --&gt; UNHEALTHY : recovery failed\n(after 3 attempts)
+
+    SHUTTING_DOWN --&gt; DRAINING : stop accepting new requests\nderegister from load balancer
+    DRAINING --&gt; TERMINATING : in-flight requests drained\n(gracePeriod: 30s)
+    TERMINATING --&gt; [*] : process exits 0
+
+    note right of HEALTHY
+        Health checks:
+        - /healthz (liveness, 10s)
+        - /readyz (readiness, 5s)
+        - /metrics (Prometheus)
+        Circuit breaker: CLOSED
+    end note
+
+    note right of DEGRADED
+        Circuit breaker: HALF-OPEN
+        Alerting: PagerDuty P3
+        Reduced traffic: 50%
+    end note
+
+    note right of UNHEALTHY
+        Circuit breaker: OPEN
+        Alerting: PagerDuty P1
+        K8s: fails liveness probe
+    end note</code></pre>
+<hr />
+<h2 id="21-core-data-model-er-diagram">21. Core Data Model ER
+Diagram</h2>
+<p>Primary entities spanning organizations, users, vaults, hosts,
+sessions, and workspace configuration.</p>
+<pre class="mermaid"><code>erDiagram
+    organizations {
+        uuid id PK
+        string name
+        string slug
+        string plan
+        int max_users
+        int max_hosts
+        bool sso_enabled
+        string sso_provider
+        string saml_metadata_url
+        string ldap_url
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    teams {
+        uuid id PK
+        uuid org_id FK
+        string name
+        string description
+        jsonb permissions
+        timestamp created_at
+    }
+
+    users {
+        uuid id PK
+        uuid org_id FK
+        string email
+        string display_name
+        string password_hash
+        bool mfa_enabled
+        string mfa_type
+        string status
+        timestamp last_login_at
+        timestamp created_at
+    }
+
+    team_members {
+        uuid team_id FK
+        uuid user_id FK
+        string role
+        timestamp joined_at
+    }
+
+    vaults {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string name
+        string type
+        bytea enc_vault_key
+        int version
+        timestamp synced_at
+        timestamp created_at
+    }
+
+    vault_items {
+        uuid id PK
+        uuid vault_id FK
+        uuid created_by FK
+        string type
+        string name
+        bytea ciphertext
+        bytea nonce
+        bytea auth_tag
+        bytea enc_item_key
+        bytea hmac
+        int version
+        jsonb metadata
+        timestamp updated_at
+        timestamp created_at
+    }
+
+    hosts {
+        uuid id PK
+        uuid org_id FK
+        string hostname
+        string ip_address
+        int port
+        string os_type
+        string username
+        string auth_method
+        uuid key_id FK
+        bool jump_host_required
+        uuid jump_host_id FK
+        jsonb labels
+        timestamp last_seen_at
+        timestamp created_at
+    }
+
+    host_groups {
+        uuid id PK
+        uuid org_id FK
+        string name
+        jsonb match_labels
+        timestamp created_at
+    }
+
+    host_group_members {
+        uuid host_group_id FK
+        uuid host_id FK
+    }
+
+    ssh_keys {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string name
+        string key_type
+        string public_key_pem
+        bytea private_key_enc
+        string fingerprint
+        timestamp created_at
+        timestamp expires_at
+    }
+
+    snippets {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string title
+        text command
+        string[] tags
+        bool shared
+        int usage_count
+        timestamp created_at
+    }
+
+    sessions {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        uuid host_id FK
+        string status
+        string auth_method
+        string client_ip
+        int duration_seconds
+        bigint bytes_in
+        bigint bytes_out
+        timestamp started_at
+        timestamp ended_at
+    }
+
+    workspaces {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string name
+        jsonb layout
+        jsonb panels
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    port_forwardings {
+        uuid id PK
+        uuid session_id FK
+        string type
+        string local_addr
+        int local_port
+        string remote_addr
+        int remote_port
+        string status
+        bigint bytes_transferred
+        timestamp created_at
+    }
+
+    known_hosts {
+        uuid id PK
+        uuid org_id FK
+        string hostname
+        string key_type
+        string public_key
+        string fingerprint
+        bool trusted
+        timestamp first_seen_at
+        timestamp verified_at
+    }
+
+    audit_events {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        uuid session_id FK
+        string event_type
+        string resource_type
+        uuid resource_id
+        jsonb payload
+        string ip_address
+        string user_agent
+        timestamp occurred_at
+    }
+
+    organizations ||--o{ teams : &quot;has&quot;
+    organizations ||--o{ users : &quot;has&quot;
+    organizations ||--o{ vaults : &quot;owns&quot;
+    organizations ||--o{ hosts : &quot;manages&quot;
+    organizations ||--o{ host_groups : &quot;has&quot;
+    organizations ||--o{ snippets : &quot;has&quot;
+    organizations ||--o{ audit_events : &quot;logs&quot;
+    users ||--o{ team_members : &quot;belongs_to&quot;
+    teams ||--o{ team_members : &quot;has&quot;
+    users ||--o{ vaults : &quot;owns&quot;
+    vaults ||--o{ vault_items : &quot;contains&quot;
+    users ||--o{ sessions : &quot;initiates&quot;
+    hosts ||--o{ sessions : &quot;receives&quot;
+    sessions ||--o{ port_forwardings : &quot;has&quot;
+    users ||--o{ ssh_keys : &quot;owns&quot;
+    hosts ||--o| ssh_keys : &quot;uses&quot;
+    hosts ||--o{ host_group_members : &quot;member_of&quot;
+    host_groups ||--o{ host_group_members : &quot;contains&quot;
+    users ||--o{ workspaces : &quot;owns&quot;
+    users ||--o{ audit_events : &quot;generates&quot;
+    sessions ||--o{ audit_events : &quot;generates&quot;</code></pre>
+<hr />
+<h2 id="22-auth-domain-er-diagram">22. Auth Domain ER Diagram</h2>
+<p>Authentication and identity entities covering tokens, MFA
+credentials, API keys, and login history.</p>
+<pre class="mermaid"><code>erDiagram
+    users {
+        uuid id PK
+        string email
+        string password_hash
+        string status
+        int failed_login_count
+        timestamp lockout_until
+        timestamp created_at
+    }
+
+    auth_tokens {
+        uuid id PK
+        uuid user_id FK
+        string jti
+        string token_type
+        string scope
+        string device_id FK
+        timestamp issued_at
+        timestamp expires_at
+        bool revoked
+        string revoke_reason
+    }
+
+    refresh_tokens {
+        uuid id PK
+        uuid user_id FK
+        string token_hash
+        uuid device_id FK
+        string ip_address
+        bool rotated
+        timestamp issued_at
+        timestamp expires_at
+        timestamp last_used_at
+    }
+
+    device_tokens {
+        uuid id PK
+        uuid user_id FK
+        string device_fingerprint
+        string device_name
+        string platform
+        string push_token
+        bool trusted
+        timestamp registered_at
+        timestamp last_active_at
+    }
+
+    mfa_credentials {
+        uuid id PK
+        uuid user_id FK
+        string type
+        bool enabled
+        bool backup_codes_generated
+        timestamp enrolled_at
+        timestamp last_used_at
+    }
+
+    totp_credentials {
+        uuid id PK
+        uuid mfa_credential_id FK
+        bytea secret_encrypted
+        int digits
+        int period
+        string algorithm
+        int[] used_codes
+        timestamp created_at
+    }
+
+    fido2_credentials {
+        uuid id PK
+        uuid mfa_credential_id FK
+        string credential_id
+        string public_key_cbor
+        string aaguid
+        bigint sign_count
+        string attestation_type
+        string transports
+        bool resident_key
+        string user_verification
+        string display_name
+        timestamp created_at
+        timestamp last_used_at
+    }
+
+    backup_codes {
+        uuid id PK
+        uuid user_id FK
+        string code_hash
+        bool used
+        timestamp created_at
+        timestamp used_at
+    }
+
+    api_keys {
+        uuid id PK
+        uuid user_id FK
+        uuid org_id FK
+        string name
+        string key_prefix
+        string key_hash
+        string[] scopes
+        string[] allowed_ips
+        timestamp created_at
+        timestamp expires_at
+        timestamp last_used_at
+        bool revoked
+    }
+
+    login_attempts {
+        uuid id PK
+        uuid user_id FK
+        string ip_address
+        string user_agent
+        string method
+        bool success
+        string failure_reason
+        timestamp attempted_at
+    }
+
+    password_history {
+        uuid id PK
+        uuid user_id FK
+        string password_hash
+        timestamp created_at
+    }
+
+    saml_identities {
+        uuid id PK
+        uuid user_id FK
+        string idp_id
+        string subject_id
+        string name_id_format
+        jsonb attributes
+        timestamp linked_at
+        timestamp last_login_at
+    }
+
+    users ||--o{ auth_tokens : &quot;has&quot;
+    users ||--o{ refresh_tokens : &quot;has&quot;
+    users ||--o{ device_tokens : &quot;registers&quot;
+    users ||--o{ mfa_credentials : &quot;enrolls&quot;
+    mfa_credentials ||--o| totp_credentials : &quot;details&quot;
+    mfa_credentials ||--o{ fido2_credentials : &quot;details&quot;
+    users ||--o{ backup_codes : &quot;has&quot;
+    users ||--o{ api_keys : &quot;owns&quot;
+    users ||--o{ login_attempts : &quot;generates&quot;
+    users ||--o{ password_history : &quot;tracks&quot;
+    users ||--o{ saml_identities : &quot;linked_to&quot;
+    auth_tokens }o--|| device_tokens : &quot;issued_to&quot;
+    refresh_tokens }o--|| device_tokens : &quot;issued_to&quot;</code></pre>
+<hr />
+<h2 id="23-sshterminal-domain-er-diagram">23. SSH/Terminal Domain ER
+Diagram</h2>
+<p>Entities for SSH sessions, recordings, terminal output, port
+forwarding, SFTP, and collaboration.</p>
+<pre class="mermaid"><code>erDiagram
+    ssh_sessions {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        uuid host_id FK
+        string status
+        string auth_method
+        string proxy_node
+        string client_ip
+        string client_version
+        string server_version
+        string terminal_type
+        int cols
+        int rows
+        bigint bytes_in
+        bigint bytes_out
+        int commands_count
+        timestamp started_at
+        timestamp ended_at
+    }
+
+    session_recordings {
+        uuid id PK
+        uuid ssh_session_id FK
+        string status
+        string s3_key
+        bigint size_bytes
+        int duration_ms
+        int chunk_count
+        string format
+        string codec
+        string checksum_sha256
+        timestamp started_at
+        timestamp completed_at
+    }
+
+    recording_chunks {
+        uuid id PK
+        uuid session_recording_id FK
+        int sequence
+        int timing_delta_ms
+        bytea data
+        string event_type
+        timestamp recorded_at
+    }
+
+    terminal_outputs {
+        uuid id PK
+        uuid ssh_session_id FK
+        text content
+        int offset_bytes
+        string encoding
+        timestamp recorded_at
+    }
+
+    port_forwards {
+        uuid id PK
+        uuid ssh_session_id FK
+        string type
+        string local_addr
+        int local_port
+        string remote_addr
+        int remote_port
+        string status
+        bigint bytes_transferred
+        int connections_count
+        timestamp opened_at
+        timestamp closed_at
+    }
+
+    sftp_transfers {
+        uuid id PK
+        uuid ssh_session_id FK
+        uuid user_id FK
+        string operation
+        string local_path
+        string remote_path
+        bigint total_bytes
+        bigint bytes_transferred
+        int chunks_completed
+        string status
+        string checksum_sha256
+        string error_message
+        timestamp started_at
+        timestamp completed_at
+    }
+
+    collaboration_sessions {
+        uuid id PK
+        uuid ssh_session_id FK
+        uuid owner_id FK
+        string mode
+        string share_token
+        string status
+        int max_participants
+        timestamp created_at
+        timestamp ended_at
+    }
+
+    collaboration_participants {
+        uuid id PK
+        uuid collab_session_id FK
+        uuid user_id FK
+        string role
+        bool can_write
+        bool can_copy_paste
+        string client_ip
+        timestamp joined_at
+        timestamp left_at
+    }
+
+    collab_input_events {
+        uuid id PK
+        uuid collab_session_id FK
+        uuid participant_id FK
+        string input_type
+        bytea data
+        timestamp recorded_at
+    }
+
+    ssh_sessions ||--o| session_recordings : &quot;recorded_as&quot;
+    session_recordings ||--o{ recording_chunks : &quot;composed_of&quot;
+    ssh_sessions ||--o{ terminal_outputs : &quot;produces&quot;
+    ssh_sessions ||--o{ port_forwards : &quot;has&quot;
+    ssh_sessions ||--o{ sftp_transfers : &quot;spawns&quot;
+    ssh_sessions ||--o| collaboration_sessions : &quot;shared_via&quot;
+    collaboration_sessions ||--o{ collaboration_participants : &quot;has&quot;
+    collaboration_participants ||--o{ collab_input_events : &quot;sends&quot;</code></pre>
+<hr />
+<h2 id="24-go-service-interface-hierarchy">24. Go Service Interface
+Hierarchy</h2>
+<p>Class diagram showing core Go interfaces, structs, and method
+signatures across the HelixTerminator service layer.</p>
+<pre class="mermaid"><code>classDiagram
+    class Service {
+        &lt;&lt;interface&gt;&gt;
+        +Start(ctx context.Context) error
+        +Stop(ctx context.Context) error
+        +Health() HealthStatus
+        +Name() string
+    }
+
+    class AuthService {
+        &lt;&lt;interface&gt;&gt;
+        +Login(ctx, req LoginRequest) LoginResponse, error
+        +Logout(ctx, token string) error
+        +ValidateToken(ctx, token string) Claims, error
+        +RefreshToken(ctx, refreshToken string) TokenPair, error
+        +IssueCertificate(ctx, req CertRequest) Certificate, error
+        +VerifyMFA(ctx, req MFARequest) bool, error
+        +RevokeSession(ctx, sessionID string) error
+    }
+
+    class VaultService {
+        &lt;&lt;interface&gt;&gt;
+        +CreateVault(ctx, req CreateVaultRequest) Vault, error
+        +UnlockVault(ctx, vaultID string, masterKey []byte) error
+        +LockVault(ctx, vaultID string) error
+        +GetItem(ctx, vaultID, itemID string) VaultItem, error
+        +PutItem(ctx, vaultID string, item VaultItem) error
+        +DeleteItem(ctx, vaultID, itemID string) error
+        +SyncVault(ctx, vaultID string) SyncResult, error
+        +ExportVault(ctx, vaultID string, format string) []byte, error
+    }
+
+    class SSHProxyService {
+        &lt;&lt;interface&gt;&gt;
+        +Connect(ctx, req ConnectRequest) Session, error
+        +Disconnect(ctx, sessionID string) error
+        +Write(ctx, sessionID string, data []byte) int, error
+        +Read(ctx, sessionID string) []byte, error
+        +Resize(ctx, sessionID string, cols, rows int) error
+        +GetSession(ctx, sessionID string) Session, error
+        +ListSessions(ctx, orgID string) []Session, error
+        +OpenPortForward(ctx, req PortForwardRequest) PortForward, error
+    }
+
+    class PKIService {
+        &lt;&lt;interface&gt;&gt;
+        +IssueCertificate(ctx, req IssueCertRequest) SignedCert, error
+        +RevokeCertificate(ctx, serial string, reason RevocationReason) error
+        +CheckRevocation(ctx, serial string) RevocationStatus, error
+        +GetCRL(ctx, caID string) []byte, error
+        +RotateCA(ctx, caID string) CAKeyPair, error
+        +GetCAPublicKey(ctx, caID string) PublicKey, error
+        +ListIssuedCerts(ctx, orgID string) []CertRecord, error
+    }
+
+    class HostService {
+        &lt;&lt;interface&gt;&gt;
+        +CreateHost(ctx, req CreateHostRequest) Host, error
+        +GetHost(ctx, hostID string) Host, error
+        +UpdateHost(ctx, hostID string, req UpdateHostRequest) Host, error
+        +DeleteHost(ctx, hostID string) error
+        +ListHosts(ctx, orgID string, filter HostFilter) []Host, error
+        +TestConnectivity(ctx, hostID string) ConnectivityResult, error
+        +SyncFromProvider(ctx, providerID string) SyncResult, error
+    }
+
+    class SFTPService {
+        &lt;&lt;interface&gt;&gt;
+        +InitTransfer(ctx, req TransferRequest) Transfer, error
+        +UploadChunk(ctx, transferID string, offset int64, data []byte) error
+        +DownloadChunk(ctx, transferID string, offset int64, size int) []byte, error
+        +PauseTransfer(ctx, transferID string) error
+        +ResumeTransfer(ctx, transferID string) error
+        +CancelTransfer(ctx, transferID string) error
+        +GetTransferStatus(ctx, transferID string) TransferStatus, error
+    }
+
+    class ContainerRuntime {
+        &lt;&lt;interface&gt;&gt;
+        +ListContainers(ctx, filter ContainerFilter) []Container, error
+        +ExecInContainer(ctx, req ExecRequest) ExecSession, error
+        +GetLogs(ctx, containerID string, opts LogOptions) io.Reader, error
+        +GetPods(ctx, namespace string) []Pod, error
+        +ExecInPod(ctx, req PodExecRequest) ExecSession, error
+        +PortForwardPod(ctx, req PodPortForwardRequest) PortForward, error
+    }
+
+    class BaseService {
+        #logger *zap.Logger
+        #config *Config
+        #db *pgxpool.Pool
+        #redis *redis.Client
+        #tracer trace.Tracer
+        #metrics *prometheus.Registry
+        +NewBaseService(cfg Config) BaseService
+        #withSpan(ctx, name string) context.Context, trace.Span
+        #handleError(err error, msg string) error
+    }
+
+    class AuthServiceImpl {
+        -userRepo UserRepository
+        -tokenRepo TokenRepository
+        -mfaRepo MFARepository
+        -jwtSigner JWTSigner
+        -pkiClient PKIService
+        +NewAuthService(deps AuthDeps) AuthService
+    }
+
+    class VaultServiceImpl {
+        -vaultRepo VaultRepository
+        -itemRepo ItemRepository
+        -encryptionSvc EncryptionService
+        -kafkaProducer kafka.Producer
+        -syncWorker SyncWorker
+        +NewVaultService(deps VaultDeps) VaultService
+    }
+
+    class EncryptionService {
+        &lt;&lt;interface&gt;&gt;
+        +EncryptItem(plaintext []byte, itemKey []byte) EncryptedItem, error
+        +DecryptItem(item EncryptedItem, itemKey []byte) []byte, error
+        +WrapKey(key []byte, wrappingKey []byte) []byte, error
+        +UnwrapKey(wrapped []byte, wrappingKey []byte) []byte, error
+        +DeriveKey(password []byte, salt []byte, params KDFParams) []byte, error
+    }
+
+    Service &lt;|.. AuthServiceImpl
+    Service &lt;|.. VaultServiceImpl
+    BaseService &lt;|-- AuthServiceImpl
+    BaseService &lt;|-- VaultServiceImpl
+    AuthService &lt;|.. AuthServiceImpl
+    VaultService &lt;|.. VaultServiceImpl
+    AuthServiceImpl --&gt; PKIService : uses
+    VaultServiceImpl --&gt; EncryptionService : uses
+    SSHProxyService --&gt; PKIService : validates certs
+    SSHProxyService --&gt; AuthService : verifies sessions
+    SFTPService --&gt; SSHProxyService : uses proxy
+    ContainerRuntime --&gt; SSHProxyService : uses proxy</code></pre>
+<hr />
+<h2 id="25-flutter-bloc-architecture">25. Flutter BLoC Architecture</h2>
+<p>BLoC (Business Logic Component) class hierarchy for the Flutter
+client, showing states, events, and service dependencies.</p>
+<pre class="mermaid"><code>classDiagram
+    class Bloc~Event, State~ {
+        &lt;&lt;abstract&gt;&gt;
+        +Stream~State~ stream
+        +State state
+        +add(Event event) void
+        +close() Future~void~
+        +on~E~(EventHandler handler) void
+    }
+
+    class AuthBloc {
+        -AuthRepository authRepo
+        -SecureStorage secureStorage
+        -DeviceInfoPlugin deviceInfo
+        +AuthBloc(authRepo, storage)
+        +on~LoginRequested~()
+        +on~LogoutRequested~()
+        +on~TokenRefreshRequested~()
+        +on~MFACodeSubmitted~()
+        +on~BiometricLoginRequested~()
+        +on~SessionCheckRequested~()
+    }
+
+    class AuthState {
+        &lt;&lt;abstract&gt;&gt;
+    }
+    class AuthInitial
+    class AuthLoading
+    class Authenticated {
+        +User user
+        +String accessToken
+        +DateTime expiresAt
+    }
+    class MFARequired {
+        +String mfaToken
+        +List~String~ methods
+        +String challengeData
+    }
+    class AuthError {
+        +String message
+        +AuthErrorCode code
+    }
+    class Unauthenticated
+
+    class VaultBloc {
+        -VaultRepository vaultRepo
+        -EncryptionService encryptionSvc
+        -SyncService syncSvc
+        +VaultBloc(vaultRepo, encSvc)
+        +on~VaultUnlockRequested~()
+        +on~VaultLockRequested~()
+        +on~ItemCreateRequested~()
+        +on~ItemUpdateRequested~()
+        +on~ItemDeleteRequested~()
+        +on~VaultSyncRequested~()
+        +on~SearchQueryChanged~()
+    }
+
+    class VaultState {
+        &lt;&lt;abstract&gt;&gt;
+    }
+    class VaultLocked
+    class VaultUnlocking
+    class VaultUnlocked {
+        +List~VaultItem~ items
+        +int version
+        +DateTime lastSynced
+    }
+    class VaultSyncing {
+        +double progress
+    }
+    class VaultConflict {
+        +VaultItem localItem
+        +VaultItem remoteItem
+    }
+    class VaultError {
+        +String message
+    }
+
+    class TerminalBloc {
+        -SSHProxyRepository proxyRepo
+        -RecordingService recordingService
+        -AIService aiService
+        +TerminalBloc(proxyRepo, aiSvc)
+        +on~ConnectionRequested~()
+        +on~DisconnectRequested~()
+        +on~InputReceived~()
+        +on~ResizeRequested~()
+        +on~CollabJoinRequested~()
+        +on~FontSizeChanged~()
+    }
+
+    class TerminalState {
+        &lt;&lt;abstract&gt;&gt;
+    }
+    class TerminalIdle
+    class TerminalConnecting {
+        +String hostName
+        +int attempt
+    }
+    class TerminalConnected {
+        +String sessionId
+        +TerminalSize size
+        +bool recording
+        +CollabSession collab
+    }
+    class TerminalError {
+        +String message
+        +bool canRetry
+    }
+
+    class SSHSessionBloc {
+        -SSHProxyRepository proxyRepo
+        -PKIRepository pkiRepo
+        +SSHSessionBloc(proxyRepo, pkiRepo)
+        +on~SessionListRequested~()
+        +on~SessionTerminateRequested~()
+        +on~SessionFilterChanged~()
+        +on~SessionDetailRequested~()
+    }
+
+    class HostBloc {
+        -HostRepository hostRepo
+        -ConnectivityService connectivitySvc
+        +HostBloc(hostRepo, connSvc)
+        +on~HostListRequested~()
+        +on~HostCreateRequested~()
+        +on~HostUpdateRequested~()
+        +on~HostDeleteRequested~()
+        +on~HostConnectivityTestRequested~()
+        +on~HostSearchQueryChanged~()
+    }
+
+    class SFTPBloc {
+        -SFTPRepository sftpRepo
+        -FilePickerService filePicker
+        +SFTPBloc(sftpRepo, filePicker)
+        +on~DirectoryListRequested~()
+        +on~UploadRequested~()
+        +on~DownloadRequested~()
+        +on~TransferPauseRequested~()
+        +on~TransferResumeRequested~()
+        +on~TransferCancelRequested~()
+    }
+
+    Bloc &lt;|-- AuthBloc
+    Bloc &lt;|-- VaultBloc
+    Bloc &lt;|-- TerminalBloc
+    Bloc &lt;|-- SSHSessionBloc
+    Bloc &lt;|-- HostBloc
+    Bloc &lt;|-- SFTPBloc
+
+    AuthState &lt;|-- AuthInitial
+    AuthState &lt;|-- AuthLoading
+    AuthState &lt;|-- Authenticated
+    AuthState &lt;|-- MFARequired
+    AuthState &lt;|-- AuthError
+    AuthState &lt;|-- Unauthenticated
+
+    VaultState &lt;|-- VaultLocked
+    VaultState &lt;|-- VaultUnlocking
+    VaultState &lt;|-- VaultUnlocked
+    VaultState &lt;|-- VaultSyncing
+    VaultState &lt;|-- VaultConflict
+    VaultState &lt;|-- VaultError
+
+    TerminalState &lt;|-- TerminalIdle
+    TerminalState &lt;|-- TerminalConnecting
+    TerminalState &lt;|-- TerminalConnected
+    TerminalState &lt;|-- TerminalError
+
+    AuthBloc --&gt; VaultBloc : unlocks on auth
+    TerminalBloc --&gt; SSHSessionBloc : manages sessions
+    TerminalBloc --&gt; SFTPBloc : spawns SFTP</code></pre>
+<hr />
+<h2 id="26-kubernetes-cluster-layout">26. Kubernetes Cluster Layout</h2>
+<p>Full Kubernetes cluster topology showing namespaces, deployments,
+statefulsets, and node assignments.</p>
+<pre class="mermaid"><code>graph TB
+    classDef node fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef ns fill:none,stroke:#555,stroke-dasharray:3 3
+    classDef pod fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef stateful fill:#e65100,stroke:#bf360c,color:#fff
+    classDef infra fill:#4a148c,stroke:#311b92,color:#fff
+    classDef monitoring fill:#006064,stroke:#004d40,color:#fff
+
+    subgraph CLUSTER[&quot;Kubernetes Cluster (EKS v1.30)&quot;]
+
+        subgraph INFRA_NS[&quot;Namespace: kube-system / istio-system&quot;]
+            ISTIOD[&quot;istiod\n(Deployment, 3 replicas)&quot;]
+            COREDNS[&quot;coredns\n(Deployment, 2 replicas)&quot;]
+            SPIRE_SERVER[&quot;spire-server\n(StatefulSet, 3 replicas)&quot;]
+            SPIRE_AGENT[&quot;spire-agent\n(DaemonSet, all nodes)&quot;]
+        end
+
+        subgraph SYSTEM_NS[&quot;Namespace: helixterm-system&quot;]
+            GW_POD[&quot;api-gateway\n(Deployment, 3 replicas\nNode: gateway-pool)&quot;]
+            CONFIG_POD[&quot;config-service\n(Deployment, 2 replicas)&quot;]
+            HEALTH_POD[&quot;health-service\n(Deployment, 2 replicas)&quot;]
+        end
+
+        subgraph PROD_NS[&quot;Namespace: helixterm-prod&quot;]
+            AUTH_POD[&quot;auth-service\n(Deployment, 3 replicas)&quot;]
+            USER_POD[&quot;user-service\n(Deployment, 3 replicas)&quot;]
+            PKI_POD[&quot;pki-service\n(Deployment, 2 replicas)&quot;]
+            ORG_POD[&quot;org-service\n(Deployment, 2 replicas)&quot;]
+            PROXY_POD[&quot;ssh-proxy\n(Deployment, 5 replicas\nHPA: 5-20)&quot;]
+            TERM_POD[&quot;terminal-service\n(Deployment, 5 replicas\nHPA: 5-20)&quot;]
+            SFTP_POD[&quot;sftp-service\n(Deployment, 3 replicas)&quot;]
+            PF_POD[&quot;portforward-service\n(Deployment, 3 replicas)&quot;]
+            VAULT_POD[&quot;vault-service\n(Deployment, 3 replicas)&quot;]
+            HOST_POD[&quot;host-service\n(Deployment, 2 replicas)&quot;]
+            AUDIT_POD[&quot;audit-service\n(Deployment, 2 replicas)&quot;]
+            AI_POD[&quot;ai-service\n(Deployment, 2 replicas\nGPU: nvidia-t4)&quot;]
+            REC_POD[&quot;recording-service\n(Deployment, 3 replicas)&quot;]
+            NOTIF_POD[&quot;notification-service\n(Deployment, 2 replicas)&quot;]
+        end
+
+        subgraph STAGING_NS[&quot;Namespace: helixterm-staging&quot;]
+            STAGING_GW[&quot;api-gateway-stg\n(Deployment, 1 replica)&quot;]
+            STAGING_ALL[&quot;all-services-stg\n(Deployment, 1 replica each)&quot;]
+        end
+
+        subgraph MONITORING_NS[&quot;Namespace: monitoring&quot;]
+            PROM[&quot;prometheus\n(StatefulSet, 2 replicas)&quot;]
+            GRAFANA[&quot;grafana\n(Deployment, 1 replica)&quot;]
+            LOKI[&quot;loki\n(StatefulSet, 3 replicas)&quot;]
+            JAEGER[&quot;jaeger-collector\n(Deployment, 2 replicas)&quot;]
+            ALERTMGR[&quot;alertmanager\n(StatefulSet, 3 replicas)&quot;]
+        end
+
+        subgraph DATA_NS[&quot;Namespace: helixterm-data&quot;]
+            PG_POD[&quot;postgresql\n(StatefulSet, 3 replicas\nPatroni HA)&quot;]
+            REDIS_POD[&quot;redis-cluster\n(StatefulSet, 6 replicas\n3 primary + 3 replica)&quot;]
+            KAFKA_POD[&quot;kafka\n(StatefulSet, 3 replicas\nZookeeper: 3)&quot;]
+            RABBIT_POD[&quot;rabbitmq\n(StatefulSet, 3 replicas)&quot;]
+        end
+
+        subgraph NODES[&quot;Node Pools&quot;]
+            GATEWAY_NODE[&quot;gateway-pool\nm5.xlarge × 3\nPublic subnet&quot;]
+            APP_NODE[&quot;app-pool\nm5.2xlarge × 10\nPrivate subnet\nHPA target&quot;]
+            DATA_NODE[&quot;data-pool\nr5.2xlarge × 3\nPrivate subnet\nSSD NVMe&quot;]
+            GPU_NODE[&quot;gpu-pool\np3.2xlarge × 2\nPrivate subnet\nnvidia-t4 GPU&quot;]
+        end
+    end
+
+    GW_POD --&gt; AUTH_POD &amp; USER_POD &amp; PKI_POD &amp; ORG_POD
+    GW_POD --&gt; PROXY_POD &amp; TERM_POD &amp; SFTP_POD &amp; PF_POD
+    GW_POD --&gt; VAULT_POD &amp; HOST_POD &amp; AUDIT_POD &amp; NOTIF_POD
+    GW_POD --&gt; AI_POD &amp; REC_POD
+
+    AUTH_POD &amp; USER_POD &amp; VAULT_POD &amp; AUDIT_POD --&gt; PG_POD
+    AUTH_POD &amp; PROXY_POD &amp; TERM_POD --&gt; REDIS_POD
+    PROXY_POD &amp; TERM_POD &amp; VAULT_POD &amp; AUDIT_POD --&gt; KAFKA_POD
+    PROXY_POD &amp; NOTIF_POD --&gt; RABBIT_POD
+
+    GATEWAY_NODE -.-&gt;|hosts| GW_POD
+    APP_NODE -.-&gt;|hosts| AUTH_POD &amp; PROXY_POD &amp; TERM_POD &amp; VAULT_POD
+    DATA_NODE -.-&gt;|hosts| PG_POD &amp; REDIS_POD &amp; KAFKA_POD &amp; RABBIT_POD
+    GPU_NODE -.-&gt;|hosts| AI_POD
+
+    ISTIOD -.-&gt;|mesh| PROD_NS
+    SPIRE_AGENT -.-&gt;|svid| PROD_NS
+
+    class GW_POD,AUTH_POD,USER_POD,PKI_POD,ORG_POD,PROXY_POD,TERM_POD,SFTP_POD,PF_POD,VAULT_POD,HOST_POD,AUDIT_POD,AI_POD,REC_POD,NOTIF_POD,CONFIG_POD,HEALTH_POD pod
+    class PG_POD,REDIS_POD,KAFKA_POD,RABBIT_POD,PROM,LOKI,JAEGER,ALERTMGR stateful
+    class GATEWAY_NODE,APP_NODE,DATA_NODE,GPU_NODE node
+    class ISTIOD,COREDNS,SPIRE_SERVER,SPIRE_AGENT infra
+    class GRAFANA,PROM,LOKI,JAEGER,ALERTMGR monitoring</code></pre>
+<hr />
+<h2 id="27-network-architecture">27. Network Architecture</h2>
+<p>Full network flow from internet through CDN, load balancer, ingress,
+service mesh, and to backing data stores.</p>
+<pre class="mermaid"><code>graph LR
+    classDef internet fill:#455a64,stroke:#263238,color:#fff
+    classDef cdn fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef lb fill:#6a1b9a,stroke:#4a148c,color:#fff
+    classDef ingress fill:#e65100,stroke:#bf360c,color:#fff
+    classDef mesh fill:#1b5e20,stroke:#0a3c00,color:#fff
+    classDef service fill:#1565c0,stroke:#0b4884,color:#fff
+    classDef data fill:#37474f,stroke:#263238,color:#fff
+    classDef firewall fill:#b71c1c,stroke:#7f0000,color:#fff
+
+    INTERNET[&quot;Internet\nPublic Traffic&quot;]
+    MOBILE[&quot;Mobile Clients\niOS / Android&quot;]
+    DESKTOP[&quot;Desktop Clients\nmacOS / Windows&quot;]
+
+    CDN[&quot;AWS CloudFront CDN\nEdge caching, TLS termination\n100+ PoPs worldwide&quot;]
+
+    WAF[&quot;AWS WAF\nDDoS protection\nOWASP top-10 rules\nRate limiting: 10k rps/IP&quot;]
+
+    ALB[&quot;AWS Application LB\nHTTPS :443 / WSS\nCross-AZ, sticky sessions\nHealth check: /healthz&quot;]
+
+    NLB[&quot;AWS Network LB\nSSH Direct Access :2222\nTCP pass-through\nfor enterprise users&quot;]
+
+    NGINX[&quot;Nginx Ingress Controller\nSSL/TLS: Let&#39;s Encrypt\nHTTP→HTTPS redirect\nHeader injection\n(X-Real-IP, X-Forwarded-For)&quot;]
+
+    ISTIO_GW[&quot;Istio Ingress Gateway\nService mesh entry\nmTLS termination\nTraffic policies&quot;]
+
+    ISTIO_MESH[&quot;Istio Service Mesh\nEnvoy sidecars on all pods\nmTLS (SPIFFE/X.509)\nTraffic mirroring\nCircuit breaking&quot;]
+
+    subgraph SERVICES[&quot;Microservices Layer (helixterm-prod)&quot;]
+        API_GW[&quot;API Gateway\n:8000&quot;]
+        CORE_SVCS[&quot;Core Services\nAuth/User/PKI/Org\n:8001-8004&quot;]
+        TERM_SVCS[&quot;Terminal Services\nSSH Proxy/Terminal\n:8010-8013&quot;]
+        DATA_SVCS[&quot;Data Services\nVault/Keys/Hosts\n:8020-8024&quot;]
+    end
+
+    subgraph DATABASES[&quot;Data Layer (helixterm-data)&quot;]
+        PG[&quot;PostgreSQL\nPatroni HA\n:5432&quot;]
+        REDIS[&quot;Redis Cluster\n:6379&quot;]
+        KAFKA[&quot;Apache Kafka\n:9092&quot;]
+        RABBIT[&quot;RabbitMQ\n:5672&quot;]
+    end
+
+    subgraph STORAGE[&quot;Persistent Storage&quot;]
+        S3[&quot;AWS S3\nRecordings + backups&quot;]
+        EFS[&quot;AWS EFS\nShared config / certs&quot;]
+        EBS[&quot;AWS EBS\nDB volumes (gp3 NVMe)&quot;]
+    end
+
+    FW_EGRESS[&quot;AWS Security Group\nEgress firewall\nAllow: SSH:22, HTTPS:443\nDeny: all others&quot;]
+
+    SSH_TARGETS[&quot;SSH Target Servers\nCustomer infrastructure&quot;]
+
+    INTERNET --&gt; CDN
+    MOBILE --&gt; CDN
+    DESKTOP --&gt; CDN
+    CDN --&gt; WAF
+    WAF --&gt; ALB
+    WAF --&gt; NLB
+    ALB --&gt; NGINX
+    NLB --&gt; NGINX
+    NGINX --&gt; ISTIO_GW
+    ISTIO_GW --&gt; ISTIO_MESH
+    ISTIO_MESH --&gt; API_GW
+    API_GW --&gt; CORE_SVCS
+    API_GW --&gt; TERM_SVCS
+    API_GW --&gt; DATA_SVCS
+
+    CORE_SVCS --&gt; PG
+    CORE_SVCS --&gt; REDIS
+    DATA_SVCS --&gt; PG
+    TERM_SVCS --&gt; REDIS
+    TERM_SVCS --&gt; KAFKA
+    DATA_SVCS --&gt; KAFKA
+    CORE_SVCS --&gt; RABBIT
+    TERM_SVCS --&gt; RABBIT
+
+    PG --&gt; EBS
+    KAFKA --&gt; EBS
+    TERM_SVCS --&gt; S3
+    DATA_SVCS --&gt; S3
+    CORE_SVCS --&gt; EFS
+
+    TERM_SVCS --&gt; FW_EGRESS
+    FW_EGRESS --&gt; SSH_TARGETS
+
+    class INTERNET,MOBILE,DESKTOP internet
+    class CDN cdn
+    class WAF,FW_EGRESS firewall
+    class ALB,NLB lb
+    class NGINX,ISTIO_GW ingress
+    class ISTIO_MESH,API_GW,CORE_SVCS,TERM_SVCS,DATA_SVCS mesh
+    class PG,REDIS,KAFKA,RABBIT data
+    class S3,EFS,EBS data
+    class SSH_TARGETS internet</code></pre>
+<hr />
+<h2 id="28-multi-region-deployment">28. Multi-Region Deployment</h2>
+<p>Primary (eu-west-1) and disaster recovery (us-east-1) regions with
+replication, failover, and traffic routing.</p>
+<pre class="mermaid"><code>graph TB
+    classDef region fill:none,stroke:#1565c0,stroke-width:2px
+    classDef az fill:none,stroke:#43a047,stroke-dasharray:4 2
+    classDef service fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef data fill:#e65100,stroke:#bf360c,color:#fff
+    classDef replication fill:#6a1b9a,stroke:#4a148c,color:#fff
+    classDef dns fill:#006064,stroke:#004d40,color:#fff
+    classDef cdn fill:#37474f,stroke:#263238,color:#fff
+
+    ROUTE53[&quot;AWS Route 53\nGlobal DNS\nLatency-based routing\nHealth check failover\nTTL: 30s&quot;]
+
+    CF[&quot;AWS CloudFront\nGlobal CDN\n250+ PoPs\nOrigin failover enabled&quot;]
+
+    ROUTE53 --&gt; CF
+    CF --&gt; PRIMARY_LB
+    CF -.-&gt;|&quot;failover (RTO &lt; 5min)&quot;| DR_LB
+
+    subgraph PRIMARY[&quot;Primary Region: eu-west-1 (Ireland) — ACTIVE&quot;]
+        PRIMARY_LB[&quot;ALB (eu-west-1)\nhelixterm.io → :443&quot;]
+
+        subgraph AZ1[&quot;AZ: eu-west-1a&quot;]
+            P_GW1[&quot;api-gateway-1\n(pod)&quot;]
+            P_APP1[&quot;app-services-1\n(3-5 pods/svc)&quot;]
+        end
+
+        subgraph AZ2[&quot;AZ: eu-west-1b&quot;]
+            P_GW2[&quot;api-gateway-2\n(pod)&quot;]
+            P_APP2[&quot;app-services-2\n(3-5 pods/svc)&quot;]
+        end
+
+        subgraph AZ3[&quot;AZ: eu-west-1c&quot;]
+            P_GW3[&quot;api-gateway-3\n(pod)&quot;]
+            P_APP3[&quot;app-services-3\n(3-5 pods/svc)&quot;]
+        end
+
+        subgraph P_DATA[&quot;Primary Data Layer&quot;]
+            P_PG_PRIMARY[&quot;PostgreSQL Primary\n(Patroni leader)&quot;]
+            P_PG_REPLICA[&quot;PostgreSQL Replica × 2\n(Patroni standbys)&quot;]
+            P_REDIS[&quot;Redis Cluster\n(3 primary + 3 replica)&quot;]
+            P_KAFKA[&quot;Kafka Cluster\n(3 brokers, RF=3)&quot;]
+        end
+
+        P_S3[&quot;S3 Bucket (eu-west-1)\nCross-region replication ON&quot;]
+    end
+
+    subgraph DR[&quot;DR Region: us-east-1 (N. Virginia) — STANDBY&quot;]
+        DR_LB[&quot;ALB (us-east-1)\ndr.helixterm.io → :443\n(traffic off in normal operation)&quot;]
+
+        subgraph DR_AZ1[&quot;AZ: us-east-1a&quot;]
+            DR_GW1[&quot;api-gateway-1\n(scaled to 0 in standby)&quot;]
+            DR_APP1[&quot;app-services-1\n(scaled to 0 in standby)&quot;]
+        end
+
+        subgraph DR_AZ2[&quot;AZ: us-east-1b&quot;]
+            DR_GW2[&quot;api-gateway-2\n(scaled to 0 in standby)&quot;]
+            DR_APP2[&quot;app-services-2\n(scaled to 0 in standby)&quot;]
+        end
+
+        subgraph DR_DATA[&quot;DR Data Layer&quot;]
+            DR_PG[&quot;PostgreSQL Replica\n(streaming replication\nRPO &lt; 1 min)&quot;]
+            DR_REDIS[&quot;Redis Replica Cluster\n(async replication)&quot;]
+            DR_KAFKA[&quot;Kafka MirrorMaker 2\n(topic replication)&quot;]
+        end
+
+        DR_S3[&quot;S3 Bucket (us-east-1)\nCross-region replica\n(replication lag &lt; 15 min)&quot;]
+    end
+
+    subgraph SHARED[&quot;Global Shared Services&quot;]
+        GLOBAL_CF_CERTS[&quot;AWS Certificate Manager\nWildcard TLS certs\n*.helixterm.io&quot;]
+        GLOBAL_SECRETS[&quot;AWS Secrets Manager\n(cross-region replication)&quot;]
+        GLOBAL_KMS[&quot;AWS KMS\n(multi-region keys\nfor vault encryption)&quot;]
+    end
+
+    PRIMARY_LB --&gt; P_GW1 &amp; P_GW2 &amp; P_GW3
+    P_GW1 &amp; P_GW2 &amp; P_GW3 --&gt; P_APP1 &amp; P_APP2 &amp; P_APP3
+    P_APP1 &amp; P_APP2 &amp; P_APP3 --&gt; P_PG_PRIMARY
+    P_APP1 &amp; P_APP2 &amp; P_APP3 --&gt; P_REDIS
+    P_APP1 &amp; P_APP2 &amp; P_APP3 --&gt; P_KAFKA
+    P_PG_PRIMARY --&gt; P_PG_REPLICA
+
+    DR_LB --&gt; DR_GW1 &amp; DR_GW2
+    DR_GW1 &amp; DR_GW2 --&gt; DR_APP1 &amp; DR_APP2
+    DR_APP1 &amp; DR_APP2 --&gt; DR_PG
+    DR_APP1 &amp; DR_APP2 --&gt; DR_REDIS
+    DR_APP1 &amp; DR_APP2 --&gt; DR_KAFKA
+
+    P_PG_REPLICA --&gt;|&quot;WAL streaming\n(sync replication\nlag &lt; 100ms)&quot;| DR_PG
+    P_KAFKA --&gt;|&quot;MirrorMaker 2\n(async, lag &lt; 30s)&quot;| DR_KAFKA
+    P_REDIS --&gt;|&quot;Redis replication\n(async, lag &lt; 5s)&quot;| DR_REDIS
+    P_S3 --&gt;|&quot;S3 CRR\n(lag &lt; 15 min)&quot;| DR_S3
+
+    GLOBAL_KMS -.-&gt; P_DATA
+    GLOBAL_KMS -.-&gt; DR_DATA
+    GLOBAL_SECRETS -.-&gt; PRIMARY
+    GLOBAL_SECRETS -.-&gt; DR
+
+    class PRIMARY_LB,DR_LB service
+    class P_PG_PRIMARY,P_PG_REPLICA,P_REDIS,P_KAFKA,DR_PG,DR_REDIS,DR_KAFKA data
+    class P_S3,DR_S3 data
+    class ROUTE53,CF cdn
+    class GLOBAL_CF_CERTS,GLOBAL_SECRETS,GLOBAL_KMS replication</code></pre>
+<hr />
+<h2 id="29-development-phase-plan-gantt">29. Development Phase Plan
+(Gantt)</h2>
+<p>Full project timeline for HelixTerminator from foundation through GA
+release.</p>
+<pre class="mermaid"><code>gantt
+    title HelixTerminator Development Phases
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %Y
+    excludes    weekends
+
+    section Phase 1 — Foundation (3 months)
+    Project setup &amp; monorepo structure        :done,    p1_1,  2025-01-06, 2w
+    Go microservice scaffolding (25 svcs)     :done,    p1_2,  2025-01-20, 3w
+    CI/CD pipeline (GitHub Actions)           :done,    p1_3,  2025-02-03, 2w
+    PostgreSQL schema &amp; migrations            :done,    p1_4,  2025-02-03, 2w
+    Redis / Kafka / RabbitMQ integration      :done,    p1_5,  2025-02-17, 2w
+    mTLS / SPIRE/SPIFFE setup                 :done,    p1_6,  2025-02-17, 2w
+    API Gateway (Envoy + custom middleware)   :done,    p1_7,  2025-03-03, 2w
+    Flutter project scaffold (Desktop)        :done,    p1_8,  2025-03-03, 1w
+    Kubernetes manifests &amp; Helm charts        :done,    p1_9,  2025-03-10, 1w
+
+    section Phase 2 — Core Features (4 months)
+    Auth Service (JWT/OAuth2/SAML)            :done,    p2_1,  2025-04-01, 3w
+    User &amp; Org Service (RBAC)                 :done,    p2_2,  2025-04-01, 3w
+    SSH Proxy Service (connect/auth/PTY)      :done,    p2_3,  2025-04-22, 4w
+    Terminal Service (WebSocket/PTY)          :done,    p2_4,  2025-04-22, 4w
+    Flutter Terminal UI (xterm renderer)      :done,    p2_5,  2025-05-20, 3w
+    Vault Service (E2EE Argon2id)             :done,    p2_6,  2025-05-20, 4w
+    Flutter Vault UI                          :done,    p2_7,  2025-06-10, 3w
+    Host Service + Flutter host browser       :done,    p2_8,  2025-07-01, 2w
+    SSH Key / Keychain Service                :done,    p2_9,  2025-07-01, 2w
+    PKI Service (SSH CA)                      :done,    p2_10, 2025-07-15, 2w
+    Basic SFTP Service + Flutter SFTP UI      :done,    p2_11, 2025-07-15, 2w
+
+    section Phase 3 — Enterprise Features (3 months)
+    LDAP/AD integration                       :active,  p3_1,  2025-08-01, 2w
+    SAML/OIDC SSO                             :active,  p3_2,  2025-08-01, 3w
+    FIDO2/WebAuthn MFA                        :active,  p3_3,  2025-08-15, 2w
+    Port Forward Service                      :active,  p3_4,  2025-08-15, 2w
+    Workspace Service + multi-tab UI          :         p3_5,  2025-09-01, 3w
+    Collaboration / Terminal sharing          :         p3_6,  2025-09-01, 3w
+    Audit Service + SIEM export               :         p3_7,  2025-09-22, 2w
+    Snippet Service + global command library  :         p3_8,  2025-09-22, 2w
+    Notification Service (email/webhook/push) :         p3_9,  2025-10-06, 2w
+    HelixTrack Bridge (Jira/GitHub/Linear)    :         p3_10, 2025-10-06, 3w
+    Container Bridge (Docker/K8s exec)        :         p3_11, 2025-10-20, 2w
+
+    section Phase 4 — AI &amp; Advanced (2 months)
+    Session Recording + Asciinema playback    :         p4_1,  2025-11-03, 3w
+    AI/Autocomplete Service (LLM backend)     :         p4_2,  2025-11-03, 3w
+    Flutter AI command suggestions UI         :         p4_3,  2025-11-24, 2w
+    Analytics Service + dashboard             :         p4_4,  2025-11-24, 2w
+    Flutter Mobile (iOS/Android)              :         p4_5,  2025-12-08, 3w
+    Advanced RBAC (attribute-based)           :         p4_6,  2025-12-08, 2w
+
+    section Phase 5 — GA Release (1 month)
+    End-to-end testing &amp; QA                   :         p5_1,  2026-01-05, 2w
+    Security audit &amp; pen testing              :         p5_2,  2026-01-05, 2w
+    Performance benchmarking (10k sessions)   :         p5_3,  2026-01-19, 1w
+    Documentation &amp; runbooks                  :         p5_4,  2026-01-19, 1w
+    Multi-region production deploy            :         p5_5,  2026-01-26, 1w
+    GA Launch                                 :milestone, p5_6, 2026-02-02, 0d</code></pre>
+<hr />
+<h2 id="30-cicd-pipeline-flow">30. CI/CD Pipeline Flow</h2>
+<p>Full continuous integration and deployment pipeline from commit
+through production deployment.</p>
+<pre class="mermaid"><code>flowchart LR
+    classDef trigger fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef quality fill:#e65100,stroke:#bf360c,color:#fff
+    classDef build fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef security fill:#b71c1c,stroke:#7f0000,color:#fff
+    classDef deploy fill:#4a148c,stroke:#311b92,color:#fff
+    classDef gate fill:#f57f17,stroke:#e65100,color:#000
+    classDef notify fill:#37474f,stroke:#263238,color:#fff
+
+    subgraph SOURCE[&quot;Source Control&quot;]
+        COMMIT[&quot;Git Commit\n(feature/fix/chore)&quot;]
+        PR[&quot;Pull Request\nopened / updated&quot;]
+        MERGE[&quot;Merge to main\n(squash merge)&quot;]
+        TAG[&quot;Git Tag\nv1.x.y&quot;]
+    end
+
+    subgraph CI[&quot;CI Pipeline (GitHub Actions)&quot;]
+        LINT[&quot;Lint\n• golangci-lint (Go)\n• dart analyze (Flutter)\n• helm lint&quot;]
+        UNIT[&quot;Unit Tests\n• go test -race ./...\n• flutter test\n• coverage &gt; 80%&quot;]
+        INT[&quot;Integration Tests\n• testcontainers (PG/Redis)\n• Kafka integration\n• gRPC contract tests&quot;]
+        BUILD_GO[&quot;Build Go Services\n• docker buildx (multi-arch)\n• goreleaser\n• 25 service images&quot;]
+        BUILD_FLUTTER[&quot;Build Flutter\n• macOS Desktop\n• iOS/Android\n• Web (WASM)&quot;]
+        SCAN_SAST[&quot;SAST Scan\n• gosec\n• semgrep\n• CodeQL (GitHub)&quot;]
+        SCAN_DEPS[&quot;Dependency Scan\n• govulncheck\n• trivy (Go modules)\n• flutter pub audit&quot;]
+        SCAN_IMAGE[&quot;Container Image Scan\n• trivy (CVE scan)\n• docker scout\n• Block: CRITICAL CVE&quot;]
+        SIGN[&quot;Image Signing\n• cosign (keyless)\n• SBOM generation\n• Attestation push&quot;]
+    end
+
+    subgraph STAGING[&quot;Staging Deploy&quot;]
+        PUSH_STAGING[&quot;Push to ECR\n(staging tag)&quot;]
+        DEPLOY_STAGING[&quot;Deploy to Staging\n• helm upgrade\n• helixterm-staging ns\n• Rolling update&quot;]
+        SMOKE[&quot;Smoke Tests\n• HTTP health checks\n• SSH connect test\n• Vault round-trip&quot;]
+        E2E[&quot;E2E Tests\n• Playwright (Web UI)\n• Flutter integration test\n• API contract tests\n• ~200 scenarios&quot;]
+        PERF[&quot;Performance Tests\n• k6 load test\n• 1000 concurrent SSH\n• p99 latency &lt; 200ms&quot;]
+    end
+
+    subgraph PROD_GATE[&quot;Production Gate&quot;]
+        APPROVE[&quot;Manual Approval\n(Tech Lead + SRE)\nor auto-approve\non schedule&quot;]
+        CANARY[&quot;Canary Release\n5% → 25% → 100%\n(10 min each step)\nAuto-rollback on errors&quot;]
+    end
+
+    subgraph PROD[&quot;Production Deploy&quot;]
+        PUSH_PROD[&quot;Push to ECR\n(prod + semver tag)&quot;]
+        DEPLOY_PRIMARY[&quot;Deploy Primary\neu-west-1\n• helm upgrade\n• Rolling (1 pod at a time)&quot;]
+        HEALTHCHECK[&quot;Production Health\n• All /healthz 200\n• Datadog synthetic\n• Error rate &lt; 0.1%&quot;]
+        DEPLOY_DR[&quot;Deploy DR\nus-east-1\n• 10 min after primary\n• Verify replication&quot;]
+        NOTIFY_SUCCESS[&quot;Notify Success\n• Slack #deployments\n• Jira release ticket\n• GitHub release notes&quot;]
+    end
+
+    subgraph ROLLBACK[&quot;Rollback Path&quot;]
+        DETECT_ERROR[&quot;Error Detected\n• Error rate spike\n• Health check fail\n• Manual trigger&quot;]
+        AUTO_ROLLBACK[&quot;Auto Rollback\n• helm rollback\n• Previous image tag\n• &lt; 2 min RTO&quot;]
+        NOTIFY_FAIL[&quot;Alert\n• PagerDuty P1\n• Slack #incidents\n• Auto-create incident&quot;]
+    end
+
+    COMMIT --&gt;|&quot;push to feature branch&quot;| PR
+    PR --&gt; LINT
+    LINT --&gt;|&quot;pass&quot;| UNIT
+    LINT --&gt;|&quot;fail&quot;| NOTIFY_FAIL
+    UNIT --&gt;|&quot;pass + coverage OK&quot;| INT
+    UNIT --&gt;|&quot;fail&quot;| NOTIFY_FAIL
+    INT --&gt;|&quot;pass&quot;| SCAN_SAST
+
+    MERGE --&gt; BUILD_GO
+    MERGE --&gt; BUILD_FLUTTER
+    BUILD_GO --&gt; SCAN_DEPS
+    BUILD_GO --&gt; SCAN_IMAGE
+    SCAN_DEPS --&gt; SCAN_SAST
+    SCAN_IMAGE --&gt; SIGN
+    SCAN_SAST --&gt;|&quot;no HIGH/CRITICAL&quot;| SIGN
+    SCAN_SAST --&gt;|&quot;violations found&quot;| NOTIFY_FAIL
+
+    SIGN --&gt; PUSH_STAGING
+    PUSH_STAGING --&gt; DEPLOY_STAGING
+    DEPLOY_STAGING --&gt; SMOKE
+    SMOKE --&gt;|&quot;pass&quot;| E2E
+    SMOKE --&gt;|&quot;fail&quot;| DETECT_ERROR
+    E2E --&gt;|&quot;pass&quot;| PERF
+    E2E --&gt;|&quot;fail&quot;| DETECT_ERROR
+    PERF --&gt;|&quot;SLOs met&quot;| APPROVE
+    PERF --&gt;|&quot;SLOs breached&quot;| DETECT_ERROR
+
+    TAG --&gt; APPROVE
+    APPROVE --&gt;|&quot;approved&quot;| CANARY
+    CANARY --&gt;|&quot;canary healthy&quot;| PUSH_PROD
+    CANARY --&gt;|&quot;canary errors&quot;| DETECT_ERROR
+
+    PUSH_PROD --&gt; DEPLOY_PRIMARY
+    DEPLOY_PRIMARY --&gt; HEALTHCHECK
+    HEALTHCHECK --&gt;|&quot;healthy&quot;| DEPLOY_DR
+    HEALTHCHECK --&gt;|&quot;unhealthy&quot;| DETECT_ERROR
+    DEPLOY_DR --&gt; NOTIFY_SUCCESS
+
+    DETECT_ERROR --&gt; AUTO_ROLLBACK
+    AUTO_ROLLBACK --&gt; NOTIFY_FAIL
+
+    class COMMIT,PR,MERGE,TAG trigger
+    class LINT,UNIT,INT quality
+    class BUILD_GO,BUILD_FLUTTER,SIGN build
+    class SCAN_SAST,SCAN_DEPS,SCAN_IMAGE security
+    class PUSH_STAGING,DEPLOY_STAGING,SMOKE,E2E,PERF,PUSH_PROD,DEPLOY_PRIMARY,DEPLOY_DR deploy
+    class APPROVE,CANARY,HEALTHCHECK gate
+    class NOTIFY_SUCCESS,NOTIFY_FAIL,DETECT_ERROR,AUTO_ROLLBACK notify</code></pre>
+<hr />
+<p><em>End of HelixTerminator Mermaid Diagram Suite — 30 diagrams
+total</em></p>
+</body>
+</html>

@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    participant C as Client / SSH Proxy
+    participant GW as API Gateway
+    participant PKI as PKI Service
+    participant AUTH as Auth Service
+    participant PG as PostgreSQL
+    participant HSM as HSM / KMS (AWS KMS)
+    participant PROXY as SSH Proxy
+
+    C->>GW: POST /v1/pki/certificates {type:SSH_USER, public_key_pem, principals:[], ttl:3600}
+    GW->>AUTH: ValidateJWT + check pki:issue permission
+    AUTH-->>GW: {user_id, org_id, roles}
+
+    GW->>PKI: IssueCertificate{user_id, org_id, public_key_pem, principals, ttl, extensions}
+
+    PKI->>AUTH: GetUserPrincipals{user_id}
+    AUTH->>PG: SELECT users u JOIN teams t ON ... WHERE u.id=$1
+    PG-->>AUTH: {principals:["ubuntu","ec2-user","admin"], force_command, source_address}
+    AUTH-->>PKI: Principals{list}
+
+    PKI->>PG: SELECT ca_keys WHERE org_id=$1 AND type=SSH_USER AND status=ACTIVE
+    PG-->>PKI: {ca_key_id, kms_key_arn, public_key}
+
+    PKI->>PKI: Build certificate {serial, key_id, principals, valid_after, valid_before, extensions}
+    PKI->>HSM: Sign{kms_key_arn, certificate_tbs, algorithm:ECDSA_SHA_512}
+    HSM-->>PKI: Signature{sig_bytes}
+
+    PKI->>PKI: Assemble signed SSH certificate (OpenSSH wire format)
+    PKI->>PG: INSERT issued_certificates {serial, user_id, org_id, fingerprint, valid_before, revoked:false}
+    PKI->>PG: INSERT audit_events {type:CERT_ISSUED, user_id, serial, principals, ttl}
+
+    PKI-->>GW: Certificate{cert_pem, serial, fingerprint, valid_before}
+    GW-->>C: 201 {certificate_pem, serial, valid_before}
+
+    C->>PROXY: ConnectWithCert{host_id, certificate_pem, private_key}
+    PROXY->>PROXY: Verify certificate signature against known CA public key
+    PROXY->>PROXY: Check validity window + revocation list (CRL / OCSP)
+    PROXY->>PKI: CheckRevocation{serial}
+    PKI->>PG: SELECT issued_certificates WHERE serial=$1
+    PG-->>PKI: {revoked: false}
+    PKI-->>PROXY: NotRevoked
+    PROXY->>PROXY: Certificate valid — proceed with SSH authentication

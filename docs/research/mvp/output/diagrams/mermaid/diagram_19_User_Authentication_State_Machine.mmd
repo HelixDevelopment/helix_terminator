@@ -1,0 +1,48 @@
+stateDiagram-v2
+    [*] --> ANONYMOUS : app launch / no session
+
+    ANONYMOUS --> CREDENTIALS_SUBMITTED : user submits email + password
+    ANONYMOUS --> SSO_REDIRECT : user clicks SSO / SAML login
+
+    SSO_REDIRECT --> SAML_ASSERTION_RECEIVED : IdP redirects back with assertion
+    SAML_ASSERTION_RECEIVED --> CREDENTIALS_SUBMITTED : SAML assertion validated\n(map to local user)
+    SAML_ASSERTION_RECEIVED --> ANONYMOUS : invalid assertion / signature fail
+
+    CREDENTIALS_SUBMITTED --> VALIDATING : server validates password (Argon2id)
+    VALIDATING --> MFA_REQUIRED : credentials valid + MFA enrolled
+    VALIDATING --> AUTHENTICATED : credentials valid + no MFA
+    VALIDATING --> ANONYMOUS : invalid credentials (show error)
+    VALIDATING --> LOCKED_OUT : too many failures\n(≥5 attempts in 15 min)
+
+    LOCKED_OUT --> ANONYMOUS : lockout expires (15 min)\nor admin unlocks
+
+    MFA_REQUIRED --> TOTP_SUBMITTED : user enters TOTP code
+    MFA_REQUIRED --> FIDO2_ASSERTING : user touches security key
+    MFA_REQUIRED --> ANONYMOUS : user cancels MFA
+    MFA_REQUIRED --> MFA_TIMED_OUT : no response in 5 min
+
+    MFA_TIMED_OUT --> ANONYMOUS : timeout → restart login
+
+    TOTP_SUBMITTED --> AUTHENTICATED : TOTP valid (±1 window)
+    TOTP_SUBMITTED --> MFA_REQUIRED : TOTP invalid (show error, retry)
+    TOTP_SUBMITTED --> LOCKED_OUT : ≥3 TOTP failures
+
+    FIDO2_ASSERTING --> AUTHENTICATED : assertion valid
+    FIDO2_ASSERTING --> MFA_REQUIRED : assertion failed
+
+    AUTHENTICATED --> ACTIVE_SESSION : JWT + refresh token stored\nRedis session created
+    ACTIVE_SESSION --> TOKEN_REFRESHING : access token expires (1h)\nrefresh token still valid
+    TOKEN_REFRESHING --> ACTIVE_SESSION : new JWT issued
+    TOKEN_REFRESHING --> SESSION_EXPIRED : refresh token revoked/expired
+
+    ACTIVE_SESSION --> SESSION_EXPIRED : admin revokes session\nor inactivity timeout
+    ACTIVE_SESSION --> ANONYMOUS : user logs out (token revoked)
+
+    SESSION_EXPIRED --> ANONYMOUS : redirect to login
+
+    note right of ACTIVE_SESSION
+        JWT TTL: 3600s
+        Refresh TTL: 30 days
+        Max concurrent sessions: 10
+        Session stored in Redis
+    end note

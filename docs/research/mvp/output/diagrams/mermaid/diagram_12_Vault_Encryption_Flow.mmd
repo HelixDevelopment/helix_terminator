@@ -1,0 +1,50 @@
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant MP as Master Password Input
+    participant KDF as Argon2id KDF
+    participant MK as Master Key (256-bit)
+    participant VKE as Vault Key Encrypt Layer
+    participant VK as Vault Key (256-bit)
+    participant IKE as Item Key Encrypt Layer
+    participant IK as Item Key (256-bit)
+    participant ENC as AES-256-GCM Encrypt
+    participant PT as Plaintext Item
+    participant VAULT as Vault Service
+    participant PG as PostgreSQL
+
+    C->>MP: User enters Master Password
+    MP->>KDF: Argon2id{password, salt:user_uuid, memory:65536, time:3, threads:4}
+    KDF-->>MK: Master Key (256-bit, derived, never sent to server)
+
+    Note over MK: Master Key exists only in client memory
+
+    C->>C: Generate random Vault Key (32 bytes, /dev/urandom)
+    MK->>VKE: Wrap Vault Key: AES-256-GCM-KW(Vault Key, Master Key)
+    VKE-->>VAULT: Encrypted Vault Key blob (sent to server on registration)
+    VAULT->>PG: Store enc_vault_key per user/vault
+
+    Note over C: Vault Unlock flow
+
+    VAULT->>C: GET enc_vault_key from server
+    MK->>VKE: Unwrap: AES-256-GCM-Decrypt(enc_vault_key, Master Key)
+    VKE-->>VK: Vault Key (plaintext, in memory only)
+
+    Note over C: Item read/write flow
+
+    C->>C: Generate random Item Key (32 bytes) per vault item
+    VK->>IKE: Wrap Item Key: AES-256-GCM-KW(Item Key, Vault Key)
+    IKE-->>VAULT: enc_item_key (stored per item in DB)
+
+    PT->>ENC: AES-256-GCM Encrypt{plaintext, Item Key, random nonce}
+    ENC-->>VAULT: {ciphertext, nonce, auth_tag}
+    VAULT->>PG: INSERT vault_items{enc_item_key, ciphertext, nonce, auth_tag, hmac}
+
+    Note over C: Item decrypt flow
+
+    PG-->>VAULT: {enc_item_key, ciphertext, nonce, auth_tag}
+    VAULT-->>C: encrypted item
+    VK->>IKE: Unwrap: AES-256-GCM-Decrypt(enc_item_key, Vault Key)
+    IKE-->>IK: Item Key
+    IK->>ENC: AES-256-GCM Decrypt{ciphertext, nonce, auth_tag, Item Key}
+    ENC-->>PT: Plaintext (visible in UI only)

@@ -1,0 +1,58 @@
+gantt
+    title HelixTerminator Development Phases
+    dateFormat  YYYY-MM-DD
+    axisFormat  %b %Y
+    excludes    weekends
+
+    section Phase 1 — Foundation (3 months)
+    Project setup & monorepo structure        :done,    p1_1,  2025-01-06, 2w
+    Go microservice scaffolding (25 svcs)     :done,    p1_2,  2025-01-20, 3w
+    CI/CD pipeline (GitHub Actions)           :done,    p1_3,  2025-02-03, 2w
+    PostgreSQL schema & migrations            :done,    p1_4,  2025-02-03, 2w
+    Redis / Kafka / RabbitMQ integration      :done,    p1_5,  2025-02-17, 2w
+    mTLS / SPIRE/SPIFFE setup                 :done,    p1_6,  2025-02-17, 2w
+    API Gateway (Envoy + custom middleware)   :done,    p1_7,  2025-03-03, 2w
+    Flutter project scaffold (Desktop)        :done,    p1_8,  2025-03-03, 1w
+    Kubernetes manifests & Helm charts        :done,    p1_9,  2025-03-10, 1w
+
+    section Phase 2 — Core Features (4 months)
+    Auth Service (JWT/OAuth2/SAML)            :done,    p2_1,  2025-04-01, 3w
+    User & Org Service (RBAC)                 :done,    p2_2,  2025-04-01, 3w
+    SSH Proxy Service (connect/auth/PTY)      :done,    p2_3,  2025-04-22, 4w
+    Terminal Service (WebSocket/PTY)          :done,    p2_4,  2025-04-22, 4w
+    Flutter Terminal UI (xterm renderer)      :done,    p2_5,  2025-05-20, 3w
+    Vault Service (E2EE Argon2id)             :done,    p2_6,  2025-05-20, 4w
+    Flutter Vault UI                          :done,    p2_7,  2025-06-10, 3w
+    Host Service + Flutter host browser       :done,    p2_8,  2025-07-01, 2w
+    SSH Key / Keychain Service                :done,    p2_9,  2025-07-01, 2w
+    PKI Service (SSH CA)                      :done,    p2_10, 2025-07-15, 2w
+    Basic SFTP Service + Flutter SFTP UI      :done,    p2_11, 2025-07-15, 2w
+
+    section Phase 3 — Enterprise Features (3 months)
+    LDAP/AD integration                       :active,  p3_1,  2025-08-01, 2w
+    SAML/OIDC SSO                             :active,  p3_2,  2025-08-01, 3w
+    FIDO2/WebAuthn MFA                        :active,  p3_3,  2025-08-15, 2w
+    Port Forward Service                      :active,  p3_4,  2025-08-15, 2w
+    Workspace Service + multi-tab UI          :         p3_5,  2025-09-01, 3w
+    Collaboration / Terminal sharing          :         p3_6,  2025-09-01, 3w
+    Audit Service + SIEM export               :         p3_7,  2025-09-22, 2w
+    Snippet Service + global command library  :         p3_8,  2025-09-22, 2w
+    Notification Service (email/webhook/push) :         p3_9,  2025-10-06, 2w
+    HelixTrack Bridge (Jira/GitHub/Linear)    :         p3_10, 2025-10-06, 3w
+    Container Bridge (Docker/K8s exec)        :         p3_11, 2025-10-20, 2w
+
+    section Phase 4 — AI & Advanced (2 months)
+    Session Recording + Asciinema playback    :         p4_1,  2025-11-03, 3w
+    AI/Autocomplete Service (LLM backend)     :         p4_2,  2025-11-03, 3w
+    Flutter AI command suggestions UI         :         p4_3,  2025-11-24, 2w
+    Analytics Service + dashboard             :         p4_4,  2025-11-24, 2w
+    Flutter Mobile (iOS/Android)              :         p4_5,  2025-12-08, 3w
+    Advanced RBAC (attribute-based)           :         p4_6,  2025-12-08, 2w
+
+    section Phase 5 — GA Release (1 month)
+    End-to-end testing & QA                   :         p5_1,  2026-01-05, 2w
+    Security audit & pen testing              :         p5_2,  2026-01-05, 2w
+    Performance benchmarking (10k sessions)   :         p5_3,  2026-01-19, 1w
+    Documentation & runbooks                  :         p5_4,  2026-01-19, 1w
+    Multi-region production deploy            :         p5_5,  2026-01-26, 1w
+    GA Launch                                 :milestone, p5_6, 2026-02-02, 0d

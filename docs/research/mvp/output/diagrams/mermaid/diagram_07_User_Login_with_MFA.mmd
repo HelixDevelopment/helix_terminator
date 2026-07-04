@@ -1,0 +1,57 @@
+sequenceDiagram
+    autonumber
+    participant C as Flutter Client
+    participant GW as API Gateway
+    participant AUTH as Auth Service
+    participant USER as User Service
+    participant REDIS as Redis
+    participant PG as PostgreSQL
+    participant NOTIF as Notification Service
+
+    C->>GW: POST /v1/auth/login {email, password_hash}
+    GW->>AUTH: Login{email, password_hash, device_fingerprint}
+    AUTH->>USER: GetUserByEmail{email}
+    USER->>PG: SELECT * FROM users WHERE email=$1
+    PG-->>USER: user record {id, password_hash, mfa_enabled, status}
+    USER-->>AUTH: UserRecord
+
+    AUTH->>AUTH: Verify Argon2id(password, stored_hash)
+    alt Password Invalid
+        AUTH->>PG: INSERT login_attempts (user_id, ip, failed=true)
+        AUTH-->>GW: 401 InvalidCredentials
+        GW-->>C: 401 {error: "invalid_credentials"}
+    else Account Locked
+        AUTH-->>GW: 423 AccountLocked {retry_after}
+        GW-->>C: 423 {error: "account_locked", retry_after}
+    else Password Valid
+        AUTH->>PG: INSERT login_attempts (user_id, ip, failed=false)
+
+        alt MFA Enabled (TOTP)
+            AUTH-->>GW: 200 {mfa_required: true, mfa_token, methods:["totp","fido2"]}
+            GW-->>C: 200 MFA challenge (totp)
+            C->>GW: POST /v1/auth/mfa/totp {mfa_token, totp_code}
+            GW->>AUTH: VerifyTOTP{mfa_token, totp_code}
+            AUTH->>PG: SELECT mfa_credentials WHERE user_id=$1 AND type='totp'
+            PG-->>AUTH: {totp_secret_encrypted}
+            AUTH->>AUTH: Decrypt TOTP secret, verify RFC 6238 code (±1 window)
+        else MFA Enabled (FIDO2/WebAuthn)
+            AUTH-->>GW: 200 {mfa_required: true, mfa_token, challenge, rp_id}
+            GW-->>C: 200 FIDO2 challenge
+            C->>GW: POST /v1/auth/mfa/fido2 {mfa_token, assertion}
+            GW->>AUTH: VerifyFIDO2{mfa_token, assertion}
+            AUTH->>PG: SELECT fido2_credentials WHERE user_id=$1
+            PG-->>AUTH: {credential_id, public_key, sign_count}
+            AUTH->>AUTH: Verify assertion signature (ES256/RS256)
+        else No MFA
+            Note over AUTH: Proceed directly to JWT issuance
+        end
+
+        AUTH->>AUTH: Issue JWT {sub:user_id, org_id, roles, exp:3600}
+        AUTH->>AUTH: Issue RefreshToken {jti, exp:2592000}
+        AUTH->>REDIS: SET session:{jti} {user_id,org_id,device} EX 86400
+        AUTH->>PG: INSERT refresh_tokens {jti, user_id, device_id, exp}
+        AUTH->>NOTIF: PublishEvent{type:LOGIN_SUCCESS, user_id, device}
+
+        AUTH-->>GW: AuthResponse{access_token, refresh_token, expires_in:3600}
+        GW-->>C: 200 {access_token, refresh_token, user_profile}
+    end

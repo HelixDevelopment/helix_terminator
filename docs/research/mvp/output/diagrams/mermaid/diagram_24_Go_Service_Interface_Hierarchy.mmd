@@ -1,0 +1,138 @@
+classDiagram
+    class Service {
+        <<interface>>
+        +Start(ctx context.Context) error
+        +Stop(ctx context.Context) error
+        +Health() HealthStatus
+        +Name() string
+    }
+
+    class AuthService {
+        <<interface>>
+        +Login(ctx, req LoginRequest) LoginResponse, error
+        +Logout(ctx, token string) error
+        +ValidateToken(ctx, token string) Claims, error
+        +RefreshToken(ctx, refreshToken string) TokenPair, error
+        +IssueCertificate(ctx, req CertRequest) Certificate, error
+        +VerifyMFA(ctx, req MFARequest) bool, error
+        +RevokeSession(ctx, sessionID string) error
+    }
+
+    class VaultService {
+        <<interface>>
+        +CreateVault(ctx, req CreateVaultRequest) Vault, error
+        +UnlockVault(ctx, vaultID string, masterKey []byte) error
+        +LockVault(ctx, vaultID string) error
+        +GetItem(ctx, vaultID, itemID string) VaultItem, error
+        +PutItem(ctx, vaultID string, item VaultItem) error
+        +DeleteItem(ctx, vaultID, itemID string) error
+        +SyncVault(ctx, vaultID string) SyncResult, error
+        +ExportVault(ctx, vaultID string, format string) []byte, error
+    }
+
+    class SSHProxyService {
+        <<interface>>
+        +Connect(ctx, req ConnectRequest) Session, error
+        +Disconnect(ctx, sessionID string) error
+        +Write(ctx, sessionID string, data []byte) int, error
+        +Read(ctx, sessionID string) []byte, error
+        +Resize(ctx, sessionID string, cols, rows int) error
+        +GetSession(ctx, sessionID string) Session, error
+        +ListSessions(ctx, orgID string) []Session, error
+        +OpenPortForward(ctx, req PortForwardRequest) PortForward, error
+    }
+
+    class PKIService {
+        <<interface>>
+        +IssueCertificate(ctx, req IssueCertRequest) SignedCert, error
+        +RevokeCertificate(ctx, serial string, reason RevocationReason) error
+        +CheckRevocation(ctx, serial string) RevocationStatus, error
+        +GetCRL(ctx, caID string) []byte, error
+        +RotateCA(ctx, caID string) CAKeyPair, error
+        +GetCAPublicKey(ctx, caID string) PublicKey, error
+        +ListIssuedCerts(ctx, orgID string) []CertRecord, error
+    }
+
+    class HostService {
+        <<interface>>
+        +CreateHost(ctx, req CreateHostRequest) Host, error
+        +GetHost(ctx, hostID string) Host, error
+        +UpdateHost(ctx, hostID string, req UpdateHostRequest) Host, error
+        +DeleteHost(ctx, hostID string) error
+        +ListHosts(ctx, orgID string, filter HostFilter) []Host, error
+        +TestConnectivity(ctx, hostID string) ConnectivityResult, error
+        +SyncFromProvider(ctx, providerID string) SyncResult, error
+    }
+
+    class SFTPService {
+        <<interface>>
+        +InitTransfer(ctx, req TransferRequest) Transfer, error
+        +UploadChunk(ctx, transferID string, offset int64, data []byte) error
+        +DownloadChunk(ctx, transferID string, offset int64, size int) []byte, error
+        +PauseTransfer(ctx, transferID string) error
+        +ResumeTransfer(ctx, transferID string) error
+        +CancelTransfer(ctx, transferID string) error
+        +GetTransferStatus(ctx, transferID string) TransferStatus, error
+    }
+
+    class ContainerRuntime {
+        <<interface>>
+        +ListContainers(ctx, filter ContainerFilter) []Container, error
+        +ExecInContainer(ctx, req ExecRequest) ExecSession, error
+        +GetLogs(ctx, containerID string, opts LogOptions) io.Reader, error
+        +GetPods(ctx, namespace string) []Pod, error
+        +ExecInPod(ctx, req PodExecRequest) ExecSession, error
+        +PortForwardPod(ctx, req PodPortForwardRequest) PortForward, error
+    }
+
+    class BaseService {
+        #logger *zap.Logger
+        #config *Config
+        #db *pgxpool.Pool
+        #redis *redis.Client
+        #tracer trace.Tracer
+        #metrics *prometheus.Registry
+        +NewBaseService(cfg Config) BaseService
+        #withSpan(ctx, name string) context.Context, trace.Span
+        #handleError(err error, msg string) error
+    }
+
+    class AuthServiceImpl {
+        -userRepo UserRepository
+        -tokenRepo TokenRepository
+        -mfaRepo MFARepository
+        -jwtSigner JWTSigner
+        -pkiClient PKIService
+        +NewAuthService(deps AuthDeps) AuthService
+    }
+
+    class VaultServiceImpl {
+        -vaultRepo VaultRepository
+        -itemRepo ItemRepository
+        -encryptionSvc EncryptionService
+        -kafkaProducer kafka.Producer
+        -syncWorker SyncWorker
+        +NewVaultService(deps VaultDeps) VaultService
+    }
+
+    class EncryptionService {
+        <<interface>>
+        +EncryptItem(plaintext []byte, itemKey []byte) EncryptedItem, error
+        +DecryptItem(item EncryptedItem, itemKey []byte) []byte, error
+        +WrapKey(key []byte, wrappingKey []byte) []byte, error
+        +UnwrapKey(wrapped []byte, wrappingKey []byte) []byte, error
+        +DeriveKey(password []byte, salt []byte, params KDFParams) []byte, error
+    }
+
+    Service <|.. AuthServiceImpl
+    Service <|.. VaultServiceImpl
+    BaseService <|-- AuthServiceImpl
+    BaseService <|-- VaultServiceImpl
+    AuthService <|.. AuthServiceImpl
+    VaultService <|.. VaultServiceImpl
+    AuthServiceImpl --> PKIService : uses
+    VaultServiceImpl --> EncryptionService : uses
+    SSHProxyService --> PKIService : validates certs
+    SSHProxyService --> AuthService : verifies sessions
+    SFTPService --> SSHProxyService : uses proxy
+    ContainerRuntime --> SSHProxyService : uses proxy

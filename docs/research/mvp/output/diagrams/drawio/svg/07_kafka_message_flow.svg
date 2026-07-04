@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="2200" height="1600" viewBox="0 0 2200 1600">
+  <title>HelixTerminator — Kafka Message Flow</title>
+  <desc>Draw.io architecture diagram. Open in diagrams.net or draw.io desktop for interactive view. File: 07_kafka_message_flow.drawio</desc>
+  
+  <!-- Embedded Draw.io XML for round-trip editing -->
+  <metadata>
+    <drawio-source><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="diagrams.net" modified="2026-06-28T00:00:00.000Z" agent="HelixTerminator Spec" version="21.0.0" type="device">
+  <diagram name="Kafka Message Flow" id="kafka-flow-007">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="HelixTerminator — Kafka Message Flow Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="1400" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- ===== KAFKA CLUSTER ===== -->
+        <mxCell id="kafka-cluster" value="Apache Kafka Cluster (3 Brokers, Replication Factor=3)" style="swimlane;startSize=35;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="680" y="60" width="840" height="1420" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-note" value="Zookeeper Ensemble (3 nodes) | SASL/PLAIN Auth | TLS in-transit | Retention: 7 days" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=11;fontStyle=2;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="10" y="35" width="820" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: session.events -->
+        <mxCell id="topic-session" value="Topic: session.events&#xa;Partitions: 12 | Retention: 30d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="70" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: audit.events -->
+        <mxCell id="topic-audit" value="Topic: audit.events&#xa;Partitions: 24 | Retention: 365d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="200" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: user.events -->
+        <mxCell id="topic-user" value="Topic: user.events&#xa;Partitions: 6 | Retention: 90d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="330" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: host.events -->
+        <mxCell id="topic-host" value="Topic: host.events&#xa;Partitions: 6 | Retention: 90d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="460" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: vault.events -->
+        <mxCell id="topic-vault" value="Topic: vault.events&#xa;Partitions: 6 | Retention: 90d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="590" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: key.rotation -->
+        <mxCell id="topic-keyrot" value="Topic: key.rotation&#xa;Partitions: 3 | Retention: 30d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="720" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: notification.events -->
+        <mxCell id="topic-notif" value="Topic: notification.events&#xa;Partitions: 6 | Retention: 7d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="850" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: metrics.raw -->
+        <mxCell id="topic-metrics" value="Topic: metrics.raw&#xa;Partitions: 12 | Retention: 3d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="980" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Topic: dlq (dead-letter) -->
+        <mxCell id="topic-dlq" value="Topic: __deadletter__&#xa;Partitions: 6 | Retention: 14d" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=#b85450;size=10;fontSize=11;fontStyle=1;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="270" y="1110" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Partition labels inside kafka cluster -->
+        <mxCell id="partition-note" value="Each partition key = org_id + user_id (deterministic routing)" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=10;fontStyle=2;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="10" y="1230" width="820" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Schema Registry -->
+        <mxCell id="schema-reg" value="Schema Registry&#xa;(Avro / Protobuf)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="20" y="600" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="schema-note" value="All messages schema-validated&#xa;on produce &amp; consume" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=10;" vertex="1" parent="kafka-cluster">
+          <mxGeometry x="20" y="660" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PRODUCERS ===== -->
+        <mxCell id="producers-group" value="Producers (Publishing Services)" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="600" height="1420" as="geometry" />
+        </mxCell>
+
+        <!-- SSH Proxy producer -->
+        <mxCell id="prod-sshproxy" value="SSH Proxy Service&#xa;(session.events)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="producers-group">
+          <mxGeometry x="20" y="60" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prod-session-events" value="SessionStarted | SessionEnded&#xa;CommandExecuted | Disconnected" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;fontSize=10;" vertex="1" parent="producers-group">
+          <mxGeometry x="240" y="65" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Auth service producer -->
+        <mxCell id="prod-auth" value="Auth Service&#xa;(audit.events)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="producers-group">
+          <mxGeometry x="20" y="190" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prod-audit-events" value="LoginSuccess | LoginFailed | TokenIssued&#xa;MFAVerified | PermissionDenied" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;fontSize=10;" vertex="1" parent="producers-group">
+          <mxGeometry x="240" y="195" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- User service producer -->
+        <mxCell id="prod-user" value="User Service&#xa;(user.events)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="producers-group">
+          <mxGeometry x="20" y="320" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prod-user-events" value="UserCreated | UserUpdated&#xa;RoleChanged | UserDeleted" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;fontSize=10;" vertex="1" parent="producers-group">
+          <mxGeometry x="240" y="325" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Host registry producer -->
+        <mxCell id="prod-host" value="Host Registry Service&#xa;(host.events)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="producers-group">
+          <mxGeometry x="20" y="450" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prod-host-events" value="HostAdded | HostRemoved&#xa;HostStatusChanged | GroupUpdated" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;fontSize=10;" vertex="1" parent="producers-group">
+          <mxGeometry x="240" y="455" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Vault service producer -->
+        <mxCell id="prod-vault" value="Vault Service&#xa;(vault.events)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="producers-group">
+          <mxGeometry x="20" y="580" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prod-vault-events" value="VaultItemCreated | VaultItemDeleted&#xa;VaultShared | VaultAccessRevoked" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;fontSize=10;" vertex="1" parent="producers-group">
+          <mxGeometry x="240" y="585" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Key rotation producer -->
+        <mxCell id="prod-keyrot" value="Key Rotation Service&#xa;(key.rotation)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="producers-group">
+          <mxGeometry x="20" y="710" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prod-keyrot-events" value="KeyRotationStarted | KeyRotationComplete&#xa;KeyCompromised | HSMHealthCheck" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;fontSize=10;" vertex="1" parent="producers-group">
+          <mxGeometry x="240" y="715" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Session manager producer -->
+        <mxCell id="prod-sessmgr" value="Session Manager&#xa;(notification.events)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="producers-group">
+          <mxGeometry x="20" y="840" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prod-notif-events" value="AlertConnected | AlertDisconnected&#xa;ThreatDetected | PolicyViolation" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;fontSize=10;" vertex="1" parent="producers-group">
+          <mxGeometry x="240" y="845" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Metrics collector producer -->
+        <mxCell id="prod-metrics" value="All Services&#xa;(metrics.raw)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="producers-group">
+          <mxGeometry x="20" y="970" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prod-metrics-events" value="CPU | Memory | Latency | RPM&#xa;ErrorRate | ConnectionCount" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;fontSize=10;" vertex="1" parent="producers-group">
+          <mxGeometry x="240" y="975" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===== CONSUMER GROUPS ===== -->
+        <mxCell id="consumers-group" value="Consumer Groups &amp; Processing Services" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="60" width="600" height="1420" as="geometry" />
+        </mxCell>
+
+        <!-- Audit service consumer -->
+        <mxCell id="cons-audit" value="Audit Log Service&#xa;Group: audit-writers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="60" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-audit-note" value="Consumes: session.events, audit.events&#xa;→ Writes to PostgreSQL + Elasticsearch" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="65" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- SIEM consumer -->
+        <mxCell id="cons-siem" value="SIEM Exporter&#xa;Group: siem-export" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="190" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-siem-note" value="Consumes: audit.events&#xa;→ Streams to Splunk / Elastic SIEM" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="195" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Notification consumer -->
+        <mxCell id="cons-notif" value="Notification Service&#xa;Group: notification-sender" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="320" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-notif-note" value="Consumes: notification.events, user.events&#xa;→ Email / Slack / PagerDuty / Push" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="325" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Search indexer consumer -->
+        <mxCell id="cons-search" value="Search Indexer&#xa;Group: search-indexer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="450" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-search-note" value="Consumes: host.events, user.events&#xa;→ Updates Elasticsearch index" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="455" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Key rotation consumer -->
+        <mxCell id="cons-keyrot" value="Vault Re-encryption&#xa;Group: vault-reencrypt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="580" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-keyrot-note" value="Consumes: key.rotation&#xa;→ Re-encrypts affected vault items" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="585" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Metrics consumer -->
+        <mxCell id="cons-metrics" value="Metrics Aggregator&#xa;Group: metrics-agg" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="710" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-metrics-note" value="Consumes: metrics.raw&#xa;→ Writes to Prometheus remote-write" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="715" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Alert consumer -->
+        <mxCell id="cons-alert" value="Alert Engine&#xa;Group: alert-engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="840" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-alert-note" value="Consumes: audit.events, session.events&#xa;→ Anomaly detection + policy checks" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="845" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Recording consumer -->
+        <mxCell id="cons-record" value="Session Recorder&#xa;Group: session-recorder" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="970" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-record-note" value="Consumes: session.events&#xa;→ Assembles recording → uploads to S3" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="975" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- DLQ consumer -->
+        <mxCell id="cons-dlq" value="DLQ Handler&#xa;Group: dlq-reprocessor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcccc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="consumers-group">
+          <mxGeometry x="20" y="1100" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cons-dlq-note" value="Consumes: __deadletter__&#xa;→ Alert + retry / discard after 3 attempts" style="text;html=1;strokeColor=none;fillColor=#f0fff0;align=left;fontSize=10;" vertex="1" parent="consumers-group">
+          <mxGeometry x="240" y="1105" width="340" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PRODUCER → TOPIC ARROWS ===== -->
+        <mxCell id="e-p-sess" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="260" y="168" relative="1" as="geometry"><mxPoint x="260" y="168" as="sourcePoint"/><mxPoint x="680" y="168" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-p-aud" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="260" y="298" relative="1" as="geometry"><mxPoint x="260" y="298" as="sourcePoint"/><mxPoint x="680" y="298" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-p-user" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="260" y="428" relative="1" as="geometry"><mxPoint x="260" y="428" as="sourcePoint"/><mxPoint x="680" y="428" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-p-host" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="260" y="558" relative="1" as="geometry"><mxPoint x="260" y="558" as="sourcePoint"/><mxPoint x="680" y="558" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-p-vault" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="260" y="688" relative="1" as="geometry"><mxPoint x="260" y="688" as="sourcePoint"/><mxPoint x="680" y="688" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-p-keyrot" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="260" y="818" relative="1" as="geometry"><mxPoint x="260" y="818" as="sourcePoint"/><mxPoint x="680" y="818" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-p-notif" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="260" y="948" relative="1" as="geometry"><mxPoint x="260" y="948" as="sourcePoint"/><mxPoint x="680" y="948" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-p-metrics" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#666666;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="260" y="1078" relative="1" as="geometry"><mxPoint x="260" y="1078" as="sourcePoint"/><mxPoint x="680" y="1078" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- ===== TOPIC → CONSUMER ARROWS ===== -->
+        <mxCell id="e-t-audit" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="168" relative="1" as="geometry"><mxPoint x="1520" y="168" as="sourcePoint"/><mxPoint x="1560" y="168" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-siem" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#666666;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="298" relative="1" as="geometry"><mxPoint x="1520" y="298" as="sourcePoint"/><mxPoint x="1560" y="298" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-notif" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="428" relative="1" as="geometry"><mxPoint x="1520" y="428" as="sourcePoint"/><mxPoint x="1560" y="428" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-search" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="558" relative="1" as="geometry"><mxPoint x="1520" y="558" as="sourcePoint"/><mxPoint x="1560" y="558" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-keyrot" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="688" relative="1" as="geometry"><mxPoint x="1520" y="688" as="sourcePoint"/><mxPoint x="1560" y="688" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-metagg" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#666666;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="818" relative="1" as="geometry"><mxPoint x="1520" y="818" as="sourcePoint"/><mxPoint x="1560" y="818" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-alert" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="948" relative="1" as="geometry"><mxPoint x="1520" y="948" as="sourcePoint"/><mxPoint x="1560" y="948" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-recorder" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="1078" relative="1" as="geometry"><mxPoint x="1520" y="1078" as="sourcePoint"/><mxPoint x="1560" y="1078" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-t-dlq" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="1520" y="1208" relative="1" as="geometry"><mxPoint x="1520" y="1208" as="sourcePoint"/><mxPoint x="1560" y="1208" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- ===== RABBITMQ SIDE NOTE ===== -->
+        <mxCell id="rabbitmq-note" value="RabbitMQ (Task Queues)&#xa;&#xa;Queues:&#xa;• email.notifications (fanout)&#xa;• sms.notifications (direct)&#xa;• push.notifications (topic)&#xa;• webhook.delivery (direct)&#xa;• key.rotation.tasks (work queue)&#xa;&#xa;Used for: guaranteed-delivery tasks&#xa;where exactly-once semantics matter." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=20;fillColor=#fff2cc;strokeColor=#d6b656;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1300" width="300" height="180" as="geometry" />
+        </mxCell>
+
+        <!-- ===== KAFKA GUARANTEE NOTE ===== -->
+        <mxCell id="kafka-guarantee" value="Kafka Guarantees:&#xa;• At-least-once delivery (default)&#xa;• Idempotent producers (enable.idempotence=true)&#xa;• Transactional producers for multi-topic writes&#xa;• Consumer offset commit: manual (post-processing)&#xa;• Backpressure: consumer lag monitoring via Grafana&#xa;• Replay: any consumer can reset offsets for replay" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=20;fillColor=#fffde7;strokeColor=#d6b656;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="1280" width="400" height="180" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+]]></drawio-source>
+  </metadata>
+  
+  <!-- Background -->
+  <rect width="2200" height="1600" fill="#f8f9fa" rx="0"/>
+  
+  <!-- Header bar -->
+  <rect width="2200" height="60" fill="#1d3557"/>
+  <text x="24" y="38" font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="18" 
+        font-weight="600" fill="#a8dadc">HelixTerminator</text>
+  <text x="180" y="38" font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="18" 
+        font-weight="300" fill="#ffffff"> / Kafka Message Flow</text>
+  <rect x="2080" y="14" width="96" height="28" rx="14" fill="#e63946"/>
+  <text x="2128" y="33" font-family="'Segoe UI',Roboto,Arial,sans-serif" 
+        font-size="11" font-weight="700" fill="white" text-anchor="middle">Draw.io</text>
+  
+  <!-- Main content area background -->
+  <rect x="20" y="80" width="2160" height="1440" 
+        fill="white" rx="8" stroke="#dee2e6" stroke-width="1"/>
+  
+  <!-- Center notice -->
+  <text x="1100" y="740" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="28" font-weight="700"
+        fill="#1d3557" text-anchor="middle">Kafka Message Flow</text>
+  <text x="1100" y="780" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="16" fill="#457b9d" 
+        text-anchor="middle">HelixTerminator Architecture Diagram</text>
+  <text x="1100" y="820" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="14" fill="#6c757d"
+        text-anchor="middle">72 elements · 2200×1600px</text>
+  <text x="1100" y="860" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="13" fill="#888"
+        text-anchor="middle">Open 07_kafka_message_flow.drawio in app.diagrams.net for interactive rendering</text>
+  
+  <!-- Draw.io icon box -->
+  <rect x="1020" y="890" width="160" height="40" 
+        rx="6" fill="#1d3557" stroke="#457b9d" stroke-width="1"/>
+  <text x="1100" y="916" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="13" font-weight="600"
+        fill="#a8dadc" text-anchor="middle">app.diagrams.net</text>
+  
+  <!-- Bottom metadata bar -->
+  <rect x="0" y="1560" width="2200" height="40" fill="#0d1b2a"/>
+  <text x="24" y="1582" font-family="monospace" font-size="11" fill="#666">
+    07_kafka_message_flow.drawio · 72 cells · HelixTerminator Technical Specification 2026
+  </text>
+</svg>

@@ -1,0 +1,48 @@
+stateDiagram-v2
+    [*] --> QUEUED : transfer enqueued
+
+    QUEUED --> STARTING : worker picks up transfer
+    QUEUED --> CANCELLED : user cancels before start
+
+    STARTING --> CONNECTING : acquire SSH session
+    CONNECTING --> OPENING_CHANNEL : SSH session acquired
+    CONNECTING --> FAILED : SSH connection failed
+
+    OPENING_CHANNEL --> NEGOTIATING : SFTP subsystem requested
+    NEGOTIATING --> TRANSFERRING : SFTP init/version exchange OK
+    NEGOTIATING --> FAILED : subsystem rejected
+
+    TRANSFERRING --> PAUSED : user pauses / bandwidth limit
+    TRANSFERRING --> COMPLETING : last byte sent/received
+    TRANSFERRING --> ERROR : network error / server error
+    TRANSFERRING --> CANCELLED : user cancels mid-transfer
+
+    PAUSED --> TRANSFERRING : user resumes
+    PAUSED --> CANCELLED : user cancels while paused
+    PAUSED --> FAILED : pause timeout (10 min)
+
+    ERROR --> RETRYING : transient error + retry < 3
+    RETRYING --> TRANSFERRING : retry succeeded (resume from offset)
+    RETRYING --> FAILED : retry exhausted or permanent error
+
+    COMPLETING --> VERIFYING : compute checksum (SHA-256)
+    VERIFYING --> COMPLETED : checksum match ✓
+    VERIFYING --> FAILED : checksum mismatch (data corruption)
+
+    COMPLETED --> [*]
+    FAILED --> [*]
+    CANCELLED --> [*]
+
+    note right of TRANSFERRING
+        Progress events:
+        - bytes_transferred
+        - speed_bps
+        - eta_seconds
+        emitted every 500ms
+    end note
+
+    note right of RETRYING
+        Backoff: 2^attempt seconds
+        Resume from last ACK offset
+        (concurrent writes: 4 streams)
+    end note

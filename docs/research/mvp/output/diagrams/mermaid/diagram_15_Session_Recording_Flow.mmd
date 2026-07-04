@@ -1,0 +1,49 @@
+sequenceDiagram
+    autonumber
+    participant SSH as SSH Proxy Service
+    participant TERM as Terminal Service
+    participant KAFKA as Kafka (recording.chunks)
+    participant REC as Recording Service
+    participant PG as PostgreSQL
+    participant S3 as S3 / MinIO
+    participant C as Client (Replay)
+    participant GW as API Gateway
+
+    SSH->>SSH: SSH session active, intercept PTY output
+    SSH->>KAFKA: Produce recording.chunks {session_id, seq:0, timestamp, data:base64_vt100, type:OUTPUT}
+    Note over SSH,KAFKA: Produce every ~100ms or 64KB chunk, whichever first
+
+    loop Streaming Phase
+        SSH->>KAFKA: Produce chunk {session_id, seq:N, timestamp, data, timing_delta}
+        KAFKA->>REC: Consume chunk [helix-recording-cg]
+        REC->>REC: Buffer chunks in memory (order by seq)
+        REC->>PG: UPDATE session_recordings SET last_chunk_seq=$1, last_seen=NOW()
+    end
+
+    SSH->>KAFKA: Produce {type:SESSION_ENDED, session_id, total_bytes, duration_ms}
+    KAFKA->>REC: Consume SESSION_ENDED
+    REC->>REC: Flush buffer, sort all chunks by seq
+    REC->>REC: Encode as Asciinema v3 JSON (header + event stream)
+    REC->>REC: Compress with zstd (level 6)
+    REC->>S3: PutObject {key: recordings/{org_id}/{session_id}.cast.zst, body, ContentType:application/zstd}
+    S3-->>REC: {etag, size_bytes}
+
+    REC->>PG: UPDATE session_recordings SET status:COMPLETED, s3_key, size_bytes, duration_ms, checksum_sha256
+
+    alt Audit / Compliance Policy requires indexed content
+        REC->>REC: Extract text output from Asciinema events
+        REC->>PG: INSERT terminal_outputs {session_id, text_content, created_at} (for search)
+    end
+
+    Note over C,GW: Replay flow
+
+    C->>GW: GET /v1/recordings/{session_id}/stream?t=0
+    GW->>REC: GetRecording{session_id, user_id}
+    REC->>PG: SELECT session_recordings WHERE session_id=$1 (check access policy)
+    PG-->>REC: {s3_key, org_id, owner_id}
+    REC->>REC: Check permission (org admin or session owner)
+    REC->>S3: GetObject{key:s3_key}
+    S3-->>REC: Compressed Asciinema stream
+    REC->>REC: Decompress zstd
+    REC-->>GW: Stream Asciinema JSON events
+    GW-->>C: Chunked transfer (play at recorded timing or N× speed)

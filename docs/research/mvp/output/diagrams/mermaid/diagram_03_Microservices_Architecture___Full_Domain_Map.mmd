@@ -1,0 +1,87 @@
+graph TB
+    classDef authDomain fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef termDomain fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef dataDomain fill:#e65100,stroke:#bf360c,color:#fff
+    classDef platformDomain fill:#4a148c,stroke:#311b92,color:#fff
+    classDef aiDomain fill:#880e4f,stroke:#560027,color:#fff
+    classDef integDomain fill:#4e342e,stroke:#3e2723,color:#fff
+    classDef infra fill:#37474f,stroke:#263238,color:#fff
+    classDef client fill:#006064,stroke:#004d40,color:#fff
+
+    CLIENT["Flutter Clients\n(Desktop/Mobile/Web)"]
+    GW["API Gateway\n:443"]
+
+    subgraph AUTH["Auth Domain"]
+        A1["Auth Service\n:8001\nOAuth2 · SAML · OIDC"]
+        A2["User Service\n:8002\nProfile · Preferences · MFA"]
+        A3["PKI Service\n:8003\nSSH CA · TLS CA · CRL"]
+        A4["Org Service\n:8004\nOrgs · Teams · RBAC · Quotas"]
+    end
+
+    subgraph TERM["Terminal Domain"]
+        T1["SSH Proxy Service\n:8010\nSSH tunnels · Jump hosts · Agent fwd"]
+        T2["Terminal Service\n:8011\nPTY · WebSocket · Collab"]
+        T3["SFTP Service\n:8012\nUpload · Download · Sync"]
+        T4["Port Forward Service\n:8013\nLocal · Remote · Dynamic"]
+    end
+
+    subgraph DATA["Data Domain"]
+        D1["Vault Service\n:8020\nE2EE · Argon2id · AES-256-GCM"]
+        D2["Keychain Service\n:8021\nSSH keys · Passphrases · Agent"]
+        D3["Snippet Service\n:8022\nCommands · Templates · Tags"]
+        D4["Host Service\n:8023\nInventory · Groups · Labels"]
+        D5["Workspace Service\n:8024\nLayouts · Tabs · Sessions"]
+    end
+
+    subgraph PLATFORM["Platform Domain"]
+        P1["API Gateway\n:8000\nRoute · Rate-limit · Auth MW"]
+        P2["Config Service\n:8030\nFeature flags · Remote config"]
+        P3["Health Service\n:8031\nLiveness · Readiness · Deps"]
+        P4["Notification Service\n:8032\nEmail · Webhook · Push"]
+        P5["Audit Service\n:8033\nCompliance · SIEM · Export"]
+        P6["Analytics Service\n:8034\nEvents · Funnels · Reports"]
+    end
+
+    subgraph AI["AI Domain"]
+        AI1["AI/Autocomplete Service\n:8040\nCommand suggest · Shell AI"]
+        AI2["Recording Service\n:8041\nAsciinema · Replay · Search"]
+    end
+
+    subgraph INTEG["Integration Domain"]
+        I1["HelixTrack Bridge\n:8050\nJira · GitHub · Linear"]
+        I2["Container Bridge\n:8051\nDocker exec · K8s pod exec"]
+    end
+
+    CLIENT -->|"HTTPS/WSS"| GW
+    GW -->|"gRPC"| A1 & A2 & A3 & A4
+    GW -->|"gRPC/WSS"| T1 & T2 & T3 & T4
+    GW -->|"gRPC"| D1 & D2 & D3 & D4 & D5
+    GW -->|"gRPC"| P2 & P3 & P4 & P5 & P6
+    GW -->|"gRPC"| AI1 & AI2
+    GW -->|"gRPC"| I1 & I2
+
+    A1 -->|"validate user"| A2
+    A1 -->|"issue SSH cert"| A3
+    A1 -->|"check permissions"| A4
+    T1 -->|"verify cert"| A3
+    T1 -->|"log session"| P5
+    T2 -->|"spawn proxy"| T1
+    T3 -->|"use proxy"| T1
+    T4 -->|"use proxy"| T1
+    D1 -->|"fetch key"| D2
+    D4 -->|"check host cert"| A3
+    P4 -->|"user lookup"| A2
+    AI1 -->|"session context"| T2
+    AI2 -->|"stream from proxy"| T1
+    I2 -->|"use proxy"| T1
+    P5 -->|"org context"| A4
+    P6 -->|"org context"| A4
+
+    class A1,A2,A3,A4 authDomain
+    class T1,T2,T3,T4 termDomain
+    class D1,D2,D3,D4,D5 dataDomain
+    class P1,P2,P3,P4,P5,P6 platformDomain
+    class AI1,AI2 aiDomain
+    class I1,I2 integDomain
+    class GW infra
+    class CLIENT client

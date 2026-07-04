@@ -1,0 +1,54 @@
+sequenceDiagram
+    autonumber
+    participant C1 as Client A (Desktop)
+    participant GW as API Gateway
+    participant VAULT as Vault Service
+    participant KEY as Keychain Service
+    participant PG as PostgreSQL
+    participant KAFKA as Kafka
+    participant SYNC as Vault Sync Worker
+    participant C2 as Client B (Mobile)
+
+    C1->>C1: Generate Item Key (AES-256)
+    C1->>C1: Encrypt plaintext with Item Key (AES-256-GCM)
+    C1->>C1: Encrypt Item Key with Vault Key (client-side)
+    C1->>GW: PUT /v1/vault/items/{item_id} {encrypted_blob, enc_item_key, version}
+    GW->>VAULT: UpdateItem{item_id, encrypted_blob, enc_item_key, version, user_id}
+
+    VAULT->>PG: SELECT vault_items WHERE id=$1 FOR UPDATE
+    PG-->>VAULT: {current_version, updated_at}
+
+    alt Version Conflict
+        VAULT-->>GW: 409 Conflict {server_version, client_version}
+        GW-->>C1: 409 {conflict: true, server_item}
+        C1->>C1: Merge conflict (CRDT / last-write-wins)
+        C1->>GW: PUT /v1/vault/items/{item_id} {merged_blob, base_version}
+    else No Conflict
+        VAULT->>VAULT: Validate encrypted blob integrity (HMAC-SHA256)
+        VAULT->>PG: BEGIN TRANSACTION
+        VAULT->>PG: UPDATE vault_items SET blob=$1, version=$2, updated_at=NOW()
+        VAULT->>PG: INSERT vault_item_history {item_id, version, blob, changed_by}
+        VAULT->>PG: COMMIT
+
+        VAULT->>KAFKA: Produce vault.sync.events {type:ITEM_UPDATED, vault_id, item_id, version, org_id}
+
+        VAULT-->>GW: 200 {item_id, version, updated_at}
+        GW-->>C1: 200 {synced: true, version}
+
+        KAFKA->>SYNC: Consume vault.sync.events
+        SYNC->>PG: SELECT vault_devices WHERE vault_id=$1 AND device_id != $2
+        PG-->>SYNC: [{device_id, push_token, last_seen}]
+
+        loop For each device
+            SYNC->>SYNC: Build sync payload for device
+            SYNC->>C2: WebSocket PUSH {type:VAULT_UPDATED, item_id, version}
+        end
+
+        C2->>GW: GET /v1/vault/items/{item_id}?since={last_sync}
+        GW->>VAULT: GetItem{item_id, user_id}
+        VAULT->>PG: SELECT vault_items WHERE id=$1
+        PG-->>VAULT: {encrypted_blob, enc_item_key, version}
+        VAULT-->>GW: VaultItem{encrypted_blob, enc_item_key, version}
+        GW-->>C2: 200 VaultItem
+        C2->>C2: Decrypt with local Vault Key → Item Key → plaintext
+    end

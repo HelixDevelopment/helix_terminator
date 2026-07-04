@@ -1,0 +1,51 @@
+stateDiagram-v2
+    [*] --> INITIALIZING : process start / pod scheduled
+
+    INITIALIZING --> LOADING_CONFIG : read config (env + config-service)
+    LOADING_CONFIG --> CONNECTING_DEPS : config loaded
+    LOADING_CONFIG --> INIT_FAILED : config invalid / missing
+
+    CONNECTING_DEPS --> STARTING : all dependencies connected\n(DB, Redis, Kafka, SPIRE)
+    CONNECTING_DEPS --> INIT_FAILED : dependency connection failed\n(after 3 retries)
+
+    INIT_FAILED --> [*] : process exits (CrashLoopBackOff)
+
+    STARTING --> HEALTHY : HTTP /healthz returns 200\nreadiness probe passes
+    STARTING --> INIT_FAILED : startup timeout (60s)
+
+    HEALTHY --> DEGRADED : partial failure detected\n(one dep slow/failing)
+    HEALTHY --> UNHEALTHY : critical failure\n(DB unreachable, OOM)
+    HEALTHY --> SHUTTING_DOWN : SIGTERM received\n(rolling update / scale down)
+
+    DEGRADED --> HEALTHY : root cause resolved\n(dep recovers, circuit closes)
+    DEGRADED --> UNHEALTHY : degradation worsens\n(error rate > 50%)
+
+    UNHEALTHY --> RECOVERING : automatic recovery attempt\n(reconnect, cache clear)
+    UNHEALTHY --> SHUTTING_DOWN : liveness probe fails ×3\n(K8s kills pod)
+
+    RECOVERING --> HEALTHY : recovery successful\n(/healthz returns 200)
+    RECOVERING --> UNHEALTHY : recovery failed\n(after 3 attempts)
+
+    SHUTTING_DOWN --> DRAINING : stop accepting new requests\nderegister from load balancer
+    DRAINING --> TERMINATING : in-flight requests drained\n(gracePeriod: 30s)
+    TERMINATING --> [*] : process exits 0
+
+    note right of HEALTHY
+        Health checks:
+        - /healthz (liveness, 10s)
+        - /readyz (readiness, 5s)
+        - /metrics (Prometheus)
+        Circuit breaker: CLOSED
+    end note
+
+    note right of DEGRADED
+        Circuit breaker: HALF-OPEN
+        Alerting: PagerDuty P3
+        Reduced traffic: 50%
+    end note
+
+    note right of UNHEALTHY
+        Circuit breaker: OPEN
+        Alerting: PagerDuty P1
+        K8s: fails liveness probe
+    end note

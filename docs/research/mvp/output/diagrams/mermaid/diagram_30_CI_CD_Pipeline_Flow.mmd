@@ -1,0 +1,103 @@
+flowchart LR
+    classDef trigger fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef quality fill:#e65100,stroke:#bf360c,color:#fff
+    classDef build fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef security fill:#b71c1c,stroke:#7f0000,color:#fff
+    classDef deploy fill:#4a148c,stroke:#311b92,color:#fff
+    classDef gate fill:#f57f17,stroke:#e65100,color:#000
+    classDef notify fill:#37474f,stroke:#263238,color:#fff
+
+    subgraph SOURCE["Source Control"]
+        COMMIT["Git Commit\n(feature/fix/chore)"]
+        PR["Pull Request\nopened / updated"]
+        MERGE["Merge to main\n(squash merge)"]
+        TAG["Git Tag\nv1.x.y"]
+    end
+
+    subgraph CI["CI Pipeline (GitHub Actions)"]
+        LINT["Lint\n• golangci-lint (Go)\n• dart analyze (Flutter)\n• helm lint"]
+        UNIT["Unit Tests\n• go test -race ./...\n• flutter test\n• coverage > 80%"]
+        INT["Integration Tests\n• testcontainers (PG/Redis)\n• Kafka integration\n• gRPC contract tests"]
+        BUILD_GO["Build Go Services\n• docker buildx (multi-arch)\n• goreleaser\n• 25 service images"]
+        BUILD_FLUTTER["Build Flutter\n• macOS Desktop\n• iOS/Android\n• Web (WASM)"]
+        SCAN_SAST["SAST Scan\n• gosec\n• semgrep\n• CodeQL (GitHub)"]
+        SCAN_DEPS["Dependency Scan\n• govulncheck\n• trivy (Go modules)\n• flutter pub audit"]
+        SCAN_IMAGE["Container Image Scan\n• trivy (CVE scan)\n• docker scout\n• Block: CRITICAL CVE"]
+        SIGN["Image Signing\n• cosign (keyless)\n• SBOM generation\n• Attestation push"]
+    end
+
+    subgraph STAGING["Staging Deploy"]
+        PUSH_STAGING["Push to ECR\n(staging tag)"]
+        DEPLOY_STAGING["Deploy to Staging\n• helm upgrade\n• helixterm-staging ns\n• Rolling update"]
+        SMOKE["Smoke Tests\n• HTTP health checks\n• SSH connect test\n• Vault round-trip"]
+        E2E["E2E Tests\n• Playwright (Web UI)\n• Flutter integration test\n• API contract tests\n• ~200 scenarios"]
+        PERF["Performance Tests\n• k6 load test\n• 1000 concurrent SSH\n• p99 latency < 200ms"]
+    end
+
+    subgraph PROD_GATE["Production Gate"]
+        APPROVE["Manual Approval\n(Tech Lead + SRE)\nor auto-approve\non schedule"]
+        CANARY["Canary Release\n5% → 25% → 100%\n(10 min each step)\nAuto-rollback on errors"]
+    end
+
+    subgraph PROD["Production Deploy"]
+        PUSH_PROD["Push to ECR\n(prod + semver tag)"]
+        DEPLOY_PRIMARY["Deploy Primary\neu-west-1\n• helm upgrade\n• Rolling (1 pod at a time)"]
+        HEALTHCHECK["Production Health\n• All /healthz 200\n• Datadog synthetic\n• Error rate < 0.1%"]
+        DEPLOY_DR["Deploy DR\nus-east-1\n• 10 min after primary\n• Verify replication"]
+        NOTIFY_SUCCESS["Notify Success\n• Slack #deployments\n• Jira release ticket\n• GitHub release notes"]
+    end
+
+    subgraph ROLLBACK["Rollback Path"]
+        DETECT_ERROR["Error Detected\n• Error rate spike\n• Health check fail\n• Manual trigger"]
+        AUTO_ROLLBACK["Auto Rollback\n• helm rollback\n• Previous image tag\n• < 2 min RTO"]
+        NOTIFY_FAIL["Alert\n• PagerDuty P1\n• Slack #incidents\n• Auto-create incident"]
+    end
+
+    COMMIT -->|"push to feature branch"| PR
+    PR --> LINT
+    LINT -->|"pass"| UNIT
+    LINT -->|"fail"| NOTIFY_FAIL
+    UNIT -->|"pass + coverage OK"| INT
+    UNIT -->|"fail"| NOTIFY_FAIL
+    INT -->|"pass"| SCAN_SAST
+
+    MERGE --> BUILD_GO
+    MERGE --> BUILD_FLUTTER
+    BUILD_GO --> SCAN_DEPS
+    BUILD_GO --> SCAN_IMAGE
+    SCAN_DEPS --> SCAN_SAST
+    SCAN_IMAGE --> SIGN
+    SCAN_SAST -->|"no HIGH/CRITICAL"| SIGN
+    SCAN_SAST -->|"violations found"| NOTIFY_FAIL
+
+    SIGN --> PUSH_STAGING
+    PUSH_STAGING --> DEPLOY_STAGING
+    DEPLOY_STAGING --> SMOKE
+    SMOKE -->|"pass"| E2E
+    SMOKE -->|"fail"| DETECT_ERROR
+    E2E -->|"pass"| PERF
+    E2E -->|"fail"| DETECT_ERROR
+    PERF -->|"SLOs met"| APPROVE
+    PERF -->|"SLOs breached"| DETECT_ERROR
+
+    TAG --> APPROVE
+    APPROVE -->|"approved"| CANARY
+    CANARY -->|"canary healthy"| PUSH_PROD
+    CANARY -->|"canary errors"| DETECT_ERROR
+
+    PUSH_PROD --> DEPLOY_PRIMARY
+    DEPLOY_PRIMARY --> HEALTHCHECK
+    HEALTHCHECK -->|"healthy"| DEPLOY_DR
+    HEALTHCHECK -->|"unhealthy"| DETECT_ERROR
+    DEPLOY_DR --> NOTIFY_SUCCESS
+
+    DETECT_ERROR --> AUTO_ROLLBACK
+    AUTO_ROLLBACK --> NOTIFY_FAIL
+
+    class COMMIT,PR,MERGE,TAG trigger
+    class LINT,UNIT,INT quality
+    class BUILD_GO,BUILD_FLUTTER,SIGN build
+    class SCAN_SAST,SCAN_DEPS,SCAN_IMAGE security
+    class PUSH_STAGING,DEPLOY_STAGING,SMOKE,E2E,PERF,PUSH_PROD,DEPLOY_PRIMARY,DEPLOY_DR deploy
+    class APPROVE,CANARY,HEALTHCHECK gate
+    class NOTIFY_SUCCESS,NOTIFY_FAIL,DETECT_ERROR,AUTO_ROLLBACK notify

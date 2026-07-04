@@ -1,0 +1,57 @@
+sequenceDiagram
+    autonumber
+    participant C as Flutter Client
+    participant GW as API Gateway
+    participant SFTP as SFTP Service
+    participant PROXY as SSH Proxy Service
+    participant REMOTE as Remote SSH Server
+    participant PG as PostgreSQL
+    participant KAFKA as Kafka
+
+    C->>GW: POST /v1/sftp/transfers {host_id, operation:UPLOAD, local_path, remote_path}
+    GW->>SFTP: InitTransfer{host_id, operation, local_path, remote_path, user_id}
+
+    SFTP->>PROXY: GetOrCreateSession{host_id, user_id}
+    PROXY->>REMOTE: SSH Connect + Authenticate
+    REMOTE-->>PROXY: SSH session established
+    PROXY->>REMOTE: Open SFTP subsystem channel
+    REMOTE-->>PROXY: SFTP subsystem ready (SSH_MSG_CHANNEL_REQUEST sftp)
+    PROXY-->>SFTP: SFTPSession{session_id, channel_id}
+
+    SFTP->>PG: INSERT sftp_transfers {id, session_id, operation, status:STARTING, size}
+    SFTP-->>GW: 202 Accepted {transfer_id, websocket_url}
+    GW-->>C: 202 {transfer_id}
+
+    C->>GW: WSS Connect /v1/sftp/progress/{transfer_id}
+
+    alt UPLOAD
+        loop Chunked Upload (8 MB chunks)
+            C->>GW: Binary chunk data (WebSocket)
+            GW->>SFTP: WriteChunk{transfer_id, offset, data}
+            SFTP->>PROXY: sftp.Write{remote_path, offset, data}
+            PROXY->>REMOTE: SSH_FXP_WRITE {handle, offset, data}
+            REMOTE-->>PROXY: SSH_FXP_STATUS OK
+            PROXY-->>SFTP: WriteAck{bytes_written}
+            SFTP->>PG: UPDATE sftp_transfers SET bytes_transferred=$1
+            SFTP->>GW: Progress{transfer_id, bytes_transferred, total_bytes, speed}
+            GW->>C: WS Progress {percent, speed_bps, eta_seconds}
+        end
+    else DOWNLOAD
+        SFTP->>PROXY: sftp.Stat{remote_path}
+        PROXY->>REMOTE: SSH_FXP_STAT {remote_path}
+        REMOTE-->>PROXY: SSH_FXP_ATTRS {size, permissions, mtime}
+        PROXY-->>SFTP: FileAttrs{size, mtime}
+        SFTP-->>GW: DownloadStream initiation
+        loop Chunked Download
+            SFTP->>PROXY: sftp.Read{remote_path, offset, 8MB}
+            PROXY->>REMOTE: SSH_FXP_READ {handle, offset, length}
+            REMOTE-->>PROXY: SSH_FXP_DATA {data}
+            PROXY-->>SFTP: DataChunk
+            SFTP->>C: Stream chunk via WebSocket / HTTP range response
+        end
+    end
+
+    SFTP->>REMOTE: Close SFTP handle (SSH_FXP_CLOSE)
+    SFTP->>PG: UPDATE sftp_transfers SET status:COMPLETED, completed_at=NOW()
+    SFTP->>KAFKA: Produce sftp.transfer.events {type:COMPLETED, transfer_id, bytes, duration}
+    SFTP->>C: WS {status:COMPLETED, checksum_sha256}

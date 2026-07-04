@@ -1,0 +1,94 @@
+graph LR
+    classDef internet fill:#455a64,stroke:#263238,color:#fff
+    classDef cdn fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef lb fill:#6a1b9a,stroke:#4a148c,color:#fff
+    classDef ingress fill:#e65100,stroke:#bf360c,color:#fff
+    classDef mesh fill:#1b5e20,stroke:#0a3c00,color:#fff
+    classDef service fill:#1565c0,stroke:#0b4884,color:#fff
+    classDef data fill:#37474f,stroke:#263238,color:#fff
+    classDef firewall fill:#b71c1c,stroke:#7f0000,color:#fff
+
+    INTERNET["Internet\nPublic Traffic"]
+    MOBILE["Mobile Clients\niOS / Android"]
+    DESKTOP["Desktop Clients\nmacOS / Windows"]
+
+    CDN["AWS CloudFront CDN\nEdge caching, TLS termination\n100+ PoPs worldwide"]
+
+    WAF["AWS WAF\nDDoS protection\nOWASP top-10 rules\nRate limiting: 10k rps/IP"]
+
+    ALB["AWS Application LB\nHTTPS :443 / WSS\nCross-AZ, sticky sessions\nHealth check: /healthz"]
+
+    NLB["AWS Network LB\nSSH Direct Access :2222\nTCP pass-through\nfor enterprise users"]
+
+    NGINX["Nginx Ingress Controller\nSSL/TLS: Let's Encrypt\nHTTP→HTTPS redirect\nHeader injection\n(X-Real-IP, X-Forwarded-For)"]
+
+    ISTIO_GW["Istio Ingress Gateway\nService mesh entry\nmTLS termination\nTraffic policies"]
+
+    ISTIO_MESH["Istio Service Mesh\nEnvoy sidecars on all pods\nmTLS (SPIFFE/X.509)\nTraffic mirroring\nCircuit breaking"]
+
+    subgraph SERVICES["Microservices Layer (helixterm-prod)"]
+        API_GW["API Gateway\n:8000"]
+        CORE_SVCS["Core Services\nAuth/User/PKI/Org\n:8001-8004"]
+        TERM_SVCS["Terminal Services\nSSH Proxy/Terminal\n:8010-8013"]
+        DATA_SVCS["Data Services\nVault/Keys/Hosts\n:8020-8024"]
+    end
+
+    subgraph DATABASES["Data Layer (helixterm-data)"]
+        PG["PostgreSQL\nPatroni HA\n:5432"]
+        REDIS["Redis Cluster\n:6379"]
+        KAFKA["Apache Kafka\n:9092"]
+        RABBIT["RabbitMQ\n:5672"]
+    end
+
+    subgraph STORAGE["Persistent Storage"]
+        S3["AWS S3\nRecordings + backups"]
+        EFS["AWS EFS\nShared config / certs"]
+        EBS["AWS EBS\nDB volumes (gp3 NVMe)"]
+    end
+
+    FW_EGRESS["AWS Security Group\nEgress firewall\nAllow: SSH:22, HTTPS:443\nDeny: all others"]
+
+    SSH_TARGETS["SSH Target Servers\nCustomer infrastructure"]
+
+    INTERNET --> CDN
+    MOBILE --> CDN
+    DESKTOP --> CDN
+    CDN --> WAF
+    WAF --> ALB
+    WAF --> NLB
+    ALB --> NGINX
+    NLB --> NGINX
+    NGINX --> ISTIO_GW
+    ISTIO_GW --> ISTIO_MESH
+    ISTIO_MESH --> API_GW
+    API_GW --> CORE_SVCS
+    API_GW --> TERM_SVCS
+    API_GW --> DATA_SVCS
+
+    CORE_SVCS --> PG
+    CORE_SVCS --> REDIS
+    DATA_SVCS --> PG
+    TERM_SVCS --> REDIS
+    TERM_SVCS --> KAFKA
+    DATA_SVCS --> KAFKA
+    CORE_SVCS --> RABBIT
+    TERM_SVCS --> RABBIT
+
+    PG --> EBS
+    KAFKA --> EBS
+    TERM_SVCS --> S3
+    DATA_SVCS --> S3
+    CORE_SVCS --> EFS
+
+    TERM_SVCS --> FW_EGRESS
+    FW_EGRESS --> SSH_TARGETS
+
+    class INTERNET,MOBILE,DESKTOP internet
+    class CDN cdn
+    class WAF,FW_EGRESS firewall
+    class ALB,NLB lb
+    class NGINX,ISTIO_GW ingress
+    class ISTIO_MESH,API_GW,CORE_SVCS,TERM_SVCS,DATA_SVCS mesh
+    class PG,REDIS,KAFKA,RABBIT data
+    class S3,EFS,EBS data
+    class SSH_TARGETS internet

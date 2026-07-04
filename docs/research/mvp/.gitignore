@@ -1,0 +1,3 @@
+# Source spec archives — extracted content is committed under output/ (no duplicate blobs)
+*.tar
+*.zip

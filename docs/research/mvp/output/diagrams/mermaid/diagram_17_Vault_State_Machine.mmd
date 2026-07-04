@@ -1,0 +1,51 @@
+stateDiagram-v2
+    [*] --> LOCKED : vault created / app launch
+
+    LOCKED --> UNLOCKING : user enters master password\n(or biometric trigger)
+    LOCKED --> [*] : vault deleted
+
+    UNLOCKING --> DERIVING_KEY : Argon2id KDF started\n(memory: 64MB, time: 3)
+    DERIVING_KEY --> FETCHING_VAULT_KEY : KDF complete → Master Key
+    FETCHING_VAULT_KEY --> DECRYPTING_VAULT_KEY : enc_vault_key fetched from server
+    DECRYPTING_VAULT_KEY --> UNLOCKED : Vault Key decrypted ✓
+    DECRYPTING_VAULT_KEY --> UNLOCK_FAILED : Wrong password (HMAC mismatch)
+    UNLOCK_FAILED --> LOCKED : reset after 3 failures\n(progressive lockout)
+
+    UNLOCKED --> SYNCING : sync triggered\n(manual / timer / push event)
+    UNLOCKED --> WRITING : user modifies item
+    UNLOCKED --> LOCKING : timeout / user locks\n(idle: 5 min default)
+    UNLOCKED --> LOCKED : app background\n(grace period: 30s)
+
+    WRITING --> ENCRYPTING_ITEM : serialize plaintext
+    ENCRYPTING_ITEM --> UPLOADING : item encrypted (AES-256-GCM)
+    UPLOADING --> UNLOCKED : server ACK (200 OK)
+    UPLOADING --> SYNC_CONFLICT : server returns 409\n(version conflict)
+    UPLOADING --> SYNC_ERROR : server error / network
+
+    SYNC_ERROR --> UNLOCKED : retry queued (offline queue)
+
+    SYNCING --> DOWNLOADING_DELTA : fetch changes since last_sync
+    DOWNLOADING_DELTA --> DECRYPTING_ITEMS : delta received
+    DECRYPTING_ITEMS --> UNLOCKED : all items decrypted and merged
+    DECRYPTING_ITEMS --> SYNC_CONFLICT : local/remote diverge
+
+    SYNC_CONFLICT --> RESOLVING : CRDT merge / LWW policy
+    RESOLVING --> UNLOCKED : conflict resolved automatically
+    RESOLVING --> MANUAL_MERGE : irresolvable conflict\n(user intervention needed)
+    MANUAL_MERGE --> UNLOCKED : user picks winner
+
+    LOCKING --> WIPING_MEMORY : zero vault key from RAM
+    WIPING_MEMORY --> LOCKED : memory wiped ✓
+
+    note right of UNLOCKED
+        Vault Key held in
+        SecureEnclave / Keychain
+        (platform secure storage)
+    end note
+
+    note right of SYNC_CONFLICT
+        Conflict strategy:
+        - Passwords: LWW by updated_at
+        - Collections: union merge
+        - Deletions: tombstone wins
+    end note

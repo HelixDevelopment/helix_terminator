@@ -1,0 +1,39 @@
+graph TB
+    classDef person fill:#08427b,stroke:#052e56,color:#fff,rx:50
+    classDef system fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef external fill:#999,stroke:#666,color:#fff
+    classDef boundary fill:none,stroke:#1168bd,stroke-dasharray:5 5,color:#1168bd
+
+    subgraph Users["External Users"]
+        DEV["👤 Developer\nIndividual engineer\nmanaging SSH infrastructure"]
+        ADMIN["👤 Team Admin\nManages team members,\nhosts and permissions"]
+        ENTERPRISE["👤 Enterprise User\nLarge-scale org admin\nwith SSO & compliance needs"]
+    end
+
+    subgraph HT["HelixTerminator System"]
+        CORE["[Software System]\nHelixTerminator\n\nNext-generation enterprise SSH client\nproviding secure terminal access,\nvault, SFTP, and collaboration"]
+    end
+
+    subgraph External["External Systems"]
+        SSH["[External System]\nSSH Servers\nLinux/Unix hosts,\nnetwork devices"]
+        LDAP["[External System]\nLDAP / Active Directory\nCorporate identity\nand directory service"]
+        SAML["[External System]\nSAML Identity Provider\nOkta, Azure AD,\nPingFederate"]
+        SMTP["[External System]\nSMTP / Email\nTransactional email\nfor alerts & invites"]
+        S3["[External System]\nObject Storage (S3)\nSession recordings,\nbackups, exports"]
+        SPIRE["[External System]\nSPIRE / SPIFFE\nWorkload identity\nand SVID issuance"]
+    end
+
+    DEV -->|"Uses [HTTPS/WSS]"| CORE
+    ADMIN -->|"Manages via [HTTPS]"| CORE
+    ENTERPRISE -->|"Administers via [HTTPS/SAML]"| CORE
+
+    CORE -->|"Opens SSH tunnels [SSH/22]"| SSH
+    CORE -->|"Authenticates users [LDAPS/636]"| LDAP
+    CORE -->|"SSO federation [SAML 2.0/OIDC]"| SAML
+    CORE -->|"Sends notifications [SMTP/587]"| SMTP
+    CORE -->|"Stores recordings [HTTPS/S3 API]"| S3
+    CORE -->|"Fetches SVIDs [gRPC]"| SPIRE
+
+    class DEV,ADMIN,ENTERPRISE person
+    class CORE system
+    class SSH,LDAP,SAML,SMTP,S3,SPIRE external

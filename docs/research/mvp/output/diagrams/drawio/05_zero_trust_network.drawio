@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="diagrams.net" modified="2026-06-28T00:00:00.000Z" agent="HelixTerminator Spec" version="21.0.0" type="device">
+  <diagram name="Zero Trust Network Architecture" id="zero-trust-005">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="HelixTerminator — Zero Trust Network Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="20" width="1300" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Zero Trust Principle Banner -->
+        <mxCell id="zt-banner" value="Zero Trust Principle: &quot;Never Trust, Always Verify&quot; — Every request authenticated, authorized, and encrypted regardless of network location" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="200" y="65" width="1450" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- ===== EXTERNAL ZONE ===== -->
+        <mxCell id="external-zone" value="External Zone (Untrusted)" style="swimlane;startSize=30;fillColor=#ffcccc;strokeColor=#b85450;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="400" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-user" value="End User&#xa;(Browser/App)" style="shape=mxgraph.azure.user;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;pointerEvents=1;" vertex="1" parent="external-zone">
+          <mxGeometry x="30" y="60" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-cli" value="CLI Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="external-zone">
+          <mxGeometry x="150" y="70" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-api" value="Third-Party API&#xa;Integrations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="external-zone">
+          <mxGeometry x="280" y="70" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-note" value="All external traffic: TLS 1.3 min&#xa;mTLS for API clients" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=10;fontStyle=2;" vertex="1" parent="external-zone">
+          <mxGeometry x="20" y="150" width="360" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow External → Gateway -->
+        <mxCell id="e-ext-gw" value="TLS 1.3&#xa;+ OIDC" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;fontStyle=1;fillColor=#b85450;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="440" y="220" relative="1" as="geometry"><mxPoint x="440" y="220" as="sourcePoint"/><mxPoint x="560" y="220" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- ===== DMZ / GATEWAY ZONE ===== -->
+        <mxCell id="dmz-zone" value="DMZ / Perimeter (Gateway Zone)" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="560" y="120" width="400" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="waf" value="WAF&#xa;(Web Application Firewall)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="dmz-zone">
+          <mxGeometry x="20" y="50" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="api-gw-zt" value="API Gateway&#xa;(Envoy Proxy)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="dmz-zone">
+          <mxGeometry x="200" y="50" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ddos" value="DDoS Protection&#xa;(Cloudflare)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="dmz-zone">
+          <mxGeometry x="20" y="130" width="160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="rate-limit-gw" value="Rate Limiting&#xa;(Redis-backed)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="dmz-zone">
+          <mxGeometry x="200" y="130" width="160" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Arrow Gateway → SPIRE/Auth -->
+        <mxCell id="e-gw-spire" value="SVID check" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="960" y="220" relative="1" as="geometry"><mxPoint x="960" y="220" as="sourcePoint"/><mxPoint x="1080" y="220" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- ===== SPIFFE / SPIRE ===== -->
+        <mxCell id="spiffe-zone" value="SPIFFE / SPIRE Identity Plane" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="120" width="480" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="spire-server-zt" value="SPIRE Server&#xa;(Trust Anchor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="spiffe-zone">
+          <mxGeometry x="20" y="50" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="spire-agent" value="SPIRE Agents&#xa;(Node Attestors)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="spiffe-zone">
+          <mxGeometry x="200" y="50" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svid-store" value="SVID Store&#xa;(X.509 + JWT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="spiffe-zone">
+          <mxGeometry x="320" y="50" width="140" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="spiffe-note" value="spiffe://helixterm.io/service/{name}&#xa;Rotated every 1 hour" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=10;fontStyle=2;" vertex="1" parent="spiffe-zone">
+          <mxGeometry x="10" y="130" width="460" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ===== SERVICE MESH (Istio) ===== -->
+        <mxCell id="mesh-zone" value="Istio Service Mesh (mTLS Everywhere)" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="380" width="1520" height="480" as="geometry" />
+        </mxCell>
+
+        <!-- Istiod -->
+        <mxCell id="istiod" value="istiod&#xa;(Control Plane)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="660" y="30" width="160" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Service with Sidecar Proxies -->
+        <!-- Auth services group -->
+        <mxCell id="svc-auth-zt" value="Auth Service&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="30" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-identity-zt" value="Identity Service&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="200" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-pki-zt" value="PKI Service&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="370" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-vault-zt" value="Vault Service&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="540" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-ssh-zt" value="SSH Proxy&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="710" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-session-zt" value="Session Manager&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="880" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-user-zt" value="User Service&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="1050" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-audit-zt" value="Audit Service&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="1220" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="svc-org-zt" value="Org Service&#xa;[Envoy Sidecar]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="1370" y="140" width="150" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- mTLS connections (some sampled) -->
+        <mxCell id="e-auth-vault" value="mTLS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" parent="mesh-zone">
+          <mxGeometry x="105" y="195" relative="1" as="geometry"><mxPoint x="105" y="195" as="sourcePoint"/><mxPoint x="615" y="195" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e-ssh-session" value="mTLS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" parent="mesh-zone">
+          <mxGeometry x="785" y="195" relative="1" as="geometry"><mxPoint x="785" y="195" as="sourcePoint"/><mxPoint x="955" y="195" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+        <!-- Policy Engine row -->
+        <mxCell id="opa" value="OPA (Open Policy Agent)&#xa;Authorization Middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="200" y="260" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="network-policy" value="Kubernetes&#xa;NetworkPolicy&#xa;(default deny-all)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="440" y="260" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="istio-authz" value="Istio AuthorizationPolicy&#xa;(service-to-service)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="640" y="260" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="peer-auth" value="PeerAuthentication&#xa;(STRICT mTLS mode)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="880" y="260" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="rbac-policy" value="RBAC Policy Engine&#xa;(Attribute-Based)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="1100" y="260" width="200" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Telemetry row -->
+        <mxCell id="telemetry-label" value="Telemetry &amp; Audit" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontStyle=1;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="30" y="345" width="160" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="access-log" value="Access Logs&#xa;(every request)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="200" y="380" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="trace-span" value="Distributed Traces&#xa;(Jaeger spans)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="370" y="380" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="anomaly" value="Anomaly Detection&#xa;(ML-based)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="540" y="380" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="siem" value="SIEM Integration&#xa;(Splunk/Elastic)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="710" y="380" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="alert-zt" value="Real-time Alerts&#xa;(PagerDuty)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="mesh-zone">
+          <mxGeometry x="880" y="380" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===== DATA ZONE ===== -->
+        <mxCell id="data-zone-zt" value="Data Zone (Internal — Highest Trust Required)" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="920" width="1000" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="pg-zt" value="PostgreSQL&#xa;(encrypted at rest)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=8;fontSize=10;" vertex="1" parent="data-zone-zt">
+          <mxGeometry x="20" y="45" width="150" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="redis-zt" value="Redis&#xa;(AUTH + TLS)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=8;fontSize=10;" vertex="1" parent="data-zone-zt">
+          <mxGeometry x="190" y="45" width="150" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-zt" value="Kafka&#xa;(SASL + TLS)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=8;fontSize=10;" vertex="1" parent="data-zone-zt">
+          <mxGeometry x="360" y="45" width="150" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="hsm-zt" value="HSM&#xa;(FIPS 140-2 L3)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="data-zone-zt">
+          <mxGeometry x="530" y="45" width="150" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="backup-zt" value="Encrypted Backups&#xa;(S3 + KMS)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=8;fontSize=10;" vertex="1" parent="data-zone-zt">
+          <mxGeometry x="700" y="45" width="150" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="vault-zt" value="HashiCorp Vault&#xa;(dynamic secrets)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="data-zone-zt">
+          <mxGeometry x="870" y="45" width="110" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- ===== TARGET ZONE ===== -->
+        <mxCell id="target-zone-zt" value="Target SSH Infrastructure Zone" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="920" width="600" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="ssh-target1" value="Linux Servers&#xa;(SSH Agent Forwarded)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="target-zone-zt">
+          <mxGeometry x="20" y="45" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ssh-jump" value="Jump/Bastion&#xa;(certificate auth only)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="target-zone-zt">
+          <mxGeometry x="200" y="45" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ssh-network-zt" value="Network Devices&#xa;(no password auth)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="target-zone-zt">
+          <mxGeometry x="380" y="45" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PRINCIPLE NOTES ===== -->
+        <mxCell id="principles" value="Zero Trust Controls:&#xa;1. Identity verification on every request&#xa;2. Least-privilege access (RBAC + ABAC)&#xa;3. Micro-segmentation (per-pod NetworkPolicy)&#xa;4. Continuous validation (token TTL ≤ 15min)&#xa;5. All traffic encrypted (TLS 1.3 / mTLS)&#xa;6. Immutable audit trail (append-only Kafka)&#xa;7. Just-in-time access (PKI cert TTL = 1h)&#xa;8. Device trust (SPIFFE workload identity)" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=20;fillColor=#fffde7;strokeColor=#d6b656;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="380" width="340" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- Mesh → Data zone arrow -->
+        <mxCell id="e-mesh-data" value="mTLS + RBAC verified" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="300" y="860" relative="1" as="geometry"><mxPoint x="300" y="860" as="sourcePoint"/><mxPoint x="300" y="920" as="targetPoint"/></mxGeometry>
+        </mxCell>
+        <!-- Mesh → Target arrow -->
+        <mxCell id="e-mesh-target" value="SSH cert (signed, time-limited)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#666666;endArrow=block;endFill=1;" edge="1" parent="1">
+          <mxGeometry x="800" y="860" relative="1" as="geometry"><mxPoint x="800" y="860" as="sourcePoint"/><mxPoint x="1300" y="920" as="targetPoint"/></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

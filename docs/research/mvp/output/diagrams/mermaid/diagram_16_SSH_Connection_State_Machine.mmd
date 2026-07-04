@@ -1,0 +1,61 @@
+stateDiagram-v2
+    [*] --> IDLE : initialized
+
+    IDLE --> CONNECTING : user initiates connect()
+    IDLE --> [*] : dispose()
+
+    CONNECTING --> RESOLVING_DNS : TCP connect started
+    RESOLVING_DNS --> TCP_CONNECTING : DNS resolved
+    RESOLVING_DNS --> ERROR : DNS failure
+
+    TCP_CONNECTING --> KEX_NEGOTIATING : TCP connected
+    TCP_CONNECTING --> ERROR : TCP refused / timeout
+
+    KEX_NEGOTIATING --> AUTHENTICATING : Key exchange complete\n(curve25519-sha256)
+    KEX_NEGOTIATING --> ERROR : KEX failed / algo mismatch
+
+    AUTHENTICATING --> AUTHENTICATED : Auth success\n(cert/key/password)
+    AUTHENTICATING --> MFA_REQUIRED : Server requests\nkeyboard-interactive
+    AUTHENTICATING --> AUTH_FAILED : Max retries exceeded
+    AUTHENTICATING --> ERROR : Protocol error
+
+    MFA_REQUIRED --> AUTHENTICATING : MFA code submitted
+    MFA_REQUIRED --> AUTH_FAILED : MFA timeout / wrong code
+
+    AUTH_FAILED --> IDLE : reset()
+    AUTH_FAILED --> [*] : give_up()
+
+    AUTHENTICATED --> CHANNEL_OPENING : Request PTY channel
+    CHANNEL_OPENING --> ACTIVE : Channel + shell open
+    CHANNEL_OPENING --> ERROR : Channel open failure
+
+    ACTIVE --> EXECUTING : Shell command running
+    ACTIVE --> SUSPENDED : User suspends (Ctrl+Z)
+    ACTIVE --> DISCONNECTING : user disconnect()
+    ACTIVE --> ERROR : Network interruption
+
+    EXECUTING --> ACTIVE : Command completed
+    SUSPENDED --> ACTIVE : resume()
+
+    ERROR --> RECONNECTING : auto-reconnect enabled\n(attempt 1..5)
+    ERROR --> DISCONNECTED : reconnect disabled / max retries
+    RECONNECTING --> CONNECTING : retry after backoff\n(exponential: 1s,2s,4s,8s,16s)
+    RECONNECTING --> DISCONNECTED : max retries exceeded
+
+    DISCONNECTING --> DRAINING : Flush pending writes
+    DRAINING --> CLOSING_CHANNELS : All writes flushed
+    CLOSING_CHANNELS --> CLOSED : All channels closed
+    CLOSED --> DISCONNECTED : cleanup complete
+    DISCONNECTED --> [*]
+
+    note right of ACTIVE
+        Keepalive: every 30s
+        ServerAliveCountMax: 3
+        TCP keepalive: enabled
+    end note
+
+    note right of RECONNECTING
+        Jitter: ±20% of backoff
+        Preserves session state
+        Re-opens PTY on reconnect
+    end note

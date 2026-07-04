@@ -1,0 +1,151 @@
+erDiagram
+    users {
+        uuid id PK
+        string email
+        string password_hash
+        string status
+        int failed_login_count
+        timestamp lockout_until
+        timestamp created_at
+    }
+
+    auth_tokens {
+        uuid id PK
+        uuid user_id FK
+        string jti
+        string token_type
+        string scope
+        string device_id FK
+        timestamp issued_at
+        timestamp expires_at
+        bool revoked
+        string revoke_reason
+    }
+
+    refresh_tokens {
+        uuid id PK
+        uuid user_id FK
+        string token_hash
+        uuid device_id FK
+        string ip_address
+        bool rotated
+        timestamp issued_at
+        timestamp expires_at
+        timestamp last_used_at
+    }
+
+    device_tokens {
+        uuid id PK
+        uuid user_id FK
+        string device_fingerprint
+        string device_name
+        string platform
+        string push_token
+        bool trusted
+        timestamp registered_at
+        timestamp last_active_at
+    }
+
+    mfa_credentials {
+        uuid id PK
+        uuid user_id FK
+        string type
+        bool enabled
+        bool backup_codes_generated
+        timestamp enrolled_at
+        timestamp last_used_at
+    }
+
+    totp_credentials {
+        uuid id PK
+        uuid mfa_credential_id FK
+        bytea secret_encrypted
+        int digits
+        int period
+        string algorithm
+        int[] used_codes
+        timestamp created_at
+    }
+
+    fido2_credentials {
+        uuid id PK
+        uuid mfa_credential_id FK
+        string credential_id
+        string public_key_cbor
+        string aaguid
+        bigint sign_count
+        string attestation_type
+        string transports
+        bool resident_key
+        string user_verification
+        string display_name
+        timestamp created_at
+        timestamp last_used_at
+    }
+
+    backup_codes {
+        uuid id PK
+        uuid user_id FK
+        string code_hash
+        bool used
+        timestamp created_at
+        timestamp used_at
+    }
+
+    api_keys {
+        uuid id PK
+        uuid user_id FK
+        uuid org_id FK
+        string name
+        string key_prefix
+        string key_hash
+        string[] scopes
+        string[] allowed_ips
+        timestamp created_at
+        timestamp expires_at
+        timestamp last_used_at
+        bool revoked
+    }
+
+    login_attempts {
+        uuid id PK
+        uuid user_id FK
+        string ip_address
+        string user_agent
+        string method
+        bool success
+        string failure_reason
+        timestamp attempted_at
+    }
+
+    password_history {
+        uuid id PK
+        uuid user_id FK
+        string password_hash
+        timestamp created_at
+    }
+
+    saml_identities {
+        uuid id PK
+        uuid user_id FK
+        string idp_id
+        string subject_id
+        string name_id_format
+        jsonb attributes
+        timestamp linked_at
+        timestamp last_login_at
+    }
+
+    users ||--o{ auth_tokens : "has"
+    users ||--o{ refresh_tokens : "has"
+    users ||--o{ device_tokens : "registers"
+    users ||--o{ mfa_credentials : "enrolls"
+    mfa_credentials ||--o| totp_credentials : "details"
+    mfa_credentials ||--o{ fido2_credentials : "details"
+    users ||--o{ backup_codes : "has"
+    users ||--o{ api_keys : "owns"
+    users ||--o{ login_attempts : "generates"
+    users ||--o{ password_history : "tracks"
+    users ||--o{ saml_identities : "linked_to"
+    auth_tokens }o--|| device_tokens : "issued_to"
+    refresh_tokens }o--|| device_tokens : "issued_to"

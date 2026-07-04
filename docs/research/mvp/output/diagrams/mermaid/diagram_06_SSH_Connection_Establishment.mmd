@@ -1,0 +1,56 @@
+sequenceDiagram
+    autonumber
+    participant C as Flutter Client
+    participant GW as API Gateway
+    participant AUTH as Auth Service
+    participant PKI as PKI Service
+    participant PROXY as SSH Proxy
+    participant JUMP as Jump Host (Bastion)
+    participant TARGET as Target SSH Server
+    participant REDIS as Redis (Sessions)
+    participant KAFKA as Kafka
+
+    C->>GW: POST /v1/ssh/connect {host_id, user, auth_method}
+    GW->>AUTH: ValidateJWT(bearer_token)
+    AUTH->>REDIS: GET session:{token_id}
+    REDIS-->>AUTH: session data (valid, not expired)
+    AUTH-->>GW: {user_id, org_id, permissions:[ssh:connect]}
+    GW->>PROXY: gRPC ConnectRequest{host_id, user_id, auth_method}
+
+    alt Certificate Authentication
+        PROXY->>PKI: IssueCertificate{user_id, host_id, ttl=3600}
+        PKI->>PKI: Sign with SSH CA key (ECDSA P-384)
+        PKI-->>PROXY: SignedCertificate{cert_pem, serial}
+    else Key Authentication
+        PROXY->>PROXY: Load key from Keychain Service
+    else Password Authentication
+        PROXY->>PROXY: Retrieve from Vault Service (E2EE)
+    end
+
+    alt Jump Host Required
+        PROXY->>JUMP: SSH Connect (direct-tcpip) :22
+        JUMP->>JUMP: Validate host certificate
+        JUMP-->>PROXY: TCP channel established
+        PROXY->>TARGET: SSH Connect via jump channel
+    else Direct Connection
+        PROXY->>TARGET: SSH Connect :22 (TCP)
+    end
+
+    TARGET->>PROXY: SSH version exchange (SSH-2.0)
+    PROXY->>TARGET: Key exchange (curve25519-sha256)
+    TARGET-->>PROXY: KEX complete, session keys established
+    PROXY->>TARGET: Authenticate (certificate/key/password)
+    TARGET-->>PROXY: Authentication success
+    PROXY->>TARGET: Request PTY (xterm-256color, 80x24)
+    TARGET-->>PROXY: PTY granted
+    PROXY->>TARGET: Start shell
+    TARGET-->>PROXY: Shell active (channel open)
+
+    PROXY->>REDIS: SET session:{session_id} {proxy_addr, host, user, started_at} EX 86400
+    PROXY->>KAFKA: Produce ssh.sessions.events {type:CONNECTED, session_id, host_id, user_id}
+
+    PROXY-->>GW: ConnectResponse{session_id, websocket_token}
+    GW-->>C: 101 Upgrade WebSocket {session_id, ws_token}
+    C->>GW: WSS Connect /v1/ssh/stream/{session_id}
+    GW->>PROXY: Stream attach {session_id}
+    Note over C,TARGET: Bidirectional WebSocket ↔ SSH channel active

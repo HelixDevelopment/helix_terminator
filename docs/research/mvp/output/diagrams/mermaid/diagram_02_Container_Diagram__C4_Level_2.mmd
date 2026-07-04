@@ -1,0 +1,92 @@
+graph TB
+    classDef client fill:#08427b,stroke:#052e56,color:#fff
+    classDef gateway fill:#b05a08,stroke:#7a3f06,color:#fff
+    classDef service fill:#1168bd,stroke:#0b4884,color:#fff
+    classDef datastore fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef messaging fill:#6a1b9a,stroke:#4a148c,color:#fff
+    classDef external fill:#888,stroke:#555,color:#fff
+
+    subgraph Clients["Client Applications"]
+        FLUTTER_DESKTOP["Flutter Desktop\n(macOS/Windows/Linux)\nDart/Flutter"]
+        FLUTTER_MOBILE["Flutter Mobile\n(iOS/Android)\nDart/Flutter"]
+        WEB_APP["Web Application\n(Browser WASM)\nDart/Flutter Web"]
+    end
+
+    subgraph Gateway["API Gateway Layer"]
+        GW["API Gateway Service\nGo + Envoy\nHTTPS/WSS :443"]
+    end
+
+    subgraph AuthDomain["Auth Domain"]
+        AUTH_SVC["Auth Service\nGo :8001\nJWT/OAuth2/SAML"]
+        USER_SVC["User Service\nGo :8002\nUser management"]
+        PKI_SVC["PKI Service\nGo :8003\nCert CA"]
+        ORG_SVC["Org Service\nGo :8004\nOrg/team RBAC"]
+    end
+
+    subgraph TerminalDomain["Terminal Domain"]
+        SSH_PROXY["SSH Proxy Service\nGo :8010\nlibssh2/crypto/ssh"]
+        TERMINAL_SVC["Terminal Service\nGo :8011\nWebSocket PTY"]
+        SFTP_SVC["SFTP Service\nGo :8012\nFile transfer"]
+        PF_SVC["Port Forward Service\nGo :8013\nTCP tunneling"]
+    end
+
+    subgraph DataDomain["Data Domain"]
+        VAULT_SVC["Vault Service\nGo :8020\nE2EE secret store"]
+        KEYCHAIN_SVC["Keychain Service\nGo :8021\nSSH key mgmt"]
+        SNIPPET_SVC["Snippet Service\nGo :8022\nCommand library"]
+        HOST_SVC["Host Service\nGo :8023\nHost inventory"]
+        WS_SVC["Workspace Service\nGo :8024\nWorkspace mgmt"]
+    end
+
+    subgraph PlatformDomain["Platform Domain"]
+        CONFIG_SVC["Config Service\nGo :8030\nFeature flags"]
+        HEALTH_SVC["Health Service\nGo :8031\nService health"]
+        NOTIF_SVC["Notification Service\nGo :8032\nAlerts/webhooks"]
+        AUDIT_SVC["Audit Service\nGo :8033\nCompliance logs"]
+        ANALYTICS_SVC["Analytics Service\nGo :8034\nUsage metrics"]
+    end
+
+    subgraph AIDomain["AI Domain"]
+        AI_SVC["AI/Autocomplete Service\nGo :8040\nLLM integration"]
+        REC_SVC["Recording Service\nGo :8041\nSession replay"]
+    end
+
+    subgraph IntegrationDomain["Integration Domain"]
+        TRACK_SVC["HelixTrack Bridge\nGo :8050\nIssue tracker sync"]
+        CONTAINER_SVC["Container Bridge\nGo :8051\nDocker/K8s exec"]
+    end
+
+    subgraph DataStores["Data Stores"]
+        PG[("PostgreSQL 16\nPrimary DB\n:5432")]
+        REDIS[("Redis Cluster\nSessions/Cache\n:6379")]
+        S3_STORE[("S3 / MinIO\nRecordings/Files\n:9000")]
+    end
+
+    subgraph Messaging["Messaging Layer"]
+        KAFKA["Apache Kafka\nEvent streaming\n:9092"]
+        RABBIT["RabbitMQ\nCommand queues\n:5672"]
+    end
+
+    FLUTTER_DESKTOP & FLUTTER_MOBILE & WEB_APP -->|"HTTPS/WSS"| GW
+
+    GW -->|"gRPC/HTTP2"| AUTH_SVC & USER_SVC & PKI_SVC & ORG_SVC
+    GW -->|"gRPC/WSS"| SSH_PROXY & TERMINAL_SVC & SFTP_SVC & PF_SVC
+    GW -->|"gRPC/HTTP2"| VAULT_SVC & KEYCHAIN_SVC & SNIPPET_SVC & HOST_SVC & WS_SVC
+    GW -->|"gRPC/HTTP2"| CONFIG_SVC & HEALTH_SVC & NOTIF_SVC & AUDIT_SVC & ANALYTICS_SVC
+    GW -->|"gRPC/HTTP2"| AI_SVC & REC_SVC
+    GW -->|"gRPC/HTTP2"| TRACK_SVC & CONTAINER_SVC
+
+    AUTH_SVC & USER_SVC & PKI_SVC & ORG_SVC --> PG
+    VAULT_SVC & KEYCHAIN_SVC & SNIPPET_SVC & HOST_SVC & WS_SVC --> PG
+    AUDIT_SVC & ANALYTICS_SVC & TRACK_SVC --> PG
+    AUTH_SVC & SSH_PROXY & TERMINAL_SVC --> REDIS
+    REC_SVC --> S3_STORE
+
+    SSH_PROXY & TERMINAL_SVC & VAULT_SVC & AUDIT_SVC --> KAFKA
+    NOTIF_SVC & SSH_PROXY & CONTAINER_SVC --> RABBIT
+
+    class FLUTTER_DESKTOP,FLUTTER_MOBILE,WEB_APP client
+    class GW gateway
+    class AUTH_SVC,USER_SVC,PKI_SVC,ORG_SVC,SSH_PROXY,TERMINAL_SVC,SFTP_SVC,PF_SVC,VAULT_SVC,KEYCHAIN_SVC,SNIPPET_SVC,HOST_SVC,WS_SVC,CONFIG_SVC,HEALTH_SVC,NOTIF_SVC,AUDIT_SVC,ANALYTICS_SVC,AI_SVC,REC_SVC,TRACK_SVC,CONTAINER_SVC service
+    class PG,REDIS,S3_STORE datastore
+    class KAFKA,RABBIT messaging

@@ -1,0 +1,91 @@
+graph TB
+    classDef node fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef ns fill:none,stroke:#555,stroke-dasharray:3 3
+    classDef pod fill:#2e7d32,stroke:#1b5e20,color:#fff
+    classDef stateful fill:#e65100,stroke:#bf360c,color:#fff
+    classDef infra fill:#4a148c,stroke:#311b92,color:#fff
+    classDef monitoring fill:#006064,stroke:#004d40,color:#fff
+
+    subgraph CLUSTER["Kubernetes Cluster (EKS v1.30)"]
+
+        subgraph INFRA_NS["Namespace: kube-system / istio-system"]
+            ISTIOD["istiod\n(Deployment, 3 replicas)"]
+            COREDNS["coredns\n(Deployment, 2 replicas)"]
+            SPIRE_SERVER["spire-server\n(StatefulSet, 3 replicas)"]
+            SPIRE_AGENT["spire-agent\n(DaemonSet, all nodes)"]
+        end
+
+        subgraph SYSTEM_NS["Namespace: helixterm-system"]
+            GW_POD["api-gateway\n(Deployment, 3 replicas\nNode: gateway-pool)"]
+            CONFIG_POD["config-service\n(Deployment, 2 replicas)"]
+            HEALTH_POD["health-service\n(Deployment, 2 replicas)"]
+        end
+
+        subgraph PROD_NS["Namespace: helixterm-prod"]
+            AUTH_POD["auth-service\n(Deployment, 3 replicas)"]
+            USER_POD["user-service\n(Deployment, 3 replicas)"]
+            PKI_POD["pki-service\n(Deployment, 2 replicas)"]
+            ORG_POD["org-service\n(Deployment, 2 replicas)"]
+            PROXY_POD["ssh-proxy\n(Deployment, 5 replicas\nHPA: 5-20)"]
+            TERM_POD["terminal-service\n(Deployment, 5 replicas\nHPA: 5-20)"]
+            SFTP_POD["sftp-service\n(Deployment, 3 replicas)"]
+            PF_POD["portforward-service\n(Deployment, 3 replicas)"]
+            VAULT_POD["vault-service\n(Deployment, 3 replicas)"]
+            HOST_POD["host-service\n(Deployment, 2 replicas)"]
+            AUDIT_POD["audit-service\n(Deployment, 2 replicas)"]
+            AI_POD["ai-service\n(Deployment, 2 replicas\nGPU: nvidia-t4)"]
+            REC_POD["recording-service\n(Deployment, 3 replicas)"]
+            NOTIF_POD["notification-service\n(Deployment, 2 replicas)"]
+        end
+
+        subgraph STAGING_NS["Namespace: helixterm-staging"]
+            STAGING_GW["api-gateway-stg\n(Deployment, 1 replica)"]
+            STAGING_ALL["all-services-stg\n(Deployment, 1 replica each)"]
+        end
+
+        subgraph MONITORING_NS["Namespace: monitoring"]
+            PROM["prometheus\n(StatefulSet, 2 replicas)"]
+            GRAFANA["grafana\n(Deployment, 1 replica)"]
+            LOKI["loki\n(StatefulSet, 3 replicas)"]
+            JAEGER["jaeger-collector\n(Deployment, 2 replicas)"]
+            ALERTMGR["alertmanager\n(StatefulSet, 3 replicas)"]
+        end
+
+        subgraph DATA_NS["Namespace: helixterm-data"]
+            PG_POD["postgresql\n(StatefulSet, 3 replicas\nPatroni HA)"]
+            REDIS_POD["redis-cluster\n(StatefulSet, 6 replicas\n3 primary + 3 replica)"]
+            KAFKA_POD["kafka\n(StatefulSet, 3 replicas\nZookeeper: 3)"]
+            RABBIT_POD["rabbitmq\n(StatefulSet, 3 replicas)"]
+        end
+
+        subgraph NODES["Node Pools"]
+            GATEWAY_NODE["gateway-pool\nm5.xlarge × 3\nPublic subnet"]
+            APP_NODE["app-pool\nm5.2xlarge × 10\nPrivate subnet\nHPA target"]
+            DATA_NODE["data-pool\nr5.2xlarge × 3\nPrivate subnet\nSSD NVMe"]
+            GPU_NODE["gpu-pool\np3.2xlarge × 2\nPrivate subnet\nnvidia-t4 GPU"]
+        end
+    end
+
+    GW_POD --> AUTH_POD & USER_POD & PKI_POD & ORG_POD
+    GW_POD --> PROXY_POD & TERM_POD & SFTP_POD & PF_POD
+    GW_POD --> VAULT_POD & HOST_POD & AUDIT_POD & NOTIF_POD
+    GW_POD --> AI_POD & REC_POD
+
+    AUTH_POD & USER_POD & VAULT_POD & AUDIT_POD --> PG_POD
+    AUTH_POD & PROXY_POD & TERM_POD --> REDIS_POD
+    PROXY_POD & TERM_POD & VAULT_POD & AUDIT_POD --> KAFKA_POD
+    PROXY_POD & NOTIF_POD --> RABBIT_POD
+
+    GATEWAY_NODE -.->|hosts| GW_POD
+    APP_NODE -.->|hosts| AUTH_POD & PROXY_POD & TERM_POD & VAULT_POD
+    DATA_NODE -.->|hosts| PG_POD & REDIS_POD & KAFKA_POD & RABBIT_POD
+    GPU_NODE -.->|hosts| AI_POD
+
+    ISTIOD -.->|mesh| PROD_NS
+    SPIRE_AGENT -.->|svid| PROD_NS
+
+    class GW_POD,AUTH_POD,USER_POD,PKI_POD,ORG_POD,PROXY_POD,TERM_POD,SFTP_POD,PF_POD,VAULT_POD,HOST_POD,AUDIT_POD,AI_POD,REC_POD,NOTIF_POD,CONFIG_POD,HEALTH_POD pod
+    class PG_POD,REDIS_POD,KAFKA_POD,RABBIT_POD,PROM,LOKI,JAEGER,ALERTMGR stateful
+    class GATEWAY_NODE,APP_NODE,DATA_NODE,GPU_NODE node
+    class ISTIOD,COREDNS,SPIRE_SERVER,SPIRE_AGENT infra
+    class GRAFANA,PROM,LOKI,JAEGER,ALERTMGR monitoring

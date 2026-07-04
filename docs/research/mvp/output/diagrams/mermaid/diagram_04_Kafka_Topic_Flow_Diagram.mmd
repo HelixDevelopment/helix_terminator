@@ -1,0 +1,77 @@
+flowchart LR
+    classDef producer fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef topic fill:#f57f17,stroke:#e65100,color:#000
+    classDef consumer fill:#2e7d32,stroke:#1b5e20,color:#fff
+
+    subgraph Producers["Kafka Producers"]
+        P_SSH["SSH Proxy Service"]
+        P_AUTH["Auth Service"]
+        P_VAULT["Vault Service"]
+        P_AUDIT["Audit Service"]
+        P_TERMINAL["Terminal Service"]
+        P_HOST["Host Service"]
+        P_USER["User Service"]
+        P_SFTP["SFTP Service"]
+    end
+
+    subgraph Topics["Kafka Topics"]
+        T1[["ssh.sessions.events\n(partition: org_id)"]]
+        T2[["auth.login.events\n(partition: user_id)"]]
+        T3[["vault.sync.events\n(partition: vault_id)"]]
+        T4[["audit.compliance.events\n(partition: org_id)"]]
+        T5[["terminal.output.stream\n(partition: session_id)"]]
+        T6[["host.inventory.changes\n(partition: org_id)"]]
+        T7[["user.lifecycle.events\n(partition: user_id)"]]
+        T8[["sftp.transfer.events\n(partition: session_id)"]]
+        T9[["notifications.dispatch\n(partition: user_id)"]]
+        T10[["analytics.raw.events\n(partition: org_id)"]]
+        T11[["recording.chunks\n(partition: session_id)"]]
+    end
+
+    subgraph Consumers["Kafka Consumers (Consumer Groups)"]
+        C_REC["Recording Service\n[helix-recording-cg]"]
+        C_ANALYTICS["Analytics Service\n[helix-analytics-cg]"]
+        C_NOTIF["Notification Service\n[helix-notification-cg]"]
+        C_AUDIT_SINK["Audit SIEM Sink\n[helix-audit-siem-cg]"]
+        C_VAULT_SYNC["Vault Sync Workers\n[helix-vault-sync-cg]"]
+        C_HOST_CACHE["Host Cache Invalidator\n[helix-host-cache-cg]"]
+        C_USER_PROJ["User Projector\n[helix-user-proj-cg]"]
+        C_AI["AI Context Builder\n[helix-ai-context-cg]"]
+        C_SEARCH["Search Indexer\n[helix-search-idx-cg]"]
+    end
+
+    P_SSH -->|"produce"| T1
+    P_SSH -->|"produce"| T11
+    P_AUTH -->|"produce"| T2
+    P_AUTH -->|"produce"| T4
+    P_VAULT -->|"produce"| T3
+    P_VAULT -->|"produce"| T4
+    P_AUDIT -->|"produce"| T4
+    P_TERMINAL -->|"produce"| T5
+    P_TERMINAL -->|"produce"| T10
+    P_HOST -->|"produce"| T6
+    P_USER -->|"produce"| T7
+    P_USER -->|"produce"| T9
+    P_SFTP -->|"produce"| T8
+    P_SFTP -->|"produce"| T4
+
+    T1 -->|"consume"| C_ANALYTICS
+    T1 -->|"consume"| C_NOTIF
+    T2 -->|"consume"| C_ANALYTICS
+    T2 -->|"consume"| C_AUDIT_SINK
+    T3 -->|"consume"| C_VAULT_SYNC
+    T4 -->|"consume"| C_AUDIT_SINK
+    T5 -->|"consume"| C_REC
+    T5 -->|"consume"| C_AI
+    T6 -->|"consume"| C_HOST_CACHE
+    T6 -->|"consume"| C_SEARCH
+    T7 -->|"consume"| C_USER_PROJ
+    T7 -->|"consume"| C_NOTIF
+    T8 -->|"consume"| C_ANALYTICS
+    T9 -->|"consume"| C_NOTIF
+    T10 -->|"consume"| C_ANALYTICS
+    T11 -->|"consume"| C_REC
+
+    class P_SSH,P_AUTH,P_VAULT,P_AUDIT,P_TERMINAL,P_HOST,P_USER,P_SFTP producer
+    class T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11 topic
+    class C_REC,C_ANALYTICS,C_NOTIF,C_AUDIT_SINK,C_VAULT_SYNC,C_HOST_CACHE,C_USER_PROJ,C_AI,C_SEARCH consumer

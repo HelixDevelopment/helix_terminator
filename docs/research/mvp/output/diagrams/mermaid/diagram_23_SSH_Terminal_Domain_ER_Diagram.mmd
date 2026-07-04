@@ -1,0 +1,129 @@
+erDiagram
+    ssh_sessions {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        uuid host_id FK
+        string status
+        string auth_method
+        string proxy_node
+        string client_ip
+        string client_version
+        string server_version
+        string terminal_type
+        int cols
+        int rows
+        bigint bytes_in
+        bigint bytes_out
+        int commands_count
+        timestamp started_at
+        timestamp ended_at
+    }
+
+    session_recordings {
+        uuid id PK
+        uuid ssh_session_id FK
+        string status
+        string s3_key
+        bigint size_bytes
+        int duration_ms
+        int chunk_count
+        string format
+        string codec
+        string checksum_sha256
+        timestamp started_at
+        timestamp completed_at
+    }
+
+    recording_chunks {
+        uuid id PK
+        uuid session_recording_id FK
+        int sequence
+        int timing_delta_ms
+        bytea data
+        string event_type
+        timestamp recorded_at
+    }
+
+    terminal_outputs {
+        uuid id PK
+        uuid ssh_session_id FK
+        text content
+        int offset_bytes
+        string encoding
+        timestamp recorded_at
+    }
+
+    port_forwards {
+        uuid id PK
+        uuid ssh_session_id FK
+        string type
+        string local_addr
+        int local_port
+        string remote_addr
+        int remote_port
+        string status
+        bigint bytes_transferred
+        int connections_count
+        timestamp opened_at
+        timestamp closed_at
+    }
+
+    sftp_transfers {
+        uuid id PK
+        uuid ssh_session_id FK
+        uuid user_id FK
+        string operation
+        string local_path
+        string remote_path
+        bigint total_bytes
+        bigint bytes_transferred
+        int chunks_completed
+        string status
+        string checksum_sha256
+        string error_message
+        timestamp started_at
+        timestamp completed_at
+    }
+
+    collaboration_sessions {
+        uuid id PK
+        uuid ssh_session_id FK
+        uuid owner_id FK
+        string mode
+        string share_token
+        string status
+        int max_participants
+        timestamp created_at
+        timestamp ended_at
+    }
+
+    collaboration_participants {
+        uuid id PK
+        uuid collab_session_id FK
+        uuid user_id FK
+        string role
+        bool can_write
+        bool can_copy_paste
+        string client_ip
+        timestamp joined_at
+        timestamp left_at
+    }
+
+    collab_input_events {
+        uuid id PK
+        uuid collab_session_id FK
+        uuid participant_id FK
+        string input_type
+        bytea data
+        timestamp recorded_at
+    }
+
+    ssh_sessions ||--o| session_recordings : "recorded_as"
+    session_recordings ||--o{ recording_chunks : "composed_of"
+    ssh_sessions ||--o{ terminal_outputs : "produces"
+    ssh_sessions ||--o{ port_forwards : "has"
+    ssh_sessions ||--o{ sftp_transfers : "spawns"
+    ssh_sessions ||--o| collaboration_sessions : "shared_via"
+    collaboration_sessions ||--o{ collaboration_participants : "has"
+    collaboration_participants ||--o{ collab_input_events : "sends"

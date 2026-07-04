@@ -1,0 +1,101 @@
+graph TB
+    classDef region fill:none,stroke:#1565c0,stroke-width:2px
+    classDef az fill:none,stroke:#43a047,stroke-dasharray:4 2
+    classDef service fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef data fill:#e65100,stroke:#bf360c,color:#fff
+    classDef replication fill:#6a1b9a,stroke:#4a148c,color:#fff
+    classDef dns fill:#006064,stroke:#004d40,color:#fff
+    classDef cdn fill:#37474f,stroke:#263238,color:#fff
+
+    ROUTE53["AWS Route 53\nGlobal DNS\nLatency-based routing\nHealth check failover\nTTL: 30s"]
+
+    CF["AWS CloudFront\nGlobal CDN\n250+ PoPs\nOrigin failover enabled"]
+
+    ROUTE53 --> CF
+    CF --> PRIMARY_LB
+    CF -.->|"failover (RTO < 5min)"| DR_LB
+
+    subgraph PRIMARY["Primary Region: eu-west-1 (Ireland) — ACTIVE"]
+        PRIMARY_LB["ALB (eu-west-1)\nhelixterm.io → :443"]
+
+        subgraph AZ1["AZ: eu-west-1a"]
+            P_GW1["api-gateway-1\n(pod)"]
+            P_APP1["app-services-1\n(3-5 pods/svc)"]
+        end
+
+        subgraph AZ2["AZ: eu-west-1b"]
+            P_GW2["api-gateway-2\n(pod)"]
+            P_APP2["app-services-2\n(3-5 pods/svc)"]
+        end
+
+        subgraph AZ3["AZ: eu-west-1c"]
+            P_GW3["api-gateway-3\n(pod)"]
+            P_APP3["app-services-3\n(3-5 pods/svc)"]
+        end
+
+        subgraph P_DATA["Primary Data Layer"]
+            P_PG_PRIMARY["PostgreSQL Primary\n(Patroni leader)"]
+            P_PG_REPLICA["PostgreSQL Replica × 2\n(Patroni standbys)"]
+            P_REDIS["Redis Cluster\n(3 primary + 3 replica)"]
+            P_KAFKA["Kafka Cluster\n(3 brokers, RF=3)"]
+        end
+
+        P_S3["S3 Bucket (eu-west-1)\nCross-region replication ON"]
+    end
+
+    subgraph DR["DR Region: us-east-1 (N. Virginia) — STANDBY"]
+        DR_LB["ALB (us-east-1)\ndr.helixterm.io → :443\n(traffic off in normal operation)"]
+
+        subgraph DR_AZ1["AZ: us-east-1a"]
+            DR_GW1["api-gateway-1\n(scaled to 0 in standby)"]
+            DR_APP1["app-services-1\n(scaled to 0 in standby)"]
+        end
+
+        subgraph DR_AZ2["AZ: us-east-1b"]
+            DR_GW2["api-gateway-2\n(scaled to 0 in standby)"]
+            DR_APP2["app-services-2\n(scaled to 0 in standby)"]
+        end
+
+        subgraph DR_DATA["DR Data Layer"]
+            DR_PG["PostgreSQL Replica\n(streaming replication\nRPO < 1 min)"]
+            DR_REDIS["Redis Replica Cluster\n(async replication)"]
+            DR_KAFKA["Kafka MirrorMaker 2\n(topic replication)"]
+        end
+
+        DR_S3["S3 Bucket (us-east-1)\nCross-region replica\n(replication lag < 15 min)"]
+    end
+
+    subgraph SHARED["Global Shared Services"]
+        GLOBAL_CF_CERTS["AWS Certificate Manager\nWildcard TLS certs\n*.helixterm.io"]
+        GLOBAL_SECRETS["AWS Secrets Manager\n(cross-region replication)"]
+        GLOBAL_KMS["AWS KMS\n(multi-region keys\nfor vault encryption)"]
+    end
+
+    PRIMARY_LB --> P_GW1 & P_GW2 & P_GW3
+    P_GW1 & P_GW2 & P_GW3 --> P_APP1 & P_APP2 & P_APP3
+    P_APP1 & P_APP2 & P_APP3 --> P_PG_PRIMARY
+    P_APP1 & P_APP2 & P_APP3 --> P_REDIS
+    P_APP1 & P_APP2 & P_APP3 --> P_KAFKA
+    P_PG_PRIMARY --> P_PG_REPLICA
+
+    DR_LB --> DR_GW1 & DR_GW2
+    DR_GW1 & DR_GW2 --> DR_APP1 & DR_APP2
+    DR_APP1 & DR_APP2 --> DR_PG
+    DR_APP1 & DR_APP2 --> DR_REDIS
+    DR_APP1 & DR_APP2 --> DR_KAFKA
+
+    P_PG_REPLICA -->|"WAL streaming\n(sync replication\nlag < 100ms)"| DR_PG
+    P_KAFKA -->|"MirrorMaker 2\n(async, lag < 30s)"| DR_KAFKA
+    P_REDIS -->|"Redis replication\n(async, lag < 5s)"| DR_REDIS
+    P_S3 -->|"S3 CRR\n(lag < 15 min)"| DR_S3
+
+    GLOBAL_KMS -.-> P_DATA
+    GLOBAL_KMS -.-> DR_DATA
+    GLOBAL_SECRETS -.-> PRIMARY
+    GLOBAL_SECRETS -.-> DR
+
+    class PRIMARY_LB,DR_LB service
+    class P_PG_PRIMARY,P_PG_REPLICA,P_REDIS,P_KAFKA,DR_PG,DR_REDIS,DR_KAFKA data
+    class P_S3,DR_S3 data
+    class ROUTE53,CF cdn
+    class GLOBAL_CF_CERTS,GLOBAL_SECRETS,GLOBAL_KMS replication

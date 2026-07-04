@@ -1,0 +1,174 @@
+classDiagram
+    class Bloc~Event, State~ {
+        <<abstract>>
+        +Stream~State~ stream
+        +State state
+        +add(Event event) void
+        +close() Future~void~
+        +on~E~(EventHandler handler) void
+    }
+
+    class AuthBloc {
+        -AuthRepository authRepo
+        -SecureStorage secureStorage
+        -DeviceInfoPlugin deviceInfo
+        +AuthBloc(authRepo, storage)
+        +on~LoginRequested~()
+        +on~LogoutRequested~()
+        +on~TokenRefreshRequested~()
+        +on~MFACodeSubmitted~()
+        +on~BiometricLoginRequested~()
+        +on~SessionCheckRequested~()
+    }
+
+    class AuthState {
+        <<abstract>>
+    }
+    class AuthInitial
+    class AuthLoading
+    class Authenticated {
+        +User user
+        +String accessToken
+        +DateTime expiresAt
+    }
+    class MFARequired {
+        +String mfaToken
+        +List~String~ methods
+        +String challengeData
+    }
+    class AuthError {
+        +String message
+        +AuthErrorCode code
+    }
+    class Unauthenticated
+
+    class VaultBloc {
+        -VaultRepository vaultRepo
+        -EncryptionService encryptionSvc
+        -SyncService syncSvc
+        +VaultBloc(vaultRepo, encSvc)
+        +on~VaultUnlockRequested~()
+        +on~VaultLockRequested~()
+        +on~ItemCreateRequested~()
+        +on~ItemUpdateRequested~()
+        +on~ItemDeleteRequested~()
+        +on~VaultSyncRequested~()
+        +on~SearchQueryChanged~()
+    }
+
+    class VaultState {
+        <<abstract>>
+    }
+    class VaultLocked
+    class VaultUnlocking
+    class VaultUnlocked {
+        +List~VaultItem~ items
+        +int version
+        +DateTime lastSynced
+    }
+    class VaultSyncing {
+        +double progress
+    }
+    class VaultConflict {
+        +VaultItem localItem
+        +VaultItem remoteItem
+    }
+    class VaultError {
+        +String message
+    }
+
+    class TerminalBloc {
+        -SSHProxyRepository proxyRepo
+        -RecordingService recordingService
+        -AIService aiService
+        +TerminalBloc(proxyRepo, aiSvc)
+        +on~ConnectionRequested~()
+        +on~DisconnectRequested~()
+        +on~InputReceived~()
+        +on~ResizeRequested~()
+        +on~CollabJoinRequested~()
+        +on~FontSizeChanged~()
+    }
+
+    class TerminalState {
+        <<abstract>>
+    }
+    class TerminalIdle
+    class TerminalConnecting {
+        +String hostName
+        +int attempt
+    }
+    class TerminalConnected {
+        +String sessionId
+        +TerminalSize size
+        +bool recording
+        +CollabSession collab
+    }
+    class TerminalError {
+        +String message
+        +bool canRetry
+    }
+
+    class SSHSessionBloc {
+        -SSHProxyRepository proxyRepo
+        -PKIRepository pkiRepo
+        +SSHSessionBloc(proxyRepo, pkiRepo)
+        +on~SessionListRequested~()
+        +on~SessionTerminateRequested~()
+        +on~SessionFilterChanged~()
+        +on~SessionDetailRequested~()
+    }
+
+    class HostBloc {
+        -HostRepository hostRepo
+        -ConnectivityService connectivitySvc
+        +HostBloc(hostRepo, connSvc)
+        +on~HostListRequested~()
+        +on~HostCreateRequested~()
+        +on~HostUpdateRequested~()
+        +on~HostDeleteRequested~()
+        +on~HostConnectivityTestRequested~()
+        +on~HostSearchQueryChanged~()
+    }
+
+    class SFTPBloc {
+        -SFTPRepository sftpRepo
+        -FilePickerService filePicker
+        +SFTPBloc(sftpRepo, filePicker)
+        +on~DirectoryListRequested~()
+        +on~UploadRequested~()
+        +on~DownloadRequested~()
+        +on~TransferPauseRequested~()
+        +on~TransferResumeRequested~()
+        +on~TransferCancelRequested~()
+    }
+
+    Bloc <|-- AuthBloc
+    Bloc <|-- VaultBloc
+    Bloc <|-- TerminalBloc
+    Bloc <|-- SSHSessionBloc
+    Bloc <|-- HostBloc
+    Bloc <|-- SFTPBloc
+
+    AuthState <|-- AuthInitial
+    AuthState <|-- AuthLoading
+    AuthState <|-- Authenticated
+    AuthState <|-- MFARequired
+    AuthState <|-- AuthError
+    AuthState <|-- Unauthenticated
+
+    VaultState <|-- VaultLocked
+    VaultState <|-- VaultUnlocking
+    VaultState <|-- VaultUnlocked
+    VaultState <|-- VaultSyncing
+    VaultState <|-- VaultConflict
+    VaultState <|-- VaultError
+
+    TerminalState <|-- TerminalIdle
+    TerminalState <|-- TerminalConnecting
+    TerminalState <|-- TerminalConnected
+    TerminalState <|-- TerminalError
+
+    AuthBloc --> VaultBloc : unlocks on auth
+    TerminalBloc --> SSHSessionBloc : manages sessions
+    TerminalBloc --> SFTPBloc : spawns SFTP

@@ -1,0 +1,59 @@
+sequenceDiagram
+    autonumber
+    participant INIT as Initiator Client
+    participant GW as API Gateway
+    participant AUTH as Auth Service
+    participant TERM as Terminal Service
+    participant PG as PostgreSQL
+    participant KAFKA as Kafka
+    participant NOTIF as Notification Service
+    participant OBS as Observer Client
+
+    INIT->>GW: POST /v1/collab/sessions {session_id, mode:READ_ONLY, invite_emails:[]}
+    GW->>AUTH: ValidatePermission{user_id, action:collab:create}
+    AUTH-->>GW: Allowed
+
+    GW->>TERM: CreateCollabSession{ssh_session_id, owner_id, mode, acl}
+    TERM->>PG: INSERT collaboration_sessions {id, ssh_session_id, owner_id, mode, share_token}
+    PG-->>TERM: {collab_id, share_token}
+
+    TERM->>KAFKA: Produce {type:COLLAB_CREATED, collab_id, owner_id, share_token}
+    KAFKA->>NOTIF: Consume {type:COLLAB_CREATED}
+    NOTIF->>OBS: Send invite email / in-app notification {join_url, share_token}
+
+    TERM-->>GW: CollabSession{collab_id, share_token, join_url}
+    GW-->>INIT: 201 {collab_id, share_token, join_url}
+
+    OBS->>GW: POST /v1/collab/join {share_token}
+    GW->>AUTH: ValidateJWT + permission check
+    AUTH-->>GW: {user_id, valid}
+    GW->>TERM: JoinCollabSession{share_token, observer_id}
+
+    TERM->>PG: SELECT collaboration_sessions WHERE share_token=$1
+    PG-->>TERM: {collab_id, ssh_session_id, mode, owner_id}
+    TERM->>PG: INSERT collaboration_participants {collab_id, user_id:observer_id, role:OBSERVER}
+
+    TERM->>INIT: WS PUSH {type:OBSERVER_JOINED, user_id:observer_id, display_name}
+
+    TERM-->>GW: JoinResponse{websocket_url, terminal_snapshot}
+    GW-->>OBS: 200 {ws_url, snapshot: base64_terminal_state}
+    OBS->>GW: WSS Connect /v1/collab/stream/{collab_id}
+
+    loop Live Terminal Data
+        INIT->>GW: Keystrokes → SSH session data
+        GW->>TERM: Input → SSH Proxy
+        TERM->>TERM: Broadcast terminal output
+        TERM->>OBS: WS {type:TERMINAL_DATA, data:base64_vt100}
+        OBS->>OBS: Render terminal output (read-only)
+    end
+
+    alt Observer requests write access
+        OBS->>GW: POST /v1/collab/{collab_id}/request-write
+        GW->>TERM: RequestWriteAccess{collab_id, observer_id}
+        TERM->>INIT: WS PUSH {type:WRITE_REQUEST, from:observer_id}
+        INIT->>GW: POST /v1/collab/{collab_id}/grant-write {user_id:observer_id}
+        GW->>TERM: GrantWriteAccess{collab_id, observer_id}
+        TERM->>PG: UPDATE collaboration_participants SET role=WRITER WHERE user_id=$1
+        TERM->>OBS: WS {type:WRITE_GRANTED}
+        Note over OBS: Observer can now send input
+    end

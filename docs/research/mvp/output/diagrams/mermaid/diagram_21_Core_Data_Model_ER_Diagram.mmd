@@ -1,0 +1,215 @@
+erDiagram
+    organizations {
+        uuid id PK
+        string name
+        string slug
+        string plan
+        int max_users
+        int max_hosts
+        bool sso_enabled
+        string sso_provider
+        string saml_metadata_url
+        string ldap_url
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    teams {
+        uuid id PK
+        uuid org_id FK
+        string name
+        string description
+        jsonb permissions
+        timestamp created_at
+    }
+
+    users {
+        uuid id PK
+        uuid org_id FK
+        string email
+        string display_name
+        string password_hash
+        bool mfa_enabled
+        string mfa_type
+        string status
+        timestamp last_login_at
+        timestamp created_at
+    }
+
+    team_members {
+        uuid team_id FK
+        uuid user_id FK
+        string role
+        timestamp joined_at
+    }
+
+    vaults {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string name
+        string type
+        bytea enc_vault_key
+        int version
+        timestamp synced_at
+        timestamp created_at
+    }
+
+    vault_items {
+        uuid id PK
+        uuid vault_id FK
+        uuid created_by FK
+        string type
+        string name
+        bytea ciphertext
+        bytea nonce
+        bytea auth_tag
+        bytea enc_item_key
+        bytea hmac
+        int version
+        jsonb metadata
+        timestamp updated_at
+        timestamp created_at
+    }
+
+    hosts {
+        uuid id PK
+        uuid org_id FK
+        string hostname
+        string ip_address
+        int port
+        string os_type
+        string username
+        string auth_method
+        uuid key_id FK
+        bool jump_host_required
+        uuid jump_host_id FK
+        jsonb labels
+        timestamp last_seen_at
+        timestamp created_at
+    }
+
+    host_groups {
+        uuid id PK
+        uuid org_id FK
+        string name
+        jsonb match_labels
+        timestamp created_at
+    }
+
+    host_group_members {
+        uuid host_group_id FK
+        uuid host_id FK
+    }
+
+    ssh_keys {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string name
+        string key_type
+        string public_key_pem
+        bytea private_key_enc
+        string fingerprint
+        timestamp created_at
+        timestamp expires_at
+    }
+
+    snippets {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string title
+        text command
+        string[] tags
+        bool shared
+        int usage_count
+        timestamp created_at
+    }
+
+    sessions {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        uuid host_id FK
+        string status
+        string auth_method
+        string client_ip
+        int duration_seconds
+        bigint bytes_in
+        bigint bytes_out
+        timestamp started_at
+        timestamp ended_at
+    }
+
+    workspaces {
+        uuid id PK
+        uuid org_id FK
+        uuid owner_id FK
+        string name
+        jsonb layout
+        jsonb panels
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    port_forwardings {
+        uuid id PK
+        uuid session_id FK
+        string type
+        string local_addr
+        int local_port
+        string remote_addr
+        int remote_port
+        string status
+        bigint bytes_transferred
+        timestamp created_at
+    }
+
+    known_hosts {
+        uuid id PK
+        uuid org_id FK
+        string hostname
+        string key_type
+        string public_key
+        string fingerprint
+        bool trusted
+        timestamp first_seen_at
+        timestamp verified_at
+    }
+
+    audit_events {
+        uuid id PK
+        uuid org_id FK
+        uuid user_id FK
+        uuid session_id FK
+        string event_type
+        string resource_type
+        uuid resource_id
+        jsonb payload
+        string ip_address
+        string user_agent
+        timestamp occurred_at
+    }
+
+    organizations ||--o{ teams : "has"
+    organizations ||--o{ users : "has"
+    organizations ||--o{ vaults : "owns"
+    organizations ||--o{ hosts : "manages"
+    organizations ||--o{ host_groups : "has"
+    organizations ||--o{ snippets : "has"
+    organizations ||--o{ audit_events : "logs"
+    users ||--o{ team_members : "belongs_to"
+    teams ||--o{ team_members : "has"
+    users ||--o{ vaults : "owns"
+    vaults ||--o{ vault_items : "contains"
+    users ||--o{ sessions : "initiates"
+    hosts ||--o{ sessions : "receives"
+    sessions ||--o{ port_forwardings : "has"
+    users ||--o{ ssh_keys : "owns"
+    hosts ||--o| ssh_keys : "uses"
+    hosts ||--o{ host_group_members : "member_of"
+    host_groups ||--o{ host_group_members : "contains"
+    users ||--o{ workspaces : "owns"
+    users ||--o{ audit_events : "generates"
+    sessions ||--o{ audit_events : "generates"

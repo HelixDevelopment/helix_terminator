@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    participant SA as Service A (SSH Proxy)
+    participant SPIRE_A as SPIRE Agent (Node A)
+    participant SPIRE_SRV as SPIRE Server
+    participant POLICY as OPA Policy Engine
+    participant SPIRE_B as SPIRE Agent (Node B)
+    participant SB as Service B (PKI Service)
+
+    Note over SA,SB: SVID Bootstrap phase (at service startup)
+
+    SA->>SPIRE_A: FetchX509SVID{workload_selector: k8s:ns:helixterm-prod, k8s:sa:ssh-proxy}
+    SPIRE_A->>SPIRE_A: Attest workload (verify pod UID, SA token)
+    SPIRE_A->>SPIRE_SRV: AttestAgent + NodeAttestation (EC2/K8s)
+    SPIRE_SRV->>SPIRE_SRV: Verify node identity + check registration entries
+    SPIRE_SRV-->>SPIRE_A: X.509-SVID {spiffe://helixterm.io/ns/prod/sa/ssh-proxy, cert, key, bundle}
+    SPIRE_A-->>SA: X509SVIDResponse {svid_pem, key_pem, bundle_pem, expires_at}
+
+    SB->>SPIRE_B: FetchX509SVID{workload_selector: k8s:sa:pki-service}
+    SPIRE_B->>SPIRE_SRV: Attest + fetch SVID
+    SPIRE_SRV-->>SPIRE_B: X.509-SVID {spiffe://helixterm.io/ns/prod/sa/pki-service, cert, key}
+    SPIRE_B-->>SB: X509SVIDResponse
+
+    Note over SA,SB: Service-to-service call with mTLS
+
+    SA->>SA: Load SVID {spiffe://...ssh-proxy} as TLS client cert
+    SA->>SB: TLS ClientHello (SNI: pki-service.helixterm-prod.svc.cluster.local)
+    SB->>SB: Present SVID {spiffe://...pki-service} as TLS server cert
+    SA->>SA: Verify server cert SAN contains expected SPIFFE ID
+    SB->>SB: Verify client cert SAN (mTLS — both sides authenticate)
+    SA-->>SB: TLS handshake complete (TLS 1.3, ECDHE + AES-256-GCM)
+
+    SA->>POLICY: AuthorizeRequest{source_spiffe_id, dest_spiffe_id, method:/PKI/IssueCertificate}
+    POLICY->>POLICY: Evaluate Rego policy {allow if ssh-proxy → pki-service, method in allowlist}
+    POLICY-->>SA: {allowed: true}
+
+    SA->>SB: gRPC IssueCertificate{...} (over established mTLS channel)
+    SB->>SB: Re-verify caller SPIFFE ID from TLS peer cert
+    SB-->>SA: CertificateResponse{cert_pem, serial}
+
+    Note over SA,SB: SVID auto-rotation (before expiry)
+    SPIRE_A->>SA: Push updated SVID (hot-reload, zero downtime)
+    SA->>SA: Replace TLS credentials in connection pool

@@ -1,0 +1,85 @@
+flowchart LR
+    classDef exchange fill:#7b1fa2,stroke:#4a148c,color:#fff
+    classDef queue fill:#ef6c00,stroke:#e65100,color:#fff
+    classDef consumer fill:#1565c0,stroke:#0d47a1,color:#fff
+    classDef producer fill:#2e7d32,stroke:#1b5e20,color:#fff
+
+    subgraph PUBS["Publishers"]
+        PUB_GW["API Gateway"]
+        PUB_SSH["SSH Proxy"]
+        PUB_NOTIF["Notification Service"]
+        PUB_SCHED["Scheduler"]
+    end
+
+    subgraph EXCHANGES["Exchanges"]
+        EX_CMD["helix.commands\n[direct exchange]"]
+        EX_EVENTS["helix.events\n[topic exchange]"]
+        EX_NOTIF["helix.notifications\n[fanout exchange]"]
+        EX_DLX["helix.dlx\n[dead-letter exchange]"]
+    end
+
+    subgraph QUEUES["Queues"]
+        Q_SSH["q.ssh.connect\n[durable, priority=10]"]
+        Q_SFTP["q.sftp.transfer\n[durable, priority=5]"]
+        Q_PF["q.portforward.open\n[durable, priority=5]"]
+        Q_CERT["q.pki.issue\n[durable, priority=8]"]
+        Q_NOTIF_EMAIL["q.notify.email\n[durable]"]
+        Q_NOTIF_PUSH["q.notify.push\n[durable]"]
+        Q_NOTIF_WEBHOOK["q.notify.webhook\n[durable]"]
+        Q_CONTAINER["q.container.exec\n[durable]"]
+        Q_DEAD["q.dlx.failed\n[durable, ttl=7d]"]
+        Q_HEALTH["q.health.check\n[transient, ttl=30s]"]
+    end
+
+    subgraph CONSUMERS["Consumers"]
+        CON_SSH["SSH Proxy Workers\n[concurrency=50]"]
+        CON_SFTP["SFTP Workers\n[concurrency=20]"]
+        CON_PF["Port Forward Workers\n[concurrency=30]"]
+        CON_PKI["PKI Service Workers\n[concurrency=10]"]
+        CON_EMAIL["Email Dispatcher\n[concurrency=5]"]
+        CON_PUSH["Push Dispatcher\n[concurrency=10]"]
+        CON_WEBHOOK["Webhook Dispatcher\n[concurrency=15]"]
+        CON_CONTAINER["Container Bridge Workers\n[concurrency=20]"]
+        CON_RETRY["Retry Processor\n[concurrency=3]"]
+        CON_HEALTH["Health Checker\n[concurrency=25]"]
+    end
+
+    PUB_GW -->|"rk: ssh.connect"| EX_CMD
+    PUB_GW -->|"rk: sftp.transfer"| EX_CMD
+    PUB_GW -->|"rk: portforward.open"| EX_CMD
+    PUB_GW -->|"rk: pki.issue"| EX_CMD
+    PUB_GW -->|"rk: container.exec"| EX_CMD
+    PUB_SSH -->|"rk: session.*"| EX_EVENTS
+    PUB_NOTIF -->|"fanout"| EX_NOTIF
+    PUB_SCHED -->|"rk: health.check"| EX_EVENTS
+
+    EX_CMD -->|"rk: ssh.connect"| Q_SSH
+    EX_CMD -->|"rk: sftp.transfer"| Q_SFTP
+    EX_CMD -->|"rk: portforward.open"| Q_PF
+    EX_CMD -->|"rk: pki.issue"| Q_CERT
+    EX_CMD -->|"rk: container.exec"| Q_CONTAINER
+    EX_EVENTS -->|"rk: health.check"| Q_HEALTH
+    EX_NOTIF --> Q_NOTIF_EMAIL
+    EX_NOTIF --> Q_NOTIF_PUSH
+    EX_NOTIF --> Q_NOTIF_WEBHOOK
+    EX_DLX --> Q_DEAD
+
+    Q_SSH -->|"ack/nack"| CON_SSH
+    Q_SFTP -->|"ack/nack"| CON_SFTP
+    Q_PF -->|"ack/nack"| CON_PF
+    Q_CERT -->|"ack/nack"| CON_PKI
+    Q_NOTIF_EMAIL -->|"ack/nack"| CON_EMAIL
+    Q_NOTIF_PUSH -->|"ack/nack"| CON_PUSH
+    Q_NOTIF_WEBHOOK -->|"ack/nack"| CON_WEBHOOK
+    Q_CONTAINER -->|"ack/nack"| CON_CONTAINER
+    Q_DEAD -->|"process"| CON_RETRY
+    Q_HEALTH -->|"ack/nack"| CON_HEALTH
+
+    CON_SSH -.->|"nack → DLX"| EX_DLX
+    CON_SFTP -.->|"nack → DLX"| EX_DLX
+    CON_PKI -.->|"nack → DLX"| EX_DLX
+
+    class EX_CMD,EX_EVENTS,EX_NOTIF,EX_DLX exchange
+    class Q_SSH,Q_SFTP,Q_PF,Q_CERT,Q_NOTIF_EMAIL,Q_NOTIF_PUSH,Q_NOTIF_WEBHOOK,Q_CONTAINER,Q_DEAD,Q_HEALTH queue
+    class CON_SSH,CON_SFTP,CON_PF,CON_PKI,CON_EMAIL,CON_PUSH,CON_WEBHOOK,CON_CONTAINER,CON_RETRY,CON_HEALTH consumer
+    class PUB_GW,PUB_SSH,PUB_NOTIF,PUB_SCHED producer

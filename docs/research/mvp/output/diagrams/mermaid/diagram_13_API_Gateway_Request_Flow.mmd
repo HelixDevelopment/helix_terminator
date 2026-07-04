@@ -1,0 +1,68 @@
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant RL as Rate Limiter (Redis)
+    participant JWTmw as JWT Middleware
+    participant AUTH as Auth Service
+    participant ROUTER as Service Router
+    participant CACHE as Response Cache (Redis)
+    participant SVC as Target Microservice
+    participant AUDIT as Audit Service
+
+    C->>GW: HTTPS Request {method, path, Authorization: Bearer <token>}
+
+    rect rgb(200, 230, 200)
+        Note over GW,RL: Rate Limiting Phase
+        GW->>RL: INCR rate:{ip}:{window} + EXPIRE
+        RL-->>GW: {count: 47, limit: 100, window: 60s}
+        alt Rate limit exceeded
+            GW-->>C: 429 Too Many Requests {Retry-After: 13}
+        end
+    end
+
+    rect rgb(200, 200, 230)
+        Note over GW,AUTH: Authentication Phase
+        GW->>JWTmw: Validate JWT signature (RS256, verify exp/nbf/iss)
+        JWTmw->>JWTmw: Parse claims {sub, org_id, roles, jti, exp}
+        JWTmw->>RL: Check token blacklist: GET blacklist:{jti}
+        RL-->>JWTmw: nil (not revoked)
+        alt Token expired
+            GW-->>C: 401 Unauthorized {error: token_expired}
+        end
+        JWTmw->>AUTH: ValidateSession{jti} (async, sampled 10%)
+        AUTH-->>JWTmw: Session valid
+    end
+
+    rect rgb(230, 200, 200)
+        Note over GW,ROUTER: Authorization Phase
+        GW->>ROUTER: CheckPermission{user_id, org_id, method, path}
+        ROUTER->>ROUTER: RBAC policy eval (Open Policy Agent / Rego)
+        alt Permission denied
+            GW-->>C: 403 Forbidden {required_permission}
+        end
+    end
+
+    rect rgb(230, 230, 200)
+        Note over GW,CACHE: Cache Lookup (GET only)
+        alt GET request
+            GW->>CACHE: GET cache:{method}:{path}:{user_id}
+            alt Cache hit
+                CACHE-->>GW: Cached response
+                GW-->>C: 200 {X-Cache: HIT, response}
+            end
+        end
+    end
+
+    GW->>ROUTER: Route request → target service
+    ROUTER->>ROUTER: Service discovery (Consul/K8s DNS)
+    ROUTER->>SVC: gRPC/HTTP2 forward {request + injected headers: X-User-ID, X-Org-ID, X-Request-ID}
+    SVC->>SVC: Process request
+    SVC-->>ROUTER: Response {body, status, headers}
+    ROUTER-->>GW: Response
+
+    alt Cacheable (GET + 2xx)
+        GW->>CACHE: SET cache:{key} {response} EX 300
+    end
+
+    GW->>AUDIT: async log {request_id, user_id, method, path, status, latency_ms}
+    GW-->>C: HTTP Response {status, body, X-Request-ID, X-RateLimit-Remaining}

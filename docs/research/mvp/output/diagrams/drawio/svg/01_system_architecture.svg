@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="2200" height="1700" viewBox="0 0 2200 1700">
+  <title>HelixTerminator — System Architecture</title>
+  <desc>Draw.io architecture diagram. Open in diagrams.net or draw.io desktop for interactive view. File: 01_system_architecture.drawio</desc>
+  
+  <!-- Embedded Draw.io XML for round-trip editing -->
+  <metadata>
+    <drawio-source><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="diagrams.net" modified="2026-06-28T00:00:00.000Z" agent="HelixTerminator Spec" version="21.0.0" type="device">
+  <diagram name="System Architecture" id="sys-arch-001">
+    <mxGraphModel dx="1800" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== TITLE ===== -->
+        <mxCell id="title" value="HelixTerminator — System Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="20" width="800" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ===== CLIENT LAYER ===== -->
+        <mxCell id="clients-group" value="Client Applications" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="700" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="flutter-desktop" value="Flutter Desktop&#xa;(macOS/Windows/Linux)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="clients-group">
+          <mxGeometry x="20" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="flutter-mobile" value="Flutter Mobile&#xa;(iOS/Android)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="clients-group">
+          <mxGeometry x="200" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="flutter-web" value="Flutter Web" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="clients-group">
+          <mxGeometry x="380" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cli-client" value="CLI Client&#xa;(Go)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="clients-group">
+          <mxGeometry x="540" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== API GATEWAY ===== -->
+        <mxCell id="api-gateway-box" value="API Gateway &amp; Ingress" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="700" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="api-gateway" value="API Gateway&#xa;(gRPC + REST)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="api-gateway-box">
+          <mxGeometry x="20" y="45" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="rate-limiter" value="Rate Limiter&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="api-gateway-box">
+          <mxGeometry x="200" y="45" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="load-balancer" value="Load Balancer&#xa;(Nginx/Envoy)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="api-gateway-box">
+          <mxGeometry x="380" y="45" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="websocket-gw" value="WebSocket&#xa;Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="api-gateway-box">
+          <mxGeometry x="560" y="45" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ===== AUTH DOMAIN ===== -->
+        <mxCell id="auth-domain" value="Auth &amp; Identity Domain" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="700" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="auth-svc" value="Auth Service&#xa;(JWT/OAuth2)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="auth-domain">
+          <mxGeometry x="20" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="identity-svc" value="Identity&#xa;Provider Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="auth-domain">
+          <mxGeometry x="180" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="pki-svc" value="PKI Service&#xa;(Cert Authority)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="auth-domain">
+          <mxGeometry x="340" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="rbac-svc" value="RBAC Service&#xa;(Permissions)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="auth-domain">
+          <mxGeometry x="500" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== SSH CORE DOMAIN ===== -->
+        <mxCell id="ssh-domain" value="SSH Core Domain" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="420" width="700" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="ssh-proxy" value="SSH Proxy&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="ssh-domain">
+          <mxGeometry x="20" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="session-mgr" value="Session Manager&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="ssh-domain">
+          <mxGeometry x="180" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="terminal-svc" value="Terminal&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="ssh-domain">
+          <mxGeometry x="340" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="port-forward" value="Port Forwarding&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="ssh-domain">
+          <mxGeometry x="500" y="50" width="140" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== VAULT DOMAIN ===== -->
+        <mxCell id="vault-domain" value="Vault &amp; Secrets Domain" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="250" width="700" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="vault-svc" value="Vault Service&#xa;(Encryption)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="vault-domain">
+          <mxGeometry x="20" y="45" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="secrets-svc" value="Secrets&#xa;Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="vault-domain">
+          <mxGeometry x="190" y="45" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="key-rotation" value="Key Rotation&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="vault-domain">
+          <mxGeometry x="360" y="45" width="150" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="hsm-svc" value="HSM Interface&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="vault-domain">
+          <mxGeometry x="530" y="45" width="150" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PLATFORM DOMAIN ===== -->
+        <mxCell id="platform-domain" value="Platform Services Domain" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="600" width="1000" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="host-svc" value="Host Registry&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="platform-domain">
+          <mxGeometry x="20" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="user-svc" value="User&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="platform-domain">
+          <mxGeometry x="170" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="org-svc" value="Organization&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="platform-domain">
+          <mxGeometry x="320" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="audit-svc" value="Audit Log&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="platform-domain">
+          <mxGeometry x="470" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="notification-svc" value="Notification&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="platform-domain">
+          <mxGeometry x="620" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="config-svc" value="Config&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="platform-domain">
+          <mxGeometry x="770" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="search-svc" value="Search&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="platform-domain">
+          <mxGeometry x="850" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== OPS DOMAIN ===== -->
+        <mxCell id="ops-domain" value="Observability &amp; Ops Domain" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="420" width="620" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="metrics-svc" value="Metrics&#xa;Collector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="ops-domain">
+          <mxGeometry x="20" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tracing-svc" value="Distributed&#xa;Tracing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="ops-domain">
+          <mxGeometry x="170" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="health-svc" value="Health Check&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="ops-domain">
+          <mxGeometry x="320" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="billing-svc" value="Billing&#xa;Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="ops-domain">
+          <mxGeometry x="470" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== MESSAGE BROKERS ===== -->
+        <mxCell id="brokers-group" value="Message Brokers" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="790" width="700" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka" value="Apache Kafka&#xa;(Event Streaming)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=10;" vertex="1" parent="brokers-group">
+          <mxGeometry x="40" y="45" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-topics" value="Topics:&#xa;session.events&#xa;audit.events&#xa;user.events&#xa;host.events" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;verticalAlign=top;fontSize=11;" vertex="1" parent="brokers-group">
+          <mxGeometry x="240" y="40" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="rabbitmq" value="RabbitMQ&#xa;(Task Queues)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=10;" vertex="1" parent="brokers-group">
+          <mxGeometry x="440" y="45" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="rabbitmq-queues" value="Queues:&#xa;notifications&#xa;email&#xa;key-rotation" style="text;html=1;strokeColor=none;fillColor=#fffde7;align=left;verticalAlign=top;fontSize=11;" vertex="1" parent="brokers-group">
+          <mxGeometry x="550" y="45" width="130" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ===== DATABASES ===== -->
+        <mxCell id="db-group" value="Data Layer" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="790" width="940" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres-main" value="PostgreSQL&#xa;(Primary — Users,&#xa;Orgs, Vault)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=10;" vertex="1" parent="db-group">
+          <mxGeometry x="20" y="40" width="160" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres-sessions" value="PostgreSQL&#xa;(Sessions &amp;&#xa;Audit Logs)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=10;" vertex="1" parent="db-group">
+          <mxGeometry x="200" y="40" width="160" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="redis-cache" value="Redis&#xa;(Cache &amp;&#xa;Sessions)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=10;" vertex="1" parent="db-group">
+          <mxGeometry x="380" y="40" width="140" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="redis-pubsub" value="Redis&#xa;(Pub/Sub&#xa;Terminal)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=10;" vertex="1" parent="db-group">
+          <mxGeometry x="540" y="40" width="140" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="elasticsearch" value="Elasticsearch&#xa;(Search &amp; Logs)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=10;" vertex="1" parent="db-group">
+          <mxGeometry x="700" y="40" width="140" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="s3-store" value="Object Storage&#xa;(S3 — Session&#xa;Recordings)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=10;" vertex="1" parent="db-group">
+          <mxGeometry x="860" y="40" width="60" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- ===== TARGET SSH SERVERS ===== -->
+        <mxCell id="target-group" value="Target Infrastructure" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="250" width="620" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="ssh-linux" value="Linux Servers&#xa;(SSH)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="target-group">
+          <mxGeometry x="20" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ssh-network" value="Network Devices&#xa;(Cisco/Juniper)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="target-group">
+          <mxGeometry x="170" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ssh-containers" value="Kubernetes&#xa;Pod Exec" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="target-group">
+          <mxGeometry x="320" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ssh-bastion" value="Bastion&#xa;Hosts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="target-group">
+          <mxGeometry x="470" y="50" width="130" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===== CONNECTIONS ===== -->
+        <!-- Clients → API Gateway -->
+        <mxCell id="e1" value="HTTPS/WSS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#9673a6;" edge="1" source="clients-group" target="api-gateway-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- API Gateway → Auth Domain -->
+        <mxCell id="e2" value="gRPC" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;" edge="1" source="api-gateway-box" target="auth-domain" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- API Gateway → Vault Domain -->
+        <mxCell id="e3" value="gRPC" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;" edge="1" source="api-gateway-box" target="vault-domain" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Auth Domain → SSH Domain -->
+        <mxCell id="e4" value="Verified Token" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;" edge="1" source="auth-domain" target="ssh-domain" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- SSH Domain → Target Infra -->
+        <mxCell id="e5" value="SSH/mTLS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6c8ebf;" edge="1" source="ssh-domain" target="target-group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Platform Domain → Kafka -->
+        <mxCell id="e6" value="Publish Events" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;" edge="1" source="platform-domain" target="brokers-group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Platform Domain → Databases -->
+        <mxCell id="e7" value="Read/Write" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;" edge="1" source="platform-domain" target="db-group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- SSH Domain → Redis pub/sub -->
+        <mxCell id="e8" value="Terminal Stream" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;" edge="1" source="ssh-domain" target="db-group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Ops Domain monitoring -->
+        <mxCell id="e9" value="Metrics/Traces" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#666666;" edge="1" source="ops-domain" target="db-group" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ===== LEGEND ===== -->
+        <mxCell id="legend" value="Legend" style="swimlane;startSize=25;fillColor=#ffffff;strokeColor=#000000;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="990" width="380" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="Microservice" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="35" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="Database" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;size=7;" vertex="1" parent="legend">
+          <mxGeometry x="130" y="30" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="Message Broker" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;size=7;" vertex="1" parent="legend">
+          <mxGeometry x="250" y="30" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="Client App" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="90" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" value="Security/Auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="legend">
+          <mxGeometry x="130" y="90" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg6" value="Infrastructure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="legend">
+          <mxGeometry x="250" y="90" width="110" height="30" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+]]></drawio-source>
+  </metadata>
+  
+  <!-- Background -->
+  <rect width="2200" height="1700" fill="#f8f9fa" rx="0"/>
+  
+  <!-- Header bar -->
+  <rect width="2200" height="60" fill="#1d3557"/>
+  <text x="24" y="38" font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="18" 
+        font-weight="600" fill="#a8dadc">HelixTerminator</text>
+  <text x="180" y="38" font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="18" 
+        font-weight="300" fill="#ffffff"> / System Architecture</text>
+  <rect x="2080" y="14" width="96" height="28" rx="14" fill="#e63946"/>
+  <text x="2128" y="33" font-family="'Segoe UI',Roboto,Arial,sans-serif" 
+        font-size="11" font-weight="700" fill="white" text-anchor="middle">Draw.io</text>
+  
+  <!-- Main content area background -->
+  <rect x="20" y="80" width="2160" height="1540" 
+        fill="white" rx="8" stroke="#dee2e6" stroke-width="1"/>
+  
+  <!-- Center notice -->
+  <text x="1100" y="790" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="28" font-weight="700"
+        fill="#1d3557" text-anchor="middle">System Architecture</text>
+  <text x="1100" y="830" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="16" fill="#457b9d" 
+        text-anchor="middle">HelixTerminator Architecture Diagram</text>
+  <text x="1100" y="870" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="14" fill="#6c757d"
+        text-anchor="middle">74 elements · 2200×1700px</text>
+  <text x="1100" y="910" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="13" fill="#888"
+        text-anchor="middle">Open 01_system_architecture.drawio in app.diagrams.net for interactive rendering</text>
+  
+  <!-- Draw.io icon box -->
+  <rect x="1020" y="940" width="160" height="40" 
+        rx="6" fill="#1d3557" stroke="#457b9d" stroke-width="1"/>
+  <text x="1100" y="966" 
+        font-family="'Segoe UI',Roboto,Arial,sans-serif" font-size="13" font-weight="600"
+        fill="#a8dadc" text-anchor="middle">app.diagrams.net</text>
+  
+  <!-- Bottom metadata bar -->
+  <rect x="0" y="1660" width="2200" height="40" fill="#0d1b2a"/>
+  <text x="24" y="1682" font-family="monospace" font-size="11" fill="#666">
+    01_system_architecture.drawio · 74 cells · HelixTerminator Technical Specification 2026
+  </text>
+</svg>
