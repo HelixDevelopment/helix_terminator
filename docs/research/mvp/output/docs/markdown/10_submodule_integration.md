@@ -23,15 +23,17 @@
 11. [`digital.vasic.concurrency` — Concurrency Utilities](#11-digitalvasicconcurrency)
 12. [`digital.vasic.containers` — ContainerRuntime Abstraction](#12-digitalvasiccontainers)
 13. [`digital.vasic.docs_chain` — Salsa-style DAG Document Engine](#13-digitalvasicdocs_chain)
-14. [`digital.vasic.challenges` — Challenges Submodule](#14-digitalvasichallenges)
+14. [`digital.vasic.challenges` — Challenges Submodule](#14-digitalvasicchallenges)
 15. [`helixqa` — AI-driven QA Orchestration](#15-helixqa)
 16. [`helixtrack.ru/core` — Project Management Integration](#16-helixtrackrucore)
-17. [HelixConstitution — AGENTS.MD, CLAUDE.MD, Constitution.md](#17-helixconstitution)
-18. [Appendix A: `go.work` Workspace File](#appendix-a-gowork-workspace-file)
-19. [Appendix B: `helix-deps.yaml`](#appendix-b-helix-depsyaml)
-20. [Appendix C: Makefile Submodule Targets](#appendix-c-makefile-submodule-targets)
-21. [Appendix D: GitHub Actions — Submodule Compliance](#appendix-d-github-actions--submodule-compliance)
-22. [Appendix E: Dependency Graph (Mermaid)](#appendix-e-dependency-graph-mermaid)
+17. [HelixConstitution — AGENTS.MD, CLAUDE.MD, Constitution.md](#17-helixconstitution--agentsmd-claudemd-constitutionmd)
+18. [Appendix A: `go.work` Workspace File](#appendix-a-gowork--workspace-file)
+19. [§17.1: `helix-deps.yaml` — Dependency Manifest](#171-helix-depsyaml--helixterminator-dependency-manifest)
+20. [Appendix B: Makefile — Submodule Targets](#appendix-b-makefile--submodule-targets)
+21. [Appendix C: GitHub Actions — Submodule Compliance Workflow](#appendix-c-github-actions--submodule-compliance-workflow)
+22. [Appendix D: Service–Submodule Dependency Graph (Mermaid)](#appendix-d-servicesubmodule-dependency-graph-mermaid)
+
+> NOTE: this document's appendices continue through Appendix I (E: `docs-chain.yaml`, F: Integration Testing Matrix, G: Error Code Registry, H: Submodule Version Compatibility Matrix, I: Common Integration Pitfalls); only A–D are indexed above — see the body headings for the rest.
 
 ---
 
@@ -46,6 +48,8 @@ This specification is the authoritative reference for integrating every external
 - **Complete, compilable Go code** (or Dart code where applicable)
 - **Configuration** artifacts (YAML, env variables)
 - **Error handling** and operational concerns
+
+> NOTE (CD-2 / CD-11 — flagged, not mass-rewritten): per `CANONICAL_FACTS.md`, the primary org/domain identity going forward is `HelixDevelopment` / `helixterminator.io`, and the canonical Go import-path convention is slash-form (`digital.vasic/security`, as used throughout the code samples in §2–§16). This document's Go module namespace (`helixterm.io/...`), and the dot-form paths used in `go.work`'s `replace` directives (Appendix A) and in `helix-deps.yaml` (§17.1, `import_path: digital.vasic.security`), predate that decision and are **not** rewritten here — both are high-churn, cross-cutting renames (600+ refs) tracked as DEFERRED cross-doc work in `CANONICAL_FACTS.md`. Do not treat `helixterm.io` or the dot-form `import_path` values below as newly-canonical; they are left in place and flagged.
 
 ### 1.1 Submodule Inventory
 
@@ -70,35 +74,37 @@ This specification is the authoritative reference for integrating every external
 
 ### 1.2 Service Registry
 
-All 25 microservices under `helixterm.io/services/`:
+All 25 microservices under `helixterm.io/services/`. This is the **CD-3 canonical service set**, adopted verbatim from `01_core_architecture.md` §2.10 (Go Module Structure) — the single authoritative enumeration; do not re-derive or re-list a divergent set elsewhere in this document (see Appendix A and Appendix D, which reference this same set):
 
 ```
-helixterm.io/services/api-gateway
+helixterm.io/services/gateway
 helixterm.io/services/auth
+helixterm.io/services/user
 helixterm.io/services/vault
+helixterm.io/services/host
 helixterm.io/services/ssh-proxy
 helixterm.io/services/terminal
 helixterm.io/services/sftp
-helixterm.io/services/host-manager
-helixterm.io/services/user
+helixterm.io/services/port-forward
+helixterm.io/services/snippet
+helixterm.io/services/keychain
 helixterm.io/services/workspace
+helixterm.io/services/collab
 helixterm.io/services/notification
 helixterm.io/services/audit
 helixterm.io/services/analytics
 helixterm.io/services/ai
+helixterm.io/services/recording
+helixterm.io/services/pki
+helixterm.io/services/org
+helixterm.io/services/billing
+helixterm.io/services/config
+helixterm.io/services/health
 helixterm.io/services/container-bridge
 helixterm.io/services/helixtrack-bridge
-helixterm.io/services/billing
-helixterm.io/services/scheduler
-helixterm.io/services/file-manager
-helixterm.io/services/config
-helixterm.io/services/identity
-helixterm.io/services/team
-helixterm.io/services/secret
-helixterm.io/services/webhook
-helixterm.io/services/search
-helixterm.io/services/onboarding
 ```
+
+> DEFERRED: several code samples later in this document (§2–§17, e.g. `host-manager`, `sftp-proxy`, `workspace-svc`, `config-svc`, `api-gateway`, `team`, `session`, `secret-manager`, `challenge`/`onboarding`) still use pre-convergence service names that predate this registry fix. Propagating the CD-3 canonical names through every code sample is high-churn, cross-cutting work tracked under CD-3/CD-11 (per `CANONICAL_FACTS.md`) and is intentionally out of scope for this pass — flagged here rather than silently left inconsistent.
 
 ### 1.3 Go Module Layout
 
@@ -110,8 +116,8 @@ helixterm.io/
 ├── CLAUDE.MD
 ├── Makefile
 ├── services/
-│   ├── api-gateway/
-│   │   ├── go.mod         (module helixterm.io/services/api-gateway)
+│   ├── gateway/
+│   │   ├── go.mod         (module helixterm.io/services/gateway)
 │   │   └── ...
 │   ├── auth/
 │   │   ├── go.mod         (module helixterm.io/services/auth)
@@ -127,7 +133,7 @@ helixterm.io/
 ## 2. `digital.vasic.security`
 
 **Import path:** `digital.vasic/security`  
-**Go module:** `digital.vasic/security v1.x.x`
+**Go module:** `digital.vasic/security v1.4.2`
 
 ### 2.1 Purpose
 
@@ -750,7 +756,7 @@ class VaultClient {
 ## 3. `digital.vasic.auth`
 
 **Import path:** `digital.vasic/auth`  
-**Go module:** `digital.vasic/auth v2.x.x`
+**Go module:** `digital.vasic/auth v2.3.1`
 
 ### 3.1 Purpose
 
@@ -1407,7 +1413,7 @@ func mapUserToSCIM(u repository.User) scim.User {
 ## 4. `digital.vasic.cache`
 
 **Import path:** `digital.vasic/cache`  
-**Go module:** `digital.vasic/cache v1.x.x`
+**Go module:** `digital.vasic/cache v1.2.7`
 
 ### 4.1 Purpose
 
@@ -1743,7 +1749,7 @@ func WarmHostCache(
 ## 5. `digital.vasic.database`
 
 **Import path:** `digital.vasic/database`  
-**Go module:** `digital.vasic/database v1.x.x`
+**Go module:** `digital.vasic/database v1.8.0`
 
 ### 5.1 Purpose
 
@@ -2021,7 +2027,7 @@ func NormalizePageSize(requested int) int {
 ## 6. `digital.vasic.messaging`
 
 **Import path:** `digital.vasic/messaging`  
-**Go module:** `digital.vasic/messaging v1.x.x`
+**Go module:** `digital.vasic/messaging v1.5.3`
 
 ### 6.1 Purpose
 
@@ -2400,7 +2406,7 @@ func (h *DLQHandler) StartDLQProcessor(ctx context.Context) error {
 ## 7. `digital.vasic.middleware`
 
 **Import path:** `digital.vasic/middleware`  
-**Go module:** `digital.vasic/middleware v1.x.x`
+**Go module:** `digital.vasic/middleware v1.1.4`
 
 ### 7.1 Purpose
 
@@ -2701,7 +2707,7 @@ func GinTimeout(d time.Duration) gin.HandlerFunc {
 ## 8. `digital.vasic.observability`
 
 **Import path:** `digital.vasic/observability`  
-**Go module:** `digital.vasic/observability v1.x.x`
+**Go module:** `digital.vasic/observability v1.3.0`
 
 ### 8.1 Purpose
 
@@ -3143,7 +3149,7 @@ scrape_configs:
 ## 9. `digital.vasic.ratelimiter`
 
 **Import path:** `digital.vasic/ratelimiter`  
-**Go module:** `digital.vasic/ratelimiter v1.x.x`
+**Go module:** `digital.vasic/ratelimiter v1.0.9`
 
 ### 9.1 Purpose
 
@@ -3392,7 +3398,7 @@ func (d *DynamicController) SetOrgLimit(ctx context.Context, orgID, plan string)
 ## 10. `digital.vasic.recovery`
 
 **Import path:** `digital.vasic/recovery`  
-**Go module:** `digital.vasic/recovery v1.x.x`
+**Go module:** `digital.vasic/recovery v1.2.1`
 
 ### 10.1 Purpose
 
@@ -3594,7 +3600,7 @@ func (b *Bulkhead) Execute(ctx context.Context, fn func(ctx context.Context) err
 ## 11. `digital.vasic.concurrency`
 
 **Import path:** `digital.vasic/concurrency`  
-**Go module:** `digital.vasic/concurrency v1.x.x`
+**Go module:** `digital.vasic/concurrency v1.1.0`
 
 ### 11.1 Purpose
 
@@ -3768,7 +3774,7 @@ func (h *TerminalHandler) broadcastToCollaborators(ctx context.Context, event mo
 ## 12. `digital.vasic.containers`
 
 **Import path:** `digital.vasic/containers`  
-**Go module:** `digital.vasic/containers v1.x.x`
+**Go module:** `digital.vasic/containers v1.0.5`
 
 ### 12.1 Purpose
 
@@ -4076,7 +4082,7 @@ class ContainerBridgeException implements Exception {
 ## 13. `digital.vasic.docs_chain`
 
 **Import path:** `digital.vasic/docs_chain` (CLI tool: `docs-chain`)  
-**Go module:** `digital.vasic/docs_chain v1.x.x`
+**Go module:** `digital.vasic/docs_chain v1.0.3`
 
 ### 13.1 Purpose
 
@@ -4256,7 +4262,7 @@ docs-chain watch --config docs-chain.yaml
 ## 14. `digital.vasic.challenges`
 
 **Import path:** `digital.vasic/challenges`  
-**Go module:** `digital.vasic/challenges v1.x.x`
+**Go module:** `digital.vasic/challenges v0.9.2` (pre-stable; see Appendix H — breaking v1.0.0 pending)
 
 ### 14.1 Architecture and Purpose
 
@@ -4709,7 +4715,7 @@ jobs:
 ## 16. `helixtrack.ru/core`
 
 **Import path:** `helixtrack.ru/core`  
-**Go module:** `helixtrack.ru/core v1.x.x`
+**Go module:** `helixtrack.ru/core v2.1.4`
 
 ### 16.1 Purpose
 
@@ -5052,10 +5058,12 @@ class HelixTask {
 
 This file lives at the repository root. The `helix-constitution` CI action reads it and verifies that all referenced submodule versions exist, licenses are approved, and dependency graph is acyclic.
 
+> DEFERRED: a few `required_by` entries below (e.g. `helixterm.io/services/ssh-key`, `helixterm.io/services/session`) predate the CD-3 canonical service registry (§1.2) and do not correspond to a service name in it. Reconciling every `required_by` entry against the canonical registry is cross-doc CD-3/CD-11 work and is out of scope for this pass; flagged rather than silently left inconsistent.
+
 ```yaml
 # helix-deps.yaml
 # HelixTerminator — Helix Dependency Manifest
-# Governed by §11.4.31 of HelixConstitution v2.
+# Governed by §11.4.31 of HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line).
 
 schema_version: "2.1"
 project:
@@ -5063,7 +5071,7 @@ project:
   module: helixterm.io
   team: core-platform
   go_version: "1.25"
-  constitution_version: "2.0"
+  constitution_version: "helixcode-v1.1.0"  # pinned commit e6504c2 (git describe: helixcode-v1.1.0-39-ge6504c2); CD-9
   license: AGPL-3.0
 
 submodules:
@@ -5258,7 +5266,7 @@ submodules:
 
   - id: helix_constitution
     source: github.com/HelixDevelopment/helix-constitution
-    version: v2.0.0
+    version: helixcode-v1.1.0  # pinned commit e6504c2 (git describe: helixcode-v1.1.0-39-ge6504c2)
     import_path: helix-constitution
     license: Proprietary-Helix
     required_by: ["ci"]
@@ -5318,7 +5326,7 @@ policies:
 
 ```markdown
 # AGENTS.MD — HelixTerminator
-# Governed by HelixConstitution §3 (AI Agent Rules), v2.0
+# Governed by HelixConstitution §3 (AI Agent Rules) (pinned e6504c2, helixcode-v1.1.0 line)
 # Last updated: 2026-06-28
 
 ## Identity
@@ -5406,8 +5414,8 @@ Flutter/Dart client: package `io.helixterm.client`.
 - `Constitution.md` — full governance rules
 - `helix-deps.yaml` — dependency manifest
 - `docs/10_submodule_integration.md` — this spec
-- `docs/01_architecture.md` — system architecture
-- `docs/02_data_model.md` — database schema
+- `docs/01_core_architecture.md` — system architecture
+- `docs/07_api_and_database.md` — API & database schema (no standalone `02_data_model.md` exists in this corpus)
 ```
 
 ### 17.3 `CLAUDE.MD` for HelixTerminator
@@ -5415,7 +5423,7 @@ Flutter/Dart client: package `io.helixterm.client`.
 ```markdown
 # CLAUDE.MD — HelixTerminator
 # Claude-specific rules for operating on the HelixTerminator codebase.
-# Governed by HelixConstitution §3.2 (Claude Rules), v2.0
+# Governed by HelixConstitution §3.2 (Claude Rules) (pinned e6504c2, helixcode-v1.1.0 line)
 # Last updated: 2026-06-28
 
 ## Persona
@@ -5521,13 +5529,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.helix/bin
-          key: helix-constitution-v2.0.0
+          key: helix-constitution-helixcode-v1.1.0-ge6504c2
 
       - name: Install helix-constitution CLI
         run: |
           if [ ! -f ~/.helix/bin/helix-constitution ]; then
             mkdir -p ~/.helix/bin
-            curl -sSfL https://releases.helixdevelopment.io/constitution/v2.0.0/helix-constitution-linux-amd64 \
+            curl -sSfL https://releases.helixdevelopment.io/constitution/helixcode-v1.1.0-ge6504c2/helix-constitution-linux-amd64 \
               -o ~/.helix/bin/helix-constitution
             chmod +x ~/.helix/bin/helix-constitution
           fi
@@ -5599,7 +5607,7 @@ jobs:
 
 ### 17.5 Constitution Rules Applicable to HelixTerminator
 
-The following rules from HelixConstitution v2.0 are binding on all HelixTerminator code:
+The following rules from HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line) are binding on all HelixTerminator code:
 
 | §     | Rule                                           | Enforcement                      |
 |-------|------------------------------------------------|----------------------------------|
@@ -5640,32 +5648,32 @@ use (
     // Root module
     .
 
-    // Microservices
+    // Microservices (CD-3 canonical 25 — see §1.2 Service Registry)
     ./services/gateway
     ./services/auth
     ./services/vault
     ./services/ssh-proxy
-    ./services/sftp-proxy
+    ./services/sftp
     ./services/terminal
-    ./services/host-manager
+    ./services/host
     ./services/user
-    ./services/team
-    ./services/workspace-svc
+    ./services/org
+    ./services/workspace
     ./services/audit
     ./services/analytics
     ./services/notification
     ./services/billing
     ./services/ai
-    ./services/challenge
+    ./services/pki
     ./services/container-bridge
     ./services/helixtrack-bridge
-    ./services/scheduler
-    ./services/rbac
-    ./services/secret-manager
-    ./services/session
+    ./services/health
+    ./services/port-forward
+    ./services/keychain
+    ./services/collab
     ./services/snippet
-    ./services/webhook
-    ./services/config-svc
+    ./services/recording
+    ./services/config
 
     // Proto definitions (generated code)
     ./proto
@@ -5861,7 +5869,7 @@ on:
 
 env:
   GO_VERSION: "1.25"
-  HELIX_CONSTITUTION_VERSION: "2.0.0"
+  HELIX_CONSTITUTION_VERSION: "1.1.0"  # helixcode-v1.1.0 line, pinned commit e6504c2
 
 jobs:
   # ── Job 1: Validate submodule versions and manifest ────────────────────────
@@ -5879,7 +5887,7 @@ jobs:
       - name: Install helix-constitution CLI
         run: |
           curl -sSfL \
-            "https://releases.helixdevelopment.io/constitution/v${HELIX_CONSTITUTION_VERSION}/helix-constitution-linux-amd64" \
+            "https://releases.helixdevelopment.io/constitution/helixcode-v${HELIX_CONSTITUTION_VERSION}-ge6504c2/helix-constitution-linux-amd64" \
             -o /usr/local/bin/helix-constitution
           chmod +x /usr/local/bin/helix-constitution
           helix-constitution version
@@ -6082,7 +6090,7 @@ jobs:
       - name: Install helix-constitution CLI
         run: |
           curl -sSfL \
-            "https://releases.helixdevelopment.io/constitution/v${HELIX_CONSTITUTION_VERSION}/helix-constitution-linux-amd64" \
+            "https://releases.helixdevelopment.io/constitution/helixcode-v${HELIX_CONSTITUTION_VERSION}-ge6504c2/helix-constitution-linux-amd64" \
             -o /usr/local/bin/helix-constitution
           chmod +x /usr/local/bin/helix-constitution
 
@@ -6149,32 +6157,33 @@ graph TD
     HT[helixtrack.ru/core]:::submod
     CONST[helix-constitution]:::submod
 
-    %% Services
+    %% Services (node IDs kept stable so edges below don't need renumbering;
+    %% labels updated to the CD-3 canonical 25-service set, see §1.2)
     GW[gateway]:::service
     AUTHSVC[auth]:::service
     VAULT[vault]:::service
     SSH[ssh-proxy]:::service
-    SFTP[sftp-proxy]:::service
+    SFTP[sftp]:::service
     TERM[terminal]:::service
-    HOSTMGR[host-manager]:::service
+    HOSTMGR[host]:::service
     USER[user]:::service
-    TEAM[team]:::service
-    WS[workspace-svc]:::service
+    TEAM[org]:::service
+    WS[workspace]:::service
     AUDIT[audit]:::service
     ANALYTICS[analytics]:::service
     NOTIF[notification]:::service
     BILLING[billing]:::service
     AI[ai]:::service
-    CHALSVC[challenge]:::service
+    CHALSVC[pki]:::service
     CB[container-bridge]:::service
     HTB[helixtrack-bridge]:::service
-    SCHED[scheduler]:::service
-    RBAC[rbac]:::service
-    SECMGR[secret-manager]:::service
-    SESSION[session]:::service
+    SCHED[health]:::service
+    RBAC[port-forward]:::service
+    SECMGR[keychain]:::service
+    SESSION[collab]:::service
     SNIPPET[snippet]:::service
-    WEBHOOK[webhook]:::service
-    CONFSVC[config-svc]:::service
+    WEBHOOK[recording]:::service
+    CONFSVC[config]:::service
 
     %% Security dependencies
     SEC --> VAULT
@@ -6649,7 +6658,7 @@ The following matrix specifies the minimum and maximum tested versions of each s
 | `digital.vasic.challenges`   | v0.8.0      | v0.9.2     | v1.0.0 (pending)        | Pre-stable; API may change              |
 | `helixqa`                    | v1.5.0      | v1.7.0     | —                        | v1.6.0 added mutation testing           |
 | `helixtrack.ru/core`         | v2.0.0      | v2.1.4     | —                        | v2.1.0 added real-time webhooks          |
-| `helix-constitution`         | v2.0.0      | v2.0.0     | —                        | Major version locked per policy         |
+| `helix-constitution`         | helixcode-v1.1.0 | helixcode-v1.1.0 | —                  | Pinned at commit e6504c2 (CD-9); major version locked per policy |
 
 ---
 
@@ -6768,7 +6777,16 @@ lifecycle.RegisterShutdown(func(ctx context.Context) error {
 ```go
 //helixqa:quarantine flaky-test-id=HT-1234 reason="SSH session timing sensitive"
 func TestSSHSessionHandshakeTimeout(t *testing.T) {
-    // ...
+    srv := newTestSSHServer(t, sshServerConfig{HandshakeDelay: 250 * time.Millisecond})
+    defer srv.Close()
+
+    _, err := dialSSHWithTimeout(srv.Addr(), 50*time.Millisecond)
+    if err == nil {
+        t.Fatal("expected handshake to time out, but dial succeeded")
+    }
+    if !errors.Is(err, context.DeadlineExceeded) {
+        t.Fatalf("expected context.DeadlineExceeded, got: %v", err)
+    }
 }
 ```
 
@@ -6778,4 +6796,4 @@ func TestSSHSessionHandshakeTimeout(t *testing.T) {
 *Document ID: doc_10_submodule_integration*
 *Version: 1.0.0*
 *Last Updated: 2026-06-28*
-*Governed by: HelixConstitution v2.0 §11.4.31*
+*Governed by: HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line) §11.4.31*

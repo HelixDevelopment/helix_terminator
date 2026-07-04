@@ -9,9 +9,9 @@
 
 ## Table of Contents
 
-1. [Complete Feature Comparison: Termius vs HelixTerminator](#1-complete-feature-comparison)
-2. [Development Phases & Sprint Plans](#2-development-phases)
-3. [Complete Use Case Specifications](#3-complete-use-cases)
+1. [Complete Feature Comparison: Termius vs HelixTerminator](#1-complete-feature-comparison-termius-vs-helixterminator)
+2. [Development Phases & Sprint Plans](#2-development-phases--sprint-plans)
+3. [Complete Use Case Specifications](#3-complete-use-case-specifications)
 4. [Edge Cases & Failure Modes](#4-edge-cases--failure-modes)
 5. [Performance Benchmarks & Targets](#5-performance-benchmarks--targets)
 6. [Monitoring & Alerting Rules](#6-monitoring--alerting-rules)
@@ -414,7 +414,7 @@ All development follows these non-negotiable principles:
 - **Security by Default:** OWASP Top 10 checks in every PR via automated scanner.
 - **Observability First:** Every service emits structured logs, metrics (Prometheus), and traces (OpenTelemetry) from day one.
 - **Definition of Done (Global):** Code reviewed, unit tests passing, integration tests passing, documentation updated, feature flag added, telemetry instrumented, security checklist passed.
-- **Tech Stack:** Go 1.23 (backend microservices), Flutter 3.24 (cross-platform client), PostgreSQL 16 (primary store), Redis 7 (cache/pub-sub), Apache Kafka 3.7 (event streaming), Kubernetes 1.30 (orchestration), Istio 1.22 (service mesh), gRPC (inter-service), REST + WebSocket (client-facing API).
+- **Tech Stack:** Go 1.25 (backend microservices), Flutter 3.24 (cross-platform client), PostgreSQL 17.2 (primary store), Redis 8 (cache/pub-sub), Apache Kafka 3.9 (event streaming), Kubernetes 1.31 (orchestration), Istio 1.22 (service mesh), gRPC (inter-service), REST + WebSocket (client-facing API).
 
 ---
 
@@ -660,6 +660,8 @@ All development follows these non-negotiable principles:
 ---
 
 ### 2.2 Phase 2: Core Features (Months 4–7)
+
+> DEFERRED (next increment): Phases 2-5 need entry/exit criteria, DoD, owners, estimates, risk register. Unlike Phase 1's Sprints 1-6, the Month-by-Month deliverable lists below (Phases 2-5) do not yet carry per-phase Acceptance Criteria, Test Requirements, or a Definition of Done checklist, nor named owners/effort estimates, nor a project risk register (likelihood/impact/mitigation/owner), nor scheduling for several fully-specified features (e.g. SSH Playground, Config Diff, Collaborative Debugging, Terminal Multiplayer, Break-Glass, JIT Access) that currently have no Phase/Sprint/Month home. This gap is tracked honestly here rather than bluffed; authoring it is out of scope for this increment.
 
 **Phase Goal:** Deliver a fully functional SSH client with terminal emulator, SFTP, port forwarding, snippets, keychain, and workspaces — sufficient for individual developer daily use.
 

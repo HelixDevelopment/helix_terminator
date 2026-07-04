@@ -22,7 +22,7 @@
 10. [Flutter Client Performance](#10-flutter-client-performance)
 11. [Observability for Performance](#11-observability-for-performance)
 12. [Danger Zones — Security-Performance Tradeoffs](#12-danger-zones--security-performance-tradeoffs)
-13. [Load Testing Results & Benchmarks](#13-load-testing-results--benchmarks)
+13. [Load Testing Plan & Benchmarks](#13-load-testing-plan--benchmarks)
 14. [Performance Improvement Roadmap](#14-performance-improvement-roadmap)
 
 ---
@@ -37,7 +37,7 @@ HelixTerminator is engineered under a **performance-first, correctness-concurren
 2. **Throughput ceiling** — Does this design path block horizontal scale-out?
 3. **Tail latency amplification** — Does p99 grow faster than p50 as load increases?
 
-The system targets **millions of requests per second** aggregate across its 25 microservices, with a non-negotiable **sub-millisecond p50 latency** for all hot-path operations. These targets are not aspirational—they are encoded as SLO burn-rate alerts and will page on-call engineers if violated.
+The system targets **millions of requests per second** aggregate across its 25 microservices, with a non-negotiable **sub-millisecond p50 latency** for all hot-path operations. The *measurement and alerting* pipeline for these targets is real: they are encoded as SLO burn-rate alerts (§11.4) that page on-call engineers when the error budget burns down. However, per the gap analysis in §4, the resilience mechanisms required to *hold* these ceilings under adverse conditions — timeouts (§4.8), circuit breakers (§4.1), backpressure (§4.5), bulkheads (§4.7), and retry budgets (§4.9) — are largely **not yet implemented**. Until those gaps close, treat the per-service SLOs in §1.2 as **target/aspirational figures the alerting pipeline watches**, not as guarantees the system currently enforces end-to-end.
 
 **Core tenets:**
 
@@ -77,6 +77,8 @@ All latency SLOs are measured at the **service egress point** (not client-percei
 | `export-service` | ≤500 ms | ≤2000 ms | ≤10000 ms | 10 req/s | 99.0% |
 | `plugin-runtime` | ≤10 ms | ≤50 ms | ≤200 ms | 5,000 req/s | 99.5% |
 | `ai-assist` | ≤200 ms | ≤800 ms | ≤2000 ms | 500 req/s | 99.0% |
+
+> **Status: ASPIRATIONAL, not fully ENFORCED.** These are the target ceilings the SLO burn-rate alerting (§11.4) is configured against. They are not yet backed end-to-end by the resilience mechanisms (timeouts, circuit breakers, backpressure) that §4 shows are missing on several of these same call paths — see the ENFORCED vs ASPIRATIONAL note in §1.1 before citing any row here as a guarantee.
 
 **SLA Error Budget Calculation:**
 
@@ -179,6 +181,8 @@ Slack to p99 budget:               0.5 ms
                │  (func BenchmarkXxx in Go)  │    Critical-path functions
                └─────────────────────────────┘
 ```
+
+> **Status:** Unit Micro-Benchmarks and Integration Benchmarks run in CI today (per-commit/per-PR, automated). **Load, Stress, Soak, and Chaos Engineering are the *planned* cadence** — no executed run of any of these four tiers has produced reported results in this document; §13 is a test plan, not a results report (see §13 status note). In particular, the "150% → 300% load" stress range shown above is a target ceiling: the only stress data available (§7.5) tops out at 150,000 sessions against the 100,000-session target — i.e. 150%, not 300% — and no soak-test leak data or chaos-engineering MTTR/blast-radius findings are reported anywhere in this document.
 
 **CI Integration:**
 
@@ -826,7 +830,7 @@ spec:
             privileged: true
       containers:
         - name: ssh-proxy
-          image: helixterm/ssh-proxy:latest
+          image: helixterm/ssh-proxy:1.0.0
           resources:
             requests:
               cpu: "4"
@@ -1754,6 +1758,8 @@ spec:
 ---
 
 ## 4. Gap Analysis — What's Missing vs. Production-Ready
+
+Every item below is an **open gap, not a shipped mitigation** — none of the resilience patterns in this section are implemented today. They directly undercut the SLO ceilings in §1.2: a hung downstream call with no timeout (§4.8) cannot honor a documented ≤2 ms/≤20 ms SLA, and the "not aspirational" alerting language in §1.1 only covers *measurement*, not *enforcement*, of those SLOs.
 
 ### 4.1 Missing Circuit Breakers
 
@@ -2948,7 +2954,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:7.4-alpine
+          image: redis:8-alpine
           command:
             - redis-server
             - /etc/redis/redis.conf
@@ -3473,6 +3479,8 @@ func (d *Drainer) GracefulShutdown(ctx context.Context) error {
 
 *Session mix: 80% interactive (low byte rate), 20% SCP transfer (high byte rate)*
 
+> **Coverage note:** this table's max row (150,000 sessions) is 150% of the 100,000-session target — it does not reach the "300% load" ceiling named in the §1.5 Stress Testing tier. No 2–3× breaking-point data is reported here; treat 300%-of-target behavior as untested.
+
 ---
 
 ## 8. Kafka Performance Tuning
@@ -3616,7 +3624,7 @@ groups:
           team: platform
         annotations:
           summary: "audit-service Kafka lag {{ $value }} on audit.events"
-          runbook: "https://runbooks.helixterm.io/kafka/consumer-lag"
+          runbook: "https://runbooks.helixterminator.io/kafka/consumer-lag"
 
       - alert: KafkaSSHConsumerLagCritical
         expr: kafka_consumer_group_lag{topic="ssh.events"} > 50000
@@ -4267,7 +4275,7 @@ Future<void> main() async {
   window.flutterConfiguration = {
     renderer: "canvaskit",
     // Preload CanvasKit WASM in background while showing splash
-    canvasKitBaseUrl: "https://cdn.helixterm.io/canvaskit/",
+    canvasKitBaseUrl: "https://cdn.helixterminator.io/canvaskit/",
   };
 </script>
 ```
@@ -4576,7 +4584,7 @@ groups:
           description: |
             Error rate {{ $value | humanizePercentage }} over 1h window.
             At this rate the 30-day error budget will be exhausted in ~2 hours.
-            Runbook: https://runbooks.helixterm.io/api-gateway/fast-burn
+            Runbook: https://runbooks.helixterminator.io/api-gateway/fast-burn
 
       # ── PAGE: Slow burn  (6h window)  ───────────────────────────────────
       - alert: APIGatewayErrorBudgetSlowBurn
@@ -4595,7 +4603,7 @@ groups:
           summary: "API Gateway burning error budget 6× rate (6h window)"
           description: |
             Sustained elevated error rate over 6h.
-            Runbook: https://runbooks.helixterm.io/api-gateway/slow-burn
+            Runbook: https://runbooks.helixterminator.io/api-gateway/slow-burn
 
       # ── TICKET: 24h burn rate watch ──────────────────────────────────────
       - alert: APIGatewayErrorBudgetDailyBurn
@@ -5534,7 +5542,9 @@ Results (10M rows, GIN trigram index):
 
 ---
 
-## 13. Load Testing Results & Benchmarks
+## 13. Load Testing Plan & Benchmarks
+
+> **Status: DEFERRED (not yet executed).** This section is a **test plan**, not a results report: §13.1 is k6 scenario/threshold *configuration* that has not been run against a live environment, and the §13.2 table is an illustrative target shape for critical-function micro-benchmarks, not verified `go test -bench` output from a dated run. No scenario pass/fail outcome, achieved throughput, or measured percentile from an executed load test is reported anywhere in this section. Do not cite these numbers as achieved SLO validation until a dated benchmark/load-test run with provenance (commit, environment, timestamp) is attached.
 
 ### 13.1 k6 Test Scenarios
 
@@ -5616,7 +5626,7 @@ export const options = {
 };
 
 export function apiGatewayScenario() {
-  const BASE = 'https://api.helixterm.io';
+  const BASE = 'https://api.helixterminator.io';
   const token = __ENV.TEST_JWT_TOKEN;
 
   // Typical read-heavy API workload: 80% reads, 15% writes, 5% deletes
@@ -5669,7 +5679,7 @@ export function apiGatewayScenario() {
 }
 
 export function sshConnectionScenario() {
-  const BASE  = 'https://api.helixterm.io';
+  const BASE  = 'https://api.helixterminator.io';
   const token = __ENV.TEST_JWT_TOKEN;
 
   const startMs = Date.now();
@@ -5696,7 +5706,7 @@ export function sshConnectionScenario() {
 }
 
 export function vaultSyncScenario() {
-  const BASE  = 'https://api.helixterm.io';
+  const BASE  = 'https://api.helixterminator.io';
   const token = __ENV.TEST_JWT_TOKEN;
 
   const startMs = Date.now();
@@ -5728,7 +5738,8 @@ export function vaultSyncScenario() {
 
 package benchmarks_test
 
-// Benchmark results collected on c5.4xlarge (16 vCPU, 32 GB RAM), Go 1.25
+// DEFERRED (not yet executed): illustrative target shape, NOT a verified `go test -bench` run.
+// Assumed environment if/when run: c5.4xlarge (16 vCPU, 32 GB RAM), Go 1.25
 // Command: go test -bench=. -benchmem -benchtime=10s -count=5 ./...
 
 /*
@@ -5764,7 +5775,7 @@ package benchmarks_test
 │ BenchmarkSingleflightCacheGet-16                 │    310 │         1 │    128 │    —   │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 
-Key observations:
+Key observations (directional, from the illustrative target shape above — not a verified run):
 • Ed25519 JWT validation is 13.5× faster than RS256; always use Ed25519 for new tokens.
 • OPA policy evaluation with caching is 273× faster than uncached; always cache decisions.
 • AES-256-GCM at ~5 GB/s makes encryption cost negligible for payloads < 1 MB.

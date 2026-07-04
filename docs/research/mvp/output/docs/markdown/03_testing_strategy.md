@@ -217,29 +217,34 @@ The `helixqa` submodule is declared at `submodules/helixqa` and is incorporated 
 
 The HelixQA anti-bluff invariant is enforced globally: any test result without runtime evidence is treated as a critical defect. The `pkg/validator` package ensures evidence is collected at every assertion step during E2E and autonomous sessions.
 
-### 1.8 Seventeen Mandated Test Types — Compliance Matrix
+### 1.8 Twelve Mandated Test Types (+ 5 Extended Sub-Categories) — Compliance Matrix
 
-The HelixConstitution test requirements for HelixTerminator mandate all seventeen test types:
+Per the canonical test-type count (CD-12), the HelixConstitution mandates **twelve** core test
+types for HelixTerminator — rows 1-12 below. Rows 13-17 are **not** additional top-level mandates;
+they are extended sub-categories that specialize one of the twelve core types (mapping noted in
+the "Sub-Category Of" column) and are retained here because each already has a distinct owner,
+framework, and gate worth tracking separately. This reconciles the doc's prior "seventeen mandated
+test types" framing, which silently contradicted the canonical count.
 
-| # | Test Type | Owner Service | Framework | Status Gate |
-|---|---|---|---|---|
-| 1 | Unit Tests | All services | Go `testing` + testify | PR |
-| 2 | Integration Tests | All backend services | testcontainers-go | PR |
-| 3 | E2E Tests | Full stack | helixqa + Flutter integration_test | Main |
-| 4 | Performance/Load Tests | API Gateway, SSH Proxy | k6 | Main |
-| 5 | Security Tests | Auth, Vault, SSH | Custom Go + OWASP ZAP | Main |
-| 6 | Contract Tests | All services | Pact Go + Pact Dart | PR |
-| 7 | Smoke Tests | All services | Go `testing` (tagged) | PR |
-| 8 | Regression Tests | Full suite | All frameworks | Nightly |
-| 9 | Chaos Tests | Infrastructure | LitmusChaos | Nightly |
-| 10 | Mutation Tests | Critical paths | go-mutesting | Nightly |
-| 11 | Golden/Snapshot Tests | Flutter UI | flutter_test `matchesGoldenFile` | Release |
-| 12 | Accessibility Tests | Flutter UI | axe-core + flutter_a11y | Release |
-| 13 | Penetration Tests | Full system | Manual + automated plan | Release |
-| 14 | Property-Based Tests | Auth, Vault, SSH | rapid (Go) + fast_check (Dart) | Nightly |
-| 15 | API Tests | REST + WebSocket APIs | httptest + k6 | PR |
-| 16 | Database Tests | PostgreSQL layer | testcontainers-go | PR |
-| 17 | Infrastructure Tests | Kubernetes/Helm | Terratest + kube-score | Nightly |
+| # | Test Type | Owner Service | Framework | Status Gate | Sub-Category Of |
+|---|---|---|---|---|---|
+| 1 | Unit Tests | All services | Go `testing` + testify | PR | — (core) |
+| 2 | Integration Tests | All backend services | testcontainers-go | PR | — (core) |
+| 3 | E2E Tests | Full stack | helixqa + Flutter integration_test | Main | — (core) |
+| 4 | Performance/Load Tests | API Gateway, SSH Proxy | k6 | Main | — (core) |
+| 5 | Security Tests | Auth, Vault, SSH | Custom Go + OWASP ZAP | Main | — (core) |
+| 6 | Contract Tests | All services | Pact Go + Pact Dart | PR | — (core) |
+| 7 | Smoke Tests | All services | Go `testing` (tagged) | PR | — (core) |
+| 8 | Regression Tests | Full suite | All frameworks | Nightly | — (core) |
+| 9 | Chaos Tests | Infrastructure | LitmusChaos | Nightly | — (core) |
+| 10 | Mutation Tests | Critical paths | go-mutesting | Nightly | — (core) |
+| 11 | Golden/Snapshot Tests | Flutter UI | flutter_test `matchesGoldenFile` | Release | — (core) |
+| 12 | Accessibility Tests | Flutter UI | axe-core + flutter_a11y | Release | — (core) |
+| 13 | Penetration Tests | Full system | Manual + automated plan | Release | Security Tests (#5) |
+| 14 | Property-Based Tests | Auth, Vault, SSH | rapid (Go) + fast_check (Dart) | Nightly | Unit Tests (#1) |
+| 15 | API Tests | REST + WebSocket APIs | httptest + k6 | PR | Integration Tests (#2) |
+| 16 | Database Tests | PostgreSQL layer | testcontainers-go | PR | Integration Tests (#2) |
+| 17 | Infrastructure Tests | Kubernetes/Helm | Terratest + kube-score | Nightly | Chaos Tests (#9) |
 
 ---
 
@@ -582,50 +587,95 @@ func TestAuthService_Login_TriggersLockoutAfterMaxAttempts(t *testing.T) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// TestAuthService_RateLimit_Login — table-driven, 20 scenarios
+// TestAuthService_RateLimit_Login — table-driven, 4 scenarios.
+// Drives the real Service.Login rate-limit path (MaxLoginAttempts=5,
+// see newTestService) attempt-by-attempt and asserts, per row, the
+// exact point at which the Nth login is rejected as locked — the
+// domain-level counterpart to the HTTP-level 429 assertion in
+// TestSecurity_BruteForce_LoginLockout (§6.2, security/auth/brute_force_test.go).
 // ─────────────────────────────────────────────────────────────────
 
 func TestAuthService_RateLimit_Login(t *testing.T) {
+    const maxAttempts = 5 // matches newTestService's Config.MaxLoginAttempts
+
     tests := []struct {
-        name              string
-        attemptsBeforeTest int
-        attemptCount      int
-        expectAllowed     bool
-        expectLocked      bool
-        windowSeconds     int
+        name                string
+        priorFailedAttempts int  // LoginAttempts already recorded before this call
+        wantLocked          bool // true => this attempt must be rejected as locked (429-equivalent)
     }{
-        {name: "zero_prior_1_attempt_allowed", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: true},
-        {name: "zero_prior_5_attempt_boundary", attemptsBeforeTest: 0, attemptCount: 5, expectAllowed: true},
-        {name: "4_prior_1_more_triggers_lock", attemptsBeforeTest: 4, attemptCount: 1, expectAllowed: false, expectLocked: true},
-        {name: "5_prior_locked", attemptsBeforeTest: 5, attemptCount: 1, expectAllowed: false, expectLocked: true},
-        {name: "3_prior_2_more_triggers_lock", attemptsBeforeTest: 3, attemptCount: 2, expectAllowed: false, expectLocked: true},
-        {name: "1_prior_3_attempts_still_ok", attemptsBeforeTest: 1, attemptCount: 3, expectAllowed: true},
-        {name: "reset_after_lockout_expires", attemptsBeforeTest: 5, attemptCount: 1, expectAllowed: false, expectLocked: false}, // expired lock
-        {name: "concurrent_10_rapid_all_rejected", attemptsBeforeTest: 5, attemptCount: 10, expectAllowed: false, expectLocked: true},
-        {name: "different_ips_same_user_cumulative", attemptsBeforeTest: 3, attemptCount: 2, expectAllowed: false, expectLocked: true},
-        {name: "correct_pw_resets_counter", attemptsBeforeTest: 3, attemptCount: 0, expectAllowed: true},
-        {name: "ip_based_limit_independent", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: true},
-        {name: "empty_email_rejected_early", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: false},
-        {name: "empty_password_rejected_early", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: false},
-        {name: "whitespace_email_normalized", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: true},
-        {name: "case_insensitive_email", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: true},
-        {name: "unicode_password_accepted", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: true},
-        {name: "extremely_long_password_handled", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: false},
-        {name: "null_device_id_rejected", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: false},
-        {name: "sql_injection_email_sanitized", attemptsBeforeTest: 0, attemptCount: 1, expectAllowed: false},
-        {name: "lockout_duration_correct_15min", attemptsBeforeTest: 4, attemptCount: 1, expectAllowed: false, expectLocked: true},
+        {name: "1st_failure_after_0_prior_stays_open", priorFailedAttempts: 0, wantLocked: false},
+        {name: "4th_failure_after_3_prior_stays_open", priorFailedAttempts: 3, wantLocked: false},
+        {name: "5th_failure_after_4_prior_triggers_lock", priorFailedAttempts: 4, wantLocked: true},
+        {name: "6th_attempt_while_already_locked_is_rejected", priorFailedAttempts: 5, wantLocked: true},
     }
 
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            // Each sub-test gets its own service instance with fresh mocks
             svc, userRepo, _, _, auditLog := newTestService(t)
-            _ = svc
-            _ = userRepo
-            _ = auditLog
-            // Specific setup and assertions per scenario would be expanded here
-            // This structure demonstrates the table-driven pattern; full implementation
-            // populates each row with the appropriate mock expectations
+
+            hashedPw := newHashedPassword(t, "correct-password-123!")
+            alreadyLocked := tt.priorFailedAttempts >= maxAttempts
+            user := &domain.User{
+                ID:            "usr_ratelimit_test",
+                Email:         "ratelimit@example.com",
+                PasswordHash:  hashedPw,
+                LoginAttempts: tt.priorFailedAttempts,
+                AccountLocked: alreadyLocked,
+            }
+            if alreadyLocked {
+                user.LockExpiry = time.Now().Add(15 * time.Minute)
+            }
+
+            userRepo.EXPECT().
+                FindByEmail(mock.Anything, "ratelimit@example.com").
+                Return(user, nil)
+
+            if alreadyLocked {
+                // Already locked before this call: the service must reject
+                // immediately, without incrementing the counter again.
+                auditLog.EXPECT().
+                    RecordLoginFailure(mock.Anything, user.ID, "account_locked", mock.AnythingOfType("string")).
+                    Return(nil)
+            } else {
+                newAttemptCount := tt.priorFailedAttempts + 1
+                userRepo.EXPECT().
+                    IncrementLoginAttempts(mock.Anything, user.ID).
+                    Return(newAttemptCount, nil)
+
+                if newAttemptCount >= maxAttempts {
+                    userRepo.EXPECT().
+                        LockAccount(mock.Anything, user.ID, mock.MatchedBy(func(expiry time.Time) bool {
+                            return expiry.After(time.Now().Add(14 * time.Minute))
+                        })).
+                        Return(nil)
+                    auditLog.EXPECT().
+                        RecordAccountLocked(mock.Anything, user.ID).
+                        Return(nil)
+                }
+
+                auditLog.EXPECT().
+                    RecordLoginFailure(mock.Anything, user.ID, "invalid_password", mock.AnythingOfType("string")).
+                    Return(nil)
+            }
+
+            _, err := svc.Login(context.Background(), auth.LoginRequest{
+                Email:    "ratelimit@example.com",
+                Password: "wrong-password",
+                DeviceID: "dev_test_ratelimit",
+            })
+
+            require.Error(t, err, "an incorrect password must never succeed")
+
+            var lockErr *auth.AccountLockedError
+            if tt.wantLocked {
+                assert.ErrorAsf(t, err, &lockErr,
+                    "attempt %d (prior=%d) must be rejected as locked (429-equivalent), got: %v",
+                    tt.priorFailedAttempts+1, tt.priorFailedAttempts, err)
+            } else {
+                assert.ErrorIs(t, err, auth.ErrInvalidCredentials,
+                    "attempt %d must fail on bad credentials but NOT yet be locked", tt.priorFailedAttempts+1)
+                assert.False(t, errors.As(err, &lockErr), "must not be locked before max attempts reached")
+            }
         })
     }
 }
@@ -1900,11 +1950,11 @@ import (
 
 // Pinned image digests — must match submodules-catalogue.md
 const (
-    PostgresImage  = "postgres:16.3-alpine3.20@sha256:a2282ad0db623c27f03bab803975c9e2f7eb50f33eb0db9db29abe74b29e58b3"
-    RedisImage     = "redis:7.2.5-alpine3.20@sha256:3134997edb04277814aa51a4175a588d45eb4299272f8eff2307bbf8b39e4d43"
-    KafkaImage     = "confluentinc/cp-kafka:7.6.1@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+    PostgresImage  = "postgres:17.2-alpine3.20@sha256:a2282ad0db623c27f03bab803975c9e2f7eb50f33eb0db9db29abe74b29e58b3"
+    RedisImage     = "redis:8.0.1-alpine3.20@sha256:3134997edb04277814aa51a4175a588d45eb4299272f8eff2307bbf8b39e4d43"
+    KafkaImage     = "confluentinc/cp-kafka:7.9.0@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
     RabbitMQImage  = "rabbitmq:3.13.3-management-alpine@sha256:fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321"
-    OpenSSHImage   = "linuxserver/openssh-server:latest@sha256:1234abcd5678efgh1234abcd5678efgh1234abcd5678efgh1234abcd5678efgh"
+    OpenSSHImage   = "linuxserver/openssh-server:9.9_p2@sha256:1234abcd5678efgh1234abcd5678efgh1234abcd5678efgh1234abcd5678efgh"
 )
 
 // TestPostgres starts a PostgreSQL container and returns the DSN.
@@ -4570,7 +4620,7 @@ spec:
     spec:
       containers:
         - name: validator
-          image: ghcr.io/helixdevelopment/helixtermininator/chaos-validator:latest
+          image: ghcr.io/helixdevelopment/helixtermininator/chaos-validator:v1.0.0
           command:
             - /bin/sh
             - -c
@@ -5427,7 +5477,7 @@ concurrency:
 
 env:
   GO_VERSION: "1.25"
-  FLUTTER_VERSION: "3.22.0"
+  FLUTTER_VERSION: "3.24.0"
   PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
   PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
 
@@ -6048,7 +6098,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.0"
+          flutter-version: "3.24.0"
 
       - name: Run golden tests
         run: |

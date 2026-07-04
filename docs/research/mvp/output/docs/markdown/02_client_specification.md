@@ -2,8 +2,8 @@
 
 **Document Version:** 1.0.0  
 **Date:** 2026-06-28  
-**Package:** `io.helixterm.client`  
-**Technology Stack:** Flutter 3.x / Dart 3.x  
+**Package:** `io.helixterminator.client`  
+**Technology Stack:** Flutter 3.24 / Dart 3.x  
 **Platforms:** Web (WASM), macOS, Windows, Linux, iOS, Android  
 
 ---
@@ -22,6 +22,8 @@
 10. [Accessibility](#10-accessibility)
 
 ---
+
+<a id="1-flutter-architecture"></a>
 
 ## 1. Flutter Architecture
 
@@ -592,7 +594,9 @@ class AuthUser {
   });
 }
 
-enum AuthRole { individual, teamMember, admin, owner }
+// Canonical RBAC vocabulary (CD-8): super_admin, org_admin, team_admin,
+// member, auditor, api_user — normalized to Dart camelCase.
+enum AuthRole { superAdmin, orgAdmin, teamAdmin, member, auditor, apiUser }
 enum MfaMethod { totp, fido2, push, backupCodes }
 enum BiometricStatus { notEnrolled, enrolled, disabled }
 ```
@@ -1592,6 +1596,8 @@ enum NotificationPriority { low, normal, high, critical }
 
 ---
 
+<a id="2-terminal-emulator-design"></a>
+
 ## 2. Terminal Emulator Design
 
 ### 2.1 xterm.dart Integration Architecture
@@ -2407,6 +2413,8 @@ class _OptimizedTerminalWrapperState extends State<OptimizedTerminalWrapper>
 
 ---
 
+<a id="3-ssh-connection-architecture"></a>
+
 ## 3. SSH Connection Architecture
 
 ### 3.1 dartssh2 Integration
@@ -3128,6 +3136,8 @@ class SftpService {
 
 ---
 
+<a id="4-offline-mode"></a>
+
 ## 4. Offline Mode
 
 ### 4.1 Offline Capability Overview
@@ -3194,7 +3204,10 @@ class SyncManager {
         .isDirtyEqualTo(true)
         .get();
 
-    // 3. Resolve conflicts
+    // 3. Resolve conflicts. `hosts` is not zero-knowledge vault data (the
+    // server already sees plaintext host records), so lastWriteWins is
+    // acceptable here. Vault entity sync MUST use
+    // ConflictStrategy.crdtVectorClock instead — see §4.3.
     final resolved = await _conflictResolver.resolve(
       localRecords: localDirty,
       remoteChanges: remoteChanges,
@@ -3231,6 +3244,20 @@ class SyncManager {
 
 ### 4.3 Conflict Resolution
 
+> **CANONICAL:** `lastWriteWins` MUST NOT be used for vault data. Because vault items are
+> zero-knowledge / client-side end-to-end encrypted (server never sees plaintext), a
+> timestamp-based "last write wins" merge can silently discard a divergent encrypted edit
+> with no way for either client to detect or recover the loss. Vault entity sync MUST use
+> `ConflictStrategy.crdtVectorClock`: each client maintains a per-item vector clock
+> (`Map<deviceId, int>`), advances its own counter on every local mutation, and a remote
+> change is merged rather than overwritten whenever the two clocks are concurrent (neither
+> dominates the other) — in that case both encrypted versions are retained and surfaced for
+> user-driven manual merge instead of being silently dropped. `lastWriteWins` remains
+> acceptable for non-secret entities (hosts, snippets, port-forwarding rules) where the
+> server can already see the plaintext and a clobbered edit is low-risk and recoverable via
+> audit log. (DEEP-WORK: full item-level vault vector-clock wire format, gossip/merge
+> protocol, and key-rotation interplay — next increment.)
+
 ```dart
 // core/sync/conflict_resolver.dart
 enum ConflictStrategy {
@@ -3238,6 +3265,7 @@ enum ConflictStrategy {
   serverWins,
   clientWins,
   manualMerge,
+  crdtVectorClock, // REQUIRED for vault data — see note above
 }
 
 class ConflictResolver {
@@ -3293,6 +3321,24 @@ class ConflictResolver {
           break;
         case ConflictStrategy.manualMerge:
           // Emit conflict event for user resolution via UI
+          break;
+        case ConflictStrategy.crdtVectorClock:
+          // Vault data only. Compare per-device vector clocks (not wall-clock
+          // timestamps): if one clock causally dominates the other, the
+          // dominant encrypted version wins; if the clocks are concurrent,
+          // retain both encrypted versions and emit a manual-merge conflict
+          // event rather than discarding either one.
+          switch (local.vectorClock.compareTo(remote.vectorClock)) {
+            case VectorClockOrder.localDominates:
+              toPushToRemote.add(local);
+              break;
+            case VectorClockOrder.remoteDominates:
+              toApplyLocally.add(remote);
+              break;
+            case VectorClockOrder.concurrent:
+              // Do not pick a winner — surface both encrypted versions.
+              break;
+          }
           break;
       }
     }
@@ -3351,6 +3397,8 @@ The local SQLite database mirrors the server-side data model with additional syn
 - `updated_at` (datetime): local modification timestamp for conflict detection
 
 ---
+
+<a id="5-security-on-client"></a>
 
 ## 5. Security on Client
 
@@ -3607,7 +3655,7 @@ enum BiometricCapability {
 ```dart
 // platform/security/screen_protection_service.dart
 class ScreenProtectionService {
-  static const _channel = MethodChannel('io.helixterm.client/screen_protection');
+  static const _channel = MethodChannel('io.helixterminator.client/screen_protection');
 
   static Future<void> enable() async {
     await _channel.invokeMethod('enableScreenProtection');
@@ -3709,7 +3757,7 @@ class ClipboardGuard {
 ```dart
 // platform/hardware_key/fido2_service.dart
 class Fido2Service {
-  static const _channel = MethodChannel('io.helixterm.client/fido2');
+  static const _channel = MethodChannel('io.helixterminator.client/fido2');
 
   Future<Fido2Assertion> authenticate({
     required Uint8List challenge,
@@ -3768,6 +3816,8 @@ class Fido2Service {
 ```
 
 ---
+
+<a id="6-uiux-complete-specification"></a>
 
 ## 6. UI/UX Complete Specification
 
@@ -4312,6 +4362,8 @@ class _SplitHorizontalState extends State<_SplitHorizontal> {
 
 ---
 
+<a id="7-performance-targets"></a>
+
 ## 7. Performance Targets
 
 ### 7.1 Startup Performance
@@ -4530,6 +4582,8 @@ class VirtualizedHostList extends StatelessWidget {
 
 ---
 
+<a id="8-platform-specific-features"></a>
+
 ## 8. Platform-Specific Features
 
 ### 8.1 macOS
@@ -4538,7 +4592,7 @@ class VirtualizedHostList extends StatelessWidget {
 ```dart
 // platform/macos/menu_bar_service.dart
 class MacOsMenuBarService {
-  static const _channel = MethodChannel('io.helixterm.client/menu_bar');
+  static const _channel = MethodChannel('io.helixterminator.client/menu_bar');
 
   // Show app in menu bar with connection status
   static Future<void> showMenuBarIcon() async {
@@ -4602,12 +4656,12 @@ Window
 ```dart
 // platform/macos/handoff_service.dart
 class HandoffService {
-  static const _channel = MethodChannel('io.helixterm.client/handoff');
+  static const _channel = MethodChannel('io.helixterminator.client/handoff');
 
   // Register current session for Handoff (requires signed-in iCloud)
   static Future<void> registerSession(SshSession session) async {
     await _channel.invokeMethod('registerUserActivity', {
-      'activityType': 'io.helixterm.client.ssh-session',
+      'activityType': 'io.helixterminator.client.ssh-session',
       'userInfo': {
         'hostId': session.hostId,
         'sessionId': session.id,
@@ -4691,7 +4745,7 @@ class WindowsSystemTrayService {
 ```dart
 // platform/windows/windows_hello_service.dart
 class WindowsHelloService {
-  static const _channel = MethodChannel('io.helixterm.client/windows_hello');
+  static const _channel = MethodChannel('io.helixterminator.client/windows_hello');
 
   static Future<bool> isAvailable() async {
     final result = await _channel.invokeMethod<bool>('isAvailable');
@@ -4711,7 +4765,7 @@ class WindowsHelloService {
 ```dart
 // platform/windows/jump_list_service.dart
 class WindowsJumpListService {
-  static const _channel = MethodChannel('io.helixterm.client/jump_list');
+  static const _channel = MethodChannel('io.helixterminator.client/jump_list');
 
   static Future<void> updateJumpList(List<HostEntity> recentHosts) async {
     await _channel.invokeMethod('updateJumpList', {
@@ -4732,11 +4786,11 @@ class WindowsJumpListService {
 ```dart
 // platform/linux/app_indicator_service.dart
 class LinuxAppIndicatorService {
-  static const _channel = MethodChannel('io.helixterm.client/app_indicator');
+  static const _channel = MethodChannel('io.helixterminator.client/app_indicator');
 
   Future<void> initialize() async {
     await _channel.invokeMethod('initialize', {
-      'id': 'io.helixterm.client',
+      'id': 'io.helixterminator.client',
       'iconName': 'helix-terminator',
       'category': 'APPLICATION_STATUS',
     });
@@ -4858,7 +4912,7 @@ class HapticsService {
 ```dart
 // platform/ios/multitasking_service.dart
 class IPadMultitaskingService {
-  static const _channel = MethodChannel('io.helixterm.client/multitasking');
+  static const _channel = MethodChannel('io.helixterminator.client/multitasking');
 
   static Future<void> openSessionInNewWindow(String sessionId) async {
     if (!await _isMultiWindowSupported()) return;
@@ -5026,6 +5080,8 @@ class WebFileSystemAccess {
 
 ---
 
+<a id="9-testing-strategy"></a>
+
 ## 9. Testing Strategy
 
 ### 9.1 Test Architecture Overview
@@ -5117,13 +5173,13 @@ void main() {
   tearDown(() => authBloc.close());
 
   group('AuthLoginRequested', () {
-    const testEmail = 'test@helixterm.io';
+    const testEmail = 'test@helixterminator.io';
     const testPassword = 'SecureP@ss1';
     final testUser = AuthUser(
       id: '123',
       email: testEmail,
       displayName: 'Test User',
-      role: AuthRole.individual,
+      role: AuthRole.member,
       enabledMfaMethods: [],
       biometricStatus: BiometricStatus.notEnrolled,
       lastLoginAt: DateTime.now(),
@@ -5348,97 +5404,24 @@ void main() {
         activeFilter: const HostFilter(),
         viewMode: HostListViewMode.list,
         sortField: HostSortField.label,
-        sortDirection
-    mockSubmitMfa = MockSubmitMfaUseCase();
-    mockBiometricAuth = MockBiometricAuthUseCase();
-    mockLogout = MockLogoutUseCase();
-    mockRestoreSession = MockRestoreSessionUseCase();
-    mockSsoLogin = MockSsoLoginUseCase();
+        sortDirection: SortDirection.ascending,
+        searchQuery: '',
+      ));
+      when(() => mockBloc.stream).thenAnswer((_) => Stream.value(HostListLoaded(
+        groups: [],
+        hosts: hosts,
+        activeFilter: const HostFilter(),
+        viewMode: HostListViewMode.list,
+        sortField: HostSortField.label,
+        sortDirection: SortDirection.ascending,
+        searchQuery: '',
+      )));
 
-    authBloc = AuthBloc(
-      loginUseCase: mockLogin,
-      submitMfaUseCase: mockSubmitMfa,
-      biometricAuthUseCase: mockBiometricAuth,
-      logoutUseCase: mockLogout,
-      restoreSessionUseCase: mockRestoreSession,
-      ssoLoginUseCase: mockSsoLogin,
-    );
-  });
+      await tester.pumpWidget(buildSut());
 
-  tearDown(() => authBloc.close());
-
-  group('AuthBloc initial state', () {
-    test('initial state is AuthInitial', () {
-      expect(authBloc.state, isA<AuthInitial>());
+      expect(find.byType(HostListItem), findsNWidgets(3));
+      expect(find.text('Host 0'), findsOneWidget);
     });
-  });
-
-  group('LoginSubmitted event', () {
-    blocTest<AuthBloc, AuthState>(
-      'emits [AuthLoading, AuthAuthenticated] on successful login',
-      build: () {
-        when(() => mockLogin(const LoginParams(
-          email: 'user@example.com',
-          password: 'secret',
-        ))).thenAnswer((_) async => Right(AuthToken(
-          accessToken: 'access',
-          refreshToken: 'refresh',
-          expiresAt: DateTime.now().add(const Duration(hours: 1)),
-          userId: 'u1',
-          requiresMfa: false,
-        )));
-        return authBloc;
-      },
-      act: (bloc) => bloc.add(const LoginSubmitted(
-        email: 'user@example.com',
-        password: 'secret',
-      )),
-      expect: () => [
-        isA<AuthLoading>(),
-        isA<AuthAuthenticated>(),
-      ],
-    );
-
-    blocTest<AuthBloc, AuthState>(
-      'emits [AuthLoading, AuthMfaRequired] when MFA required',
-      build: () {
-        when(() => mockLogin(any())).thenAnswer((_) async => Right(AuthToken(
-          accessToken: '',
-          refreshToken: '',
-          expiresAt: DateTime.now(),
-          userId: 'u1',
-          requiresMfa: true,
-          mfaChallenge: MfaChallenge(type: MfaType.totp, challengeId: 'ch1'),
-        )));
-        return authBloc;
-      },
-      act: (bloc) => bloc.add(const LoginSubmitted(
-        email: 'user@example.com',
-        password: 'secret',
-      )),
-      expect: () => [
-        isA<AuthLoading>(),
-        isA<AuthMfaRequired>(),
-      ],
-    );
-
-    blocTest<AuthBloc, AuthState>(
-      'emits [AuthLoading, AuthError] on invalid credentials',
-      build: () {
-        when(() => mockLogin(any())).thenAnswer((_) async =>
-            const Left(AuthFailure.invalidCredentials()));
-        return authBloc;
-      },
-      act: (bloc) => bloc.add(const LoginSubmitted(
-        email: 'user@example.com',
-        password: 'wrong',
-      )),
-      expect: () => [
-        isA<AuthLoading>(),
-        predicate<AuthState>((s) =>
-            s is AuthError && s.code == AuthErrorCode.invalidCredentials),
-      ],
-    );
   });
 }
 ```
@@ -5961,6 +5944,8 @@ void main() {
 ```
 
 ---
+
+<a id="10-accessibility"></a>
 
 ## 10. Accessibility
 
@@ -6526,7 +6511,7 @@ publish_to: none
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
-  flutter: '>=3.22.0'
+  flutter: '>=3.24.0'
 
 dependencies:
   flutter:
@@ -6742,8 +6727,8 @@ class HelixConfig {
 
   static const development = HelixConfig(
     environment: HelixEnvironment.development,
-    apiBaseUrl: 'https://api.dev.helixterm.io',
-    wsBaseUrl: 'wss://ws.dev.helixterm.io',
+    apiBaseUrl: 'https://api.dev.helixterminator.io',
+    wsBaseUrl: 'wss://ws.dev.helixterminator.io',
     sentryDsn: '',
     enableAnalytics: false,
     enableCrashReporting: false,
@@ -6755,8 +6740,8 @@ class HelixConfig {
 
   static const staging = HelixConfig(
     environment: HelixEnvironment.staging,
-    apiBaseUrl: 'https://api.staging.helixterm.io',
-    wsBaseUrl: 'wss://ws.staging.helixterm.io',
+    apiBaseUrl: 'https://api.staging.helixterminator.io',
+    wsBaseUrl: 'wss://ws.staging.helixterminator.io',
     sentryDsn: 'https://sentry-staging-dsn@sentry.io/12345',
     enableAnalytics: true,
     enableCrashReporting: true,
@@ -6768,1446 +6753,8 @@ class HelixConfig {
 
   static const production = HelixConfig(
     environment: HelixEnvironment.production,
-    apiBaseUrl: 'https://api.helixterm.io',
-    wsBaseUrl: 'wss://ws.helixterm.io',
-    sentryDsn: 'https://sentry-prod-dsn@sentry.io/12346',
-    enableAnalytics: true,
-    enableCrashReporting: true,
-    sessionTimeout: Duration(hours: 8),
-    autoLockTimeout: Duration(minutes: 10),
-    maxScrollbackLines: 100000,
-    enableAiFeatures: true,
-  );
-}
-```
-
----
-
-*End of HelixTerminator Client-Side Technical Specification v1.0*
-*Document generated: 2026-06-28*
-*Total estimated implementation effort: 24 person-months (team of 4 Flutter engineers)*
-
-    mockSubmitMfa = MockSubmitMfaUseCase();
-    mockBiometricAuth = MockBiometricAuthUseCase();
-    mockLogout = MockLogoutUseCase();
-    mockRestoreSession = MockRestoreSessionUseCase();
-    mockSsoLogin = MockSsoLoginUseCase();
-
-    authBloc = AuthBloc(
-      loginUseCase: mockLogin,
-      submitMfaUseCase: mockSubmitMfa,
-      biometricAuthUseCase: mockBiometricAuth,
-      logoutUseCase: mockLogout,
-      restoreSessionUseCase: mockRestoreSession,
-      ssoLoginUseCase: mockSsoLogin,
-    );
-  });
-
-  tearDown(() => authBloc.close());
-
-  group('AuthBloc initial state', () {
-    test('initial state is AuthInitial', () {
-      expect(authBloc.state, isA<AuthInitial>());
-    });
-  });
-
-  group('LoginSubmitted event', () {
-    blocTest<AuthBloc, AuthState>(
-      'emits [AuthLoading, AuthAuthenticated] on successful login',
-      build: () {
-        when(() => mockLogin(const LoginParams(
-          email: 'user@example.com',
-          password: 'secret',
-        ))).thenAnswer((_) async => Right(AuthToken(
-          accessToken: 'access',
-          refreshToken: 'refresh',
-          expiresAt: DateTime.now().add(const Duration(hours: 1)),
-          userId: 'u1',
-          requiresMfa: false,
-        )));
-        return authBloc;
-      },
-      act: (bloc) => bloc.add(const LoginSubmitted(
-        email: 'user@example.com',
-        password: 'secret',
-      )),
-      expect: () => [
-        isA<AuthLoading>(),
-        isA<AuthAuthenticated>(),
-      ],
-    );
-
-    blocTest<AuthBloc, AuthState>(
-      'emits [AuthLoading, AuthMfaRequired] when MFA required',
-      build: () {
-        when(() => mockLogin(any())).thenAnswer((_) async => Right(AuthToken(
-          accessToken: '',
-          refreshToken: '',
-          expiresAt: DateTime.now(),
-          userId: 'u1',
-          requiresMfa: true,
-          mfaChallenge: MfaChallenge(type: MfaType.totp, challengeId: 'ch1'),
-        )));
-        return authBloc;
-      },
-      act: (bloc) => bloc.add(const LoginSubmitted(
-        email: 'user@example.com',
-        password: 'secret',
-      )),
-      expect: () => [
-        isA<AuthLoading>(),
-        isA<AuthMfaRequired>(),
-      ],
-    );
-
-    blocTest<AuthBloc, AuthState>(
-      'emits [AuthLoading, AuthError] on invalid credentials',
-      build: () {
-        when(() => mockLogin(any())).thenAnswer((_) async =>
-            const Left(AuthFailure.invalidCredentials()));
-        return authBloc;
-      },
-      act: (bloc) => bloc.add(const LoginSubmitted(
-        email: 'user@example.com',
-        password: 'wrong',
-      )),
-      expect: () => [
-        isA<AuthLoading>(),
-        predicate<AuthState>((s) =>
-            s is AuthError && s.code == AuthErrorCode.invalidCredentials),
-      ],
-    );
-  });
-}
-```
-
-### 9.3 Unit Tests: Repositories
-
-```dart
-// test/unit/features/hosts/host_repository_test.dart
-void main() {
-  late HostRepositoryImpl repository;
-  late MockHostLocalDataSource mockLocal;
-  late MockHostRemoteDataSource mockRemote;
-  late MockNetworkInfo mockNetworkInfo;
-
-  setUp(() {
-    mockLocal = MockHostLocalDataSource();
-    mockRemote = MockHostRemoteDataSource();
-    mockNetworkInfo = MockNetworkInfo();
-    repository = HostRepositoryImpl(
-      localDataSource: mockLocal,
-      remoteDataSource: mockRemote,
-      networkInfo: mockNetworkInfo,
-    );
-  });
-
-  group('getHosts', () {
-    final tHosts = [
-      HostModel(id: '1', label: 'Server 1', hostname: 'srv1.example.com', port: 22),
-    ];
-
-    test('returns remote hosts and caches when online', () async {
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-      when(() => mockRemote.getHosts()).thenAnswer((_) async => tHosts);
-      when(() => mockLocal.cacheHosts(tHosts)).thenAnswer((_) async => {});
-
-      final result = await repository.getHosts();
-
-      expect(result, Right(tHosts));
-      verify(() => mockLocal.cacheHosts(tHosts)).called(1);
-    });
-
-    test('returns cached hosts when offline', () async {
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(() => mockLocal.getHosts()).thenAnswer((_) async => tHosts);
-
-      final result = await repository.getHosts();
-
-      expect(result, Right(tHosts));
-      verifyNever(() => mockRemote.getHosts());
-    });
-
-    test('returns CacheFailure when offline and no cache', () async {
-      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
-      when(() => mockLocal.getHosts()).thenThrow(CacheException('Empty cache'));
-
-      final result = await repository.getHosts();
-
-      expect(result, isA<Left<Failure, List<HostModel>>>());
-    });
-  });
-}
-```
-
-### 9.4 Widget Tests
-
-```dart
-// test/widget/features/hosts/host_list_page_test.dart
-void main() {
-  late MockHostListBloc mockBloc;
-
-  setUp(() {
-    mockBloc = MockHostListBloc();
-  });
-
-  // continued from partial file...
-  testWidgets('shows sort direction indicator correctly', (tester) async {
-    when(() => mockBloc.state).thenReturn(HostListLoaded(
-      groups: [],
-      hosts: [],
-      activeFilter: const HostFilter(),
-      viewMode: HostListViewMode.list,
-      sortField: HostSortField.label,
-      sortDirection: SortDirection.descending, // descending order
-      searchQuery: '',
-    ));
-    when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
-
-    await tester.pumpWidget(MaterialApp(
-      home: BlocProvider<HostListBloc>.value(
-        value: mockBloc,
-        child: const HostListPage(),
-      ),
-    ));
-
-    expect(find.byIcon(Icons.arrow_downward), findsOneWidget);
-  });
-}
-```
-
-### 9.5 Integration Tests (E2E)
-
-Integration tests use `flutter_test` with `integration_test` package, running on real device or emulator.
-
-```dart
-// integration_test/flows/login_to_connect_flow_test.dart
-import 'package:flutter_test/flutter_test.dart';
-import 'package:integration_test/integration_test.dart';
-import 'package:helix_client/main.dart' as app;
-
-void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
-  group('Login → Connect → Terminal E2E', () {
-    testWidgets('completes full connection flow', (tester) async {
-      app.main();
-      await tester.pumpAndSettle(const Duration(seconds: 3));
-
-      // Step 1: Login
-      await tester.enterText(find.byKey(const Key('email_field')), 'test@example.com');
-      await tester.enterText(find.byKey(const Key('password_field')), 'Test1234!');
-      await tester.tap(find.byKey(const Key('login_button')));
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-      expect(find.byKey(const Key('host_list_page')), findsOneWidget);
-
-      // Step 2: Select host
-      await tester.tap(find.text('Development Server'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('host_detail_page')), findsOneWidget);
-
-      // Step 3: Connect
-      await tester.tap(find.byKey(const Key('connect_button')));
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
-      // Expect terminal is shown
-      expect(find.byKey(const Key('terminal_page')), findsOneWidget);
-      expect(find.byKey(const Key('terminal_view')), findsOneWidget);
-
-      // Step 4: Type a command
-      await tester.tap(find.byKey(const Key('terminal_view')));
-      await tester.pumpAndSettle();
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
-      // ... verify command echo in terminal
-
-      // Step 5: Disconnect
-      await tester.tap(find.byKey(const Key('disconnect_button')));
-      await tester.pumpAndSettle(const Duration(seconds: 2));
-      expect(find.byKey(const Key('host_list_page')), findsOneWidget);
-    });
-
-    testWidgets('SFTP browse and download flow', (tester) async {
-      app.main();
-      await tester.pumpAndSettle(const Duration(seconds: 3));
-
-      // ... login ...
-      await _loginWithTestCredentials(tester);
-
-      // Open SFTP browser
-      await tester.tap(find.byKey(const Key('sftp_button')));
-      await tester.pumpAndSettle(const Duration(seconds: 4));
-      expect(find.byKey(const Key('sftp_browser_page')), findsOneWidget);
-
-      // Navigate to /home/user
-      await tester.tap(find.text('/'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('home'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('user'));
-      await tester.pumpAndSettle();
-
-      // Download a file
-      await tester.longPress(find.text('.bashrc'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Download'));
-      await tester.pumpAndSettle(const Duration(seconds: 3));
-
-      // Verify transfer appears in queue
-      await tester.tap(find.byKey(const Key('transfer_queue_tab')));
-      await tester.pumpAndSettle();
-      expect(find.text('.bashrc'), findsOneWidget);
-    });
-  });
-}
-
-Future<void> _loginWithTestCredentials(WidgetTester tester) async {
-  await tester.enterText(find.byKey(const Key('email_field')), 'test@example.com');
-  await tester.enterText(find.byKey(const Key('password_field')), 'Test1234!');
-  await tester.tap(find.byKey(const Key('login_button')));
-  await tester.pumpAndSettle(const Duration(seconds: 5));
-}
-```
-
-### 9.6 Golden Tests (Pixel-Perfect UI Regression)
-
-```dart
-// test/widget/golden/host_list_golden_test.dart
-import 'package:golden_toolkit/golden_toolkit.dart';
-
-void main() {
-  setUpAll(() async {
-    await loadAppFonts();
-  });
-
-  testGoldens('HostListPage light mode', (tester) async {
-    await tester.pumpWidgetBuilder(
-      BlocProvider<HostListBloc>(
-        create: (_) => HostListBloc(
-          getHostsUseCase: MockGetHostsUseCase(),
-        )..add(HostListInitialized()),
-        child: const HostListPage(),
-      ),
-      surfaceSize: const Size(375, 812),
-      wrapper: materialAppWrapper(theme: AppThemes.light),
-    );
-    await screenMatchesGolden(tester, 'host_list_light');
-  });
-
-  testGoldens('HostListPage dark mode', (tester) async {
-    await tester.pumpWidgetBuilder(
-      BlocProvider<HostListBloc>(
-        create: (_) => HostListBloc(
-          getHostsUseCase: MockGetHostsUseCase(),
-        )..add(HostListInitialized()),
-        child: const HostListPage(),
-      ),
-      surfaceSize: const Size(375, 812),
-      wrapper: materialAppWrapper(theme: AppThemes.dark),
-    );
-    await screenMatchesGolden(tester, 'host_list_dark');
-  });
-
-  testGoldens('Terminal Dracula theme', (tester) async {
-    await tester.pumpWidgetBuilder(
-      BlocProvider<TerminalBloc>(
-        create: (_) => TerminalBloc(
-          terminalService: MockTerminalService(),
-        ),
-        child: const TerminalPage(),
-      ),
-      surfaceSize: const Size(1280, 720),
-      wrapper: materialAppWrapper(theme: AppThemes.dark),
-    );
-    await screenMatchesGolden(tester, 'terminal_dracula');
-  });
-}
-```
-
-### 9.7 Performance Tests
-
-```dart
-// integration_test/performance/terminal_frame_time_test.dart
-import 'package:flutter/scheduler.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:integration_test/integration_test.dart';
-
-void main() {
-  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
-  testWidgets('Terminal renders at 60fps during rapid output', (tester) async {
-    final frameTimings = <FrameTiming>[];
-
-    SchedulerBinding.instance.addTimingsCallback((timings) {
-      frameTimings.addAll(timings);
-    });
-
-    // Pump terminal page with simulated rapid SSH output
-    await tester.pumpWidget(buildTerminalWithMockData());
-    await tester.pumpAndSettle();
-
-    // Simulate 5000 lines of rapid output
-    for (int i = 0; i < 5000; i++) {
-      binding.reportData ??= <String, dynamic>{};
-      // Simulate writing a line to terminal
-      final terminalCubit = tester.state<TerminalPageState>(
-        find.byType(TerminalPage),
-      ).cubit;
-      terminalCubit.processOutput('Line $i: ${_randomLine()}\r\n');
-      if (i % 100 == 0) await tester.pump(const Duration(milliseconds: 16));
-    }
-
-    await tester.pumpAndSettle();
-
-    // Analyze frame timings
-    final slowFrames = frameTimings.where(
-      (f) => f.totalSpan.inMilliseconds > 16,
-    ).length;
-
-    final jankFrames = frameTimings.where(
-      (f) => f.totalSpan.inMilliseconds > 32,
-    ).length;
-
-    binding.reportData!['frame_count'] = frameTimings.length;
-    binding.reportData!['slow_frame_count'] = slowFrames;
-    binding.reportData!['jank_frame_count'] = jankFrames;
-    binding.reportData!['slow_frame_percentage'] =
-        frameTimings.isNotEmpty ? slowFrames / frameTimings.length * 100 : 0;
-
-    // Assert: less than 5% slow frames, zero jank
-    expect(slowFrames / frameTimings.length, lessThan(0.05));
-    expect(jankFrames, equals(0));
-  });
-
-  testWidgets('Host list scrolls smoothly with 10000 hosts', (tester) async {
-    await tester.pumpWidget(buildHostListWith10000Hosts());
-    await tester.pumpAndSettle();
-
-    final stopwatch = Stopwatch()..start();
-    await tester.fling(
-      find.byKey(const Key('host_list_view')),
-      const Offset(0, -5000),
-      3000,
-    );
-    await tester.pumpAndSettle();
-    stopwatch.stop();
-
-    // Should scroll 10000 items within reasonable time
-    expect(stopwatch.elapsedMilliseconds, lessThan(3000));
-  });
-}
-
-String _randomLine() {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789 ';
-  return List.generate(80, (_) => chars[Random().nextInt(chars.length)]).join();
-}
-```
-
-### 9.8 SSH Protocol Fuzz Tests
-
-```dart
-// test/unit/features/ssh_session/ssh_protocol_fuzz_test.dart
-void main() {
-  group('SSH packet parsing fuzz', () {
-    late MockSshTransport mockTransport;
-    late SshPacketParser parser;
-
-    setUp(() {
-      mockTransport = MockSshTransport();
-      parser = SshPacketParser(transport: mockTransport);
-    });
-
-    test('handles malformed SSH banner gracefully', () {
-      // Fuzz: random bytes as SSH banner
-      final random = Random();
-      for (int i = 0; i < 1000; i++) {
-        final malformedBanner = List.generate(
-          random.nextInt(256),
-          (_) => random.nextInt(256),
-        );
-        expect(
-          () => parser.parseBanner(Uint8List.fromList(malformedBanner)),
-          returnsNormally, // should not throw, should return error result
-        );
-      }
-    });
-
-    test('handles truncated KEX_INIT packet', () {
-      // KEX_INIT with insufficient bytes
-      final truncated = Uint8List.fromList([0x14, 0x00]); // SSH_MSG_KEXINIT = 20
-      final result = parser.parseKexInit(truncated);
-      expect(result.isLeft(), isTrue);
-      expect(result.fold((l) => l, (r) => null), isA<SshProtocolError>());
-    });
-
-    test('handles sequence number wraparound', () {
-      // Simulate 4294967295 packets to test sequence number overflow
-      final sequenceManager = SshSequenceNumberManager();
-      for (int i = 0; i < 0xFFFFFFFF; i += 1000000) {
-        sequenceManager.setSequence(i);
-      }
-      sequenceManager.setSequence(0xFFFFFFFF);
-      sequenceManager.increment(); // Should wrap to 0
-      expect(sequenceManager.current, equals(0));
-    });
-  });
-}
-```
-
-### 9.9 Offline Mode Sync Conflict Tests
-
-```dart
-// test/unit/core/conflict_resolver_test.dart
-void main() {
-  late ConflictResolver resolver;
-
-  setUp(() {
-    resolver = ConflictResolver();
-  });
-
-  group('Host entity conflict resolution', () {
-    test('server wins for concurrent label edits (timestamp-based)', () {
-      final local = HostEntity(
-        id: 'h1',
-        label: 'Local Label',
-        hostname: 'server.example.com',
-        port: 22,
-        username: 'admin',
-        protocol: HostProtocol.ssh,
-        updatedAt: DateTime(2026, 1, 1, 12, 0, 0),
-        createdAt: DateTime(2026, 1, 1),
-      );
-
-      final remote = HostEntity(
-        id: 'h1',
-        label: 'Remote Label',
-        hostname: 'server.example.com',
-        port: 22,
-        username: 'admin',
-        protocol: HostProtocol.ssh,
-        updatedAt: DateTime(2026, 1, 1, 13, 0, 0), // newer
-        createdAt: DateTime(2026, 1, 1),
-      );
-
-      final resolved = resolver.resolveHostConflict(local: local, remote: remote);
-      expect(resolved.label, equals('Remote Label'));
-    });
-
-    test('local wins when local timestamp is newer', () {
-      final local = HostEntity(
-        id: 'h1',
-        label: 'Local Updated',
-        hostname: 'server.example.com',
-        port: 22,
-        username: 'admin',
-        protocol: HostProtocol.ssh,
-        updatedAt: DateTime(2026, 1, 1, 14, 0, 0), // newer locally
-        createdAt: DateTime(2026, 1, 1),
-      );
-
-      final remote = HostEntity(
-        id: 'h1',
-        label: 'Remote Stale',
-        hostname: 'server.example.com',
-        port: 22,
-        username: 'admin',
-        protocol: HostProtocol.ssh,
-        updatedAt: DateTime(2026, 1, 1, 10, 0, 0),
-        createdAt: DateTime(2026, 1, 1),
-      );
-
-      final resolved = resolver.resolveHostConflict(local: local, remote: remote);
-      expect(resolved.label, equals('Local Updated'));
-    });
-
-    test('deletion remote takes priority over local edit', () {
-      final localEdit = HostEntity(
-        id: 'h1',
-        label: 'Edited Host',
-        hostname: 'server.example.com',
-        port: 22,
-        username: 'admin',
-        protocol: HostProtocol.ssh,
-        updatedAt: DateTime(2026, 1, 1, 13, 0, 0),
-        createdAt: DateTime(2026, 1, 1),
-      );
-
-      final remoteDeleted = SyncTombstone(
-        entityId: 'h1',
-        entityType: 'host',
-        deletedAt: DateTime(2026, 1, 1, 12, 0, 0),
-        deletedBy: 'user_remote',
-      );
-
-      // Remote deletion wins regardless of local edit timestamp
-      final resolved = resolver.resolveWithTombstone(
-        localEntity: localEdit,
-        tombstone: remoteDeleted,
-        policy: ConflictPolicy.remoteDeletionWins,
-      );
-
-      expect(resolved, isNull); // entity should be deleted locally
-    });
-  });
-}
-```
-
-### 9.10 Accessibility Tests
-
-```dart
-// test/widget/accessibility/host_list_accessibility_test.dart
-import 'package:flutter_test/flutter_test.dart';
-
-void main() {
-  testWidgets('HostListPage meets accessibility guidelines', (tester) async {
-    final SemanticsHandle handle = tester.ensureSemantics();
-
-    await tester.pumpWidget(buildHostListWithData());
-    await tester.pumpAndSettle();
-
-    // Check for accessibility violations
-    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-    await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
-    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-    await expectLater(tester, meetsGuideline(textContrastGuideline));
-
-    handle.dispose();
-  });
-
-  testWidgets('Terminal screen has semantic labels', (tester) async {
-    await tester.pumpWidget(buildTerminalPage());
-    await tester.pumpAndSettle();
-
-    expect(
-      tester.getSemantics(find.byKey(const Key('terminal_input'))),
-      matchesSemantics(
-        label: 'Terminal input',
-        isTextField: true,
-        isFocusable: true,
-      ),
-    );
-
-    expect(
-      tester.getSemantics(find.byKey(const Key('disconnect_button'))),
-      matchesSemantics(
-        label: 'Disconnect from server',
-        isButton: true,
-        isFocusable: true,
-      ),
-    );
-  });
-}
-```
-
----
-
-## 10. Accessibility
-
-### 10.1 WCAG 2.1 AA Compliance
-
-HelixTerminator targets WCAG 2.1 Level AA compliance across all supported platforms. Compliance is verified at build time via automated accessibility checks integrated into the CI/CD pipeline.
-
-#### 10.1.1 Perceivable
-
-**1.1 Text Alternatives:** Every non-text element carries a programmatic text alternative.
-
-- All icons use `Semantics(label: '...')` wrappers or `Tooltip` widgets.
-- Images and illustrations carry `Image(semanticLabel: '...')` descriptions.
-- Terminal output is exposed to screen readers via AccessibilityNode with appropriate live region semantics (`liveRegion: LiveRegionMode.polite` for normal output, `assertive` for error output).
-- Status indicators (connection dot, transfer progress) carry both visual and textual representation.
-
-**1.2 Time-based Media:** Not applicable for primary use case. Session recordings exported as video files will carry captions when speech is present.
-
-**1.3 Adaptable:**
-
-- Layout is entirely widget-based, allowing screen readers to traverse the widget tree in logical reading order.
-- `MergeSemantics` and `ExcludeSemantics` are used to group and simplify complex composite widgets.
-- `Semantics(sortKey: OrdinalSortKey(...))` enforces correct traversal order in drag-and-drop interfaces.
-- Headings are marked with `Semantics(header: true)`.
-
-**1.4 Distinguishable:**
-
-- All text/background combinations meet 4.5:1 contrast ratio for normal text and 3:1 for large text (≥18pt normal or ≥14pt bold).
-- Color is never the sole means of conveying information. Status indicators pair color with icon shape and/or text label.
-- Text can be resized up to 200% without loss of content or functionality (Flutter text scale factor support).
-- Reflow: content reflows correctly at all zoom levels using `LayoutBuilder` and adaptive breakpoints.
-- Non-text contrast: UI component borders and focus indicators meet 3:1 contrast ratio.
-
-```dart
-// Accessible color token example
-class AccessibleColors {
-  // All tokens verified against WCAG 2.1 AA
-  static const textPrimary = Color(0xFF1A1A1A);         // on white: 16.1:1
-  static const textSecondary = Color(0xFF595959);        // on white: 7.0:1
-  static const textMuted = Color(0xFF767676);            // on white: 4.54:1 (AA)
-  static const success = Color(0xFF2E7D32);              // on white: 7.5:1
-  static const warning = Color(0xFF795548);              // on white: 5.1:1
-  static const error = Color(0xFFC62828);                // on white: 7.1:1
-  static const linkDefault = Color(0xFF0D47A1);          // on white: 8.6:1
-  
-  // Focus ring - always visible against both light and dark backgrounds
-  static const focusRing = Color(0xFF1565C0);            // 5.9:1 on white, 3.1:1 on #333
-}
-```
-
-#### 10.1.2 Operable
-
-**2.1 Keyboard Accessible:**
-
-All functionality is operable via keyboard alone. No keyboard trap exists anywhere in the application. The terminal widget requires special handling because it captures all keystrokes by design; the escape key sequence (default: `Ctrl+Shift+X`) always transfers focus out of the terminal and back to the application chrome.
-
-```dart
-// KeyboardTrapHandler — prevents terminal from indefinitely capturing focus
-class KeyboardTrapHandler extends StatefulWidget {
-  final Widget child;
-  final VoidCallback onEscapeFocusTrap;
-
-  const KeyboardTrapHandler({
-    required this.child,
-    required this.onEscapeFocusTrap,
-    super.key,
-  });
-
-  @override
-  State<KeyboardTrapHandler> createState() => _KeyboardTrapHandlerState();
-}
-
-class _KeyboardTrapHandlerState extends State<KeyboardTrapHandler> {
-  @override
-  Widget build(BuildContext context) {
-    return Focus(
-      onKey: (node, event) {
-        if (event is RawKeyDownEvent &&
-            event.isControlPressed &&
-            event.isShiftPressed &&
-            event.logicalKey == LogicalKeyboardKey.keyX) {
-          widget.onEscapeFocusTrap();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: widget.child,
-    );
-  }
-}
-```
-
-Full keyboard navigation map:
-
-| Key | Action |
-|-----|--------|
-| `Tab` | Move focus to next interactive element |
-| `Shift+Tab` | Move focus to previous interactive element |
-| `Enter` / `Space` | Activate focused button or link |
-| `Arrow keys` | Navigate within list/grid |
-| `Escape` | Close dialog / cancel action |
-| `Ctrl+Shift+X` | Escape terminal keyboard trap |
-| `Ctrl+Tab` | Switch between terminal tabs |
-| `F6` | Rotate focus between split panes |
-| `Ctrl+Shift+H` | Return to host list from anywhere |
-| `Ctrl+Shift+S` | Open SFTP browser |
-| `Ctrl+Shift+P` | Open AI command palette |
-| `?` (in host list) | Show keyboard shortcuts cheat sheet |
-
-**2.2 Enough Time:** No time limits are imposed on user interactions. Session timeout warnings appear 5 minutes before expiry with clear options to extend. Auto-lock countdown displays a progress indicator and "Stay unlocked" button.
-
-**2.3 Seizures and Physical Reactions:** No flashing content exceeds 3 flashes per second. All animations respect `MediaQuery.of(context).disableAnimations` and the OS-level "Reduce Motion" preference.
-
-```dart
-// Animation-aware wrapper respects system reduce-motion setting
-class MotionSensitiveAnimation extends StatelessWidget {
-  final Widget child;
-  final Widget reducedMotionChild;
-
-  const MotionSensitiveAnimation({
-    required this.child,
-    required this.reducedMotionChild,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.of(context).disableAnimations;
-    return reduceMotion ? reducedMotionChild : child;
-  }
-}
-```
-
-**2.4 Navigable:**
-
-- Every page has a descriptive title announced to screen readers: `Semantics(namesRoute: true, label: 'Host List — HelixTerminator')`.
-- Skip navigation links are provided: a visually hidden "Skip to terminal" link receives keyboard focus first on the terminal page.
-- Focus is managed programmatically on route transitions: `FocusScope.of(context).requestFocus(_pageFocusNode)` after navigation.
-- Breadcrumb navigation is present in nested screens (e.g., Organization → Team → Vault).
-
-**2.5 Input Modalities:**
-
-- All multi-finger gesture shortcuts have keyboard equivalents.
-- Drag-and-drop in SFTP browser has a keyboard-accessible alternative (context menu → Copy/Move).
-- Touch targets are minimum 44×44dp on mobile (iOS HIG) and 48×48dp on Android (Material guidelines).
-- Pointer precision is not required for any core function.
-
-#### 10.1.3 Understandable
-
-**3.1 Readable:**
-
-- App language is declared to the OS: `MaterialApp(locale: Locale('en', 'US'), ...)`.
-- Technical abbreviations (e.g., "SFTP", "MFA") are expanded on first use in all user-facing content.
-- Error messages are written in plain language: "Your session timed out. Please log in again." instead of "403 Forbidden."
-
-**3.2 Predictable:**
-
-- Navigation is consistent throughout the app. The sidebar always appears on the left (or bottom on mobile).
-- Context-sensitive actions change dynamically, but their location within the UI remains fixed.
-- Focus never moves unexpectedly except in response to user-initiated actions.
-
-**3.3 Input Assistance:**
-
-- All form fields carry labels (not just placeholders).
-- Inline validation provides real-time, specific error messages.
-- Password strength meters include both visual bar and textual description ("Weak", "Fair", "Strong", "Very Strong").
-- Error messages identify the field and describe the fix: "Hostname is required." not just "Invalid input."
-
-```dart
-// Accessible form field with persistent label and error
-class AccessibleTextField extends StatelessWidget {
-  final String label;
-  final String? error;
-  final TextEditingController controller;
-  final TextInputType keyboardType;
-  final bool obscureText;
-
-  const AccessibleTextField({
-    required this.label,
-    required this.controller,
-    this.error,
-    this.keyboardType = TextInputType.text,
-    this.obscureText = false,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium,
-        ),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          obscureText: obscureText,
-          decoration: InputDecoration(
-            border: const OutlineInputBorder(),
-            errorText: error,
-            // errorText renders as both red text AND is announced by screen readers
-          ),
-          // Semantic label combines field label + current error for screen reader
-          semanticsLabel: error != null ? '$label: $error' : label,
-        ),
-      ],
-    );
-  }
-}
-```
-
-#### 10.1.4 Robust
-
-**4.1 Compatible:**
-
-- Semantic widget tree is compatible with TalkBack (Android), VoiceOver (iOS/macOS), NVDA (Windows), and Orca (Linux).
-- Flutter's accessibility layer maps widget semantics to platform-native accessibility APIs automatically.
-- Custom interactive widgets always implement `GestureDetector` with `onTap` (not just `onTapDown`) to ensure screen reader activation works correctly.
-- `SemanticsService.announce` is used for dynamic content changes (e.g., "Connected to server.example.com" after successful SSH connection).
-
-### 10.2 Screen Reader Support
-
-#### 10.2.1 TalkBack (Android)
-
-- Touch exploration enabled: all interactive areas are discoverable by touch.
-- Swipe-to-navigate traverses elements in logical order.
-- Grouping: related elements (e.g., host card: name + status + last connected) are merged into a single focusable unit using `MergeSemantics`.
-- Terminal output: live region announces last output line when screen reader is active.
-- Gesture shortcuts: TalkBack local context menus expose host actions (Connect, Edit, Delete) as menu items.
-
-```dart
-// Host card with merged semantics for screen readers
-class AccessibleHostCard extends StatelessWidget {
-  final HostEntity host;
-  final VoidCallback onTap;
-
-  const AccessibleHostCard({
-    required this.host,
-    required this.onTap,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return MergeSemantics(
-      child: Semantics(
-        label: '${host.label}, ${host.hostname}, '
-            'port ${host.port}, '
-            '${host.isOnline ? "Online" : "Offline"}, '
-            'last connected ${_formatRelativeTime(host.lastConnectedAt)}',
-        button: true,
-        onTap: onTap,
-        child: _buildCardVisual(context),
-      ),
-    );
-  }
-
-  String _formatRelativeTime(DateTime? dt) {
-    if (dt == null) return 'never';
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 60) return '${diff.inMinutes} minutes ago';
-    if (diff.inHours < 24) return '${diff.inHours} hours ago';
-    return '${diff.inDays} days ago';
-  }
-
-  Widget _buildCardVisual(BuildContext context) {
-    // ... visual layout ...
-    return const SizedBox();
-  }
-}
-```
-
-#### 10.2.2 VoiceOver (iOS/macOS)
-
-- Rotor support: all lists expose custom rotor actions for quick navigation by headings, links, and form fields.
-- iPad: keyboard shortcuts (VoiceOver + arrow keys) navigate the split-pane terminal layout.
-- macOS: the menu bar app exposes all primary actions as accessible menu items.
-- Focus order in modal dialogs is trapped correctly within the dialog boundary.
-
-#### 10.2.3 Windows NVDA / JAWS
-
-- ARIA-equivalent Flutter semantics map to Windows UI Automation (UIA) tree automatically.
-- Virtual cursor mode works for browsing the host list and settings.
-- Application mode is automatically activated in the terminal, passing raw keystrokes to NVDA's applications layer.
-- Tab stop order matches visual layout.
-
-#### 10.2.4 Linux Orca
-
-- AT-SPI2 bridge exposes Flutter widget tree.
-- Orca flat review mode works across all screens.
-- All interactive elements have `SpeechAccessibilityRole` equivalents exposed through AT-SPI2.
-
-### 10.3 High Contrast Mode
-
-The app automatically detects high contrast preferences via `MediaQuery.of(context).highContrast` and applies a dedicated `HighContrastTheme`.
-
-```dart
-// High contrast theme overrides
-class AppThemes {
-  static ThemeData get highContrast => ThemeData(
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Color(0xFF000080),       // Navy blue — distinct, high contrast
-      onPrimary: Color(0xFFFFFFFF),
-      secondary: Color(0xFF006400),
-      onSecondary: Color(0xFFFFFFFF),
-      error: Color(0xFF8B0000),
-      onError: Color(0xFFFFFFFF),
-      surface: Color(0xFFFFFFFF),
-      onSurface: Color(0xFF000000),
-    ),
-    textTheme: Typography.blackCupertino.copyWith(
-      bodyMedium: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF000000),
-      ),
-    ),
-    inputDecorationTheme: const InputDecorationTheme(
-      border: OutlineInputBorder(
-        borderSide: BorderSide(color: Color(0xFF000000), width: 2),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: Color(0xFF000080), width: 3),
-      ),
-    ),
-  );
-
-  static ThemeData get highContrastDark => ThemeData(
-    colorScheme: const ColorScheme(
-      brightness: Brightness.dark,
-      primary: Color(0xFF00FFFF),       // Cyan on black
-      onPrimary: Color(0xFF000000),
-      secondary: Color(0xFFFFFF00),
-      onSecondary: Color(0xFF000000),
-      error: Color(0xFFFF4444),
-      onError: Color(0xFF000000),
-      surface: Color(0xFF000000),
-      onSurface: Color(0xFFFFFFFF),
-    ),
-  );
-}
-```
-
-High contrast terminal color schemes override the selected theme:
-
-```dart
-class TerminalHighContrastTheme extends TerminalTheme {
-  @override
-  Color get background => const Color(0xFF000000);
-  @override
-  Color get foreground => const Color(0xFFFFFFFF);
-  @override
-  Color get cursor => const Color(0xFFFFFF00);
-  @override
-  Color get selectionBackground => const Color(0xFF0000FF);
-  @override
-  Color get selectionForeground => const Color(0xFFFFFFFF);
-
-  // ANSI colors — all ensure 7:1+ contrast against background
-  @override
-  Color get black => const Color(0xFF000000);
-  @override
-  Color get red => const Color(0xFFFF4444);
-  @override
-  Color get green => const Color(0xFF44FF44);
-  @override
-  Color get yellow => const Color(0xFFFFFF00);
-  @override
-  Color get blue => const Color(0xFF4444FF);
-  @override
-  Color get magenta => const Color(0xFFFF44FF);
-  @override
-  Color get cyan => const Color(0xFF44FFFF);
-  @override
-  Color get white => const Color(0xFFFFFFFF);
-
-  // Bright variants are identical in high contrast mode
-  @override Color get brightBlack => const Color(0xFF666666);
-  @override Color get brightRed => const Color(0xFFFF6666);
-  @override Color get brightGreen => const Color(0xFF66FF66);
-  @override Color get brightYellow => const Color(0xFFFFFF66);
-  @override Color get brightBlue => const Color(0xFF6666FF);
-  @override Color get brightMagenta => const Color(0xFFFF66FF);
-  @override Color get brightCyan => const Color(0xFF66FFFF);
-  @override Color get brightWhite => const Color(0xFFFFFFFF);
-}
-```
-
-### 10.4 Focus Management
-
-Focus management is critical for keyboard and screen reader users. All route transitions, modal opens/closes, and dynamic content updates manage focus explicitly.
-
-```dart
-// FocusManager utility
-class HelixFocusManager {
-  /// Call after navigating to a new route.
-  /// Announces the route name and moves focus to the page's first interactive element.
-  static void onRouteChange(BuildContext context, String routeTitle) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      SemanticsService.announce(routeTitle, TextDirection.ltr);
-      // Find the first tabbable element in the new route
-      final firstFocus = FocusScope.of(context).traversalDescendants
-          .where((n) => n.canRequestFocus)
-          .firstOrNull;
-      firstFocus?.requestFocus();
-    });
-  }
-
-  /// Call when opening a modal / bottom sheet.
-  /// Saves the trigger element's focus node to restore on close.
-  static FocusNode? _savedFocus;
-
-  static void onModalOpen(BuildContext context) {
-    _savedFocus = FocusManager.instance.primaryFocus;
-  }
-
-  /// Call when closing a modal.
-  static void onModalClose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _savedFocus?.requestFocus();
-      _savedFocus = null;
-    });
-  }
-}
-```
-
-### 10.5 Semantic Labels
-
-Every interactive element in the application carries a semantic label. The following table defines the labeling convention:
-
-| Widget Type | Labeling Strategy | Example |
-|-------------|------------------|---------|
-| Icon button | `Semantics(label: 'Action name')` | `label: 'Delete host'` |
-| Image | `Image(semanticLabel: '...')` | `semanticLabel: 'SSH key fingerprint QR code'` |
-| Progress indicator | `Semantics(label: '...', value: '...%')` | `label: 'Upload progress', value: '47%'` |
-| Toggle | `Semantics(toggled: bool)` | Checked state for checkboxes |
-| Status badge | `Semantics(label: 'Status: Connected')` | Combined visual + text |
-| Text field | Persistent label + error state | `label: 'Hostname: Must not be empty'` |
-| List item | `MergeSemantics` wrapping all sub-elements | Full card announced as one unit |
-| Chart | `Semantics(label: descriptive summary)` | `label: 'Transfer speed: 24.3 MB/s, 5-second history'` |
-| Terminal | `liveRegion` + custom announcements | Last line + connection status changes |
-
-### 10.6 Keyboard-Only Navigation Map
-
-Complete keyboard navigation is possible through all screens using standard keyboard interactions.
-
-```
-Application-level:
-  Ctrl+, (comma)     → Open Settings
-  Ctrl+H             → Host List
-  Ctrl+W             → Close current tab
-  Ctrl+T             → New terminal tab
-  Ctrl+N             → New connection dialog
-  Ctrl+Shift+F       → Global search
-
-Host List:
-  /                  → Focus search field
-  Arrow Up/Down      → Navigate host list
-  Enter              → Open selected host
-  Space              → Toggle selection
-  Ctrl+Enter         → Connect to selected host
-  Delete             → Delete selected host (with confirmation)
-  Ctrl+G             → Create new group
-  Ctrl+E             → Edit selected host
-
-Terminal:
-  Ctrl+C             → Send SIGINT (not copy — use Ctrl+Shift+C for copy)
-  Ctrl+Shift+C       → Copy selection
-  Ctrl+Shift+V       → Paste
-  Ctrl+Shift+F       → Find in terminal
-  Ctrl+Shift+Up/Down → Scroll terminal one line
-  PgUp/PgDown        → Scroll terminal one page
-  Ctrl+Shift+Home    → Scroll to top
-  Ctrl+Shift+End     → Scroll to bottom
-  Ctrl+Shift+X       → Release terminal keyboard focus to app chrome
-  Ctrl+D             → Send EOF
-  Ctrl+Z             → Send SIGTSTP
-
-SFTP Browser:
-  Arrow keys         → Navigate file list
-  Enter              → Open directory / download file
-  Backspace          → Navigate to parent directory
-  F2                 → Rename selected item
-  F5                 → Refresh directory listing
-  Delete             → Delete selected item (with confirmation)
-  Ctrl+A             → Select all
-  Ctrl+D             → Download selected
-  Ctrl+U             → Upload files
-  Ctrl+Shift+N       → New folder
-```
-
-### 10.7 Dynamic Type and Text Scaling
-
-HelixTerminator fully supports system font size preferences.
-
-```dart
-// Responsive text scaling
-class AppTextScaler extends StatelessWidget {
-  final Widget child;
-
-  const AppTextScaler({required this.child, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Clamp text scale between 0.8 and 2.0 to prevent layout breakage
-    // while supporting large text needs
-    return MediaQuery.withClampedTextScaling(
-      minScaleFactor: 0.8,
-      maxScaleFactor: 2.0,
-      child: child,
-    );
-  }
-}
-```
-
-Terminal font size is independent of system text scale — it follows the user's explicit terminal font size setting — but the application chrome (navigation, dialogs, labels) scales with system preferences.
-
-### 10.8 Reduced Motion
-
-All animations check for the system "Reduce Motion" preference.
-
-```dart
-// AnimationConfig respects system preferences
-class AnimationConfig {
-  static Duration pageFadeIn(BuildContext context) =>
-      MediaQuery.of(context).disableAnimations
-          ? Duration.zero
-          : const Duration(milliseconds: 250);
-
-  static Duration listItemSlideIn(BuildContext context) =>
-      MediaQuery.of(context).disableAnimations
-          ? Duration.zero
-          : const Duration(milliseconds: 200);
-
-  static Duration connectionPulse(BuildContext context) =>
-      MediaQuery.of(context).disableAnimations
-          ? Duration.zero
-          : const Duration(milliseconds: 1500);
-
-  // Terminal cursor blink respects reduce motion
-  static Duration cursorBlink(BuildContext context) =>
-      MediaQuery.of(context).disableAnimations
-          ? const Duration(seconds: 999999) // effectively disabled
-          : const Duration(milliseconds: 530);
-}
-```
-
----
-
-## Appendix A: Dart Package Dependencies
-
-```yaml
-# pubspec.yaml — complete dependency list
-
-name: helix_client
-description: HelixTerminator SSH client
-version: 1.0.0+1
-publish_to: none
-
-environment:
-  sdk: '>=3.3.0 <4.0.0'
-  flutter: '>=3.22.0'
-
-dependencies:
-  flutter:
-    sdk: flutter
-
-  # SSH & Terminal
-  dartssh2: ^2.9.0
-  xterm: ^3.6.0
-
-  # State management
-  flutter_bloc: ^8.1.6
-  bloc: ^8.1.4
-  equatable: ^2.0.5
-
-  # Dependency injection
-  get_it: ^7.7.0
-  injectable: ^2.4.2
-
-  # Navigation
-  go_router: ^14.2.7
-
-  # Networking
-  dio: ^5.5.0
-  web_socket_channel: ^3.0.1
-  connectivity_plus: ^6.0.3
-
-  # Local storage
-  drift: ^2.18.0
-  sqlite3_flutter_libs: ^0.5.21
-  flutter_secure_storage: ^9.2.2
-  path_provider: ^2.1.3
-
-  # Cryptography
-  pointycastle: ^3.9.1
-  cryptography: ^2.7.0
-  argon2_ffi: ^1.0.0
-
-  # Authentication
-  local_auth: ^2.3.0
-  flutter_web_auth_2: ^4.0.0
-
-  # Platform & System
-  path: ^1.9.0
-  uuid: ^4.4.0
-  intl: ^0.19.0
-  rxdart: ^0.28.0
-  collection: ^1.18.0
-  async: ^2.11.0
-
-  # UI components
-  flutter_svg: ^2.0.10+1
-  cached_network_image: ^3.4.1
-  shimmer: ^3.0.0
-  lottie: ^3.1.2
-
-  # File system
-  file_picker: ^8.1.2
-  open_file: ^3.3.2
-  share_plus: ^10.0.2
-  desktop_drop: ^0.4.4
-
-  # Notifications
-  flutter_local_notifications: ^17.2.2
-  firebase_messaging: ^15.1.3
-
-  # Analytics & Crash reporting
-  firebase_crashlytics: ^4.1.3
-  firebase_analytics: ^11.3.3
-
-  # Utils
-  dartz: ^0.10.1
-  logger: ^2.4.0
-  json_annotation: ^4.9.0
-  freezed_annotation: ^2.4.1
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
-  # Code generation
-  build_runner: ^2.4.11
-  injectable_generator: ^2.6.2
-  freezed: ^2.5.2
-  json_serializable: ^6.8.0
-  drift_dev: ^2.18.0
-
-  # Testing
-  bloc_test: ^9.1.7
-  mocktail: ^1.0.4
-  golden_toolkit: ^0.15.0
-  integration_test:
-    sdk: flutter
-
-  # Linting
-  flutter_lints: ^4.0.0
-  very_good_analysis: ^6.0.0
-```
-
----
-
-## Appendix B: Directory Structure
-
-```
-lib/
-├── main.dart
-├── main_development.dart
-├── main_staging.dart
-├── main_production.dart
-│
-├── app/
-│   ├── app.dart                        # Root MaterialApp + GoRouter setup
-│   ├── app_bloc_observer.dart          # BlocObserver for logging
-│   ├── app_router.dart                 # All GoRouter routes
-│   └── app_theme.dart                  # Theme data
-│
-├── core/
-│   ├── di/
-│   │   ├── injection_container.dart    # get_it setup
-│   │   └── injection_container.config.dart  # generated
-│   ├── error/
-│   │   ├── failures.dart
-│   │   └── exceptions.dart
-│   ├── network/
-│   │   ├── dio_client.dart
-│   │   ├── dio_interceptors.dart
-│   │   └── network_info.dart
-│   ├── storage/
-│   │   ├── app_database.dart           # drift database
-│   │   ├── secure_storage.dart
-│   │   └── daos/
-│   ├── sync/
-│   │   ├── sync_manager.dart
-│   │   ├── conflict_resolver.dart
-│   │   └── sync_models.dart
-│   ├── platform/
-│   │   ├── platform_channel.dart
-│   │   └── channels/
-│   └── utils/
-│       ├── extensions/
-│       └── validators/
-│
-├── features/
-│   ├── auth/
-│   │   ├── data/
-│   │   │   ├── datasources/
-│   │   │   ├── models/
-│   │   │   └── repositories/
-│   │   ├── domain/
-│   │   │   ├── entities/
-│   │   │   ├── repositories/
-│   │   │   └── usecases/
-│   │   └── presentation/
-│   │       ├── bloc/
-│   │       ├── pages/
-│   │       └── widgets/
-│   │
-│   ├── vault/
-│   │   └── ... (same structure)
-│   ├── hosts/
-│   ├── terminal/
-│   ├── ssh_session/
-│   ├── sftp/
-│   ├── port_forwarding/
-│   ├── workspace/
-│   ├── snippets/
-│   ├── keychain/
-│   ├── collaboration/
-│   ├── ai_autocomplete/
-│   ├── session_logs/
-│   ├── settings/
-│   ├── organizations/
-│   ├── audit/
-│   ├── known_hosts/
-│   └── notifications/
-│
-└── l10n/
-    ├── app_en.arb
-    └── app_localizations.dart
-```
-
----
-
-## Appendix C: Environment Configuration
-
-```dart
-// lib/core/config/environment.dart
-enum HelixEnvironment { development, staging, production }
-
-class HelixConfig {
-  final HelixEnvironment environment;
-  final String apiBaseUrl;
-  final String wsBaseUrl;
-  final String sentryDsn;
-  final bool enableAnalytics;
-  final bool enableCrashReporting;
-  final Duration sessionTimeout;
-  final Duration autoLockTimeout;
-  final int maxScrollbackLines;
-  final bool enableAiFeatures;
-
-  const HelixConfig({
-    required this.environment,
-    required this.apiBaseUrl,
-    required this.wsBaseUrl,
-    required this.sentryDsn,
-    required this.enableAnalytics,
-    required this.enableCrashReporting,
-    required this.sessionTimeout,
-    required this.autoLockTimeout,
-    required this.maxScrollbackLines,
-    required this.enableAiFeatures,
-  });
-
-  static const development = HelixConfig(
-    environment: HelixEnvironment.development,
-    apiBaseUrl: 'https://api.dev.helixterm.io',
-    wsBaseUrl: 'wss://ws.dev.helixterm.io',
-    sentryDsn: '',
-    enableAnalytics: false,
-    enableCrashReporting: false,
-    sessionTimeout: Duration(hours: 24),
-    autoLockTimeout: Duration(minutes: 30),
-    maxScrollbackLines: 50000,
-    enableAiFeatures: true,
-  );
-
-  static const staging = HelixConfig(
-    environment: HelixEnvironment.staging,
-    apiBaseUrl: 'https://api.staging.helixterm.io',
-    wsBaseUrl: 'wss://ws.staging.helixterm.io',
-    sentryDsn: 'https://sentry-staging-dsn@sentry.io/12345',
-    enableAnalytics: true,
-    enableCrashReporting: true,
-    sessionTimeout: Duration(hours: 8),
-    autoLockTimeout: Duration(minutes: 15),
-    maxScrollbackLines: 100000,
-    enableAiFeatures: true,
-  );
-
-  static const production = HelixConfig(
-    environment: HelixEnvironment.production,
-    apiBaseUrl: 'https://api.helixterm.io',
-    wsBaseUrl: 'wss://ws.helixterm.io',
+    apiBaseUrl: 'https://api.helixterminator.io',
+    wsBaseUrl: 'wss://ws.helixterminator.io',
     sentryDsn: 'https://sentry-prod-dsn@sentry.io/12346',
     enableAnalytics: true,
     enableCrashReporting: true,

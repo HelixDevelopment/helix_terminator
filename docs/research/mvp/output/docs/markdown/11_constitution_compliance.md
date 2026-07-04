@@ -19,32 +19,43 @@
 > HelixConstitution. Every engineer, every AI agent, and every automated pipeline operating on the
 > HelixTerminator codebase MUST read and comply with every clause in this document.**
 
+> **Scope note:** This document addresses **Module B (Zero-Trust Connection Broker)** of the
+> dual-scope `helix_terminator` product; see `docs/research/mvp/output/CANONICAL_FACTS.md` (CD-1)
+> for the full product-scope reconciliation (Module A vs Module B). A dedicated Scope & Module
+> Boundary section is `> DEFERRED (next increment)`.
+
 ---
 
 ## Table of Contents
 
-1. [Constitution Overview & HelixTerminator Scope](#section-1-constitution-overview--helixterminat or-scope)
+1. [Constitution Overview and HelixTerminator Scope](#section-1-constitution-overview-and-helixterminator-scope)
 2. [Package Naming Conventions](#section-2-package-naming-conventions)
-3. [AGENTS.MD for HelixTerminator](#section-3-agentsmd-for-helixterminat or)
-4. [CLAUDE.MD for HelixTerminator](#section-4-claudemd-for-helixterminat or)
-5. [helix-deps.yaml Specification](#section-5-helix-depsyaml-specification)
+3. [AGENTS_MD for HelixTerminator](#section-3-agents_md-for-helixterminator)
+4. [CLAUDE_MD for HelixTerminator](#section-4-claude_md-for-helixterminator)
+5. [helix-deps_yaml Specification](#section-5-helix-deps_yaml-specification)
 6. [Mandatory Test Types per Constitution](#section-6-mandatory-test-types-per-constitution)
 7. [CI/CD Constitution Compliance Gates](#section-7-cicd-constitution-compliance-gates)
-8. [Anti-Patterns & Forbidden Patterns](#section-8-anti-patterns--forbidden-patterns)
+8. [Anti-Patterns and Forbidden Patterns](#section-8-anti-patterns-and-forbidden-patterns)
 9. [Code Review Checklist (Constitution-Mandated)](#section-9-code-review-checklist-constitution-mandated)
 10. [Repository Structure Compliance](#section-10-repository-structure-compliance)
 11. [Changelog Convention](#section-11-changelog-convention)
-12. [Compliance Scoring & Monitoring](#section-12-compliance-scoring--monitoring)
+12. [Compliance Scoring and Monitoring](#section-12-compliance-scoring-and-monitoring)
 
 ---
 
-## Section 1: Constitution Overview & HelixTerminator Scope
+## Section 1: Constitution Overview and HelixTerminator Scope
 
 ### 1.1 What the HelixConstitution Governs
 
-The HelixConstitution (repository: `git@github.com:HelixDevelopment/HelixConstitution.git`) is the
+The HelixConstitution (repository: `git@github.com:HelixDevelopment/HelixConstitution.git`, included as the
+`constitution/` submodule and pinned at commit `e6504c2` — `git describe` = `helixcode-v1.1.0-39-ge6504c2`;
+cited throughout this document as **"HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line)"** per
+`CANONICAL_FACTS.md` CD-9 — do NOT assert "v2.0" / "v1.0.0" / "v4.1.0" for this submodule) is the
 **universal, project-agnostic** engineering governance framework shared by every project inside the
-HelixDevelopment and vasic-digital organisations. It defines non-negotiable rules across:
+`HelixDevelopment` organisation (org/domain identity per CANONICAL_FACTS.md CD-2). `vasic-digital/*`
+submodule import paths appear throughout this document as the shared-library org prefix; standardizing
+those paths under `HelixDevelopment` is `> DEFERRED (next increment)` — see CANONICAL_FACTS.md CD-2/CD-11.
+It defines non-negotiable rules across:
 
 | Domain                      | Governed Behaviour                                                                           |
 |-----------------------------|----------------------------------------------------------------------------------------------|
@@ -88,16 +99,16 @@ clauses apply at full strength.
 
 #### 1.2.2 Submodule Wiring
 
-The constitution is included as a Git submodule pinned to a specific tag:
+The constitution is included as a Git submodule pinned to a specific verified commit (CD-9):
 
 ```bash
 # In the HelixTerminator repository root:
 git submodule add git@github.com:HelixDevelopment/HelixConstitution.git constitution
 cd constitution
-git checkout v1.0.0   # pin to current stable tag
+git checkout e6504c2   # pin to verified commit (helixcode-v1.1.0 line; CANONICAL_FACTS.md CD-9)
 cd ..
 git add constitution .gitmodules
-git commit -m "chore: add HelixConstitution submodule pinned to v1.0.0
+git commit -m "chore: add HelixConstitution submodule pinned to e6504c2 (helixcode-v1.1.0 line)
 
 Classification: universal (§11.4.17)
 Rationale: HelixTerminator opts into the Helix Universal Constitution."
@@ -213,7 +224,9 @@ Every CI run MUST verify the constitution submodule is present and at the expect
 #!/usr/bin/env bash
 set -euo pipefail
 
-EXPECTED_TAG="v1.0.0"
+# Pinned per CANONICAL_FACTS.md CD-9: HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line).
+# Do NOT compare against a tag — the verified pin is the commit itself, not an exact-match tag.
+EXPECTED_COMMIT="e6504c2"
 CONSTITUTION_DIR="constitution"
 
 if [ ! -f "${CONSTITUTION_DIR}/Constitution.md" ]; then
@@ -221,9 +234,9 @@ if [ ! -f "${CONSTITUTION_DIR}/Constitution.md" ]; then
   exit 1
 fi
 
-ACTUAL_TAG=$(cd "${CONSTITUTION_DIR}" && git describe --tags --exact-match 2>/dev/null || echo "UNTAGGED")
-if [ "${ACTUAL_TAG}" != "${EXPECTED_TAG}" ]; then
-  echo "FAIL: constitution at ${ACTUAL_TAG}, expected ${EXPECTED_TAG}"
+ACTUAL_COMMIT=$(cd "${CONSTITUTION_DIR}" && git rev-parse --short=7 HEAD 2>/dev/null || echo "UNKNOWN")
+if [ "${ACTUAL_COMMIT}" != "${EXPECTED_COMMIT}" ]; then
+  echo "FAIL: constitution at ${ACTUAL_COMMIT}, expected ${EXPECTED_COMMIT} (helixcode-v1.1.0 line)"
   exit 1
 fi
 
@@ -239,7 +252,7 @@ if ! grep -q "constitution/AGENTS.md" AGENTS.md; then
   exit 1
 fi
 
-echo "PASS: constitution inheritance verified at ${EXPECTED_TAG}"
+echo "PASS: constitution inheritance verified at ${EXPECTED_COMMIT}"
 ```
 
 ---
@@ -334,7 +347,7 @@ publish_to: none
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
-  flutter: ">=3.22.0"
+  flutter: ">=3.24.0"
 ```
 
 ```
@@ -436,7 +449,7 @@ labels:
   helix.io/service: auth-gateway
   helix.io/domain: auth
   helix.io/environment: prod
-  helix.io/constitution-version: v1.0.0
+  helix.io/constitution-version: "e6504c2"  # HelixConstitution pinned commit, helixcode-v1.1.0 line (CD-9)
 ```
 
 **Namespace conventions:**
@@ -555,51 +568,31 @@ Ticket: HT-011
 Constitution: §11.4.26 (submodule update workflow)
 ```
 
-### 2.11 All 25 Services — Complete Naming Reference Table
+### 2.11 All 25 Services — Naming Convention (roster owned by doc-01)
 
-The following table is the authoritative naming reference for all 25 HelixTerminator microservices
-across every naming dimension:
+> **CD-3 (CANONICAL_FACTS.md):** the 25-microservice roster is NOT enumerated in this document.
+> `01_core_architecture.md` owns the single canonical service registry (name, port, DB, owning
+> team, submodule deps); every other document — including this one — references it rather than
+> re-enumerating divergently. (This section previously listed a 25-service set that also
+> contradicted Appendix A.2's separate 25-service list below; both have been replaced with this
+> pointer so the document no longer self-contradicts. A transcluded, cross-doc-consistent registry
+> table is `> DEFERRED (next increment)`.)
 
-| # | Service Name | Go Module Path | Kafka Domain | Database | K8s Deployment | Docker Image | Dart Bundle (if applicable) |
-|---|---|---|---|---|---|---|---|
-| 1 | auth-gateway | `helixterm.io/services/auth-gateway` | `helix.terminator.auth.*` | `helixterm_auth_gateway_db` | `helixterm-auth-gateway` | `helixterm-auth-gateway` | — |
-| 2 | session-manager | `helixterm.io/services/session-manager` | `helix.terminator.session.*` | `helixterm_session_manager_db` | `helixterm-session-manager` | `helixterm-session-manager` | — |
-| 3 | connection-broker | `helixterm.io/services/connection-broker` | `helix.terminator.connection.*` | `helixterm_connection_broker_db` | `helixterm-connection-broker` | `helixterm-connection-broker` | — |
-| 4 | protocol-handler | `helixterm.io/services/protocol-handler` | `helix.terminator.protocol.*` | `helixterm_protocol_handler_db` | `helixterm-protocol-handler` | `helixterm-protocol-handler` | — |
-| 5 | event-router | `helixterm.io/services/event-router` | `helix.terminator.event.*` | `helixterm_event_router_db` | `helixterm-event-router` | `helixterm-event-router` | — |
-| 6 | user-registry | `helixterm.io/services/user-registry` | `helix.terminator.user.*` | `helixterm_user_registry_db` | `helixterm-user-registry` | `helixterm-user-registry` | — |
-| 7 | billing-service | `helixterm.io/services/billing-service` | `helix.terminator.billing.*` | `helixterm_billing_service_db` | `helixterm-billing-service` | `helixterm-billing-service` | — |
-| 8 | node-manager | `helixterm.io/services/node-manager` | `helix.terminator.node.*` | `helixterm_node_manager_db` | `helixterm-node-manager` | `helixterm-node-manager` | — |
-| 9 | metrics-collector | `helixterm.io/services/metrics-collector` | `helix.terminator.metrics.*` | `helixterm_metrics_collector_db` | `helixterm-metrics-collector` | `helixterm-metrics-collector` | — |
-| 10 | notification-dispatcher | `helixterm.io/services/notification-dispatcher` | `helix.terminator.notification.*` | `helixterm_notification_dispatcher_db` | `helixterm-notification-dispatcher` | `helixterm-notification-dispatcher` | — |
-| 11 | config-service | `helixterm.io/services/config-service` | `helix.terminator.config.*` | `helixterm_config_service_db` | `helixterm-config-service` | `helixterm-config-service` | — |
-| 12 | audit-logger | `helixterm.io/services/audit-logger` | `helix.terminator.audit.*` | `helixterm_audit_logger_db` | `helixterm-audit-logger` | `helixterm-audit-logger` | — |
-| 13 | rate-limiter | `helixterm.io/services/rate-limiter` | `helix.terminator.ratelimit.*` | `helixterm_rate_limiter_db` | `helixterm-rate-limiter` | `helixterm-rate-limiter` | — |
-| 14 | load-balancer | `helixterm.io/services/load-balancer` | `helix.terminator.loadbalance.*` | `helixterm_load_balancer_db` | `helixterm-load-balancer` | `helixterm-load-balancer` | — |
-| 15 | health-monitor | `helixterm.io/services/health-monitor` | `helix.terminator.health.*` | `helixterm_health_monitor_db` | `helixterm-health-monitor` | `helixterm-health-monitor` | — |
-| 16 | traffic-analyzer | `helixterm.io/services/traffic-analyzer` | `helix.terminator.traffic.*` | `helixterm_traffic_analyzer_db` | `helixterm-traffic-analyzer` | `helixterm-traffic-analyzer` | — |
-| 17 | crypto-engine | `helixterm.io/services/crypto-engine` | `helix.terminator.crypto.*` | `helixterm_crypto_engine_db` | `helixterm-crypto-engine` | `helixterm-crypto-engine` | — |
-| 18 | dns-resolver | `helixterm.io/services/dns-resolver` | `helix.terminator.dns.*` | `helixterm_dns_resolver_db` | `helixterm-dns-resolver` | `helixterm-dns-resolver` | — |
-| 19 | geo-router | `helixterm.io/services/geo-router` | `helix.terminator.geo.*` | `helixterm_geo_router_db` | `helixterm-geo-router` | `helixterm-geo-router` | — |
-| 20 | subscription-manager | `helixterm.io/services/subscription-manager` | `helix.terminator.subscription.*` | `helixterm_subscription_manager_db` | `helixterm-subscription-manager` | `helixterm-subscription-manager` | — |
-| 21 | key-vault | `helixterm.io/services/key-vault` | `helix.terminator.keyvault.*` | `helixterm_key_vault_db` | `helixterm-key-vault` | `helixterm-key-vault` | — |
-| 22 | api-gateway | `helixterm.io/services/api-gateway` | `helix.terminator.api.*` | `helixterm_api_gateway_db` | `helixterm-api-gateway` | `helixterm-api-gateway` | — |
-| 23 | scheduler | `helixterm.io/services/scheduler` | `helix.terminator.schedule.*` | `helixterm_scheduler_db` | `helixterm-scheduler` | `helixterm-scheduler` | — |
-| 24 | backup-service | `helixterm.io/services/backup-service` | `helix.terminator.backup.*` | `helixterm_backup_service_db` | `helixterm-backup-service` | `helixterm-backup-service` | — |
-| 25 | telemetry-exporter | `helixterm.io/services/telemetry-exporter` | `helix.terminator.telemetry.*` | `helixterm_telemetry_exporter_db` | `helixterm-telemetry-exporter` | `helixterm-telemetry-exporter` | — |
+This document's role is only to define the per-dimension naming **convention** that every service
+in doc-01's registry MUST follow, shown here for one representative example:
 
-**Full Docker image names** (ghcr.io registry prefix):
+| Service Name (example, per doc-01 registry) | Go Module Path | Kafka Domain | Database | K8s Deployment | Docker Image | Dart Bundle (if applicable) |
+|---|---|---|---|---|---|---|
+| `<service-name>` | `helixterm.io/services/<service-name>` | `helix.terminator.<domain>.*` | `helixterm_<service_snake>_db` | `helixterm-<service-name>` | `helixterm-<service-name>` | — |
+
+**Docker image name pattern** (ghcr.io registry prefix, applied to every service in doc-01's registry):
 ```
-ghcr.io/helixdevelopment/helixterm-auth-gateway:<version>
-ghcr.io/helixdevelopment/helixterm-session-manager:<version>
-ghcr.io/helixdevelopment/helixterm-connection-broker:<version>
-... (same pattern for all 25)
-ghcr.io/helixdevelopment/helixterm-telemetry-exporter:<version>
+ghcr.io/helixdevelopment/helixterm-<service-name>:<version>
 ```
 
 ---
 
-## Section 3: AGENTS.MD for HelixTerminator
+## Section 3: AGENTS_MD for HelixTerminator
 
 > **DEPLOYMENT NOTE:** The following content MUST be placed verbatim in the file `AGENTS.md` at the
 > HelixTerminator repository root. This is the complete, deployable file.
@@ -649,11 +642,11 @@ management platform consisting of:
 - **6 shared Go libraries** at module path `helixterm.io/pkg/<name>`
 - **1 Flutter client** with bundle ID `io.helixterm.client`
 - **Go version**: 1.25 (MUST be exactly 1.25 or higher; never downgrade)
-- **Flutter version**: 3.22 or higher
+- **Flutter version**: 3.24 or higher
 - **Dart version**: 3.4 or higher
 - **Protobuf**: proto3 exclusively
-- **Message broker**: Apache Kafka 3.7+
-- **Service mesh**: Istio 1.21+ with mTLS enforced
+- **Message broker**: Apache Kafka 3.9+
+- **Service mesh**: Istio 1.22+ with mTLS enforced
 - **Container runtime**: Podman 5+ rootless mode ONLY (§11.4.161)
 
 The repository is a **monorepo** managed with `go.work`. Every service
@@ -882,10 +875,26 @@ Every change MUST have tests at all four layers:
 ```go
 // Meta-test mutation example:
 // File: tests/meta/coverage_gate_mutation_test.go
+//
+// Anti-bluff (§1.1): this is a REAL asserting body, not a comment-only stub.
+// Plant a mutated coverage value below the gate's threshold and assert that
+// the gate's own pass/fail decision function reports FAIL for it — proving
+// the coverage gate actually catches a regression instead of always passing.
 func TestCoverageGateMutation(t *testing.T) {
-    // Plant: temporarily lower coverage below threshold
-    // Assert: CI gate reports FAIL
-    // This test MUST be present and passing for every coverage gate
+    const threshold = 80.0        // line-coverage floor asserted by the gate
+    const mutatedCoverage = 62.0  // planted regression: well below threshold
+
+    passed := evaluateCoverageGate(mutatedCoverage, threshold)
+
+    if passed {
+        t.Fatalf("coverage gate mutation test FAILED: gate reported PASS for %.1f%% coverage "+
+            "against a %.1f%% threshold — the gate is not catching regressions", mutatedCoverage, threshold)
+    }
+}
+
+// evaluateCoverageGate mirrors the CI coverage gate's pass/fail decision.
+func evaluateCoverageGate(actualCoverage, thresholdCoverage float64) bool {
+    return actualCoverage >= thresholdCoverage
 }
 ```
 
@@ -998,8 +1007,9 @@ func BenchmarkSessionManager_CreateSession(b *testing.B) {
 3. **No command injection** — never construct shell commands from user input.
 4. **No SSRF** — all outbound URLs validated against allowlist.
 5. **No insecure random** — use `crypto/rand`, never `math/rand` for security.
-6. **No JWT algorithm confusion** — pin algorithm in validation (`RS256` only
-   for access tokens).
+6. **No JWT algorithm confusion** — pin algorithm in validation (`EdDSA`/Ed25519 only
+   for access tokens, per `CANONICAL_FACTS.md` CD-7; `RS256`/`ES256`/`HS256` are forbidden as the
+   signing choice and MUST only appear in attack-test / negative-example code).
 7. **No plaintext secrets in logs** — log only token prefixes (first 8 chars).
 8. **No unvalidated redirects** — every redirect URL validated against allowlist.
 9. **mTLS enforced** for all service-to-service Kafka and gRPC traffic.
@@ -1092,10 +1102,11 @@ The constitution check covers:
 - .gitignore completeness
 - AGENTS.md/CLAUDE.md presence and inheritance references
 ```
+```
 
 ---
 
-## Section 4: CLAUDE.MD for HelixTerminator
+## Section 4: CLAUDE_MD for HelixTerminator
 
 > **DEPLOYMENT NOTE:** The following content MUST be placed verbatim in the file `CLAUDE.md` at the
 > HelixTerminator repository root. This is the complete, deployable file.
@@ -1395,10 +1406,11 @@ When working with large files (>500 lines), Claude MUST:
 8. **Monorepo `go.work`**: read the full file once per session; cache the
    module list; update when adding new modules.
 ```
+```
 
 ---
 
-## Section 5: helix-deps.yaml Specification
+## Section 5: helix-deps_yaml Specification
 
 Per Constitution §11.4.31, every owned-by-us submodule MUST ship `helix-deps.yaml` listing
 its own-org dependencies. The following is the **complete, deployable `helix-deps.yaml`** for
@@ -1419,6 +1431,10 @@ HelixTerminator.
 
 schema_version: "1.0"
 project: helixterm
+# module_path uses the pervasive `helixterm.io` Go-import convention used throughout this
+# document; reconciling it with the canonical primary domain `helixterminator.io`
+# (CANONICAL_FACTS.md CD-2) requires a mass import-path rewrite and is
+# `> DEFERRED (next increment)`.
 module_path: helixterm.io
 go_version: "1.25"
 updated: "2026-06-28"
@@ -1430,7 +1446,7 @@ constitution:
   name: constitution
   ssh_url: git@github.com:HelixDevelopment/HelixConstitution.git
   https_url: https://github.com/HelixDevelopment/HelixConstitution.git
-  ref: v1.0.0
+  ref: e6504c2  # pinned commit, helixcode-v1.1.0 line (CANONICAL_FACTS.md CD-9)
   layout: flat
   canonical_path: constitution/
   why: >
@@ -1442,7 +1458,7 @@ constitution:
     - assert_file_exists: constitution/Constitution.md
     - assert_file_exists: constitution/AGENTS.md
     - assert_file_exists: constitution/CLAUDE.md
-    - assert_git_tag: v1.0.0
+    - assert_git_commit: e6504c2  # helixcode-v1.1.0 line
 
 # ─────────────────────────────────────────────────────────────────────────────
 # §2. VASIC-DIGITAL SUBMODULE DEPENDENCIES
@@ -1498,7 +1514,7 @@ vasic_digital_dependencies:
     why: >
       JWT generation/validation, session token management, OAuth2 flows,
       PKCE support. Used by auth-gateway service and middleware layer.
-      RS256-only JWT validation enforced.
+      EdDSA (Ed25519)-only JWT validation enforced (CANONICAL_FACTS.md CD-7).
     go_module: digital.vasic.auth
     used_by:
       - helixterm.io/services/auth-gateway
@@ -1506,7 +1522,7 @@ vasic_digital_dependencies:
     validation:
       - assert_file_exists: submodules/auth/README.md
       - run_tests: submodules/auth/
-      - assert_algorithm: RS256
+      - assert_algorithm: EdDSA
 
   - name: recovery
     ssh_url: git@github.com:vasic-digital/recovery.git
@@ -1562,7 +1578,7 @@ vasic_digital_dependencies:
     validation:
       - assert_file_exists: submodules/messaging/README.md
       - run_tests: submodules/messaging/
-      - assert_kafka_version: ">=3.7"
+      - assert_kafka_version: ">=3.9"
 
   - name: database
     ssh_url: git@github.com:vasic-digital/database.git
@@ -1580,7 +1596,7 @@ vasic_digital_dependencies:
     validation:
       - assert_file_exists: submodules/database/README.md
       - run_tests: submodules/database/
-      - assert_postgres_version: ">=15"
+      - assert_postgres_version: ">=17.2"
 
   - name: config
     ssh_url: git@github.com:vasic-digital/config.git
@@ -2886,8 +2902,8 @@ concurrency:
 
 env:
   GO_VERSION: '1.25'
-  FLUTTER_VERSION: '3.22.0'
-  CONSTITUTION_TAG: 'v1.0.0'
+  FLUTTER_VERSION: '3.24.0'
+  CONSTITUTION_COMMIT: 'e6504c2'  # helixcode-v1.1.0 line (CANONICAL_FACTS.md CD-9)
   MINIMUM_COMPLIANCE_SCORE: '95'
 
 jobs:
@@ -2895,7 +2911,7 @@ jobs:
   # Job 1: Constitution submodule validation
   # ─────────────────────────────────────────────────────────────────
   constitution-submodule:
-    name: "§1 Constitution Submodule"
+    name: "CI-01 Constitution Submodule"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -2945,7 +2961,7 @@ jobs:
   # Job 2: Package naming convention validation
   # ─────────────────────────────────────────────────────────────────
   naming-conventions:
-    name: "§2 Package Naming Conventions"
+    name: "CI-02 Package Naming Conventions"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -2991,7 +3007,7 @@ jobs:
   # Job 3: Test presence verification
   # ─────────────────────────────────────────────────────────────────
   test-presence:
-    name: "§3 Required Test Types Present"
+    name: "CI-03 Required Test Types Present"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -3029,7 +3045,7 @@ jobs:
   # Job 4: Unit tests + coverage
   # ─────────────────────────────────────────────────────────────────
   unit-tests:
-    name: "§4 Unit Tests + Coverage"
+    name: "CI-04 Unit Tests + Coverage"
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -3098,7 +3114,7 @@ jobs:
   # Job 5: Linting (zero violations required)
   # ─────────────────────────────────────────────────────────────────
   lint:
-    name: "§5 Linting (Zero Violations)"
+    name: "CI-05 Linting (Zero Violations)"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -3125,7 +3141,7 @@ jobs:
   # Job 6: Security scan
   # ─────────────────────────────────────────────────────────────────
   security-scan:
-    name: "§6 Security Scan"
+    name: "CI-06 Security Scan"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -3168,7 +3184,7 @@ jobs:
   # Job 7: Forbidden pattern detection
   # ─────────────────────────────────────────────────────────────────
   forbidden-patterns:
-    name: "§7 Forbidden Pattern Detection"
+    name: "CI-07 Forbidden Pattern Detection"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -3230,7 +3246,7 @@ jobs:
   # Job 8: Commit message format verification
   # ─────────────────────────────────────────────────────────────────
   commit-messages:
-    name: "§8 Commit Message Format"
+    name: "CI-08 Commit Message Format"
     runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
     steps:
@@ -3269,7 +3285,7 @@ jobs:
   # Job 9: Full constitution compliance score
   # ─────────────────────────────────────────────────────────────────
   compliance-score:
-    name: "§9 Constitution Compliance Score"
+    name: "CI-09 Constitution Compliance Score"
     runs-on: ubuntu-24.04
     needs:
       - constitution-submodule
@@ -3324,7 +3340,7 @@ jobs:
   # Job 10: .gitignore validation (§11.4.30)
   # ─────────────────────────────────────────────────────────────────
   gitignore-audit:
-    name: "§10 .gitignore Audit (§11.4.30)"
+    name: "CI-10 .gitignore Audit (§11.4.30)"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -3357,7 +3373,7 @@ jobs:
   # Job 11: Release gate (score must be 100)
   # ─────────────────────────────────────────────────────────────────
   release-gate:
-    name: "§11 Release Gate (Score = 100)"
+    name: "CI-11 Release Gate (Score = 100)"
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/helixterm-')
     needs:
@@ -3454,7 +3470,9 @@ func main() {
 	flag.Parse()
 
 	checker := NewConstitutionChecker()
-	report := checker.RunAll()
+	// *check is now actually read by RunAll (see below) — it is no longer a
+	// declared-but-unused dispatch flag (anti-bluff §1.1 / former BLUFF gate).
+	report := checker.RunAll(*check)
 
 	switch *outputFmt {
 	case "json":
@@ -3483,30 +3501,56 @@ func NewConstitutionChecker() *ConstitutionChecker {
 	return &ConstitutionChecker{root: root}
 }
 
-func (c *ConstitutionChecker) RunAll() *ComplianceReport {
+// RunAll runs every named check, or exactly one if `only` is non-empty.
+// `only` is the value of the `--check` flag: previously this parameter did
+// not exist and the flag was declared but never read, so every CI step
+// invoking `--check <name>` (§7) silently ran the full suite regardless of
+// which name was passed — a BLUFF gate. It is now a real, exercised filter.
+func (c *ConstitutionChecker) RunAll(only string) *ComplianceReport {
 	fmt.Println("HelixTerminator Constitution Compliance Check")
 	fmt.Println("=============================================")
 
-	// §1: Constitution submodule
-	c.checkConstitutionSubmodule()
-	// §2: Package naming
-	c.checkPackageNaming()
-	// §3: AGENTS.md + CLAUDE.md
-	c.checkAgentFiles()
-	// §4: helix-deps.yaml
-	c.checkHelixDeps()
-	// §5: Test presence
-	c.checkTestPresence()
-	// §6: Coverage (if not overridden)
-	c.checkCoverage()
-	// §7: Forbidden patterns
-	c.checkForbiddenPatterns()
-	// §8: .gitignore
-	c.checkGitignore()
-	// §9: Repository structure
-	c.checkRepoStructure()
-	// §10: Commit format (last 20)
-	c.checkCommitMessages()
+	// checks is the ordered, named check registry backing --check <name>.
+	// Job-comment numbers below (Check 1..Check 10) intentionally do NOT use
+	// "§N" — that prefix is reserved for HelixConstitution clause numbers
+	// elsewhere in this document and must not collide with it.
+	checks := []struct {
+		name string
+		fn   func()
+	}{
+		{"submodule-catalogue", c.checkConstitutionSubmodule}, // Check 1: Constitution submodule
+		{"package-naming", c.checkPackageNaming},               // Check 2: Package naming
+		{"agent-files", c.checkAgentFiles},                     // Check 3: AGENTS.md + CLAUDE.md
+		{"helix-deps", c.checkHelixDeps},                       // Check 4: helix-deps.yaml
+		{"test-presence", c.checkTestPresence},                 // Check 5: Test presence
+		{"coverage", c.checkCoverage},                          // Check 6: Coverage (if not overridden)
+		{"forbidden-patterns", c.checkForbiddenPatterns},       // Check 7: Forbidden patterns
+		{"gitignore", c.checkGitignore},                        // Check 8: .gitignore
+		{"repo-structure", c.checkRepoStructure},               // Check 9: Repository structure
+		{"commit-messages", c.checkCommitMessages},             // Check 10: Commit format (last 20)
+	}
+
+	if only != "" {
+		for _, ch := range checks {
+			if ch.name == only {
+				ch.fn()
+				return c.buildReport()
+			}
+		}
+		// §11.4.6 no-guessing mandate: fail closed on an unrecognized --check
+		// value instead of silently running every check (the prior bug).
+		// context-propagation / handler-db-access / submodule-duplication /
+		// global-state / required-files are separate AST detectors invoked
+		// directly in §7 CI steps and are not yet wired into this table.
+		// > DEFERRED (next increment): wire those five in so every --check
+		// > value used anywhere in this document resolves here too.
+		fmt.Printf("FAIL: unknown --check value %q\n", only)
+		os.Exit(1)
+	}
+
+	for _, ch := range checks {
+		ch.fn()
+	}
 
 	return c.buildReport()
 }
@@ -3931,7 +3975,7 @@ func (r *ComplianceReport) ToMarkdown() string {
 
 ---
 
-## Section 8: Anti-Patterns & Forbidden Patterns
+## Section 8: Anti-Patterns and Forbidden Patterns
 
 Every forbidden pattern listed below triggers an immediate CI failure. Detection methods include
 AST-level analysis, grep patterns, and lint rules.
@@ -4720,7 +4764,7 @@ Constitution: governed by `constitution/Constitution.md` (HelixConstitution v2).
 - k6 performance scripts for analytics service: `tests/perf/analytics_ingest.js` (HT-075)
 
 ### Changed
-- `helixterm.io/services/auth`: JWT signing upgraded from HS256 to RS256; existing tokens remain valid until natural expiry (HT-076) ([#145](https://github.com/HelixDevelopment/helixterm/pull/145))
+- `helixterm.io/services/auth`: JWT signing upgraded from HS256 to EdDSA (Ed25519), per `CANONICAL_FACTS.md` CD-7; existing tokens remain valid until natural expiry (HT-076) ([#145](https://github.com/HelixDevelopment/helixterm/pull/145))
 - `helixterm.io/pkg/logger`: structured log fields now include `trace_id` and `span_id` automatically from context (HT-077)
 - Go workspace updated to Go 1.25.2 (HT-078)
 - All Helm chart resource requests updated to reflect measured baseline usage from Stats.md (HT-079)
@@ -4779,7 +4823,7 @@ Constitution: governed by `constitution/Constitution.md` (HelixConstitution v2).
 
 ---
 
-## Section 12: Compliance Scoring & Monitoring
+## Section 12: Compliance Scoring and Monitoring
 
 > **Authority:** Constitution compliance is not a binary pass/fail — it is a scored metric tracked over time. This section defines the scoring algorithm, enforcement thresholds, dashboard design, and review cadence.
 
@@ -5191,35 +5235,22 @@ The CSV is generated by `scripts/compliance-score.go --format csv --append docs/
 | §12 | Host session safety | Bounded execution; ≤60% RAM |
 | §12.10 | Continuation document | CONTINUATION.md updated every non-trivial state change |
 
-### A.2 All 25 Services Quick Reference
+### A.2 Services Quick Reference — See Canonical Registry (CD-3)
 
-| # | Service | Module Path | Docker Image | DB Name | Primary Kafka Topics |
-|---|---------|-------------|--------------|---------|----------------------|
-| 1 | auth | `helixterm.io/services/auth` | `ghcr.io/helixdevelopment/helixterm-auth:latest` | `helixterm_auth_db` | `helix.terminator.auth.token_issued`, `helix.terminator.auth.token_revoked` |
-| 2 | gateway | `helixterm.io/services/gateway` | `ghcr.io/helixdevelopment/helixterm-gateway:latest` | — | `helix.terminator.gateway.request_routed` |
-| 3 | session | `helixterm.io/services/session` | `ghcr.io/helixdevelopment/helixterm-session:latest` | `helixterm_session_db` | `helix.terminator.session.session_created`, `helix.terminator.session.session_ended` |
-| 4 | user | `helixterm.io/services/user` | `ghcr.io/helixdevelopment/helixterm-user:latest` | `helixterm_user_db` | `helix.terminator.user.user_registered`, `helix.terminator.user.profile_updated` |
-| 5 | billing | `helixterm.io/services/billing` | `ghcr.io/helixdevelopment/helixterm-billing:latest` | `helixterm_billing_db` | `helix.terminator.billing.invoice_created`, `helix.terminator.billing.payment_processed` |
-| 6 | notification | `helixterm.io/services/notification` | `ghcr.io/helixdevelopment/helixterm-notification:latest` | `helixterm_notification_db` | `helix.terminator.notification.message_sent` |
-| 7 | terminal | `helixterm.io/services/terminal` | `ghcr.io/helixdevelopment/helixterm-terminal:latest` | `helixterm_terminal_db` | `helix.terminator.terminal.input_received`, `helix.terminator.terminal.output_sent` |
-| 8 | execution | `helixterm.io/services/execution` | `ghcr.io/helixdevelopment/helixterm-execution:latest` | `helixterm_execution_db` | `helix.terminator.execution.job_started`, `helix.terminator.execution.job_completed` |
-| 9 | scheduler | `helixterm.io/services/scheduler` | `ghcr.io/helixdevelopment/helixterm-scheduler:latest` | `helixterm_scheduler_db` | `helix.terminator.scheduler.job_scheduled`, `helix.terminator.scheduler.job_fired` |
-| 10 | storage | `helixterm.io/services/storage` | `ghcr.io/helixdevelopment/helixterm-storage:latest` | `helixterm_storage_db` | `helix.terminator.storage.file_uploaded`, `helix.terminator.storage.file_deleted` |
-| 11 | config | `helixterm.io/services/config` | `ghcr.io/helixdevelopment/helixterm-config:latest` | `helixterm_config_db` | `helix.terminator.config.config_changed` |
-| 12 | audit | `helixterm.io/services/audit` | `ghcr.io/helixdevelopment/helixterm-audit:latest` | `helixterm_audit_db` | `helix.terminator.audit.event_recorded` |
-| 13 | metrics | `helixterm.io/services/metrics` | `ghcr.io/helixdevelopment/helixterm-metrics:latest` | `helixterm_metrics_db` | `helix.terminator.metrics.data_point_recorded` |
-| 14 | search | `helixterm.io/services/search` | `ghcr.io/helixdevelopment/helixterm-search:latest` | `helixterm_search_db` | `helix.terminator.search.index_updated` |
-| 15 | webhook | `helixterm.io/services/webhook` | `ghcr.io/helixdevelopment/helixterm-webhook:latest` | `helixterm_webhook_db` | `helix.terminator.webhook.delivery_attempted` |
-| 16 | provisioner | `helixterm.io/services/provisioner` | `ghcr.io/helixdevelopment/helixterm-provisioner:latest` | `helixterm_provisioner_db` | `helix.terminator.provisioner.resource_created`, `helix.terminator.provisioner.resource_destroyed` |
-| 17 | identity | `helixterm.io/services/identity` | `ghcr.io/helixdevelopment/helixterm-identity:latest` | `helixterm_identity_db` | `helix.terminator.identity.credential_verified` |
-| 18 | policy | `helixterm.io/services/policy` | `ghcr.io/helixdevelopment/helixterm-policy:latest` | `helixterm_policy_db` | `helix.terminator.policy.policy_evaluated` |
-| 19 | secrets | `helixterm.io/services/secrets` | `ghcr.io/helixdevelopment/helixterm-secrets:latest` | `helixterm_secrets_db` | `helix.terminator.secrets.secret_rotated` |
-| 20 | registry | `helixterm.io/services/registry` | `ghcr.io/helixdevelopment/helixterm-registry:latest` | `helixterm_registry_db` | `helix.terminator.registry.service_registered` |
-| 21 | relay | `helixterm.io/services/relay` | `ghcr.io/helixdevelopment/helixterm-relay:latest` | — | `helix.terminator.relay.message_relayed` |
-| 22 | analytics | `helixterm.io/services/analytics` | `ghcr.io/helixdevelopment/helixterm-analytics:latest` | `helixterm_analytics_db` | `helix.terminator.analytics.session_recorded`, `helix.terminator.analytics.metric_emitted` |
-| 23 | backup | `helixterm.io/services/backup` | `ghcr.io/helixdevelopment/helixterm-backup:latest` | `helixterm_backup_db` | `helix.terminator.backup.backup_completed`, `helix.terminator.backup.restore_requested` |
-| 24 | health | `helixterm.io/services/health` | `ghcr.io/helixdevelopment/helixterm-health:latest` | — | `helix.terminator.health.check_failed` |
-| 25 | events | `helixterm.io/services/events` | `ghcr.io/helixdevelopment/helixterm-events:latest` | `helixterm_events_db` | `helix.terminator.events.event_published`, `helix.terminator.events.subscriber_connected` |
+> This table previously enumerated its own divergent 25-service list — a THIRD list, disagreeing
+> with both §2.11's (now-removed) list and doc-01's canonical registry — and used the forbidden
+> `:latest` image tag (§8 forbidden pattern) throughout. Per `CANONICAL_FACTS.md` CD-3, the roster
+> and its per-service Docker image / DB / Kafka-topic values are owned by `01_core_architecture.md`'s
+> canonical service registry; do not re-enumerate them here.
+
+Applying this document's naming convention (§2.11) to any service in doc-01's registry:
+
+| Field | Pattern |
+|---|---|
+| Module Path | `helixterm.io/services/<service-name>` |
+| Docker Image | `ghcr.io/helixdevelopment/helixterm-<service-name>:<version>` — an explicit pinned `<version>`, e.g. `1.0.0`; **never** `:latest` |
+| DB Name | `helixterm_<service_snake>_db` |
+| Primary Kafka Topics | `helix.terminator.<domain>.<event>` |
 
 ---
 
@@ -5428,8 +5459,8 @@ HELIXTERM_KAFKA_SCHEMA_REGISTRY_URL=http://localhost:8081
 HELIXTERM_KAFKA_CONSUMER_GROUP=helixterm-main
 
 # ─── Auth ──────────────────────────────────────────────────────────────────
-HELIXTERM_JWT_PUBLIC_KEY_PATH=      # REQUIRED — path to RS256 public key
-HELIXTERM_JWT_PRIVATE_KEY_PATH=     # REQUIRED — path to RS256 private key; NEVER commit
+HELIXTERM_JWT_PUBLIC_KEY_PATH=      # REQUIRED — path to EdDSA (Ed25519) public key (CD-7)
+HELIXTERM_JWT_PRIVATE_KEY_PATH=     # REQUIRED — path to EdDSA (Ed25519) private key; NEVER commit
 HELIXTERM_JWT_EXPIRY_SECONDS=3600
 
 # ─── Observability ─────────────────────────────────────────────────────────

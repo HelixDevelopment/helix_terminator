@@ -111,7 +111,7 @@ The default theme is **Helix Dark**, a near-black surface system with carefully 
 
 The dark theme uses a **purple-to-teal accent spectrum** that carries brand identity without competing with terminal content. Purple (`#6C63FF`) is used for primary interactive elements, teal (`#00D4B1`) for success and connected states, and red (`#FF6B6B`) for alerts and errors.
 
-**Light theme** exists as a full-fidelity alternative for users who prefer it. It is not a "light mode afterthought" — every component, every color token, and every contrast ratio has been validated in both themes.
+**Light theme** is *intended* as a full-fidelity alternative for users who prefer it, and is not meant to be a "light mode afterthought" — but as specified today it is not yet at parity: the Border, Interactive, Status, and SSH-connection-status token groups have no light-theme values yet (§2.3.2 lists the specifics, each marked `> DEFERRED (next increment)`), so the "every component, every token, every ratio validated in both themes" claim does not yet hold. Closing that gap is tracked as a follow-up increment, not fabricated here.
 
 ### 1.3.2 Terminal Aesthetic Integration
 
@@ -205,6 +205,18 @@ HelixTerminator's color system is built on a **layered token architecture** with
 3. **Component tokens** — component-specific overrides that reference semantic tokens (e.g., `button-bg-primary: interactive-default`)
 
 This architecture ensures that a single theme change at the semantic layer cascades to all components without any component-level overrides required.
+
+**Constitutional alignment:** This 3-tier primitive -> semantic -> component architecture is
+HelixTerminator's implementation of the token-driven, light+dark, no-ad-hoc-CSS design-system
+mandate in **HelixConstitution (pinned e6504c2, helixcode-v1.1.0 line) §11.4.162 ("OpenDesign")**.
+Per §11.4.162, every color/spacing/typography value consumed by a component MUST resolve through a
+named token (never a literal hex/px value in component code -- see §10.4 Flutter Implementation for
+the enforced access pattern), and both light and dark themes MUST be first-class, fully-populated
+token sets rather than one theme with the other bolted on. The component-token layer described above
+is not yet fully theme-parametric: several `component.*` tokens in §10.2 resolve only against
+`color.semantic.dark.*` and have no light-theme counterpart (see §2.3.2 and §10.3 for the specific
+gaps, marked `> DEFERRED` below). Closing that gap is required for full §11.4.162 compliance and is
+tracked as a follow-up increment, not fabricated here.
 
 ---
 
@@ -400,6 +412,15 @@ This architecture ensures that a single theme change at the semantic layer casca
 
 ### 2.3.2 Light Theme Semantic Tokens
 
+> **§11.4.162 (OpenDesign) gap:** Per the constitutional citation in §2.1, light theme must be a
+> first-class, fully-populated token set. As specified below, it is not: only Background/Surface and
+> a partial Text group exist. **No Border, Interactive, Status, or SSH-connection-status light-theme
+> tables exist at all** (compare to the complete Dark Theme equivalents in §2.3.1). `text-inverse`,
+> `text-link-hover`, `text-success`, `text-warning`, `text-error`, and `text-info` are also missing
+> from the light Text group below. `> DEFERRED (next increment)`: authoring the missing light-theme
+> Border/Interactive/Status/SSH tables (and the matching JSON in §10.2) is a design-token authoring
+> task out of scope for this hardening pass -- not fabricated here.
+
 #### Background / Surface (Light)
 
 | Semantic Token        | Hex        | Usage                                       |
@@ -410,16 +431,28 @@ This architecture ensures that a single theme change at the semantic layer casca
 | `surface-sunken`      | `#F0F0F4`  | Input fields, code areas                    |
 | `surface-interactive` | `#F0F0F4`  | Row hover bg                                |
 | `surface-selected`    | `#F0EFFF`  | Selected row bg                             |
+| `surface-danger`      | -- `> DEFERRED (next increment)` -- | Destructive action confirmation zone (dark-theme-only today) |
 
 #### Text (Light)
 
+Ratios recomputed per §2.6/§9.2 methodology (WCAG 2.1 relative luminance):
+
 | Semantic Token         | Hex        | Contrast vs surface |
 |------------------------|------------|----------------------|
-| `text-primary`         | `#0E0E14`  | 16.3:1               |
-| `text-secondary`       | `#56566A`  | 5.8:1                |
-| `text-tertiary`        | `#78788A`  | 4.5:1                |
-| `text-disabled`        | `#A0A0B8`  | 2.8:1 (large only)   |
-| `text-link`            | `#5952D4`  | 6.1:1                |
+| `text-primary`         | `#0E0E14`  | 18.14:1              |
+| `text-secondary`       | `#56566A`  | 6.75:1               |
+| `text-tertiary`        | `#78788A`  | 4.08:1               |
+| `text-disabled`        | `#A0A0B8`  | 2.41:1 (large only)  |
+| `text-link`            | `#5952D4`  | 5.53:1               |
+| `text-inverse`, `text-link-hover`, `text-success`, `text-warning`, `text-error`, `text-info` | -- | `> DEFERRED (next increment)` -- no light-theme value specified yet |
+
+#### Border / Interactive / Status / SSH Connection Status (Light)
+
+`> DEFERRED (next increment)`: unlike Dark Theme (§2.3.1, which has complete Border, Interactive,
+Status Semantic, and SSH Connection Status token tables), no light-theme equivalents exist for these
+four groups. This is the largest concrete gap behind the "full-fidelity" light-theme claim in §1.3.1
+and must be closed before that claim is accurate. Not fabricated here -- requires design-token
+authoring in a follow-up increment.
 
 ---
 
@@ -796,22 +829,62 @@ ANSI Bright:
 
 ## 2.6 Color Contrast Compliance Matrix
 
-| Pair                                 | Ratio  | WCAG Level |
-|--------------------------------------|--------|------------|
-| text-primary on surface (dark)       | 17.5:1 | AAA        |
-| text-secondary on surface (dark)     | 7.2:1  | AAA        |
-| text-tertiary on surface (dark)      | 4.6:1  | AA         |
-| text-link on surface (dark)          | 7.8:1  | AAA        |
-| interactive-default on surface (dark)| 5.2:1  | AA         |
-| text-success on surface-success-bg   | 8.1:1  | AAA        |
-| text-error on surface-error-bg       | 6.3:1  | AA         |
-| text-warning on surface-warning-bg   | 9.4:1  | AAA        |
-| text-primary on surface (light)      | 16.3:1 | AAA        |
-| text-secondary on surface (light)    | 5.8:1  | AA         |
-| text-link on surface (light)         | 6.1:1  | AA         |
-# 2. Complete System Architecture
+**Recomputed** from the actual token hex values (§2.2/§2.3) using the WCAG 2.1 relative-luminance
+formula (`L = 0.2126R + 0.7152G + 0.0722B` on linearized sRGB channels; `ratio = (L1+0.05)/(L2+0.05)`).
+The previous version of this table was hand-typed/estimated and every row diverged from the
+computed value (see `mvp-A1-ux.md` Finding 3); it has been replaced below with values computed
+directly from hex.
 
-## 2.1 Architectural Philosophy
+| Pair                                 | Ratio   | WCAG Level |
+|--------------------------------------|---------|------------|
+| text-primary on surface (dark)       | 19.24:1 | AAA        |
+| text-secondary on surface (dark)     | 7.53:1  | AAA        |
+| text-tertiary on surface (dark)      | 4.45:1  | AA*        |
+| text-link on surface (dark)          | 7.06:1  | AAA*       |
+| interactive-default on surface (dark)| 4.46:1  | AA (UI/large-text 3:1 floor -- see note) |
+| text-success on surface-success-bg   | 10.42:1 | AAA        |
+| text-error on surface-error-bg       | 5.50:1  | AA         |
+| text-warning on surface-warning-bg   | 10.39:1 | AAA        |
+| text-primary on surface (light)      | 18.14:1 | AAA        |
+| text-secondary on surface (light)    | 6.75:1  | AA         |
+| text-link on surface (light)         | 5.53:1  | AA         |
+
+\* `text-tertiary` (4.45:1) and `text-link` (7.06:1) are within 0.05-0.06 of their respective AA
+(4.5:1) / AAA (7:1) thresholds. `text-tertiary` is used only for captions/tertiary labels; treat as
+borderline and prefer restricting it to >=14px semibold ("large text", 3:1 floor) until the token is
+nudged in a follow-up pass. `> DEFERRED (next increment)`.
+
+`interactive-default` (#6C63FF) is listed here as if it were running text, but its documented usage
+(§2.3.1 Interactive) is exclusively UI components -- primary button fill, active toggle, progress
+bar -- so the applicable WCAG 1.4.11 floor is 3:1 (non-text), which it clears comfortably at 4.46:1.
+If this color is ever used as inline link/body text at normal size, prefer `text-link` (#9590FF,
+7.06:1) instead, since 4.46:1 does not clear the 4.5:1 AA text floor.
+
+**Two rows here are real compliance failures, not just miscomputed passes** (see §9.2.1 for the
+canonical text-contrast table and hand-worked arithmetic): `text-disabled` (2.69:1, fails its own
+3:1 large-text floor) and white button labels on `interactive-default` (4.32:1, fails the 4.5:1 AA
+text floor). Both are carried through honestly in §9.2.1 below rather than hidden here.
+
+> **Gap (tracked, not fixed this pass):** This matrix still does not cover the SSH connection-status
+> colors (`ssh-connecting`, `ssh-error`, `ssh-reconnecting`) against their badge backgrounds, even
+> though these are the safety-critical "is this connection trusted/live" signals the Trust principle
+> (§1.2.4) depends on. `> DEFERRED (next increment)`.
+# Appendix P.1 -- Platform Architecture Context (see docs 01/07): Complete System Architecture
+
+> **Appendix note (applies to Appendix P.1-P.9 below):** Sections P.1 through P.9 preserve backend
+> / platform-architecture content (microservice catalog, database schemas, Kafka/RabbitMQ topology,
+> Zero Trust security architecture, API specification, performance architecture, Kubernetes
+> deployment, submodule integration) that was originally interleaved into this UX Design System
+> document under section numbers that duplicated the UX chapters (see
+> `docs/research/mvp/REMEDIATION_REGISTER.md`, `06_ux_design_system` entry, and
+> `mvp-A1-ux.md` Finding 0). It has been relabeled here under its own Appendix P numbering so no
+> two sections in this file share a number, but it remains **out of scope** for the UX Design
+> System proper (Sections 1-10). The canonical, deduplicated version of this platform content is
+> owned by `01_core_architecture.md` and `07_api_and_database.md` -- treat those as authoritative
+> and this appendix as historical/contextual reference only. A follow-up increment should extract
+> Appendix P into its own standalone platform-architecture document. `> DEFERRED (next increment)`.
+
+## P.1.1 Architectural Philosophy
 
 HelixTerminator's architecture is a full microservices system with strict domain isolation, event-driven state propagation, and zero-trust security enforcement at every layer. Services communicate via three channels:
 
@@ -821,7 +894,7 @@ HelixTerminator's architecture is a full microservices system with strict domain
 
 This three-channel model provides clear semantic separation: Kafka for facts that have already happened (events), RabbitMQ for instructions that must happen exactly once (commands), REST/gRPC for interrogations (queries) and mutations requiring transactional semantics.
 
-## 2.2 High-Level Architecture Diagram Description
+## P.1.2 High-Level Architecture Diagram Description
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -835,7 +908,7 @@ This three-channel model provides clear semantic separation: Kafka for facts tha
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                        │ mTLS (SPIFFE/SPIRE identities)
 ┌─────────────────────────────────────▼───────────────────────────────────────┐
-│               API GATEWAY SERVICE  helixterm.io/services/gateway  :8080      │
+│               API GATEWAY SERVICE  helixterminator.io/services/gateway  :8080      │
 │     Rate limiting │ Auth token validation │ Request routing │ Circuit breaker│
 └──┬──────────┬──────────┬─────────┬──────────┬──────────┬───────────┬────────┘
    │          │          │         │          │          │           │
@@ -846,7 +919,7 @@ This three-channel model provides clear semantic separation: Kafka for facts tha
    └──────────┴──────────┴────┬────┴──────────┴──────────┴───────────┘
                                │ Internal gRPC / mTLS
    ┌───────────────────────────▼──────────────────────────────────────┐
-   │              SSH PROXY SERVICE  helixterm.io/services/ssh-proxy  │
+   │              SSH PROXY SERVICE  helixterminator.io/services/ssh-proxy  │
    │              :8090 (WebSocket → SSH tunnel)                      │
    └──────────────────────┬───────────────────────────────────────────┘
                           │
@@ -882,7 +955,7 @@ This three-channel model provides clear semantic separation: Kafka for facts tha
   Billing :8104 │ Container Bridge :8105 │ HelixTrack Bridge :8106
 ```
 
-## 2.3 Service Mesh: Istio Integration
+## P.1.3 Service Mesh: Istio Integration
 
 All services run inside an Istio service mesh on Kubernetes. Every pod has an Envoy sidecar injected automatically via `istio-injection=enabled` namespace label. Key Istio configuration:
 
@@ -924,22 +997,22 @@ spec:
         paths: ["/api/v1/auth/*"]
 ```
 
-## 2.4 SPIFFE/SPIRE Workload Identity
+## P.1.4 SPIFFE/SPIRE Workload Identity
 
 Every service is assigned a SPIFFE SVID (SPIFFE Verifiable Identity Document) of the form:
 
 ```
-spiffe://helixterm.io/ns/helixterm-prod/sa/<service-account-name>
+spiffe://helixterminator.io/ns/helixterm-prod/sa/<service-account-name>
 ```
 
 SPIRE Server runs as a StatefulSet. SPIRE Agents run as DaemonSets. SVIDs are rotated every hour. X.509 SVIDs are used for mTLS (Envoy's certificate material). JWT SVIDs are used for service-to-service API calls where certificate-based auth is not available.
 
-## 2.5 API Gateway Design
+## P.1.5 API Gateway Design
 
-The API Gateway (`helixterm.io/services/gateway`) is built on Gin Gonic and performs:
+The API Gateway (`helixterminator.io/services/gateway`) is built on Gin Gonic and performs:
 
 1. **TLS termination** (delegated to Nginx Ingress + cert-manager in Kubernetes).
-2. **JWT validation:** Validates access tokens signed by the Auth Service (RS256, public key fetched from JWKS endpoint with caching via `digital.vasic.cache`).
+2. **JWT validation:** Validates access tokens signed by the Auth Service (EdDSA/Ed25519 -- CD-7 canonical signing choice --, public key fetched from JWKS endpoint with caching via `digital.vasic.cache`).
 3. **Rate limiting:** Per-user, per-IP, per-endpoint rate limiting using `digital.vasic.ratelimiter` backed by Redis sliding window counters.
 4. **Request routing:** Path-based routing to upstream services via registered Gin route groups.
 5. **Circuit breaking:** `digital.vasic.recovery` circuit breaker wraps every upstream call; open-circuit returns 503 with `Retry-After` header.
@@ -947,15 +1020,15 @@ The API Gateway (`helixterm.io/services/gateway`) is built on Gin Gonic and perf
 7. **Request ID propagation:** Every request receives a `X-Request-ID` (UUID v7) injected if not present, propagated in all downstream calls.
 
 ```go
-// Package: helixterm.io/services/gateway
+// Package: helixterminator.io/services/gateway
 // File: internal/router/router.go
 
 package router
 
 import (
     "github.com/gin-gonic/gin"
-    "helixterm.io/services/gateway/internal/middleware"
-    "helixterm.io/services/gateway/internal/proxy"
+    "helixterminator.io/services/gateway/internal/middleware"
+    "helixterminator.io/services/gateway/internal/proxy"
     "digital.vasic.ratelimiter/pkg/limiter"
     "digital.vasic.recovery/pkg/circuitbreaker"
     "digital.vasic.observability/pkg/tracing"
@@ -1027,9 +1100,9 @@ func New(
 }
 ```
 
-## 2.6 Inter-Service Communication Patterns
+## P.1.6 Inter-Service Communication Patterns
 
-### 2.6.1 When to Use Kafka (Event Streaming)
+### P.1.6.1 When to Use Kafka (Event Streaming)
 
 Kafka is used for **facts** — things that have already happened and whose record must be durable, ordered, and replayable:
 
@@ -1053,7 +1126,7 @@ Kafka is used for **facts** — things that have already happened and whose reco
 
 **Kafka guarantees:** at-least-once delivery (consumers deduplicate via event IDs), ordered within a partition, 7-day default retention (365 days for audit topics), Snappy compression.
 
-### 2.6.2 When to Use RabbitMQ (Command Bus)
+### P.1.6.2 When to Use RabbitMQ (Command Bus)
 
 RabbitMQ is used for **commands** — instructions that must be executed exactly once by exactly one consumer:
 
@@ -1072,7 +1145,7 @@ RabbitMQ is used for **commands** — instructions that must be executed exactly
 
 **RabbitMQ guarantees:** durable queues, persistent messages, consumer acknowledgements, dead-letter exchange (`helix.dlx`) with retry routing (3 retries with exponential backoff).
 
-### 2.6.3 Synchronous gRPC (Internal)
+### P.1.6.3 Synchronous gRPC (Internal)
 
 Services that require low-latency request/response and benefit from strongly-typed contracts use gRPC internally:
 
@@ -1086,7 +1159,7 @@ Services that require low-latency request/response and benefit from strongly-typ
 | Vault | Keychain | `GetWrappedKey` |
 | PKI | Vault | `GetSigningKey` |
 
-## 2.7 Event Sourcing and CQRS
+## P.1.7 Event Sourcing and CQRS
 
 The following services implement full Event Sourcing + CQRS:
 
@@ -1113,13 +1186,13 @@ CREATE INDEX idx_event_store_type   ON event_store (event_type);
 CREATE INDEX idx_event_store_time   ON event_store (occurred_at);
 ```
 
-## 2.8 Circuit Breaker Strategy
+## P.1.8 Circuit Breaker Strategy
 
 All outbound calls use `digital.vasic.recovery`'s circuit breaker implementation with the following default configuration:
 
 ```go
 // Package: digital.vasic.recovery/pkg/circuitbreaker
-// Usage in helixterm.io/services/gateway
+// Usage in helixterminator.io/services/gateway
 
 import "digital.vasic.recovery/pkg/circuitbreaker"
 
@@ -1149,7 +1222,7 @@ Per-service thresholds:
 | HelixTrack Bridge | 60s | 0.8 | 5 |
 | Billing | 30s | 0.4 | 3 |
 
-## 2.9 Full Service Dependency Graph
+## P.1.9 Full Service Dependency Graph
 
 ```
 gateway → [auth, user, vault, host, snippet, workspace, org, terminal,
@@ -1178,11 +1251,11 @@ container-bridge → [vault, org, audit]
 helixtrack-bridge → [user, org, audit]
 ```
 
-## 2.10 Go Module Structure
+## P.1.10 Go Module Structure
 
 ```
-helixterm.io/
-├── core/                     # Core shared library (helixterm.io/core)
+helixterminator.io/
+├── core/                     # Core shared library (helixterminator.io/core)
 │   ├── go.mod
 │   ├── pkg/
 │   │   ├── domain/           # Shared domain types (User, Host, Session, etc.)
@@ -1193,31 +1266,31 @@ helixterm.io/
 │   └── proto/                # Protobuf definitions for gRPC
 │
 ├── services/
-│   ├── gateway/              # helixterm.io/services/gateway
-│   ├── auth/                 # helixterm.io/services/auth
-│   ├── user/                 # helixterm.io/services/user
-│   ├── vault/                # helixterm.io/services/vault
-│   ├── host/                 # helixterm.io/services/host
-│   ├── ssh-proxy/            # helixterm.io/services/ssh-proxy
-│   ├── terminal/             # helixterm.io/services/terminal
-│   ├── sftp/                 # helixterm.io/services/sftp
-│   ├── port-forward/         # helixterm.io/services/port-forward
-│   ├── snippet/              # helixterm.io/services/snippet
-│   ├── keychain/             # helixterm.io/services/keychain
-│   ├── workspace/            # helixterm.io/services/workspace
-│   ├── collab/               # helixterm.io/services/collab
-│   ├── notification/         # helixterm.io/services/notification
-│   ├── audit/                # helixterm.io/services/audit
-│   ├── analytics/            # helixterm.io/services/analytics
-│   ├── ai/                   # helixterm.io/services/ai
-│   ├── recording/            # helixterm.io/services/recording
-│   ├── pki/                  # helixterm.io/services/pki
-│   ├── org/                  # helixterm.io/services/org
-│   ├── billing/              # helixterm.io/services/billing
-│   ├── config/               # helixterm.io/services/config
-│   ├── health/               # helixterm.io/services/health
-│   ├── container-bridge/     # helixterm.io/services/container-bridge
-│   └── helixtrack-bridge/    # helixterm.io/services/helixtrack-bridge
+│   ├── gateway/              # helixterminator.io/services/gateway
+│   ├── auth/                 # helixterminator.io/services/auth
+│   ├── user/                 # helixterminator.io/services/user
+│   ├── vault/                # helixterminator.io/services/vault
+│   ├── host/                 # helixterminator.io/services/host
+│   ├── ssh-proxy/            # helixterminator.io/services/ssh-proxy
+│   ├── terminal/             # helixterminator.io/services/terminal
+│   ├── sftp/                 # helixterminator.io/services/sftp
+│   ├── port-forward/         # helixterminator.io/services/port-forward
+│   ├── snippet/              # helixterminator.io/services/snippet
+│   ├── keychain/             # helixterminator.io/services/keychain
+│   ├── workspace/            # helixterminator.io/services/workspace
+│   ├── collab/               # helixterminator.io/services/collab
+│   ├── notification/         # helixterminator.io/services/notification
+│   ├── audit/                # helixterminator.io/services/audit
+│   ├── analytics/            # helixterminator.io/services/analytics
+│   ├── ai/                   # helixterminator.io/services/ai
+│   ├── recording/            # helixterminator.io/services/recording
+│   ├── pki/                  # helixterminator.io/services/pki
+│   ├── org/                  # helixterminator.io/services/org
+│   ├── billing/              # helixterminator.io/services/billing
+│   ├── config/               # helixterminator.io/services/config
+│   ├── health/               # helixterminator.io/services/health
+│   ├── container-bridge/     # helixterminator.io/services/container-bridge
+│   └── helixtrack-bridge/    # helixterminator.io/services/helixtrack-bridge
 │
 ├── constitution/             # git submodule: HelixDevelopment/HelixConstitution
 ├── submodules/
@@ -1243,12 +1316,12 @@ helixterm.io/
 
 Each service `go.mod` declares:
 ```
-module helixterm.io/services/<name>
+module helixterminator.io/services/<name>
 
 go 1.25
 
 require (
-    helixterm.io/core v0.1.0
+    helixterminator.io/core v0.1.0
     digital.vasic.security v0.3.2
     digital.vasic.auth v0.4.1
     digital.vasic.cache v0.2.8
@@ -1514,9 +1587,9 @@ The terminal requires special handling distinct from UI typography:
 | Error text (dark)           | `text-error`        | `#FF7A7A`                            |
 | Code inline (dark)          | `text-primary` + `surface-sunken` bg | Distinct code block bg |
 | Terminal output             | Per-scheme fg color | User-controlled                      |
-# 3. Complete Microservices Catalog
+# Appendix P.2 -- Platform Architecture Context (see docs 01/07): Complete Microservices Catalog
 
-## 3.1 Service Standard Structure
+## P.2.1 Service Standard Structure
 
 Every microservice follows this internal package layout:
 
@@ -1543,9 +1616,9 @@ services/<name>/
 
 ---
 
-## 3.2 Service: API Gateway
+## P.2.2 Service: API Gateway
 
-**Module:** `helixterm.io/services/gateway`
+**Module:** `helixterminator.io/services/gateway`
 **Port:** `:8080` (HTTP), `:8443` (HTTPS — handled by Ingress)
 **Replicas:** 10 (minimum in prod, HPA max 50)
 
@@ -1582,16 +1655,16 @@ Stateless. Horizontal scaling via HPA (CPU threshold 60%). Connection pool to ea
 
 ---
 
-## 3.3 Service: Auth Service
+## P.2.3 Service: Auth Service
 
-**Module:** `helixterm.io/services/auth`
+**Module:** `helixterminator.io/services/auth`
 **Port:** `:8081`
 **Database:** `helixterm_auth` (PostgreSQL dedicated instance)
 **Cache:** `auth:` prefix in Redis cluster
 
 ### Responsibilities
 - User authentication: password, FIDO2/WebAuthn, TOTP, OAuth2 (OIDC/SAML).
-- Token lifecycle: issue access tokens (JWT RS256, TTL=15min), refresh tokens (opaque, TTL=30d), device tokens (JWT RS256, TTL=24h).
+- Token lifecycle: issue access tokens (JWT EdDSA/Ed25519, TTL=15min), refresh tokens (opaque, TTL=30d), device tokens (JWT EdDSA/Ed25519, TTL=24h).
 - Session management: track active sessions per user/device.
 - FIDO2/WebAuthn credential registration and assertion.
 - TOTP registration and verification.
@@ -1611,7 +1684,7 @@ Stateless. Horizontal scaling via HPA (CPU threshold 60%). Connection pool to ea
 ### Key Go Code
 
 ```go
-// Package: helixterm.io/services/auth
+// Package: helixterminator.io/services/auth
 // File: internal/service/auth_service.go
 
 package service
@@ -1625,9 +1698,9 @@ import (
     "digital.vasic.security/pkg/argon2"
     "digital.vasic.security/pkg/storage"
     "digital.vasic.ratelimiter/pkg/limiter"
-    "helixterm.io/services/auth/internal/domain"
-    "helixterm.io/services/auth/internal/repository"
-    "helixterm.io/services/auth/internal/events"
+    "helixterminator.io/services/auth/internal/domain"
+    "helixterminator.io/services/auth/internal/repository"
+    "helixterminator.io/services/auth/internal/events"
 )
 
 type AuthService struct {
@@ -1678,8 +1751,8 @@ func (s *AuthService) issueTokens(ctx context.Context, user *domain.User, device
         DeviceID:   deviceID,
         ExpiresAt:  time.Now().Add(15 * time.Minute),
         IssuedAt:   time.Now(),
-        Issuer:     "https://auth.helixterm.io",
-        Audience:   []string{"https://api.helixterm.io"},
+        Issuer:     "https://auth.helixterminator.io",
+        Audience:   []string{"https://api.helixterminator.io"},
         KeyID:      s.signingKeyID,
     })
     if err != nil {
@@ -1737,9 +1810,9 @@ See Section 7 for full details. Key endpoints:
 
 ---
 
-## 3.4 Service: User Service
+## P.2.4 Service: User Service
 
-**Module:** `helixterm.io/services/user`
+**Module:** `helixterminator.io/services/user`
 **Port:** `:8082`
 **Database:** `helixterm_users` (PostgreSQL)
 
@@ -1763,9 +1836,9 @@ See Section 7 for full details. Key endpoints:
 
 ---
 
-## 3.5 Service: Vault Service
+## P.2.5 Service: Vault Service
 
-**Module:** `helixterm.io/services/vault`
+**Module:** `helixterminator.io/services/vault`
 **Port:** `:8083`
 **Database:** `helixterm_vault` (PostgreSQL)
 
@@ -1781,7 +1854,7 @@ See Section 7 for full details. Key endpoints:
 ### Key Domain Types
 
 ```go
-// Package: helixterm.io/services/vault
+// Package: helixterminator.io/services/vault
 // File: internal/domain/vault_item.go
 
 package domain
@@ -1837,9 +1910,9 @@ type VaultItem struct {
 
 ---
 
-## 3.6 Service: Host Service
+## P.2.6 Service: Host Service
 
-**Module:** `helixterm.io/services/host`
+**Module:** `helixterminator.io/services/host`
 **Port:** `:8084`
 **Database:** `helixterm_hosts` (PostgreSQL)
 
@@ -1870,9 +1943,9 @@ type VaultItem struct {
 
 ---
 
-## 3.7 Service: SSH Proxy Service
+## P.2.7 Service: SSH Proxy Service
 
-**Module:** `helixterm.io/services/ssh-proxy`
+**Module:** `helixterminator.io/services/ssh-proxy`
 **Port:** `:8090` (WebSocket/HTTP)
 **Database:** `helixterm_ssh_proxy` (PostgreSQL — connection state only)
 **Critical Path:** This is the highest-latency-sensitive service in the platform.
@@ -1892,7 +1965,7 @@ type VaultItem struct {
 ### Container-Native Session (via `digital.vasic.containers`)
 
 ```go
-// Package: helixterm.io/services/ssh-proxy
+// Package: helixterminator.io/services/ssh-proxy
 // File: internal/session/container_session.go
 
 package session
@@ -1903,7 +1976,7 @@ import (
 
     "digital.vasic.containers/pkg/runtime"
     "digital.vasic.containers/pkg/exec"
-    "helixterm.io/services/ssh-proxy/internal/domain"
+    "helixterminator.io/services/ssh-proxy/internal/domain"
 )
 
 type ContainerSession struct {
@@ -1970,9 +2043,9 @@ func (s *ContainerSession) Close() error {
 
 ---
 
-## 3.8 Service: Terminal Session Service
+## P.2.8 Service: Terminal Session Service
 
-**Module:** `helixterm.io/services/terminal`
+**Module:** `helixterminator.io/services/terminal`
 **Port:** `:8091` (WebSocket)
 **Database:** `helixterm_terminal` (PostgreSQL)
 
@@ -1989,7 +2062,7 @@ func (s *ContainerSession) Close() error {
 ### WebSocket Message Protocol
 
 ```go
-// Package: helixterm.io/services/terminal
+// Package: helixterminator.io/services/terminal
 // File: internal/protocol/message.go
 
 package protocol
@@ -2032,9 +2105,9 @@ type ResizePayload struct {
 
 ---
 
-## 3.9 Service: SFTP Service
+## P.2.9 Service: SFTP Service
 
-**Module:** `helixterm.io/services/sftp`
+**Module:** `helixterminator.io/services/sftp`
 **Port:** `:8092`
 **Database:** `helixterm_sftp` (PostgreSQL)
 
@@ -2064,9 +2137,9 @@ type ResizePayload struct {
 
 ---
 
-## 3.10 Service: Port Forwarding Service
+## P.2.10 Service: Port Forwarding Service
 
-**Module:** `helixterm.io/services/port-forward`
+**Module:** `helixterminator.io/services/port-forward`
 **Port:** `:8093`
 **Database:** `helixterm_port_forward` (PostgreSQL)
 
@@ -2091,9 +2164,9 @@ type ResizePayload struct {
 
 ---
 
-## 3.11 Service: Snippet Service
+## P.2.11 Service: Snippet Service
 
-**Module:** `helixterm.io/services/snippet`
+**Module:** `helixterminator.io/services/snippet`
 **Port:** `:8086`
 **Database:** `helixterm_snippets` (PostgreSQL)
 
@@ -2109,9 +2182,9 @@ type ResizePayload struct {
 
 ---
 
-## 3.12 Service: Keychain Service
+## P.2.12 Service: Keychain Service
 
-**Module:** `helixterm.io/services/keychain`
+**Module:** `helixterminator.io/services/keychain`
 **Port:** `:8101` (gRPC only — no REST; internal use by Vault and PKI services)
 
 ### Responsibilities
@@ -2124,9 +2197,9 @@ type ResizePayload struct {
 
 ---
 
-## 3.13 Service: Workspace Service
+## P.2.13 Service: Workspace Service
 
-**Module:** `helixterm.io/services/workspace`
+**Module:** `helixterminator.io/services/workspace`
 **Port:** `:8085`
 **Database:** `helixterm_workspaces` (PostgreSQL)
 
@@ -2140,9 +2213,9 @@ type ResizePayload struct {
 
 ---
 
-## 3.14 Service: Collaboration Service
+## P.2.14 Service: Collaboration Service
 
-**Module:** `helixterm.io/services/collab`
+**Module:** `helixterminator.io/services/collab`
 **Port:** `:8099`
 **Database:** `helixterm_collab` (PostgreSQL)
 **Cache:** Redis pub/sub for real-time message routing
@@ -2174,9 +2247,9 @@ type ResizePayload struct {
 
 ---
 
-## 3.15 Service: Notification Service
+## P.2.15 Service: Notification Service
 
-**Module:** `helixterm.io/services/notification`
+**Module:** `helixterminator.io/services/notification`
 **Port:** `:8096`
 **Database:** `helixterm_notifications` (PostgreSQL)
 
@@ -2202,9 +2275,9 @@ type ResizePayload struct {
 
 ---
 
-## 3.16 Service: Audit Service
+## P.2.16 Service: Audit Service
 
-**Module:** `helixterm.io/services/audit`
+**Module:** `helixterminator.io/services/audit`
 **Port:** `:8094`
 **Database:** `helixterm_audit` (PostgreSQL — partitioned by org + month)
 
@@ -2221,7 +2294,7 @@ type ResizePayload struct {
 
 ### Merkle Chain Implementation
 ```go
-// Package: helixterm.io/services/audit
+// Package: helixterminator.io/services/audit
 // File: internal/chain/merkle.go
 
 package chain
@@ -2272,9 +2345,9 @@ func ComputeHash(event AuditEvent) (string, error) {
 
 ---
 
-## 3.17 Service: Analytics Service
+## P.2.17 Service: Analytics Service
 
-**Module:** `helixterm.io/services/analytics`
+**Module:** `helixterminator.io/services/analytics`
 **Port:** `:8095`
 **Database:** `helixterm_analytics` (PostgreSQL — time-series optimized, partitioned by week)
 
@@ -2289,9 +2362,9 @@ func ComputeHash(event AuditEvent) (string, error) {
 
 ---
 
-## 3.18 Service: AI/Autocomplete Service
+## P.2.18 Service: AI/Autocomplete Service
 
-**Module:** `helixterm.io/services/ai`
+**Module:** `helixterminator.io/services/ai`
 **Port:** `:8098`
 **Database:** `helixterm_ai` (PostgreSQL — user preferences, history)
 **Cache:** Redis — suggestion cache (TTL=300s)
@@ -2315,9 +2388,9 @@ func ComputeHash(event AuditEvent) (string, error) {
 
 ---
 
-## 3.19 Service: Session Recording Service
+## P.2.19 Service: Session Recording Service
 
-**Module:** `helixterm.io/services/recording`
+**Module:** `helixterminator.io/services/recording`
 **Port:** `:8097`
 **Database:** `helixterm_recordings` (PostgreSQL — metadata only)
 **Storage:** S3-compatible object storage (MinIO in self-hosted, AWS S3 / GCS in cloud)
@@ -2335,7 +2408,7 @@ func ComputeHash(event AuditEvent) (string, error) {
 ### Recording Signing
 
 ```go
-// Package: helixterm.io/services/recording
+// Package: helixterminator.io/services/recording
 // File: internal/signing/signer.go
 
 package signing
@@ -2380,9 +2453,9 @@ func Verify(manifest RecordingManifest, sig string, pubKey ed25519.PublicKey) (b
 
 ---
 
-## 3.20 Service: Certificate Authority Service (PKI)
+## P.2.20 Service: Certificate Authority Service (PKI)
 
-**Module:** `helixterm.io/services/pki`
+**Module:** `helixterminator.io/services/pki`
 **Port:** `:8100`
 **Database:** `helixterm_pki` (PostgreSQL)
 
@@ -2407,9 +2480,9 @@ func Verify(manifest RecordingManifest, sig string, pubKey ed25519.PublicKey) (b
 
 ---
 
-## 3.21 Service: Organization/Team Service
+## P.2.21 Service: Organization/Team Service
 
-**Module:** `helixterm.io/services/org`
+**Module:** `helixterminator.io/services/org`
 **Port:** `:8087`
 **Database:** `helixterm_org` (PostgreSQL)
 
@@ -2426,7 +2499,7 @@ func Verify(manifest RecordingManifest, sig string, pubKey ed25519.PublicKey) (b
 ### RBAC Implementation
 
 ```go
-// Package: helixterm.io/services/org
+// Package: helixterminator.io/services/org
 // File: internal/domain/rbac.go
 
 package domain
@@ -2482,9 +2555,9 @@ var BuiltInRoles = []Role{
 
 ---
 
-## 3.22 Service: Billing Service
+## P.2.22 Service: Billing Service
 
-**Module:** `helixterm.io/services/billing`
+**Module:** `helixterminator.io/services/billing`
 **Port:** `:8104`
 **Database:** `helixterm_billing` (PostgreSQL)
 
@@ -2499,9 +2572,9 @@ var BuiltInRoles = []Role{
 
 ---
 
-## 3.23 Service: Configuration Service
+## P.2.23 Service: Configuration Service
 
-**Module:** `helixterm.io/services/config`
+**Module:** `helixterminator.io/services/config`
 **Port:** `:8102`
 **Database:** `helixterm_config` (PostgreSQL)
 
@@ -2514,9 +2587,9 @@ var BuiltInRoles = []Role{
 
 ---
 
-## 3.24 Service: Health/Monitoring Service
+## P.2.24 Service: Health/Monitoring Service
 
-**Module:** `helixterm.io/services/health`
+**Module:** `helixterminator.io/services/health`
 **Port:** `:8103`
 
 ### Responsibilities
@@ -2528,9 +2601,9 @@ var BuiltInRoles = []Role{
 
 ---
 
-## 3.25 Service: Container Registry Bridge
+## P.2.25 Service: Container Registry Bridge
 
-**Module:** `helixterm.io/services/container-bridge`
+**Module:** `helixterminator.io/services/container-bridge`
 **Port:** `:8105`
 **Database:** `helixterm_container_bridge` (PostgreSQL)
 
@@ -2546,9 +2619,9 @@ var BuiltInRoles = []Role{
 
 ---
 
-## 3.26 Service: HelixTrack Integration Service
+## P.2.26 Service: HelixTrack Integration Service
 
-**Module:** `helixterm.io/services/helixtrack-bridge`
+**Module:** `helixterminator.io/services/helixtrack-bridge`
 **Port:** `:8106`
 **Database:** `helixterm_helixtrack_bridge` (PostgreSQL)
 
@@ -2792,9 +2865,9 @@ The host list adapts its column count based on available width after sidebar:
 | Session log            | Virtual scroll, auto-follow mode | None             |
 
 **Auto-scroll in terminal:** When the user is at the bottom of the scrollback buffer, new output auto-scrolls. When the user has scrolled up, auto-scroll suspends and a "jump to bottom" button appears at the bottom-right of the terminal viewport.
-# 4. Database Architecture
+# Appendix P.3 -- Platform Architecture Context (see docs 01/07): Database Architecture
 
-## 4.1 Database-per-Service Pattern
+## P.3.1 Database-per-Service Pattern
 
 Each microservice owns exactly one PostgreSQL database. No service reads from or writes to another service's database. Cross-service data access is exclusively via API calls or event streaming. This enforces bounded context isolation and enables independent schema evolution.
 
@@ -2824,7 +2897,7 @@ Each microservice owns exactly one PostgreSQL database. No service reads from or
 | Container Bridge | `helixterm_container_bridge` | `pg-containers.helixterm-prod.svc` |
 | HelixTrack Bridge | `helixterm_helixtrack_bridge` | `pg-helixtrack.helixterm-prod.svc` |
 
-All PostgreSQL instances run **PostgreSQL 17.0** with:
+All PostgreSQL instances run **PostgreSQL 17.2** (CD-4 canonical pin) with:
 - **pgvector v0.7.0** extension (AI service similarity search)
 - **pg_partman v5.0.1** (automated partition management)
 - **pg_cron v1.6.2** (scheduled maintenance jobs)
@@ -2832,7 +2905,7 @@ All PostgreSQL instances run **PostgreSQL 17.0** with:
 - **pg_stat_statements** (query performance analysis)
 - Connection pooling via **PgBouncer 1.23** (transaction-mode pooling, max_client_conn=10000)
 
-## 4.2 Migration Strategy
+## P.3.2 Migration Strategy
 
 All migrations use sequentially numbered files:
 ```
@@ -2861,7 +2934,7 @@ if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 }
 ```
 
-## 4.3 Complete Schema: Auth Service (`helixterm_auth`)
+## P.3.3 Complete Schema: Auth Service (`helixterm_auth`)
 
 ```sql
 -- Migration: 00001_init_auth.up.sql
@@ -3008,7 +3081,7 @@ CREATE INDEX idx_login_attempts_user    ON login_attempts (user_id, occurred_at)
 CREATE INDEX idx_login_attempts_time    ON login_attempts (occurred_at);
 ```
 
-## 4.4 Complete Schema: User Service (`helixterm_users`)
+## P.3.4 Complete Schema: User Service (`helixterm_users`)
 
 ```sql
 -- Migration: 00001_init_users.up.sql
@@ -3084,7 +3157,7 @@ CREATE TABLE user_devices (
 CREATE INDEX idx_devices_user_id ON user_devices (user_id);
 ```
 
-## 4.5 Complete Schema: Vault Service (`helixterm_vault`)
+## P.3.5 Complete Schema: Vault Service (`helixterm_vault`)
 
 ```sql
 -- Migration: 00001_init_vault.up.sql
@@ -3167,7 +3240,7 @@ CREATE TABLE vault_access_log (
 -- Create monthly partitions via pg_partman
 ```
 
-## 4.6 Complete Schema: Host Service (`helixterm_hosts`)
+## P.3.6 Complete Schema: Host Service (`helixterm_hosts`)
 
 ```sql
 -- Migration: 00001_init_hosts.up.sql
@@ -3249,7 +3322,7 @@ CREATE INDEX idx_host_perm_host_id ON host_access_permissions (host_id);
 CREATE INDEX idx_host_perm_entity  ON host_access_permissions (entity_id, entity_type);
 ```
 
-## 4.7 Complete Schema: SSH Proxy / Terminal Services
+## P.3.7 Complete Schema: SSH Proxy / Terminal Services
 
 ```sql
 -- Migration: 00001_init_ssh_proxy.up.sql (helixterm_ssh_proxy)
@@ -3324,7 +3397,7 @@ CREATE INDEX idx_term_cmd_user    ON terminal_commands (user_id, executed_at);
 CREATE INDEX idx_term_cmd_fts     ON terminal_commands USING GIN (to_tsvector('simple', command));
 ```
 
-## 4.8 Complete Schema: Audit Service (`helixterm_audit`)
+## P.3.8 Complete Schema: Audit Service (`helixterm_audit`)
 
 ```sql
 -- Migration: 00001_init_audit.up.sql
@@ -3370,7 +3443,7 @@ CREATE INDEX idx_audit_hash         ON audit_events (hash);
 CREATE INDEX idx_audit_prev_hash    ON audit_events (prev_hash);
 ```
 
-## 4.9 Complete Schema: Session Recording Service (`helixterm_recordings`)
+## P.3.9 Complete Schema: Session Recording Service (`helixterm_recordings`)
 
 ```sql
 -- Migration: 00001_init_recordings.up.sql
@@ -3436,7 +3509,7 @@ CREATE INDEX idx_rec_commands_recording ON recording_commands (recording_id, off
 CREATE INDEX idx_rec_commands_fts       ON recording_commands USING GIN (fts_vector);
 ```
 
-## 4.10 Complete Schema: Org Service (`helixterm_org`)
+## P.3.10 Complete Schema: Org Service (`helixterm_org`)
 
 ```sql
 -- Migration: 00001_init_org.up.sql
@@ -3546,7 +3619,7 @@ CREATE INDEX idx_invitations_email   ON org_invitations (email);
 CREATE INDEX idx_invitations_org_id  ON org_invitations (org_id);
 ```
 
-## 4.11 Complete Schema: PKI Service (`helixterm_pki`)
+## P.3.11 Complete Schema: PKI Service (`helixterm_pki`)
 
 ```sql
 -- Migration: 00001_init_pki.up.sql
@@ -3592,7 +3665,7 @@ CREATE INDEX idx_certs_valid      ON issued_certificates (valid_until) WHERE rev
 CREATE INDEX idx_certs_serial     ON issued_certificates (serial_number);
 ```
 
-## 4.12 Complete Schema: Billing Service (`helixterm_billing`)
+## P.3.12 Complete Schema: Billing Service (`helixterm_billing`)
 
 ```sql
 -- Migration: 00001_init_billing.up.sql
@@ -3647,7 +3720,7 @@ CREATE TABLE invoices (
 CREATE INDEX idx_invoices_customer ON invoices (customer_id);
 ```
 
-## 4.13 Redis Data Structures and TTL Policies
+## P.3.13 Redis Data Structures and TTL Policies
 
 ```
 # Auth Service
@@ -3689,7 +3762,7 @@ config:{org_id}                    Hash    TTL=60s    (org configuration cache)
 config:global                      Hash    TTL=60s    (global configuration cache)
 ```
 
-## 4.14 Event Store Schema (CQRS Services)
+## P.3.14 Event Store Schema (CQRS Services)
 
 The event store is shared across Auth, Vault, Org, and Audit services (each in their own database), using the canonical schema from §2.7.
 
@@ -4795,9 +4868,9 @@ SHA256:abc1def2ghi3jkl4mno5pqr6stu7vwx8yz9ABCDef
 
 - Code preview: First 3 lines, truncated with `…`
 - Syntax: Bash highlighting (key=amber, operator=teal, string=teal, command=white)
-# 5. Kafka & RabbitMQ Architecture
+# Appendix P.4 -- Platform Architecture Context (see docs 01/07): Kafka & RabbitMQ Architecture
 
-## 5.1 Messaging Technology Selection Rationale
+## P.4.1 Messaging Technology Selection Rationale
 
 | Criterion | Apache Kafka | RabbitMQ |
 |---|---|---|
@@ -4808,9 +4881,9 @@ SHA256:abc1def2ghi3jkl4mno5pqr6stu7vwx8yz9ABCDef
 | **Use in HelixTerminator** | Events (facts that happened) | Commands (actions to execute) |
 | **Throughput** | Millions/sec | Hundreds of thousands/sec |
 
-**Version:** Apache Kafka 3.7.0 (KRaft mode, no ZooKeeper), RabbitMQ 3.13.3.
+**Version:** Apache Kafka 3.9 (CD-4 canonical pin, KRaft mode, no ZooKeeper), RabbitMQ 3.13.3.
 
-## 5.2 Kafka Cluster Configuration
+## P.4.2 Kafka Cluster Configuration
 
 ```yaml
 # deploy/kubernetes/kafka-cluster.yaml (using Strimzi operator)
@@ -4866,7 +4939,7 @@ spec:
     replicas: 0                          # KRaft mode
 ```
 
-## 5.3 Complete Kafka Topic Catalog
+## P.4.3 Complete Kafka Topic Catalog
 
 All topics are created via the `digital.vasic.messaging` topic management API, which calls the Kafka Admin API. Topic definitions are also committed as YAML to `deploy/kafka/topics/`.
 
@@ -4881,7 +4954,7 @@ compression_type: snappy
 min_insync_replicas: 2
 ```
 
-### 5.3.1 User and Auth Events
+### P.4.3.1 User and Auth Events
 
 | Topic | Partitions | Retention | Key | Purpose |
 |---|---|---|---|---|
@@ -4892,7 +4965,7 @@ min_insync_replicas: 2
 | `helix.auth.mfa.events` | 6 | 30d | `user_id` | MFA enable/disable/verify events |
 | `helix.auth.tokens.revoked` | 6 | 30d | `token_id` | Token revocation events |
 
-### 5.3.2 Session Events
+### P.4.3.2 Session Events
 
 | Topic | Partitions | Retention | Key | Purpose |
 |---|---|---|---|---|
@@ -4904,7 +4977,7 @@ min_insync_replicas: 2
 | `helix.recordings.segments` | 48 | 7d | `recording_id` | Recording segment chunks |
 | `helix.recordings.completed` | 12 | 30d | `recording_id` | Recording finalization |
 
-### 5.3.3 Vault Events
+### P.4.3.3 Vault Events
 
 | Topic | Partitions | Retention | Key | Purpose |
 |---|---|---|---|---|
@@ -4914,7 +4987,7 @@ min_insync_replicas: 2
 | `helix.vault.deleted` | 12 | 90d | `item_id` | Vault item deletions |
 | `helix.vault.shared` | 6 | 90d | `item_id` | Vault sharing events |
 
-### 5.3.4 Security Events
+### P.4.3.4 Security Events
 
 | Topic | Partitions | Retention | Key | Purpose |
 |---|---|---|---|---|
@@ -4923,13 +4996,13 @@ min_insync_replicas: 2
 | `helix.pki.certificates.issued` | 6 | 365d | `user_id` | Certificate issuance |
 | `helix.pki.certificates.revoked` | 6 | 365d | `serial` | Certificate revocation |
 
-### 5.3.5 Audit Events
+### P.4.3.5 Audit Events
 
 | Topic | Partitions | Retention | Key | Purpose |
 |---|---|---|---|---|
 | `helix.audit.events` | 48 | 365d | `org_id` | All audit events (compliance) |
 
-### 5.3.6 Infrastructure Events
+### P.4.3.6 Infrastructure Events
 
 | Topic | Partitions | Retention | Key | Purpose |
 |---|---|---|---|---|
@@ -4938,7 +5011,7 @@ min_insync_replicas: 2
 | `helix.portforward.closed` | 12 | 7d | `user_id` | Port forward closed |
 | `helix.sftp.transfers` | 24 | 30d | `user_id` | SFTP transfer events |
 
-### 5.3.7 Analytics Events
+### P.4.3.7 Analytics Events
 
 | Topic | Partitions | Retention | Key | Purpose |
 |---|---|---|---|---|
@@ -4946,7 +5019,7 @@ min_insync_replicas: 2
 | `helix.gateway.requests` | 48 | 7d | `user_id` | API gateway request events |
 | `helix.ai.suggestions` | 12 | 30d | `user_id` | AI suggestion events |
 
-### 5.3.8 Organization Events
+### P.4.3.8 Organization Events
 
 | Topic | Partitions | Retention | Key | Purpose |
 |---|---|---|---|---|
@@ -4957,12 +5030,12 @@ min_insync_replicas: 2
 | `helix.teams.created` | 6 | 30d | `org_id` | Team creation |
 | `helix.billing.events` | 12 | 365d | `org_id` | All billing events |
 
-## 5.4 Kafka Message Schemas
+## P.4.4 Kafka Message Schemas
 
 All Kafka messages use JSON encoding with an Avro-compatible schema registered in the Confluent Schema Registry. The Go struct definitions using `digital.vasic.messaging`:
 
 ```go
-// Package: helixterm.io/core
+// Package: helixterminator.io/core
 // File: pkg/events/session_events.go
 
 package events
@@ -5059,10 +5132,10 @@ type SecurityAnomalyEvent struct {
 }
 ```
 
-## 5.5 Kafka Consumer Groups
+## P.4.5 Kafka Consumer Groups
 
 ```go
-// Package: helixterm.io/services/audit
+// Package: helixterminator.io/services/audit
 // File: internal/events/consumer.go
 
 package events
@@ -5070,7 +5143,7 @@ package events
 import (
     "context"
     "digital.vasic.messaging/pkg/kafka"
-    "helixterm.io/services/audit/internal/service"
+    "helixterminator.io/services/audit/internal/service"
 )
 
 const (
@@ -5117,7 +5190,7 @@ func StartAuditConsumer(ctx context.Context, svc service.AuditService) {
 | `helix-pki-audit` | `helix.pki.certificates.issued`, `helix.pki.certificates.revoked` | Audit Service (PKI events) |
 | `helix-helixtrack-bridge` | `helix.sessions.started`, `helix.sessions.terminated` | HelixTrack Bridge |
 
-## 5.6 Dead Letter Queue (DLQ) Handling
+## P.4.6 Dead Letter Queue (DLQ) Handling
 
 ```go
 // Package: digital.vasic.messaging/pkg/kafka
@@ -5153,7 +5226,7 @@ DLQ topics (auto-created with 30-day retention):
 
 DLQ messages are processed by a dedicated `helix-dlq-reprocessor` service that supports manual replay via admin API.
 
-## 5.7 RabbitMQ Configuration
+## P.4.7 RabbitMQ Configuration
 
 ```yaml
 # deploy/kubernetes/rabbitmq-cluster.yaml (using RabbitMQ Operator)
@@ -5185,7 +5258,7 @@ spec:
     caSecretName: rabbitmq-ca-secret
 ```
 
-## 5.8 Complete RabbitMQ Exchange and Queue Catalog
+## P.4.8 Complete RabbitMQ Exchange and Queue Catalog
 
 ### Exchanges
 
@@ -5582,9 +5655,9 @@ The one exception is **progress bars for file transfers and connections** — th
 | Skeleton shimmer             | 60fps      | 3ms                    |
 
 All animations must stay within Flutter's "jank threshold" of 16ms rasterization per frame. Components that cannot maintain this budget must disable their transition animations and switch to instant state changes.
-# 6. Zero Trust Security Architecture
+# Appendix P.5 -- Platform Architecture Context (see docs 01/07): Zero Trust Security Architecture
 
-## 6.1 Zero Trust Principles
+## P.5.1 Zero Trust Principles
 
 HelixTerminator's security model is built on the NIST Zero Trust Architecture (SP 800-207) guidelines:
 
@@ -5593,7 +5666,7 @@ HelixTerminator's security model is built on the NIST Zero Trust Architecture (S
 3. **Assume breach.** The system is designed to contain and detect breaches. A compromised service should not provide unrestricted lateral movement.
 4. **Continuous verification.** Authentication is not a one-time event. Short token TTLs, certificate rotation, and behavioral analysis continuously re-validate trust.
 
-## 6.2 SPIFFE/SPIRE Workload Identity
+## P.5.2 SPIFFE/SPIRE Workload Identity
 
 ### Architecture
 
@@ -5613,7 +5686,7 @@ spec:
   selector:
     podLabel:
       app: auth-service
-  spiffeIDTemplate: "spiffe://helixterm.io/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}"
+  spiffeIDTemplate: "spiffe://helixterminator.io/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}"
   ttl: 1h
   admin: false
 ```
@@ -5635,23 +5708,23 @@ spec:
     mode: STRICT
 ```
 
-## 6.3 JWT Architecture
+## P.5.3 JWT Architecture
 
-### 6.3.1 Access Token
+### P.5.3.1 Access Token
 
 ```json
 // JWT Header
 {
-    "alg": "RS256",
+    "alg": "EdDSA",
     "typ": "JWT",
     "kid": "helix-2026-06-key-01"   // key ID for JWKS lookup
 }
 
 // JWT Payload
 {
-    "iss": "https://auth.helixterm.io",
+    "iss": "https://auth.helixterminator.io",
     "sub": "usr_01JXXXXXXXXXXXXXXXXXXXXXXX",    // ULID
-    "aud": ["https://api.helixterm.io"],
+    "aud": ["https://api.helixterminator.io"],
     "iat": 1751118000,
     "exp": 1751118900,             // iat + 900s (15 minutes)
     "jti": "01JXXXXXXXXXXXXXXXXXXXXXXX",        // JWT ID — nonce for replay prevention
@@ -5664,9 +5737,9 @@ spec:
 }
 ```
 
-Access tokens are **RS256-signed** (RSA-2048 key pair). The public key is exposed at `GET /api/v1/auth/.well-known/jwks.json`. The Gateway validates tokens locally using cached JWKS (TTL=300s in Redis). RSA signing keys are rotated every 90 days with a 7-day overlap period for graceful token expiry.
+Access tokens are **EdDSA-signed** (Ed25519 key pair -- CD-7 canonical signing choice, replacing the RSA/RS256 signing this section previously specified). The public key is exposed at `GET /api/v1/auth/.well-known/jwks.json` (OKP `kty`, `crv: Ed25519`). The Gateway validates tokens locally using cached JWKS (TTL=300s in Redis). Ed25519 signing keys are rotated every 90 days with a 7-day overlap period for graceful token expiry.
 
-### 6.3.2 Refresh Token
+### P.5.3.2 Refresh Token
 
 Refresh tokens are opaque random 32-byte values, stored as SHA-256 hash in PostgreSQL. They are:
 - Single-use (rotation on every use).
@@ -5674,20 +5747,20 @@ Refresh tokens are opaque random 32-byte values, stored as SHA-256 hash in Postg
 - Invalidated if a previously-used token is presented (token reuse detection → all sessions for the user revoked).
 - TTL: 30 days from issuance.
 
-### 6.3.3 Device Token
+### P.5.3.3 Device Token
 
-Device tokens are JWT RS256 tokens with TTL=24h, issued during device registration. They carry `device_cert` claim — the fingerprint of the device's X.509 certificate issued by the PKI service. Device tokens can be used for automation/CI pipelines where interactive MFA is not possible.
+Device tokens are JWT EdDSA (Ed25519) tokens with TTL=24h, issued during device registration. They carry `device_cert` claim — the fingerprint of the device's X.509 certificate issued by the PKI service. Device tokens can be used for automation/CI pipelines where interactive MFA is not possible.
 
-### 6.3.4 JWT Key Rotation
+### P.5.3.4 JWT Key Rotation
 
 ```go
-// Package: helixterm.io/services/auth
+// Package: helixterminator.io/services/auth
 // File: internal/keys/rotation.go
 
 package keys
 
 import (
-    "crypto/rsa"
+    "crypto/ed25519"
     "crypto/rand"
     "encoding/json"
     "time"
@@ -5699,12 +5772,12 @@ import (
 type KeyRotationManager struct {
     store      storage.SecureStore
     activeKeyID string
-    keys        map[string]*rsa.PrivateKey
+    keys        map[string]ed25519.PrivateKey
     mu          sync.RWMutex
 }
 
 func (m *KeyRotationManager) Rotate() error {
-    newKey, err := rsa.GenerateKey(rand.Reader, 2048)
+    _, newKey, err := ed25519.GenerateKey(rand.Reader)
     if err != nil {
         return err
     }
@@ -5731,9 +5804,9 @@ func (m *KeyRotationManager) JWKS() jose.JSONWebKeySet {
     var keys []jose.JSONWebKey
     for id, key := range m.keys {
         keys = append(keys, jose.JSONWebKey{
-            Key:       &key.PublicKey,
+            Key:       key.Public(),
             KeyID:     id,
-            Algorithm: "RS256",
+            Algorithm: "EdDSA",
             Use:       "sig",
         })
     }
@@ -5741,7 +5814,7 @@ func (m *KeyRotationManager) JWKS() jose.JSONWebKeySet {
 }
 ```
 
-## 6.4 SSH Certificate Authority Architecture
+## P.5.4 SSH Certificate Authority Architecture
 
 ### Why SSH Certificates Instead of Static Keys
 
@@ -5772,7 +5845,7 @@ Client                 SSH Proxy              PKI Service            Vault Servi
 ### SSH Certificate Configuration
 
 ```go
-// Package: helixterm.io/services/pki
+// Package: helixterminator.io/services/pki
 // File: internal/ca/signer.go
 
 package ca
@@ -5824,7 +5897,7 @@ func (s *CertificateSigner) IssueUserCert(
 }
 ```
 
-## 6.5 FIDO2/WebAuthn
+## P.5.5 FIDO2/WebAuthn
 
 HelixTerminator implements FIDO2/WebAuthn using the `go-webauthn/webauthn` library (v0.10.2).
 
@@ -5836,7 +5909,7 @@ HelixTerminator implements FIDO2/WebAuthn using the `go-webauthn/webauthn` libra
 ### Registration Flow
 
 ```go
-// Package: helixterm.io/services/auth
+// Package: helixterminator.io/services/auth
 // File: internal/handler/webauthn_handler.go
 
 package handler
@@ -5848,8 +5921,8 @@ import (
 
 var WebAuthnConfig = &webauthn.Config{
     RPDisplayName: "HelixTerminator",
-    RPID:          "helixterm.io",
-    RPOrigins:     []string{"https://app.helixterm.io", "https://helixterm.io"},
+    RPID:          "helixterminator.io",
+    RPOrigins:     []string{"https://app.helixterminator.io", "https://helixterminator.io"},
     AttestationPreference: protocol.PreferDirectAttestation,
     AuthenticatorSelection: protocol.AuthenticatorSelection{
         AuthenticatorAttachment: protocol.CrossPlatform,
@@ -5887,7 +5960,7 @@ func (h *WebAuthnHandler) BeginRegistration(c *gin.Context) {
 ### MFA Enforcement Policy
 
 ```go
-// Package: helixterm.io/services/auth
+// Package: helixterminator.io/services/auth
 // File: internal/policy/mfa_policy.go
 
 type MFAPolicy struct {
@@ -5910,7 +5983,7 @@ func (p *MFAPolicy) RequiresMFA(user *domain.User, orgPolicy string) bool {
 }
 ```
 
-## 6.6 Vault Encryption Architecture (Zero Knowledge)
+## P.5.6 Vault Encryption Architecture (Zero Knowledge)
 
 ```
 Client Side                              Server Side
@@ -5934,7 +6007,7 @@ AES-256-GCM.Encrypt(vault_item_plaintext)
 ### Key Derivation Specification
 
 ```go
-// Package: helixterm.io/core
+// Package: helixterminator.io/core
 // File: pkg/crypto/vault_kdf.go
 
 package crypto
@@ -5991,7 +6064,7 @@ func EncryptVaultItem(key, plaintext []byte) (ciphertext, nonce []byte, err erro
 When a vault item is shared with another user or team, the symmetric item key is encrypted with the recipient's public key (X25519 ECDH key exchange + AES-256-GCM):
 
 ```go
-// Package: helixterm.io/core
+// Package: helixterminator.io/core
 // File: pkg/crypto/vault_sharing.go
 
 import "golang.org/x/crypto/nacl/box"
@@ -6011,7 +6084,7 @@ func WrapKeyForRecipient(
 }
 ```
 
-## 6.7 RBAC Implementation Details
+## P.5.7 RBAC Implementation Details
 
 The Org Service implements a four-level RBAC model:
 
@@ -6025,7 +6098,7 @@ Organization
 ### Permission Evaluation
 
 ```go
-// Package: helixterm.io/services/org
+// Package: helixterminator.io/services/org
 // File: internal/service/permission_service.go
 
 package service
@@ -6085,7 +6158,7 @@ func (s *PermissionService) Authorize(ctx context.Context, req AuthorizeRequest)
 }
 ```
 
-## 6.8 SOC 2 Type II Compliance Controls
+## P.5.8 SOC 2 Type II Compliance Controls
 
 | Control Domain | Control | HelixTerminator Implementation |
 |---|---|---|
@@ -6101,7 +6174,7 @@ func (s *PermissionService) Authorize(ctx context.Context, req AuthorizeRequest)
 | **C1.1** | Confidentiality | AES-256-GCM vault, mTLS, zero-knowledge architecture |
 | **PI1.1** | Processing integrity | Merkle-chained audit log, checksum on all transfers |
 
-## 6.9 Network Security: Zero Trust Network Policies
+## P.5.9 Network Security: Zero Trust Network Policies
 
 ```yaml
 # Default deny all ingress and egress
@@ -6158,7 +6231,7 @@ spec:
           app: spire-agent   # SPIFFE SVID socket
 ```
 
-## 6.10 Biometric Authentication Flow
+## P.5.10 Biometric Authentication Flow
 
 On Flutter mobile/desktop clients, the platform's biometric API is used as an authenticator:
 
@@ -6244,7 +6317,7 @@ Wireframes use the following notation:
 │           animated shimmer, purple color            │
 │                                                     │
 │                                                     │
-│      Version 1.0.0   •   helixterm.io  (11px)       │
+│      Version 1.0.0   •   helixterminator.io  (11px)       │
 │              (bottom, text-disabled)                │
 │                                                     │
 └─────────────────────────────────────────────────────┘
@@ -6998,12 +7071,12 @@ The divider (▓▓▓) is a 4px wide drag handle. On hover: cursor becomes `ew-
 │                                                            │ [End share] │
 └────────────────────────────────────────────────────────────┴────────────┘
 ```
-# 7. API Specification
+# Appendix P.6 -- Platform Architecture Context (see docs 01/07): API Specification
 
-## 7.1 API Conventions
+## P.6.1 API Conventions
 
-**Base URL:** `https://api.helixterm.io/api/v1`
-**WebSocket Base:** `wss://api.helixterm.io/ws/v1`
+**Base URL:** `https://api.helixterminator.io/api/v1`
+**WebSocket Base:** `wss://api.helixterminator.io/ws/v1`
 **Content-Type:** `application/json`
 **Authentication:** `Authorization: Bearer <access_token>` (all authenticated endpoints)
 
@@ -7066,7 +7139,7 @@ X-RateLimit-Reset: 1751118060
 X-RateLimit-Policy: "1000;w=60"
 ```
 
-## 7.2 Auth Service Endpoints
+## P.6.2 Auth Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7151,7 +7224,7 @@ X-RateLimit-Policy: "1000;w=60"
 }
 ```
 
-## 7.3 User Service Endpoints
+## P.6.3 User Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7171,7 +7244,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 44 | DELETE | `/users/:user_id` | Bearer+Admin | Delete user account |
 | 45 | POST | `/users/me/close-account` | Bearer | Request account deletion |
 
-## 7.4 Vault Service Endpoints
+## P.6.4 Vault Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7222,7 +7295,7 @@ X-RateLimit-Policy: "1000;w=60"
 }
 ```
 
-## 7.5 Host Service Endpoints
+## P.6.5 Host Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7283,7 +7356,7 @@ X-RateLimit-Policy: "1000;w=60"
 }
 ```
 
-## 7.6 Terminal Session Endpoints
+## P.6.6 Terminal Session Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7296,7 +7369,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 93 | POST | `/sessions/bulk-close` | Bearer+Admin | Bulk close sessions |
 | **WS** | GET | `/ws/v1/terminal/:session_id` | Bearer | WebSocket terminal I/O |
 
-## 7.7 SFTP Endpoints
+## P.6.7 SFTP Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7317,7 +7390,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 108 | POST | `/sftp/transfers/:transfer_id/resume` | Bearer | Resume transfer |
 | **WS** | GET | `/ws/v1/sftp/:session_id/stream` | Bearer | WebSocket transfer progress |
 
-## 7.8 Port Forward Endpoints
+## P.6.8 Port Forward Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7358,7 +7431,7 @@ X-RateLimit-Policy: "1000;w=60"
 }
 ```
 
-## 7.9 Snippet Service Endpoints
+## P.6.9 Snippet Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7378,7 +7451,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 131 | POST | `/snippets/import` | Bearer | Import snippets |
 | 132 | GET | `/snippets/export` | Bearer | Export snippets |
 
-## 7.10 Organization Endpoints
+## P.6.10 Organization Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7415,7 +7488,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 163 | PUT | `/org/scim/v2/Users/:id` | SCIM Token | SCIM update user |
 | 164 | DELETE | `/org/scim/v2/Users/:id` | SCIM Token | SCIM deprovision user |
 
-## 7.11 Collaboration Endpoints
+## P.6.11 Collaboration Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7428,7 +7501,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 171 | POST | `/collab/join/:share_token` | Bearer | Join shared session |
 | **WS** | GET | `/ws/v1/collab/:session_id` | Bearer | WebSocket collab stream |
 
-## 7.12 Audit Service Endpoints
+## P.6.12 Audit Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7439,7 +7512,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 176 | GET | `/audit/summary` | Bearer+Admin | Audit event summary |
 | **WS** | GET | `/ws/v1/audit/stream` | Bearer+Admin | Real-time audit event stream |
 
-## 7.13 Recording Service Endpoints
+## P.6.13 Recording Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7451,7 +7524,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 182 | POST | `/recordings/:recording_id/verify` | Bearer | Verify recording signature |
 | 183 | GET | `/recordings/search` | Bearer | Full-text search recordings |
 
-## 7.14 AI Service Endpoints
+## P.6.14 AI Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7464,7 +7537,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 190 | GET | `/ai/anomalies` | Bearer+Admin | List detected anomalies |
 | 191 | PUT | `/ai/preferences` | Bearer | Update AI preferences |
 
-## 7.15 PKI Service Endpoints
+## P.6.15 PKI Service Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7474,7 +7547,7 @@ X-RateLimit-Policy: "1000;w=60"
 | 195 | GET | `/pki/certificates` | Bearer+Admin | List issued certificates |
 | 196 | GET | `/pki/ca/public-key` | None | Get CA public key (for host config) |
 
-## 7.16 Notifications, Billing, Config, Container, HelixTrack Endpoints
+## P.6.16 Notifications, Billing, Config, Container, HelixTrack Endpoints
 
 | # | Method | Path | Auth | Description |
 |---|---|---|---|---|
@@ -7505,15 +7578,15 @@ X-RateLimit-Policy: "1000;w=60"
 | 220 | DELETE | `/helixtrack/sessions/:session_id/links/:issue_id` | Bearer | Unlink issue |
 | 221 | GET | `/helixtrack/status` | Bearer | HelixTrack connection status |
 
-## 7.17 gRPC Internal API Definitions
+## P.6.17 gRPC Internal API Definitions
 
 ```protobuf
-// Package: helixterm.io/core/proto
+// Package: helixterminator.io/core/proto
 // File: proto/auth/v1/auth.proto
 
 syntax = "proto3";
 package helix.auth.v1;
-option go_package = "helixterm.io/core/proto/auth/v1;authv1";
+option go_package = "helixterminator.io/core/proto/auth/v1;authv1";
 
 service AuthService {
     rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
@@ -7694,7 +7767,7 @@ These shortcuts work from any screen in the application.
 | Find next                       | `⌘G` or `↵`        | `F3` or `Enter`        |
 | Find previous                   | `⌘⇧G` or `⇧↵`      | `Shift+F3`             |
 | Select all terminal output      | `⌘A` (in terminal) | `Ctrl+Shift+A`         |
-| Clear terminal                  | `⌘K`               | `Ctrl+L`               |
+| Clear terminal                  | `⌘⇧L`              | `Ctrl+Shift+L`         |
 | Scroll up one line              | `⌘↑`               | `Ctrl+Shift+↑`         |
 | Scroll down one line            | `⌘↓`               | `Ctrl+Shift+↓`         |
 | Scroll up one page              | `⌘PgUp`            | `Ctrl+Shift+PgUp`      |
@@ -7702,6 +7775,12 @@ These shortcuts work from any screen in the application.
 | Scroll to top                   | `⌘Home`            | `Ctrl+Shift+Home`      |
 | Scroll to bottom                | `⌘End`             | `Ctrl+Shift+End`       |
 | Jump to bottom (auto-scroll)    | `⌘⇧↓`              | `Ctrl+Shift+End`       |
+
+> **Collision fix:** `Clear terminal` was previously bound to `⌘K` on macOS, which collided with
+> `⌘K` = Open Command Palette (§8.2) -- both shown side by side, unresolved, on the §8.12 cheat
+> sheet. It was also inconsistent with its own Windows/Linux binding (`Ctrl+L`). Reassigned above to
+> `⌘⇧L` / `Ctrl+Shift+L`, which is unused elsewhere in this document and now matches across
+> platforms.
 
 ### 8.4.4 Terminal View
 
@@ -7721,7 +7800,7 @@ These shortcuts work from any screen in the application.
 |---------------------------------|--------------------|------------------------|
 | Disconnect current session      | `⌘⇧Q`              | `Ctrl+Shift+Q`         |
 | Reconnect                       | `⌘⇧↵`              | `Ctrl+Shift+Enter`     |
-| Suspend to background (Mosh)    | `⌘⇧Z`              | `Ctrl+Shift+Z`         |
+| Suspend to background (Mosh)    | `⌘⇧M`              | `Ctrl+Shift+M`         |
 | SSH escape sequence menu        | `⌘⇧E`              | `Ctrl+Shift+E`         |
 | Start session recording         | `⌘⇧⏺` (Rec)        | `Ctrl+Shift+R` (Rec)   |
 | Stop session recording          | Same               | Same                   |
@@ -7729,6 +7808,12 @@ These shortcuts work from any screen in the application.
 | Open SFTP for current host      | `⌘⇧S`              | `Ctrl+Shift+S`         |
 | Open port forwarding            | `⌘⇧P`              | `Ctrl+Shift+P`         |
 | Send command to all tabs        | `⌘⇧⏎`              | `Ctrl+Shift+Enter` (Broadcast) |
+
+> **Collision fix:** `Suspend to background (Mosh)` was previously bound to `⌘⇧Z`, which collided
+> with `⌘⇧Z` = Redo (§8.2) -- both available without any documented scoping rule to separate them.
+> Redo is a deeply ingrained cross-platform convention and was left unchanged; Mosh-suspend is
+> reassigned above to `⌘⇧M` / `Ctrl+Shift+M` (M for "Mosh"), which is unused elsewhere in this
+> document.
 
 ---
 
@@ -7848,15 +7933,15 @@ When user presses `?`, a full-screen overlay displays all shortcuts organized by
 │  ⌘F  Search     │  ⌘⌥[] Focus pane     │  ⌘5  Keys               │
 │                  │  ⌘+  Bigger font     │                          │
 │  SSH             │  ⌘-  Smaller font    │  FORMS                   │
-│  ⌘⇧Q Disconnect │  ⌘K  Clear terminal  │  Tab  Next field         │
+│  ⌘⇧Q Disconnect │  ⌘⇧L Clear terminal  │  Tab  Next field         │
 │  ⌘⇧↵ Reconnect  │  ⌘F  Find            │  ⌘↵  Submit             │
 │  ⌘⇧B Broadcast  │  ⌘C  Copy            │  Esc  Cancel             │
 │  ⌘⇧S SFTP       │  ⌘V  Paste           │                          │
 └──────────────────┴──────────────────────┴──────────────────────────┘
 ```
-# 8. Performance Architecture
+# Appendix P.7 -- Platform Architecture Context (see docs 01/07): Performance Architecture
 
-## 8.1 Performance Targets
+## P.7.1 Performance Targets
 
 | Metric | Target | Notes |
 |---|---|---|
@@ -7871,7 +7956,7 @@ When user presses `?`, a full-screen overlay displays all shortcuts organized by
 | Session recording | 100K+ concurrent | Recording segments to Kafka |
 | SFTP transfer | 1 Gbps+ | Per-connection max |
 
-## 8.2 Horizontal Scaling Strategy Per Service
+## P.7.2 Horizontal Scaling Strategy Per Service
 
 Every service is stateless (state in PostgreSQL/Redis) and scales horizontally via Kubernetes HPA.
 
@@ -7896,7 +7981,7 @@ Every service is stateless (state in PostgreSQL/Redis) and scales horizontally v
 | Org | 3 | 30 | CPU | 70% |
 | Billing | 2 | 10 | CPU | 60% |
 
-## 8.3 Redis Caching Strategy (L1/L2)
+## P.7.3 Redis Caching Strategy (L1/L2)
 
 ```
 Client → [L1: in-process memory cache (ristretto, 100MB)] → [L2: Redis Cluster] → PostgreSQL
@@ -7989,7 +8074,7 @@ replicaConfigs := []string{
 // Each replica: MaxConns=200 (heavier read load)
 ```
 
-## 8.4 WebSocket Connection Management at Scale
+## P.7.4 WebSocket Connection Management at Scale
 
 The Terminal and Collab services need to handle millions of concurrent WebSocket connections. This is achieved via:
 
@@ -7998,7 +8083,7 @@ The Terminal and Collab services need to handle millions of concurrent WebSocket
 Each Terminal pod handles up to 5,000 concurrent WebSocket connections via Go's efficient goroutine scheduler.
 
 ```go
-// Package: helixterm.io/services/terminal
+// Package: helixterminator.io/services/terminal
 // File: internal/ws/hub.go
 
 package ws
@@ -8062,7 +8147,7 @@ Kafka → Terminal Pod 2 (User C, observer) → WebSocket to User C
 
 The Ingress uses `nginx.ingress.kubernetes.io/affinity: cookie` for WebSocket connections to ensure sticky sessions — a user's WebSocket reconnect goes to the same pod. This avoids re-establishing SSH connections.
 
-## 8.5 Circuit Breaker Thresholds
+## P.7.5 Circuit Breaker Thresholds
 
 See §2.8 for the code. Summary of production thresholds:
 
@@ -8095,12 +8180,12 @@ circuit_breakers:
     min_requests: 20
 ```
 
-## 8.6 SSH Connection Pooling
+## P.7.6 SSH Connection Pooling
 
 The SSH Proxy maintains a connection pool of authenticated SSH connections per (user_id, host_id) tuple to avoid the overhead of re-establishing the TCP + SSH handshake for every new session:
 
 ```go
-// Package: helixterm.io/services/ssh-proxy
+// Package: helixterminator.io/services/ssh-proxy
 // File: internal/pool/ssh_pool.go
 
 package pool
@@ -8144,7 +8229,7 @@ func (p *SSHConnectionPool) Get(userID, hostID string) (*ssh.Client, error) {
 }
 ```
 
-## 8.7 Kafka Throughput Optimization
+## P.7.7 Kafka Throughput Optimization
 
 - **Producer batching:** `batch.size=1MB`, `linger.ms=5` — accumulate messages for 5ms before sending, enabling batches of up to 1MB.
 - **Snappy compression:** reduces network bandwidth by ~60% for JSON payloads.
@@ -8177,7 +8262,7 @@ func init() {
 }
 ```
 
-## 8.8 CDN Strategy
+## P.7.8 CDN Strategy
 
 All Flutter Web SPA static assets (compiled JS, CSS, fonts, images) are served via CloudFront (AWS deployment) or Google Cloud CDN (GCP deployment) with:
 - **Cache-Control:** `public, max-age=31536000, immutable` (content-addressed filenames).
@@ -8186,7 +8271,7 @@ All Flutter Web SPA static assets (compiled JS, CSS, fonts, images) are served v
 - **Edge locations:** 50+ PoPs globally.
 - **API Gateway:** NOT behind CDN — all API requests go directly to the Kubernetes Ingress. CDN is for static assets only.
 
-## 8.9 Load Balancing Algorithms
+## P.7.9 Load Balancing Algorithms
 
 | Layer | Algorithm | Tool |
 |---|---|---|
@@ -8197,7 +8282,7 @@ All Flutter Web SPA static assets (compiled JS, CSS, fonts, images) are served v
 | Redis | Consistent hashing (keyslot) | Redis Cluster |
 | Kafka consumers | Partition assignment (cooperative-sticky) | Kafka consumer group protocol |
 
-## 8.10 Observability Stack
+## P.7.10 Observability Stack
 
 ```
 Services → OpenTelemetry SDK (digital.vasic.observability)
@@ -8277,36 +8362,69 @@ HelixTerminator commits to meeting **WCAG 2.1 Level AA** compliance across all p
 
 **WCAG AAA:** Minimum 7:1 for normal text. Minimum 4.5:1 for large text.
 
-All HelixTerminator text pairs have been validated against these ratios:
+**Recomputed** (per §2.6 above) directly from the hex values in §2.2/§2.3 using the WCAG 2.1
+relative-luminance formula. The prior table's ratios were hand-typed estimates and every row
+diverged from the computed value; **two of those rows were real compliance failures presented as
+passes**, which are now surfaced honestly below instead of hidden:
 
-| Text Element               | Token Pair                          | Ratio  | Level |
-|----------------------------|-------------------------------------|--------|-------|
-| Primary body text (dark)   | `text-primary` / `surface`          | 17.5:1 | AAA   |
-| Secondary body text (dark) | `text-secondary` / `surface`        | 7.2:1  | AAA   |
-| Tertiary / caption (dark)  | `text-tertiary` / `surface`         | 4.6:1  | AA    |
-| Links (dark)               | `text-link` / `surface`             | 7.8:1  | AAA   |
-| Error text (dark)          | `text-error` / `surface`            | 6.3:1  | AA    |
-| Warning text (dark)        | `text-warning` / `surface`          | 9.4:1  | AAA   |
-| Success text (dark)        | `text-success` / `surface`          | 9.1:1  | AAA   |
-| Button label on primary    | `#FFFFFF` / `interactive-default`   | 5.2:1  | AA    |
-| Primary body text (light)  | `text-primary` / `surface`          | 16.3:1 | AAA   |
-| Secondary text (light)     | `text-secondary` / `surface`        | 5.8:1  | AA    |
-| Disabled text (dark)       | `text-disabled` / `surface`         | 3.1:1  | AA large only |
+| Text Element               | Token Pair                          | Ratio   | Level |
+|----------------------------|--------------------------------------|---------|-------|
+| Primary body text (dark)   | `text-primary` / `surface`          | 19.24:1 | AAA   |
+| Secondary body text (dark) | `text-secondary` / `surface`        | 7.53:1  | AAA   |
+| Tertiary / caption (dark)  | `text-tertiary` / `surface`         | 4.45:1  | AA*   |
+| Links (dark)               | `text-link` / `surface`             | 7.06:1  | AAA*  |
+| Error text (dark)          | `text-error` / `surface`            | 7.62:1  | AAA   |
+| Warning text (dark)        | `text-warning` / `surface`          | 13.34:1 | AAA   |
+| Success text (dark)        | `text-success` / `surface`          | 13.08:1 | AAA   |
+| Button label on primary    | `#FFFFFF` / `interactive-default`   | 4.32:1  | **FAIL** (below 4.5:1 AA text floor) |
+| Primary body text (light)  | `text-primary` / `surface`          | 18.14:1 | AAA   |
+| Secondary text (light)     | `text-secondary` / `surface`        | 6.75:1  | AA    |
+| Disabled text (dark)       | `text-disabled` / `surface`         | 2.69:1  | **FAIL** (below the doc's own 3:1 large-text floor) |
 
-**Note on disabled text:** WCAG exempts disabled controls from contrast requirements, but HelixTerminator maintains 3:1 as a minimum even for disabled states to improve legibility.
+\* `text-tertiary` and `text-link` (dark) sit within ~0.05 of the AA/AAA line; treated as passing at
+their stated level but flagged for a token nudge in a follow-up pass (see §2.6 note).
+
+**Two real failures, shown with hand arithmetic (WCAG 2.1, `L = 0.2126R + 0.7152G + 0.0722B` on
+linearized channels; `ratio = (L1+0.05)/(L2+0.05)`):**
+
+1. **Disabled text** -- `text-disabled` `#56566A` on `surface` `#0E0E14`:
+   - `#56566A` -> R=G=0x56=86, B=0x6A=106. Linearized: R=G=0.0931, B=0.1441.
+     `L1 = 0.2126(0.0931) + 0.7152(0.0931) + 0.0722(0.1441) = 0.0198 + 0.0666 + 0.0104 = 0.0968`
+   - `#0E0E14` -> R=G=0x0E=14, B=0x14=20. Linearized: R=G=0.0044, B=0.0070.
+     `L2 = 0.2126(0.0044) + 0.7152(0.0044) + 0.0722(0.0070) = 0.00459`
+   - `ratio = (0.0968 + 0.05) / (0.00459 + 0.05) = 0.1468 / 0.05459 = 2.69:1`
+   - The document's own §9.2.1 note claims a self-imposed 3:1 floor for disabled text even though WCAG exempts disabled controls entirely -- at 2.69:1, the token **fails that self-imposed floor**, not just a stricter external one.
+2. **Button label on primary** -- `#FFFFFF` on `interactive-default` `#6C63FF`:
+   - `#FFFFFF` -> linearized R=G=B=1.0. `L1 = 0.2126(1.0) + 0.7152(1.0) + 0.0722(1.0) = 1.0`
+   - `#6C63FF` -> R=0x6C=108, G=0x63=99, B=0xFF=255. Linearized: R=0.1500, G=0.1248, B=1.0.
+     `L2 = 0.2126(0.1500) + 0.7152(0.1248) + 0.0722(1.0) = 0.0319 + 0.0893 + 0.0722 = 0.1933`
+   - `ratio = (1.0 + 0.05) / (0.1933 + 0.05) = 1.05 / 0.2433 = 4.32:1`
+   - Primary button labels render at 13-15px (not "large text"), so the applicable floor is **4.5:1**, not 3:1. At 4.32:1, HelixTerminator's single most common interactive element -- the primary button -- **fails WCAG AA** as currently specified.
+
+**Note on disabled text:** WCAG exempts disabled controls from contrast requirements, but HelixTerminator maintains 3:1 as a minimum even for disabled states to improve legibility; the token as specified does not meet that self-imposed floor (see failure #1 above). `> DEFERRED (next increment)`: token remediation (e.g. lightening `text-disabled` or `interactive-default`/lightening the button label treatment) is not fabricated here -- it requires a design decision out of scope for this pass.
 
 ### 9.2.2 UI Component Contrast (WCAG 1.4.11)
 
 Non-text UI components (borders of inputs, state indicators) must meet 3:1 against adjacent colors.
+**Recomputed** from hex in this pass (previously hand-typed, like §9.2.1); this recompute surfaced
+**two additional real failures** beyond the two documented above, both using `border-default`
+(`#2E2E3E`) directly against base `surface` (`#0E0E14`) -- a pairing that is far too close in
+luminance (1.44:1) to clear the 3:1 UI-component floor:
 
 | Component                  | Element         | Contrast vs adjacent | Level |
 |----------------------------|-----------------|----------------------|-------|
-| Input border (unfocused)   | `border-default` / `surface` | 3.2:1 | AA |
-| Input border (focused)     | `border-brand` / `surface`   | 5.2:1 | AA |
-| Checkbox border (unchecked)| `border-default` / surface   | 3.2:1 | AA |
-| Focus ring                 | `border-brand` / surface     | 5.2:1 | AA |
-| SSH connected dot          | `ssh-connected` / `surface-raised` | 5.4:1 | AA |
-| Error border               | `border-error` / surface     | 4.8:1 | AA |
+| Input border (unfocused)   | `border-default` / `surface` | 1.44:1 | **FAIL** (below 3:1) |
+| Input border (focused)     | `border-brand` / `surface`   | 4.46:1 | AA |
+| Checkbox border (unchecked)| `border-default` / surface   | 1.44:1 | **FAIL** (below 3:1) |
+| Focus ring                 | `border-brand` / surface     | 4.46:1 | AA |
+| SSH connected dot          | `ssh-connected` / `surface-raised` | 9.47:1 | AA |
+| Error border               | `border-error` / surface     | 6.93:1 | AA |
+
+> **Gap (tracked, not fixed this pass):** `border-default` needs a lighter token (e.g. between
+> `border-default` `#2E2E3E` and `border-strong` `#3A3A4A`, or a new dedicated
+> `border-default-on-surface` token) before it can be honestly claimed as WCAG-1.4.11-compliant for
+> unfocused input/checkbox borders. Not fabricated here -- token selection is a design decision for
+> a follow-up increment. `> DEFERRED (next increment)`.
 
 ---
 
@@ -8634,9 +8752,9 @@ TextField(
   ),
 )
 ```
-# 9. Kubernetes Deployment
+# Appendix P.8 -- Platform Architecture Context (see docs 01/07): Kubernetes Deployment
 
-## 9.1 Namespace Organization
+## P.8.1 Namespace Organization
 
 ```
 helixterm-prod           # Production workloads
@@ -8648,7 +8766,7 @@ helixterm-security       # SPIRE, cert-manager, external-secrets-operator
 helixterm-ingress        # Nginx Ingress Controller
 ```
 
-## 9.2 Example Service Kubernetes Resources: Auth Service
+## P.8.2 Example Service Kubernetes Resources: Auth Service
 
 ### Deployment
 
@@ -8704,7 +8822,7 @@ spec:
               topologyKey: topology.kubernetes.io/zone
       containers:
       - name: auth-service
-        image: registry.helixterm.io/helixterm/auth-service:1.0.0
+        image: registry.helixterminator.io/helixterm/auth-service:1.0.0
         ports:
         - name: http
           containerPort: 8081
@@ -8926,7 +9044,7 @@ metadata:
     eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/helixterm-auth-service
 ```
 
-## 9.3 SSH Proxy Service (High-Connection-Count Specialization)
+## P.8.3 SSH Proxy Service (High-Connection-Count Specialization)
 
 ```yaml
 # deploy/kubernetes/helixterm-prod/ssh-proxy/deployment.yaml
@@ -8954,7 +9072,7 @@ spec:
             topologyKey: kubernetes.io/hostname    # Strict: one pod per node
       containers:
       - name: ssh-proxy
-        image: registry.helixterm.io/helixterm/ssh-proxy:1.0.0
+        image: registry.helixterminator.io/helixterm/ssh-proxy:1.0.0
         ports:
         - containerPort: 8090
         resources:
@@ -9002,7 +9120,7 @@ spec:
           value: "65535"
 ```
 
-## 9.4 Terminal Service (WebSocket at Scale)
+## P.8.4 Terminal Service (WebSocket at Scale)
 
 ```yaml
 apiVersion: apps/v1
@@ -9016,7 +9134,7 @@ spec:
     spec:
       containers:
       - name: terminal-service
-        image: registry.helixterm.io/helixterm/terminal-service:1.0.0
+        image: registry.helixterminator.io/helixterm/terminal-service:1.0.0
         resources:
           requests:
             memory: "512Mi"
@@ -9035,7 +9153,7 @@ spec:
           value: "65536"
 ```
 
-## 9.5 Ingress Configuration
+## P.8.5 Ingress Configuration
 
 ```yaml
 # deploy/kubernetes/helixterm-prod/ingress/ingress.yaml
@@ -9056,7 +9174,7 @@ metadata:
       more_set_headers "X-XSS-Protection: 1; mode=block";
       more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
       more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
-      more_set_headers "Content-Security-Policy: default-src 'self'; connect-src 'self' wss://api.helixterm.io";
+      more_set_headers "Content-Security-Policy: default-src 'self'; connect-src 'self' wss://api.helixterminator.io";
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/session-cookie-name: "HELIX_AFFINITY"
@@ -9066,11 +9184,11 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - api.helixterm.io
-    - app.helixterm.io
+    - api.helixterminator.io
+    - app.helixterminator.io
     secretName: helixterm-tls
   rules:
-  - host: api.helixterm.io
+  - host: api.helixterminator.io
     http:
       paths:
       - path: /api/v1
@@ -9087,7 +9205,7 @@ spec:
             name: gateway-service
             port:
               number: 8080
-  - host: app.helixterm.io
+  - host: app.helixterminator.io
     http:
       paths:
       - path: /
@@ -9099,7 +9217,7 @@ spec:
               number: 80
 ```
 
-## 9.6 Helm Chart Structure
+## P.8.6 Helm Chart Structure
 
 ```
 deploy/helm/helixterm/
@@ -9161,7 +9279,7 @@ dependencies:
   condition: redis.enabled
 ```
 
-## 9.7 Secret Management (External Secrets Operator)
+## P.8.7 Secret Management (External Secrets Operator)
 
 ```yaml
 # deploy/kubernetes/helixterm-prod/secrets/external-secret-auth.yaml
@@ -9193,7 +9311,7 @@ spec:
       property: jwt_private_key
 ```
 
-## 9.8 Pod Resource Limits Summary
+## P.8.8 Pod Resource Limits Summary
 
 | Service | CPU Request | CPU Limit | Mem Request | Mem Limit |
 |---|---|---|---|---|
@@ -9220,7 +9338,7 @@ spec:
 | Container Bridge | 250m | 1000m | 256Mi | 1Gi |
 | HelixTrack Bridge | 200m | 500m | 256Mi | 512Mi |
 
-## 9.9 Rollout Strategy (Zero-Downtime Deploys)
+## P.8.9 Rollout Strategy (Zero-Downtime Deploys)
 
 All services use the following rollout process:
 
@@ -9268,6 +9386,13 @@ spec:
 # 10. DESIGN TOKENS FILE
 
 ## 10.1 Token Architecture
+
+This token file is HelixTerminator's concrete implementation of **HelixConstitution (pinned e6504c2,
+helixcode-v1.1.0 line) §11.4.162 ("OpenDesign")**: a single token-driven source of truth, consumed by
+components exclusively through named references (never ad-hoc hex/px literals — see §10.4), with
+light and dark as parallel first-class theme sets. As noted in §2.1/§2.3.2, the light-theme set is
+not yet complete (Border/Interactive/Status/SSH-status groups and the `helixLight` terminal scheme
+are `> DEFERRED (next increment)`); §11.4.162 compliance is therefore partial until that gap closes.
 
 The design token file follows the **Style Dictionary** format (W3C Design Tokens Community Group spec). Tokens are organized hierarchically: `category.subcategory.variant.state`.
 
@@ -9862,6 +9987,12 @@ All values include:
 }
 ```
 
+> **Gap:** `terminalScheme` above defines only 3 of the 12 documented terminal themes (§2.4:
+> `helixDark`, `dracula`, `nord`). `helixLight` (documented in prose at §2.4.2) plus Solarized
+> Dark/Light, One Dark, Monokai, Gruvbox Dark/Light, Tokyo Night, and Catppuccin Mocha have no JSON
+> token entry here. `> DEFERRED (next increment)`: authoring the remaining 9 scheme JSON blocks is a
+> content-authoring task out of scope for this hardening pass -- not fabricated here.
+
 ---
 
 ## 10.3 Token Count Summary
@@ -9885,7 +10016,12 @@ All values include:
 | Terminal schemes      | 64 (4 colors × 16 per scheme) |
 | **TOTAL**             | **~512**    |
 
-All 512+ tokens are defined in the JSON above plus the additional terminal scheme tokens for all 12 themes (HelixDark, HelixLight, Solarized Dark, Solarized Light, Dracula, One Dark, Monokai, Nord, Gruvbox Dark, Gruvbox Light, Tokyo Night, Catppuccin Mocha) × 20 values each = 240 additional terminal tokens.
+**Color semantic (dark) 62 vs. (light) 24 is not incidental** — it is the numeric footprint of the
+§2.3.2 / §11.4.162 gap noted above: light theme is missing its Border, Interactive, Status, and
+SSH-connection-status groups entirely. `> DEFERRED (next increment)` until those groups are
+authored and the two counts reach parity.
+
+All 512+ tokens are defined in the JSON above plus the additional terminal scheme tokens for all 12 themes (HelixDark, HelixLight, Solarized Dark, Solarized Light, Dracula, One Dark, Monokai, Nord, Gruvbox Dark, Gruvbox Light, Tokyo Night, Catppuccin Mocha) × 20 values each = 240 additional terminal tokens. Only 3 of these 12 schemes (`helixDark`, `dracula`, `nord`) are currently present as concrete JSON in §10.2 (see gap note above); the remaining 9, including `helixLight`, are `> DEFERRED (next increment)`.
 
 **Total token count: 512 + 240 (remaining terminal schemes) = 752 tokens.**
 
@@ -9937,9 +10073,9 @@ ThemeData helixDarkTheme = ThemeData(
   fontFamily: 'Inter',
 );
 ```
-# 10. Submodule Integration
+# Appendix P.9 -- Platform Architecture Context (see docs 01/07): Submodule Integration
 
-## 10.1 Integration Philosophy (HelixConstitution §11.4.74)
+## P.9.1 Integration Philosophy (HelixConstitution §11.4.74)
 
 Per HelixConstitution §11.4.74 (submodule-catalogue-first discovery, extend-don't-reimplement):
 
@@ -9948,7 +10084,7 @@ Per HelixConstitution §11.4.74 (submodule-catalogue-first discovery, extend-don
 - **All containerized workloads** must use `digital.vasic.containers` per §11.4.76.
 - **All spec documents** must be registered with `digital.vasic.docs_chain` per §11.4.73.
 
-## 10.2 `digital.vasic.containers`
+## P.9.2 `digital.vasic.containers`
 
 **Version used:** v0.5.0
 **Module path:** `digital.vasic.containers`
@@ -9999,7 +10135,7 @@ type ContainerRuntime interface {
 ### Runtime Registration in SSH Proxy
 
 ```go
-// Package: helixterm.io/services/ssh-proxy
+// Package: helixterminator.io/services/ssh-proxy
 // File: internal/runtime/registry.go
 
 package runtime
@@ -10062,7 +10198,7 @@ func (r *RuntimeRegistry) Get(runtimeType string) (runtime.ContainerRuntime, boo
 ### Health Monitoring via `digital.vasic.containers`
 
 ```go
-// Package: helixterm.io/services/container-bridge
+// Package: helixterminator.io/services/container-bridge
 // File: internal/health/watcher.go
 // Uses digital.vasic.containers health checks + lifecycle monitoring
 
@@ -10072,7 +10208,7 @@ import (
     "digital.vasic.containers/pkg/runtime"
     "digital.vasic.containers/pkg/lifecycle"
     "digital.vasic.containers/pkg/monitor"
-    "helixterm.io/services/container-bridge/internal/events"
+    "helixterminator.io/services/container-bridge/internal/events"
 )
 
 type ContainerHealthWatcher struct {
@@ -10112,7 +10248,7 @@ func (w *ContainerHealthWatcher) Start(ctx context.Context) {
 }
 ```
 
-## 10.3 `digital.vasic.security`
+## P.9.3 `digital.vasic.security`
 
 **Version used:** v0.3.2
 **Module path:** `digital.vasic.security`
@@ -10148,7 +10284,7 @@ keyBytes, err := store.Load("key_id_001")
 Every call to create or update a vault item in the Vault Service passes through `digital.vasic.security`:
 
 ```go
-// Package: helixterm.io/services/vault
+// Package: helixterminator.io/services/vault
 // File: internal/service/vault_service.go
 
 import (
@@ -10187,7 +10323,7 @@ hash, err := hasher.Hash(password)
 valid, err := hasher.Verify(password, hash)
 ```
 
-## 10.4 `digital.vasic.auth`
+## P.9.4 `digital.vasic.auth`
 
 **Version used:** v0.4.1
 **Module path:** `digital.vasic.auth`
@@ -10207,7 +10343,7 @@ helixtrackOAuth2 := oauth2.NewClient(oauth2.Config{
     Scopes:       []string{"issues:read", "projects:read", "sprints:read"},
     AuthURL:      "https://helixtrack.ru/oauth2/authorize",
     TokenURL:     "https://helixtrack.ru/oauth2/token",
-    RedirectURL:  "https://api.helixterm.io/api/v1/helixtrack/oauth/callback",
+    RedirectURL:  "https://api.helixterminator.io/api/v1/helixtrack/oauth/callback",
 })
 
 // Authorization code flow
@@ -10232,9 +10368,9 @@ tokenManager := oauth2.NewTokenManager(oauth2.TokenManagerConfig{
 import "digital.vasic.auth/pkg/jwt"
 
 manager := jwt.NewManager(jwt.Config{
-    Algorithm:    jwt.RS256,
-    Issuer:       "https://auth.helixterm.io",
-    Audience:     []string{"https://api.helixterm.io"},
+    Algorithm:    jwt.EdDSA, // CD-7 canonical signing choice (Ed25519)
+    Issuer:       "https://auth.helixterminator.io",
+    Audience:     []string{"https://api.helixterminator.io"},
     PrivateKeyID: "helix-2026-06-key-01",
 })
 
@@ -10249,7 +10385,7 @@ token, err := manager.Issue(jwt.Claims{
 claims, err := manager.Validate(tokenString)
 ```
 
-## 10.5 `digital.vasic.messaging`
+## P.9.5 `digital.vasic.messaging`
 
 **Version used:** v0.3.1
 **Module path:** `digital.vasic.messaging`
@@ -10314,7 +10450,7 @@ err = publisher.Publish(rabbitmq.Message{
 })
 ```
 
-## 10.6 `digital.vasic.observability`
+## P.9.6 `digital.vasic.observability`
 
 **Version used:** v0.4.0
 **Module path:** `digital.vasic.observability`
@@ -10323,7 +10459,7 @@ err = publisher.Publish(rabbitmq.Message{
 ### Initialization Pattern
 
 ```go
-// Package: helixterm.io/services/auth
+// Package: helixterminator.io/services/auth
 // File: cmd/server/main.go
 
 import (
@@ -10374,7 +10510,7 @@ func main() {
 ### Custom Metrics (Auth Service)
 
 ```go
-// Package: helixterm.io/services/auth
+// Package: helixterminator.io/services/auth
 // File: internal/metrics/auth_metrics.go
 
 import "digital.vasic.observability/pkg/metrics"
@@ -10405,7 +10541,7 @@ var (
 )
 ```
 
-## 10.7 `digital.vasic.ratelimiter`
+## P.9.7 `digital.vasic.ratelimiter`
 
 **Version used:** v0.2.1
 **Used by:** Gateway Service (per-endpoint), Auth Service (login attempts), AI Service (inference rate)
@@ -10433,7 +10569,7 @@ policies := map[string]limiter.Policy{
 }
 ```
 
-## 10.8 `digital.vasic.recovery`
+## P.9.8 `digital.vasic.recovery`
 
 **Version used:** v0.3.0
 **Used by:** Gateway Service (circuit breakers), Port Forward Service (auto-reconnect), SSH Proxy (connection retry)
@@ -10466,7 +10602,7 @@ err := reconnector.Do(ctx, func() error {
 })
 ```
 
-## 10.9 `digital.vasic.cache`
+## P.9.9 `digital.vasic.cache`
 
 **Version used:** v0.2.8
 **Used by:** All services for L1/L2 caching
@@ -10498,7 +10634,7 @@ value, err := c.Get(ctx, "jwks_cache")
 err = c.Delete(ctx, "jwks_cache")
 ```
 
-## 10.10 `digital.vasic.concurrency`
+## P.9.10 `digital.vasic.concurrency`
 
 **Version used:** v0.2.2
 **Used by:** Terminal Service (WebSocket hub), Recording Service (segment assembly), AI Service (batch inference)
@@ -10532,7 +10668,7 @@ fanout.Do(ctx, participantIDs, func(participantID string) error {
 })
 ```
 
-## 10.11 `digital.vasic.docs_chain`
+## P.9.11 `digital.vasic.docs_chain`
 
 **Version used:** v0.1.5
 **Module path:** `digital.vasic.docs_chain`
@@ -10543,7 +10679,7 @@ fanout.Do(ctx, participantIDs, func(participantID string) error {
 ### Document Dependency Registration
 
 ```go
-// Package: helixterm.io/core
+// Package: helixterminator.io/core
 // File: docs/chain/registry.go
 // Run at CI time (not at runtime)
 
@@ -10619,7 +10755,7 @@ jobs:
       run: docschain report --format markdown >> $GITHUB_STEP_SUMMARY
 ```
 
-## 10.12 `helixqa` — AI-Driven QA Orchestration
+## P.9.12 `helixqa` -- AI-Driven QA Orchestration
 
 **Used by:** CI/CD pipeline
 **Module path:** `helixqa`
@@ -10652,13 +10788,13 @@ Integration points:
 - **AI test suggestion:** `helixqa` analyses changed code paths and suggests test cases for uncovered paths.
 - **Flakiness detection:** tracks test run history in its own database and flags tests with failure rate > 5%.
 
-## 10.13 `helixtrack.ru/core`
+## P.9.13 `helixtrack.ru/core`
 
 **Used by:** HelixTrack Bridge Service
 **Module path:** `helixtrack.ru/core`
 
 ```go
-// Package: helixterm.io/services/helixtrack-bridge
+// Package: helixterminator.io/services/helixtrack-bridge
 // File: internal/client/helixtrack_client.go
 
 import "helixtrack.ru/core/pkg/client"
@@ -10686,7 +10822,7 @@ err = htClient.Issues.AddEvent(ctx, issueID, client.IssueEvent{
 })
 ```
 
-## 10.14 HelixConstitution Compliance in CI/CD
+## P.9.14 HelixConstitution Compliance in CI/CD
 
 Per §11.4.75 (mechanical enforcement without exception):
 
@@ -10723,7 +10859,7 @@ jobs:
     # Submodule catalogue consistency (§11.4.74)
     - name: Submodule catalogue check
       run: |
-        go run helixterm.io/tools/submodule-check ./...
+        go run helixterminator.io/tools/submodule-check ./...
 
     # Docs chain validation (§11.4.73)
     - name: Docs chain validation

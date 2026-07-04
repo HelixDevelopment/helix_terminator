@@ -19,7 +19,7 @@
 6. [Terraform Infrastructure-as-Code](#6-terraform-infrastructure-as-code)
 7. [Observability Stack](#7-observability-stack)
 8. [Disaster Recovery](#8-disaster-recovery)
-9. [Local Development Environment](#9-local-development-environment)
+9. [Local Development Environment](#9-local-development)
 10. [Security Hardening](#10-security-hardening)
 
 ---
@@ -264,7 +264,7 @@ infrastructure/kubernetes/base/
 |---|---|---|
 | Go packages | `lowercase`, no hyphens | `authservice` |
 | Service directories | `kebab-case` | `auth-service` |
-| Docker images | `ghcr.io/helixterm/<service>:<semver>` | `ghcr.io/helixterm/auth-service:1.4.2` |
+| Docker images | `ghcr.io/helixdevelopment/<service>:<semver>` | `ghcr.io/helixdevelopment/auth-service:1.4.2` |
 | K8s namespaces | `helixterm-<env>` | `helixterm-prod` |
 | K8s labels | `app`, `version`, `team`, `component` | `app: auth-service` |
 | Helm releases | `helixterm-<env>` | `helixterm-prod` |
@@ -440,7 +440,7 @@ metadata:
     environment: production
     team: platform
     pod-security.kubernetes.io/enforce: restricted
-    pod-security.kubernetes.io/enforce-version: v1.30
+    pod-security.kubernetes.io/enforce-version: v1.31
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
 ---
@@ -452,7 +452,7 @@ metadata:
     environment: staging
     team: platform
     pod-security.kubernetes.io/enforce: restricted
-    pod-security.kubernetes.io/enforce-version: v1.30
+    pod-security.kubernetes.io/enforce-version: v1.31
 ---
 apiVersion: v1
 kind: Namespace
@@ -574,7 +574,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: gateway
-        image: ghcr.io/helixterm/gateway:latest
+        image: ghcr.io/helixdevelopment/gateway:1.0.0
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -806,7 +806,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: auth-service
-        image: ghcr.io/helixterm/auth-service:latest
+        image: ghcr.io/helixdevelopment/auth-service:1.0.0
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -988,7 +988,7 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: vault-service
-        image: ghcr.io/helixterm/vault-service:latest
+        image: ghcr.io/helixdevelopment/vault-service:1.0.0
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -1180,7 +1180,7 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: ssh-proxy
-        image: ghcr.io/helixterm/ssh-proxy:latest
+        image: ghcr.io/helixdevelopment/ssh-proxy:1.0.0
         imagePullPolicy: Always
         ports:
         - containerPort: 2222
@@ -1369,7 +1369,7 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: session-recorder
-        image: ghcr.io/helixterm/session-recorder:latest
+        image: ghcr.io/helixdevelopment/session-recorder:1.0.0
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -1577,7 +1577,7 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: kafka
-        image: bitnami/kafka:3.7.0
+        image: bitnami/kafka:3.9.0
         ports:
         - containerPort: 9092
           name: internal
@@ -1720,7 +1720,7 @@ spec:
           mountPath: /bitnami/postgresql
       containers:
       - name: postgresql
-        image: bitnami/postgresql:16.2.0
+        image: bitnami/postgresql:17.2.0
         ports:
         - containerPort: 5432
           name: postgresql
@@ -1846,7 +1846,7 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: redis
-        image: bitnami/redis:7.2.4
+        image: bitnami/redis:8.0.0
         ports:
         - containerPort: 6379
           name: redis
@@ -2723,6 +2723,15 @@ podAntiAffinity:
 
 ## 4. Docker & Podman Build
 
+> **NOTE — rootless Podman is the mandated target runtime (Constitution §11.4.161):**
+> HelixConstitution §11.4.161 mandates rootless Podman as the target container
+> build/runtime for HelixTerminator. Local development already supports
+> `PodmanRuntime` as an alternative to `DockerRuntime` (see Appendix B), but
+> the CI/CD pipelines in §5 of this document still build and push images with
+> Docker (`docker/setup-buildx-action` + `docker/build-push-action`). Full
+> migration of CI to rootless Podman is **DEFERRED** to a future increment —
+> this note exists so the gap is tracked explicitly rather than left unstated.
+
 ### 4.1 Go Service Dockerfile (Standard Pattern)
 
 ```dockerfile
@@ -2898,7 +2907,7 @@ ENTRYPOINT ["/service"]
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1: Flutter build
 # ─────────────────────────────────────────────────────────────────────────────
-FROM ghcr.io/cirruslabs/flutter:3.22.2 AS builder
+FROM ghcr.io/cirruslabs/flutter:3.24.5 AS builder
 
 WORKDIR /app
 
@@ -3014,7 +3023,7 @@ volumes:
 
 services:
   postgresql:
-    image: postgres:16.2-alpine
+    image: postgres:17.2-alpine
     container_name: helixterm-postgresql
     restart: unless-stopped
     environment:
@@ -3035,7 +3044,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7.2-alpine
+    image: redis:8-alpine
     container_name: helixterm-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
@@ -3052,7 +3061,7 @@ services:
       retries: 5
 
   kafka:
-    image: bitnami/kafka:3.7.0
+    image: bitnami/kafka:3.9.0
     container_name: helixterm-kafka
     restart: unless-stopped
     environment:
@@ -3101,7 +3110,7 @@ services:
   # ─── Application Services ────────────────────────────────────────────────────
 
   gateway:
-    image: ghcr.io/helixterm/gateway:dev
+    image: ghcr.io/helixdevelopment/gateway:dev
     build:
       context: ../../services/gateway
       dockerfile: Dockerfile.dev
@@ -3140,7 +3149,7 @@ services:
       retries: 3
 
   auth-service:
-    image: ghcr.io/helixterm/auth-service:dev
+    image: ghcr.io/helixdevelopment/auth-service:dev
     build:
       context: ../../services/auth-service
       dockerfile: Dockerfile.dev
@@ -3170,7 +3179,7 @@ services:
       - helixterm-net
 
   vault-service:
-    image: ghcr.io/helixterm/vault-service:dev
+    image: ghcr.io/helixdevelopment/vault-service:dev
     build:
       context: ../../services/vault-service
       dockerfile: Dockerfile.dev
@@ -3197,7 +3206,7 @@ services:
       - helixterm-net
 
   ssh-proxy:
-    image: ghcr.io/helixterm/ssh-proxy:dev
+    image: ghcr.io/helixdevelopment/ssh-proxy:dev
     build:
       context: ../../services/ssh-proxy
       dockerfile: Dockerfile.dev
@@ -3223,7 +3232,7 @@ services:
       - helixterm-net
 
   session-recorder:
-    image: ghcr.io/helixterm/session-recorder:dev
+    image: ghcr.io/helixdevelopment/session-recorder:dev
     build:
       context: ../../services/session-recorder
       dockerfile: Dockerfile.dev
@@ -3419,7 +3428,7 @@ concurrency:
 
 env:
   GO_VERSION: "1.25"
-  FLUTTER_VERSION: "3.22.2"
+  FLUTTER_VERSION: "3.24.5"
   GOLANGCI_LINT_VERSION: "v1.59.1"
   COVERAGE_THRESHOLD: "80"
 
@@ -3713,7 +3722,7 @@ jobs:
         with:
           context: services/${{ matrix.service }}
           push: false
-          tags: ghcr.io/helixterm/${{ matrix.service }}:pr-${{ github.event.number }}
+          tags: ghcr.io/helixdevelopment/${{ matrix.service }}:pr-${{ github.event.number }}
           build-args: |
             GIT_COMMIT=${{ github.sha }}
             GIT_TAG=pr-${{ github.event.number }}
@@ -4691,7 +4700,7 @@ resource "aws_db_instance" "helixterm_prod" {
   identifier = "helixterm-prod"
 
   engine               = "postgres"
-  engine_version       = "16.2"
+  engine_version       = "17.2"
   instance_class       = "db.r6g.2xlarge"
   allocated_storage    = 500
   max_allocated_storage = 5000
@@ -4870,7 +4879,7 @@ resource "aws_elasticache_parameter_group" "helixterm" {
 # ─── MSK (Managed Kafka) ──────────────────────────────────────────────────────
 resource "aws_msk_cluster" "helixterm" {
   cluster_name           = "helixterm-prod"
-  kafka_version          = "3.7.0"
+  kafka_version          = "3.9.0"
   number_of_broker_nodes = 3
 
   broker_node_group_info {
@@ -4929,7 +4938,7 @@ resource "aws_msk_cluster" "helixterm" {
 }
 
 resource "aws_msk_configuration" "helixterm" {
-  kafka_versions = ["3.7.0"]
+  kafka_versions = ["3.9.0"]
   name           = "helixterm-prod"
 
   server_properties = <<PROPERTIES
@@ -5037,10 +5046,12 @@ resource "aws_s3_bucket_replication_configuration" "backups" {
   }
 }
 
-# DR bucket in secondary region
+# DR bucket in secondary region (CD-6: eu-west-1 is the canonical DR region —
+# a stray us-west-2 provider here previously reversed/contradicted the DR
+# region used everywhere else in this document, e.g. §8)
 resource "aws_s3_bucket" "backups_dr" {
-  provider = aws.us-west-2
-  bucket   = "helixterm-backups-prod-dr-usw2"
+  provider = aws.eu-west-1
+  bucket   = "helixterm-backups-prod-dr-euw1"
 }
 
 # ─── CloudFront CDN ───────────────────────────────────────────────────────────
@@ -5568,79 +5579,12 @@ spec:
           annotations:
             summary: "Kafka has {{ $value }} under-replicated partitions"
             description: "Under-replicated partitions indicate broker or network issues."
-
-    - name: ssh.alerts
-      rules:
-        - alert: SSHConnectionFailureRateHigh
-          expr: |
-            sum(rate(ssh_connections_total{status="failure"}[1m])) /
-            sum(rate(ssh_connections_total[1m])) > 0.05
-          for: 2m
-          labels:
-            severity: critical
-            team: platform
-            runbook: https://docs.helixterm.io/runbooks/ssh-failure-rate
-          annotations:
-            summary: "SSH connection failure rate > 5%"
-            description: "SSH failure rate: {{ $value | humanizePercentage }}."
-
-        - alert: SSHSessionDurationAnomalyHigh
-          expr: |
-            histogram_quantile(0.99, rate(ssh_session_duration_seconds_bucket[10m])) > 3600
-          for: 5m
-          labels:
-            severity: warning
-            team: platform
-          annotations:
-            summary: "SSH p99 session duration > 1 hour"
-            description: "Possible hanging sessions or abnormally long operations."
-
-        - alert: SSHActiveSessions
-          expr: |
-            ssh_active_sessions_total > 500
-          for: 5m
-          labels:
-            severity: warning
-            team: platform
-          annotations:
-            summary: "SSH active sessions > 500"
-            description: "Current sessions: {{ $value }}. May indicate load spike."
-
-    - name: vault.alerts
-      rules:
-        - alert: VaultEncryptLatencyP99High
-          expr: |
-            histogram_quantile(0.99, rate(vault_encrypt_duration_seconds_bucket[5m])) > 0.1
-          for: 5m
-          labels:
-            severity: critical
-            team: platform
-            runbook: https://docs.helixterm.io/runbooks/vault-latency
-          annotations:
-            summary: "Vault encrypt p99 latency > 100ms"
-            description: "Vault encrypt p99: {{ $value | humanizeDuration }}."
-
-        - alert: VaultDecryptLatencyP99High
-          expr: |
-            histogram_quantile(0.99, rate(vault_decrypt_duration_seconds_bucket[5m])) > 0.1
-          for: 5m
-          labels:
-            severity: critical
-            team: platform
-          annotations:
-            summary: "Vault decrypt p99 latency > 100ms"
-            description: "Vault decrypt p99: {{ $value | humanizeDuration }}."
-
-        - alert: VaultOperationErrors
-          expr: |
-            sum(rate(vault_operations_total{status="error"}[5m])) > 1
-          for: 2m
-          labels:
-            severity: critical
-            team: platform
-          annotations:
-            summary: "Vault operation errors > 1/s"
-            description: "Vault errors: {{ $value }}/s."
+            # NOTE: the ssh.alerts and vault.alerts groups defined earlier in
+            # this file (§7.2 top) are the single canonical definitions for
+            # those alert groups. A second, conflicting ssh.alerts/vault.alerts
+            # pair (different metric names/thresholds) previously existed here
+            # and has been removed as a duplicate — Prometheus rule files must
+            # not declare two groups with the same `name`.
 
     - name: database.alerts
       rules:
@@ -6137,7 +6081,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: walg-backup
-              image: ghcr.io/helixterm/walg-runner:latest
+              image: ghcr.io/helixdevelopment/walg-runner:1.0.0
               command:
                 - /bin/sh
                 - -c
@@ -6251,7 +6195,7 @@ Redis backups are pushed to S3 using a sidecar container every 5 minutes:
 ```yaml
 # Redis backup sidecar container snippet (added to Redis StatefulSet)
 - name: redis-backup
-  image: ghcr.io/helixterm/redis-backup:latest
+  image: ghcr.io/helixdevelopment/redis-backup:1.0.0
   command:
     - /bin/sh
     - -c
@@ -6510,7 +6454,7 @@ Before setting up the HelixTerminator development environment, install the follo
 | Tool | Minimum Version | Install |
 |------|----------------|---------|
 | Go | 1.25 | `brew install go` or [go.dev/dl](https://go.dev/dl) |
-| Flutter | 3.22+ | [flutter.dev/docs/get-started](https://docs.flutter.dev/get-started) |
+| Flutter | 3.24+ | [flutter.dev/docs/get-started](https://docs.flutter.dev/get-started) |
 | Docker | 27.x | [docs.docker.com](https://docs.docker.com/get-started/) |
 | Podman | 5.x | `brew install podman` |
 | kubectl | 1.31+ | `brew install kubectl` |
@@ -6811,7 +6755,7 @@ services:
 
   # ─── MinIO (S3 mock for local dev) ───────────────────────────────────────
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-04-08T15-41-24Z
     container_name: helix-minio
     restart: unless-stopped
     networks:
@@ -6883,7 +6827,7 @@ services:
 
   # ─── SMTP Mock (Mailhog) ──────────────────────────────────────────────────
   mailhog:
-    image: mailhog/mailhog:latest
+    image: mailhog/mailhog:v1.0.1
     container_name: helix-mailhog
     restart: unless-stopped
     networks:
@@ -7019,7 +6963,7 @@ vuln-check:  ## Run govulncheck
 	govulncheck ./...
 
 trivy-scan/%:  ## Scan a built image with Trivy
-	trivy image ghcr.io/helixterm/$*:local
+	trivy image ghcr.io/helixdevelopment/$*:local
 
 help:  ## Display this help
 	@grep -E '^[a-zA-Z_/-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -7307,9 +7251,9 @@ Every service Deployment in HelixTerminator applies these settings:
 # Baseline security context applied to ALL containers
 securityContext:
   runAsNonRoot: true
-  runAsUser: 65534          # "nobody" user
-  runAsGroup: 65534
-  fsGroup: 65534
+  runAsUser: 65532          # distroless/static:nonroot UID (65534 "nobody" is undefined in distroless images)
+  runAsGroup: 65532
+  fsGroup: 65532
   seccompProfile:
     type: RuntimeDefault
 
@@ -7523,7 +7467,7 @@ Trivy is integrated as a blocking gate in CI/CD pipelines:
 - name: Scan image for vulnerabilities
   uses: aquasecurity/trivy-action@master
   with:
-    image-ref: ghcr.io/helixterm/${{ matrix.service }}:${{ github.sha }}
+    image-ref: ghcr.io/helixdevelopment/${{ matrix.service }}:${{ github.sha }}
     format: sarif
     output: trivy-results.sarif
     severity: CRITICAL,HIGH
@@ -7555,14 +7499,14 @@ SBOM (Software Bill of Materials) generation is automated post-build:
 
 ```bash
 # Generate SBOM in CycloneDX format
-syft ghcr.io/helixterm/${SERVICE}:${TAG} -o cyclonedx-json > sbom-${SERVICE}-${TAG}.json
+syft ghcr.io/helixdevelopment/${SERVICE}:${TAG} -o cyclonedx-json > sbom-${SERVICE}-${TAG}.json
 
 # Attest SBOM with cosign
 cosign attest \
   --predicate sbom-${SERVICE}-${TAG}.json \
   --type cyclonedx \
   --key cosign.key \
-  ghcr.io/helixterm/${SERVICE}:${TAG}
+  ghcr.io/helixdevelopment/${SERVICE}:${TAG}
 ```
 
 ### 10.5 SAST Integration (gosec + Semgrep)
@@ -7604,7 +7548,7 @@ jobs:
     name: Semgrep SAST
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep:latest
+      image: semgrep/semgrep:1.99.0
     steps:
       - uses: actions/checkout@v4
 
@@ -7663,7 +7607,7 @@ data:
       desc: The auth-service should only connect to PostgreSQL, Redis, and Vault
       condition: >
         outbound and
-        container.image.repository = "ghcr.io/helixterm/auth-service" and
+        container.image.repository = "ghcr.io/helixdevelopment/auth-service" and
         not fd.rip in (postgres_ips, redis_ips, vault_ips) and
         not fd.rport in (5432, 6379, 8200)
       output: >
@@ -7677,7 +7621,7 @@ data:
       condition: >
         spawned_process and
         container and
-        container.image.repository startswith "ghcr.io/helixterm/" and
+        container.image.repository startswith "ghcr.io/helixdevelopment/" and
         proc.name in (shell_binaries) and
         not proc.pname in (known_parent_binaries)
       output: >
@@ -7691,7 +7635,7 @@ data:
       desc: Vault service reading files outside expected paths
       condition: >
         open_read and
-        container.image.repository = "ghcr.io/helixterm/vault-service" and
+        container.image.repository = "ghcr.io/helixdevelopment/vault-service" and
         not fd.name startswith "/service" and
         not fd.name startswith "/tmp" and
         not fd.name startswith "/etc/ssl" and
@@ -7708,7 +7652,7 @@ data:
       condition: >
         spawned_process and
         container and
-        container.image.repository startswith "ghcr.io/helixterm/" and
+        container.image.repository startswith "ghcr.io/helixdevelopment/" and
         (proc.name in (crypto_miners) or
          proc.cmdline contains "stratum+tcp" or
          proc.cmdline contains "nicehash")
@@ -7926,7 +7870,7 @@ metadata:
   name: helix-image-policy
 spec:
   images:
-    - glob: "ghcr.io/helixterm/**"
+    - glob: "ghcr.io/helixdevelopment/**"
   authorities:
     - keyless:
         url: https://fulcio.sigstore.dev
@@ -7978,7 +7922,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.x'
+          flutter-version: '3.24.x'
 
       - name: Check Flutter dependencies
         working-directory: clients/flutter
@@ -8022,11 +7966,14 @@ VIOLATIONS=0
 
 echo "==> Running HelixConstitution compliance check"
 
-# Rule: Every service must have a /healthz endpoint
+# Rule: Every service must have /healthz/live and /healthz/ready endpoints
+# (the actual route pair every service registers — see §2.3 probes; a bare
+# "/healthz" literal never appears in service code, so grepping for it alone
+# false-fails every service).
 for svc in "${SERVICES_DIR}"/*/; do
   svc_name=$(basename "${svc}")
-  if ! grep -rq '"/healthz"' "${svc}"; then
-    echo "VIOLATION: ${svc_name} missing /healthz endpoint"
+  if ! grep -rqE '"/healthz/(live|ready)"' "${svc}"; then
+    echo "VIOLATION: ${svc_name} missing /healthz/live or /healthz/ready endpoint"
     VIOLATIONS=$((VIOLATIONS + 1))
   fi
 done
