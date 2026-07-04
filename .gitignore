@@ -30,3 +30,6 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Superpowers SDD controller scratch (ledger, not source)
+.superpowers/
