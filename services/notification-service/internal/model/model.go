@@ -2,13 +2,95 @@ package model
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
-// TODO: define domain models for notification-service
+// Notification represents a notification sent to a user
+type Notification struct {
+	ID        uuid.UUID       `json:"id" db:"id"`
+	UserID    uuid.UUID       `json:"userId" db:"user_id"`
+	OrgID     *uuid.UUID      `json:"orgId,omitempty" db:"org_id"`
+	Type      string          `json:"type" db:"type"`
+	Title     string          `json:"title" db:"title"`
+	Message   string          `json:"message" db:"message"`
+	Data      []byte          `json:"data,omitempty" db:"data"`
+	Channel   string          `json:"channel" db:"channel"`
+	Status    string          `json:"status" db:"status"`
+	ReadAt    *time.Time      `json:"readAt,omitempty" db:"read_at"`
+	SentAt    *time.Time      `json:"sentAt,omitempty" db:"sent_at"`
+	CreatedAt time.Time       `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time       `json:"updatedAt" db:"updated_at"`
+}
 
-// BaseModel provides common fields.
-type BaseModel struct {
-	ID        string    `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+// NotificationPreference represents a user's notification preferences for a channel
+type NotificationPreference struct {
+	UserID    uuid.UUID  `json:"userId" db:"user_id"`
+	Channel   string     `json:"channel" db:"channel"`
+	Enabled   bool       `json:"enabled" db:"enabled"`
+	Types     []string   `json:"types" db:"types"`
+	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// CreateNotificationRequest represents a request to create a notification
+type CreateNotificationRequest struct {
+	UserID  string          `json:"userId" binding:"required,uuid"`
+	OrgID   string          `json:"orgId,omitempty" binding:"omitempty,uuid"`
+	Type    string          `json:"type" binding:"required,oneof=info warning error success"`
+	Title   string          `json:"title" binding:"required,max=255"`
+	Message string          `json:"message" binding:"required,max=2000"`
+	Data    json.RawMessage `json:"data,omitempty"`
+	Channel string          `json:"channel" binding:"required,oneof=email in_app push webhook"`
+	Status  string          `json:"status" binding:"omitempty,oneof=pending sent delivered failed"`
+}
+
+// ListNotificationsRequest represents query parameters for listing notifications
+type ListNotificationsRequest struct {
+	UserID string `form:"user_id" binding:"required,uuid"`
+	OrgID  string `form:"org_id" binding:"omitempty,uuid"`
+	Status string `form:"status" binding:"omitempty,oneof=pending sent delivered failed"`
+	Channel string `form:"channel" binding:"omitempty,oneof=email in_app push webhook"`
+	Limit  int    `form:"limit,default=20" binding:"omitempty,min=1,max=100"`
+	Offset int    `form:"offset,default=0" binding:"omitempty,min=0"`
+}
+
+// MarkReadRequest represents a request to mark a notification as read
+type MarkReadRequest struct {
+	ID string `uri:"id" binding:"required,uuid"`
+}
+
+// UpdatePreferenceRequest represents a request to update notification preferences
+type UpdatePreferenceRequest struct {
+	UserID  string   `json:"userId" binding:"required,uuid"`
+	Channel string   `json:"channel" binding:"required,oneof=email in_app push webhook"`
+	Enabled bool     `json:"enabled"`
+	Types   []string `json:"types" binding:"omitempty,dive,oneof=info warning error success"`
+}
+
+// NotificationResponse represents a notification in API responses
+type NotificationResponse struct {
+	ID        uuid.UUID       `json:"id"`
+	UserID    uuid.UUID       `json:"userId"`
+	OrgID     *uuid.UUID      `json:"orgId,omitempty"`
+	Type      string          `json:"type"`
+	Title     string          `json:"title"`
+	Message   string          `json:"message"`
+	Data      json.RawMessage `json:"data,omitempty"`
+	Channel   string          `json:"channel"`
+	Status    string          `json:"status"`
+	ReadAt    *time.Time      `json:"readAt,omitempty"`
+	SentAt    *time.Time      `json:"sentAt,omitempty"`
+	CreatedAt time.Time       `json:"createdAt"`
+	UpdatedAt time.Time       `json:"updatedAt"`
+}
+
+// PreferenceResponse represents a notification preference in API responses
+type PreferenceResponse struct {
+	UserID    uuid.UUID  `json:"userId"`
+	Channel   string     `json:"channel"`
+	Enabled   bool       `json:"enabled"`
+	Types     []string   `json:"types"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
 }

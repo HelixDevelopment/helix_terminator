@@ -4,14 +4,14 @@ package org_service;
 
 option go_package = "github.com/helixdevelopment/org-service/api/proto;org_service";
 
-// TODO: define service RPCs and messages
+// Protobuf definitions for org-service (future gRPC gateway)
 
-service OrgServiceService {
-	rpc HealthCheck (HealthRequest) returns (HealthResponse);
+service OrgService {
+  rpc HealthCheck (HealthRequest) returns (HealthResponse);
 }
 
 message HealthRequest {}
 
 message HealthResponse {
-	bool healthy = 1;
+  bool healthy = 1;
 }

@@ -122,5 +122,5 @@ func TestGetOrgBySlug_DBUnavailable(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
-	assert.Contains(t, w.Body.String(), "database not connected")
+	assert.Contains(t, w.Body.String(), "database not available")
 }

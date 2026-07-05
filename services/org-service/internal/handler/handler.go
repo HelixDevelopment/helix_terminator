@@ -132,6 +132,11 @@ func (h *Handler) GetOrg(c *gin.Context) {
 		return
 	}
 
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
+		return
+	}
+
 	org, err := h.repo.GetOrgByID(c.Request.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
@@ -150,6 +155,11 @@ func (h *Handler) GetOrgBySlug(c *gin.Context) {
 	slug := c.Param("slug")
 	if slug == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "slug is required"})
+		return
+	}
+
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
 		return
 	}
 
@@ -200,6 +210,11 @@ func (h *Handler) UpdateOrg(c *gin.Context) {
 		updates["settings"] = req.Settings
 	}
 
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
+		return
+	}
+
 	if err := h.repo.UpdateOrg(c.Request.Context(), id, updates); err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
@@ -222,6 +237,11 @@ func (h *Handler) DeleteOrg(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization id"})
+		return
+	}
+
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
 		return
 	}
 
@@ -260,6 +280,11 @@ func (h *Handler) CreateTeam(c *gin.Context) {
 		UpdatedAt:   time.Now().UTC(),
 	}
 
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
+		return
+	}
+
 	if err := h.repo.CreateTeam(c.Request.Context(), team); err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
@@ -286,6 +311,11 @@ func (h *Handler) ListTeams(c *gin.Context) {
 		limit = 20
 	}
 
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
+		return
+	}
+
 	teams, err := h.repo.ListTeams(c.Request.Context(), orgID, limit, offset)
 	if err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
@@ -304,6 +334,11 @@ func (h *Handler) GetTeam(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid team id"})
+		return
+	}
+
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
 		return
 	}
 
@@ -331,6 +366,11 @@ func (h *Handler) UpdateTeam(c *gin.Context) {
 	var req model.UpdateTeamRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
 		return
 	}
 
@@ -369,6 +409,11 @@ func (h *Handler) DeleteTeam(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid team id"})
+		return
+	}
+
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
 		return
 	}
 
@@ -438,6 +483,11 @@ func (h *Handler) AddMember(c *gin.Context) {
 		UpdatedAt: now,
 	}
 
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
+		return
+	}
+
 	if err := h.repo.AddMember(c.Request.Context(), membership); err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
@@ -475,6 +525,11 @@ func (h *Handler) ListMembers(c *gin.Context) {
 		teamID = &tid
 	}
 
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
+		return
+	}
+
 	members, total, err := h.repo.ListMembers(c.Request.Context(), orgID, teamID, role, limit, offset)
 	if err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
@@ -510,6 +565,11 @@ func (h *Handler) UpdateMember(c *gin.Context) {
 	var req model.UpdateMemberRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
 		return
 	}
 
@@ -559,6 +619,11 @@ func (h *Handler) RemoveMember(c *gin.Context) {
 	userID, err := uuid.Parse(c.Param("user_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
 		return
 	}
 
