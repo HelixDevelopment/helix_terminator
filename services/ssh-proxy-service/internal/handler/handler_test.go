@@ -1,4 +1,4 @@
-package handler_test
+package handler
 
 import (
 	"net/http"
@@ -7,19 +7,43 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"github.com/helixdevelopment/ssh-proxy-service/internal/handler"
+
+	"github.com/helixdevelopment/ssh-proxy-service/internal/repository"
+	"github.com/helixdevelopment/ssh-proxy-service/internal/wshandler"
 )
 
-func TestHealthCheck(t *testing.T) {
-	t.Skip("TODO: implement real health check test")
+func setupTestHandler() (*Handler, *gin.Engine) {
 	gin.SetMode(gin.TestMode)
-	h := handler.New()
-	r := gin.New()
-	r.GET("/health", h.HealthCheck)
+	repo := &repository.InMemoryRepository{}
+	sm := wshandler.NewSessionManager()
+	h := New(repo, sm)
+	return h, gin.New()
+}
 
+func TestHealthCheck(t *testing.T) {
+	h, _ := setupTestHandler()
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/health", nil)
-	r.ServeHTTP(w, req)
-
+	c, _ := gin.CreateTestContext(w)
+	h.HealthCheck(c)
 	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "healthy")
+	assert.Contains(t, w.Body.String(), "ssh-proxy-service")
+}
+
+func TestReadinessCheck(t *testing.T) {
+	h, _ := setupTestHandler()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	h.ReadinessCheck(c)
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "ready")
+}
+
+func TestGetSSHSession_NotFound(t *testing.T) {
+	h, r := setupTestHandler()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/ssh/sessions/00000000-0000-0000-0000-000000000000", nil)
+	r.GET("/api/v1/ssh/sessions/:id", h.GetSSHSession)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
