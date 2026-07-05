@@ -166,7 +166,65 @@ HelixTerminator's architecture is a full microservices system with strict domain
 
 This three-channel model provides clear semantic separation: Kafka for facts that have already happened (events), RabbitMQ for instructions that must happen exactly once (commands), REST/gRPC for interrogations (queries) and mutations requiring transactional semantics.
 
-## 2.2 High-Level Architecture Diagram Description
+## 2.2 Architecture Diagrams
+
+### 2.2.1 System Context (C4 Level 1)
+
+The System Context diagram fixes the platform's outer trust boundary: the human personas and
+automated actors that call it, and the external systems it depends on. It is the missing top
+level above the container-level diagram in §2.2.2 (DEEP-WORK item, `REMEDIATION_REGISTER.md`
+§4/§5 "C4 context diagram"). Module scope: this diagram depicts **Module A — Secure Terminal
+Platform** (per `CANONICAL_FACTS.md` CD-1); Module B (Zero-Trust Connection Broker / WireGuard)
+has its own context and is out of scope here.
+
+```mermaid
+C4Context
+    title System Context (C4 Level 1) — HelixTerminator Secure Terminal Platform (Module A)
+
+    Person(dev, "Individual Developer", "member role — SSH/SFTP terminal, vault, snippets")
+    Person(eng, "Engineering Team Member", "member role — day-to-day SSH access, live collaboration")
+    Person(admin, "Org / Team Admin", "org_admin / team_admin — membership, hosts, policy, billing")
+    Person(auditor, "Compliance Auditor", "auditor role — read-only audit trail + compliance exports")
+    Person(root, "Platform Super Admin", "super_admin — cross-org break-glass, platform operations")
+    System_Ext(cicd, "CI/CD Pipeline", "api_user service account — automated SSH/SFTP/snippet calls")
+
+    System(platform, "HelixTerminator Platform", "Secure Terminal Platform (Module A): SSH/SFTP/vault/terminal/real-time collaboration, multi-tenant SaaS, 25 microservices")
+
+    System_Ext(idp, "Identity Provider", "Customer SAML 2.0 / OIDC SSO + SCIM 2.0, federated via auth.helixterminator.io")
+    System_Ext(targets, "SSH/SFTP Target Hosts", "Customer-owned Linux/Unix servers, cloud VMs, Kubernetes pods — reached over certificate-based SSH")
+    System_Ext(objstore, "Object Storage", "S3-compatible: session recordings, vault backups, WAL archives (us-east-1 primary, eu-west-1 DR per CD-6)")
+    System_Ext(notif, "Notification Channels", "SMTP relay, Slack, PagerDuty, generic outbound webhook")
+    System_Ext(billing, "Payments Processor", "Card/ACH processor — subscription billing, invoicing, usage metering")
+    System_Ext(helixtrack, "HelixTrack", "External work-item tracking system, bridged per §10.13")
+    System_Ext(registry, "Container Registries", "Docker Hub / Harbor / ECR — images for Container-Native SSH Sessions (§10.2)")
+
+    Rel(dev, platform, "Authenticates, opens SSH/SFTP sessions, manages vault items", "HTTPS/WSS")
+    Rel(eng, platform, "Collaborates on shared sessions, uses snippets", "HTTPS/WSS")
+    Rel(admin, platform, "Manages org/team/RBAC/hosts/billing", "HTTPS")
+    Rel(auditor, platform, "Reviews audit trail, compliance reports", "HTTPS, read-only")
+    Rel(root, platform, "Break-glass elevation, platform-wide operations", "HTTPS, time-boxed + two-person control")
+    Rel(cicd, platform, "Automated SSH commands, SFTP transfers", "REST API, JWT EdDSA-signed bearer token")
+
+    Rel(platform, idp, "Federated SSO login, SCIM provisioning/deprovisioning", "SAML 2.0 / OIDC, SCIM 2.0")
+    Rel(platform, targets, "SSH / SFTP / port-forward sessions via SSH Proxy Service", "SSH, certificate-based auth (§6.4)")
+    Rel(platform, objstore, "Writes/reads recordings, WAL archives, backups", "S3 API over TLS")
+    Rel(platform, notif, "Sends alerts, session-share invites, billing notices", "SMTP / HTTPS webhook")
+    Rel(platform, billing, "Subscription/usage sync, webhook events", "HTTPS, signed webhook")
+    Rel(platform, helixtrack, "Syncs work items / cross-references audit trail", "REST/gRPC bridge")
+    Rel(platform, registry, "Pulls container images for ephemeral session sandboxes", "OCI Distribution API")
+```
+
+**Reading the diagram:** every `Rel(platform, System_Ext, ...)` arrow crosses a zero-trust boundary
+(§6) and is therefore mTLS/TLS-terminated, rate-limited at the gateway (§2.5), and covered by the
+circuit-breaker + bulkhead matrix in §2.8. The five personas map 1:1 onto the six canonical RBAC
+roles from `CANONICAL_FACTS.md` CD-8 (`super_admin`, `org_admin`, `team_admin` folded into "Org /
+Team Admin" above, `member`, `auditor`, `api_user`).
+
+### 2.2.2 Container-Level Architecture (C4 Level 2)
+
+The diagram below is the container-level (C4 Level 2) decomposition — the API Gateway, the 25
+services from §3, and the two messaging backbones (Kafka, RabbitMQ) that sit inside the
+`platform` system box of §2.2.1.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -493,6 +551,63 @@ Per-service thresholds:
 | AI | 60s | 0.7 | 5 |
 | HelixTrack Bridge | 60s | 0.8 | 5 |
 | Billing | 30s | 0.4 | 3 |
+
+### Full Per-Service Failure-Mode & Resilience Matrix
+
+The six rows above are the historical illustrative set; the table below extends the same
+`digital.vasic.recovery` circuit-breaker + bulkhead discipline to **all 25 services** in §3,
+closing the DEEP-WORK gap tracked in `REMEDIATION_REGISTER.md` §4/§5 ("circuit-breaker/failure-mode
+coverage for all 25 services"). Upstream Dependencies are taken verbatim from the dependency graph
+in §2.9. Services are grouped into three resilience classes, each with a distinct retry/backoff and
+bulkhead policy appropriate to its call shape:
+
+- **Class A — synchronous CRUD** (stateless request/response, safe to retry): bounded exponential
+  backoff, moderate CB trip ratio, bulkhead sized as a per-pod concurrency semaphore via
+  `digital.vasic.concurrency/pkg/workpool`.
+- **Class B — long-lived stateful connections** (SSH/WebSocket tunnels): retries are **not**
+  applied to an established connection (re-sending SSH input/output is not idempotent — retry
+  scope is limited to the initial handshake); CB trips earlier (lower ratio, fewer probe requests)
+  because a stuck downstream directly holds a scarce connection slot; bulkhead is the connection
+  pool itself (§8.4 WebSocket Hub, §8.6 SSH Connection Pool).
+- **Class C — asynchronous / best-effort** (Kafka-mediated, fire-and-forget or leaf): no
+  synchronous circuit breaker on the calling path — backpressure and redelivery are handled by the
+  Kafka consumer group + DLQ (§5.6); "CB Trip Ratio" is marked N/A and bulkhead is expressed as
+  max concurrent consumer workers per pod.
+
+| Service | Class | Upstream Dependencies | Timeout | Retry / Backoff | CB Trip Ratio (min reqs) | CB Max Half-Open | Bulkhead (max concurrent / pod) |
+|---|---|---|---|---|---|---|---|
+| API Gateway | — (ingress) | all 25 downstream services | N/A (enforces per-downstream config above) | N/A | N/A | N/A | 10,000 in-flight requests/pod (Nginx Ingress + Gin) |
+| Auth | A | user, vault, pki, notification, audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 200 |
+| User | A | org, notification, audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 200 |
+| Vault | A | keychain, audit, pki | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 150 |
+| Host | A | vault, org, audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 200 |
+| SSH Proxy | B | auth, vault, host, terminal, audit, recording, pki, container-bridge | 30s (handshake) | 0 (established sessions never retried; handshake retried once) | 0.3 (min 5) | 2 | 5,000 pooled SSH conns/pod (§8.6, maxActive=20/tuple) |
+| Terminal | B | ssh-proxy, collab, recording, ai, audit | 30s (handshake) | 0 (WebSocket reconnect is client-driven, not server retry) | 0.3 (min 5) | 2 | 5,000 WebSocket conns/pod (§8.4) |
+| SFTP | B | ssh-proxy, vault, audit | 30s | 1 (transfer-init only; in-flight transfer not retried) | 0.3 (min 5) | 2 | 1,000 concurrent transfers/pod |
+| Port Forward | B | ssh-proxy, vault, audit | 30s | 1 (tunnel-init only) | 0.3 (min 5) | 2 | 500 concurrent tunnels/pod |
+| Snippet | A | audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 200 |
+| Keychain | A | audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 150 |
+| Workspace | A | user, org, audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 200 |
+| Collaboration | B | terminal, user, org, notification | 15s | 0 (presence/CRDT stream not retried; client resyncs) | 0.3 (min 5) | 2 | 5,000 concurrent participants/pod (shares Terminal Hub, §8.4) |
+| Notification | A | user, audit | 10s (external SMTP/webhook egress) | 3× exponential (250/500/1000ms + jitter) | 0.5 (min 10) | 3 | 300 |
+| Audit | C (leaf) | — (emits to Kafka only; consumes nothing synchronously) | N/A | Kafka producer `acks=all`, synchronous, fail-closed for privileged-op events (no silent drop) | N/A | N/A | 32 producer workers/pod, backed by §5.6 DLQ |
+| Analytics | C | Kafka consumer only (no synchronous upstream) | N/A | Kafka consumer-group redelivery, 3 attempts before DLQ (§5.6) | N/A | N/A | 50 partition-consumer workers/pod |
+| AI/Autocomplete | A | terminal, user, audit | 60s | 1 (LLM calls are not blindly retried — cost/latency) | 0.7 (min 20) | 5 | 100 (LLM-bound, lower fan-out than CRUD services) |
+| Session Recording | B | terminal, audit | 30s | 1 (segment upload only; active recording stream not retried) | 0.3 (min 5) | 2 | 2,000 concurrent active recordings/pod (object-storage write bound) |
+| PKI (Certificate Authority) | A | vault, audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 150 |
+| Organization/Team | A | user, auth, notification, audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 200 |
+| Billing | A | org, user, notification, audit | 30s | 0.4 (min 10) — no automatic retry against payment processor writes (avoid double-charge) | 0.4 (min 10) | 3 | 100 |
+| Configuration | A | audit | 5s | 3× exponential (100/200/400ms + 20% jitter) | 0.5 (min 10) | 3 | 200 |
+| Health/Monitoring | A | all services (health-check fan-out) | 2s | 0 (a slow health check is itself the signal; retrying masks it) | N/A (never trips — probes report, don't block traffic) | N/A | 500 (parallel probe fan-out) |
+| Container Registry Bridge | A | vault, org, audit | 15s (external registry egress) | 3× exponential (250/500/1000ms + jitter) | 0.5 (min 10) | 3 | 150 |
+| HelixTrack Bridge | A | user, org, audit | 60s | 3× exponential (500/1000/2000ms + jitter) | 0.8 (min 20) | 5 | 100 |
+
+**Bulkhead enforcement:** every Class A/B bulkhead is implemented as a bounded semaphore from
+`digital.vasic.concurrency/pkg/workpool` (mirrors the `Hub.pool` field in §8.4's `workpool.WorkPool`);
+requests beyond the bulkhead limit are queued up to `queue_depth = 2 × bulkhead` and then rejected
+with `503 Service Unavailable` (the same status the circuit breaker's open state returns, per §7.1),
+so callers cannot distinguish "downstream unhealthy" from "this pod is saturated" without inspecting
+the `Retry-After` header — both are transient-retry signals, which is the intended behaviour.
 
 ## 2.9 Full Service Dependency Graph
 
@@ -1703,6 +1818,41 @@ All PostgreSQL instances run **PostgreSQL 17.2** (per `CANONICAL_FACTS.md` CD-4)
 - **pgaudit v16** (query-level audit logging)
 - **pg_stat_statements** (query performance analysis)
 - Connection pooling via **PgBouncer 1.23** (transaction-mode pooling, max_client_conn=10000)
+
+### PostgreSQL High-Availability & Disaster-Recovery Topology
+
+Closes part of the DEEP-WORK gap tracked in `REMEDIATION_REGISTER.md` §4/§5 ("PostgreSQL DR/HA…
+absent in `01`") without re-authoring the runbook that already exists in `04_devops_infrastructure.md`.
+
+**Canonical DR runbook.** `04_devops_infrastructure.md` §8 (Disaster Recovery) is the **single
+source of truth** for DR *procedure* — RTO 30 min / RPO 5 min (§8.1), the `us-east-1` primary →
+`eu-west-1` DR region topology (§8.2, per `CANONICAL_FACTS.md` CD-6), continuous WAL-G archiving
+to S3 (§8.3), and the cross-region failover runbook + regular DR-exercise cadence (§8.6–§8.7).
+This section adds only the missing piece: the **per-service HA topology at the architecture
+level** for the 22 databases enumerated in the table above, expressed as two resilience tiers so
+each database's failover characteristics are explicit rather than assumed uniform.
+
+| Tier | Databases | Patroni Cluster Size | Synchronous Standbys | Local Async Standby | Cross-Region DR Replica | Local Failover SLA |
+|---|---|---|---|---|---|---|
+| **Tier 1 — Critical-path / compliance** | `helixterm_auth`, `helixterm_vault`, `helixterm_audit`, `helixterm_pki` | 5 nodes | 2 (different AZ each) | 1 | 1 async replica in `eu-west-1` | < 15s (RPO ≈ 0, synchronous quorum commit) |
+| **Tier 2 — Standard service databases** | remaining 18 databases (`helixterm_users`, `helixterm_hosts`, `helixterm_ssh_proxy`, `helixterm_terminal`, `helixterm_sftp`, `helixterm_port_forward`, `helixterm_snippets`, `helixterm_keychain`, `helixterm_workspaces`, `helixterm_collab`, `helixterm_notifications`, `helixterm_analytics`, `helixterm_ai`, `helixterm_recordings`, `helixterm_org`, `helixterm_billing`, `helixterm_config`, `helixterm_container_bridge`, `helixterm_helixtrack_bridge`) | 3 nodes | 1 | 1 | 1 async replica in `eu-west-1` | < 30s (matches platform-wide RTO/RPO in doc 04 §8.1) |
+
+Each Patroni cluster runs as a Kubernetes `StatefulSet` on Kubernetes 1.31 (per `CANONICAL_FACTS.md`
+CD-4), coordinated via an `etcd` quorum for distributed-consensus leader election, and matches the
+`pg-<service>.helixterm-prod.svc` in-cluster Service naming already used in the database table
+above — Patroni's own health-check + automatic-promotion loop is what delivers the "Local Failover
+SLA" column; the *platform-level* 30-minute RTO in doc 04 §8.1 is the outer bound that also covers
+full-region loss, not just single-primary loss.
+
+**Open cross-doc reconciliation (flagged, not silently resolved — Constitution §11.4.6).** Doc 04
+§8.2 currently frames the same database estate as managed AWS RDS Multi-AZ + cross-region read
+replica; this section frames it as self-hosted Patroni-on-Kubernetes. Both are internally
+consistent, valid HA mechanisms and neither doc claims the other is wrong — but the two substrates
+are **not yet reconciled into one explicit decision** and are tracked as an open DEEP-WORK item in
+`REMEDIATION_REGISTER.md` §4 ("PostgreSQL DR + HA… → **01, 04**"). Until that decision lands, treat
+the RTO/RPO targets in doc 04 §8.1 as authoritative regardless of which substrate is ultimately
+chosen; the per-tier topology above is this document's architecture-level description of the
+Patroni-based alternative, not a claim that the reconciliation is complete.
 
 ## 4.2 Migration Strategy
 
@@ -4029,6 +4179,60 @@ X-RateLimit-Remaining: 987
 X-RateLimit-Reset: 1751118060
 X-RateLimit-Policy: "1000;w=60"
 ```
+
+### API Versioning & Deprecation Strategy
+
+Closes the DEEP-WORK gap tracked in `REMEDIATION_REGISTER.md` §4/§5 ("API-versioning strategy" for
+`01_core_architecture`).
+
+**Versioning scheme (primary: URI; secondary: header).**
+- **URI versioning is authoritative** — every REST resource is already rooted at `/api/v1/...`
+  (see Base URL above); a breaking change ships as `/api/v2/...` served alongside `/api/v1/...`
+  for the entire deprecation window below. WebSocket endpoints version identically
+  (`wss://api.helixterm.io/ws/v1/...` → `/ws/v2/...`).
+- **Header versioning is the negotiation override**, for clients that cannot change their base
+  URL immediately: `Accept: application/vnd.helixterm.v1+json` (or `v2`). When both a URI version
+  and an `Accept` media-type version are present and they disagree, the request is rejected with
+  `400 Bad Request` (`error.code = "VERSION_CONFLICT"`) — silently preferring one is a
+  no-guessing violation (Constitution §11.4.6); the client must be unambiguous.
+- gRPC internal APIs (§7.17) version via the protobuf package path
+  (`helixterm.services.auth.v1`, `.v2`) per standard protobuf-versioning practice, independent of
+  the public REST/WS scheme above (internal-only, no external deprecation window required).
+
+**Deprecation window + sunset headers.** A version enters `Deprecated` state the moment its
+successor ships and stays fully functional for a **minimum 12-month deprecation window** before
+`Sunset`. During that window every response on the deprecated version carries:
+
+```
+Deprecation: true
+Sunset: Wed, 30 Jun 2027 00:00:00 GMT
+Link: <https://api.helixterm.io/api/v2/hosts>; rel="successor-version"
+Link: <https://docs.helixterminator.io/migration/v1-to-v2>; rel="deprecation"
+```
+
+(header names/semantics per IETF `draft-ietf-httpapi-deprecation-header` / RFC 8594 `Sunset`). At
+`Sunset`, the version returns `410 Gone` with a body pointing to the successor and migration guide
+— it is never silently removed (removal without warning would itself be a §11.4.6 bluff-adjacent
+surprise for integrators). CI/CD (§10.14) blocks any PR that deletes a versioned route before its
+recorded `Sunset` date has passed.
+
+**Backward-compatibility policy within a major version.** Additive-only: new optional request
+fields, new optional response fields, new endpoints, and new enum values are non-breaking and ship
+without a version bump (clients MUST ignore unknown fields — enforced by contract tests below).
+Breaking changes — field removal, type change, required-field addition, enum value removal,
+semantic change to an existing field, auth-scheme change — REQUIRE a major version bump. Exactly
+**two major versions are supported concurrently** (current `N` + previous `N-1`); a third
+concurrent version is not permitted (forces the deprecation window above to actually be enforced
+rather than accreting indefinitely).
+
+**Contract-test tie-in.** Every version of every public endpoint carries a Pact consumer-driven
+contract (see `03_testing_strategy.md`'s Pact coverage, extended per its own DEEP-WORK item to
+Vault/Host-Group/Recording/SCIM-SAML) recorded in the Pact Broker with a matching
+`{service}-{version}` tag. The versioning gate in CI (`helixqa` §10.12 + `constitution.yml`
+§10.14) runs `pact-broker can-i-deploy` before any deploy: a service cannot ship a change that
+breaks a still-supported consumer contract without either (a) bumping the major version per the
+policy above, or (b) an explicit, reviewed contract-migration commit. This is the mechanical
+enforcement that makes "additive-only" a verified property rather than a convention.
 
 ## 7.2 Auth Service Endpoints
 

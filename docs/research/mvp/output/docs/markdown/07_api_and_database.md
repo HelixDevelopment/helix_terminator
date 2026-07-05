@@ -1963,6 +1963,217 @@ Valid permissions: `read`, `write`, `admin`.
 
 ---
 
+### GET /api/v1/vaults/{vaultId}/items
+
+List item metadata within a vault (individual-secret surface — distinct from the opaque bulk `/sync`
+endpoint above, which is the client's delta-sync transport). Item **content** (`encrypted_data`, `iv`) is
+always end-to-end encrypted; the server never decrypts it and this endpoint never returns plaintext,
+matching the zero-knowledge posture (client-side AES-256-GCM, Argon2id-derived keys, §4 intro).
+
+**Authentication:** Bearer token required; requires vault `read` permission
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `item_type` | string | — | Filter by `vault_items.item_type` |
+| `cursor` / `limit` | string / integer | — / 25 | Pagination |
+
+**Success Response — 200 OK:**
+```json
+{
+  "data": [
+    {
+      "id": "item-550e8400-0000-0000-0000-aabbccddeeff",
+      "vault_id": "vault-550e8400-0000-0000-0000-aabbccddeeff",
+      "item_type": "password",
+      "version": 5,
+      "checksum": "sha256:aabbccdd...",
+      "created_by": "550e8400-e29b-41d4-a716-446655440000",
+      "updated_by": "660e8400-e29b-41d4-a716-556655440000",
+      "created_at": "2026-01-15T09:00:00Z",
+      "updated_at": "2026-06-20T10:00:00Z"
+    }
+  ],
+  "pagination": { "total_count": 247, "has_next": true }
+}
+```
+`encrypted_data` and `iv` are intentionally omitted from the list response (bandwidth; clients fetch full
+item content via the endpoint below only for the item currently being opened).
+
+---
+
+### GET /api/v1/vaults/{vaultId}/items/{itemId}
+
+Fetch a single item's full encrypted payload — the item-level counterpart to the bulk `/sync` transport.
+
+**Authentication:** Bearer token required; requires vault `read` permission
+
+**Success Response — 200 OK:**
+```json
+{
+  "id": "item-550e8400-0000-0000-0000-aabbccddeeff",
+  "vault_id": "vault-550e8400-0000-0000-0000-aabbccddeeff",
+  "item_type": "password",
+  "encrypted_data": "base64-encoded-encrypted-payload",
+  "iv": "base64-encoded-iv",
+  "checksum": "sha256:aabbccdd...",
+  "version": 5,
+  "created_at": "2026-01-15T09:00:00Z",
+  "updated_at": "2026-06-20T10:00:00Z"
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+|---|---|
+| 403 | User is not a member of this vault, or lacks `read` permission |
+| 404 | Item not found or soft-deleted |
+
+---
+
+### DELETE /api/v1/vaults/{vaultId}/items/{itemId}
+
+Soft-delete a single vault item (sets `vault_items.is_deleted = TRUE`, `deleted_at = NOW()`) without
+requiring a full `/sync` round-trip.
+
+**Authentication:** Bearer token required; requires vault `write` permission
+
+**Success Response — 204 No Content**
+
+---
+
+### GET /api/v1/vaults/{vaultId}/items/{itemId}/versions
+
+List an item's version history (`vault_item_versions`) — used for conflict resolution and "restore a
+previous version" UI.
+
+**Authentication:** Bearer token required; requires vault `read` permission
+
+**Success Response — 200 OK:**
+```json
+{
+  "data": [
+    {
+      "version": 5,
+      "encrypted_data": "base64-encoded-encrypted-payload",
+      "iv": "base64-encoded-iv",
+      "checksum": "sha256:aabbccdd...",
+      "changed_by": "550e8400-e29b-41d4-a716-446655440000",
+      "created_at": "2026-06-20T10:00:00Z"
+    }
+  ],
+  "pagination": { "total_count": 5, "has_next": false }
+}
+```
+
+---
+
+### GET /api/v1/vaults/{vaultId}/items/{itemId}/audit
+
+Per-item audit trail — reads `vault_audit_events` filtered by `item_id` (that table already carries an
+`item_id` column, §17.2; this endpoint is the REST surface the schema was missing). Distinct from the
+org-wide `GET /api/v1/audit/events` (§13) which cannot be filtered to a single vault item efficiently at
+that layer.
+
+**Authentication:** Bearer token required; requires vault `admin` permission
+
+**Success Response — 200 OK:**
+```json
+{
+  "data": [
+    {
+      "event_type": "item.viewed",
+      "user_id": "660e8400-e29b-41d4-a716-556655440000",
+      "ip_address": "203.0.113.42",
+      "occurred_at": "2026-06-28T17:40:00Z"
+    },
+    {
+      "event_type": "item.updated",
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "ip_address": "203.0.113.10",
+      "occurred_at": "2026-06-20T10:00:00Z"
+    }
+  ],
+  "pagination": { "total_count": 12, "has_next": false }
+}
+```
+
+---
+
+### POST /api/v1/vaults/{vaultId}/rewrap
+
+**Key rotation / re-wrap after member removal.** Rotating a vault's symmetric key, or re-keying it after a
+member is removed (so the removed member's last-known copy of the key can no longer decrypt items synced
+after their removal), MUST be **client-driven end-to-end** — per the zero-knowledge posture (§4 intro),
+the server never generates, sees, or re-wraps the plaintext vault key itself. This endpoint only accepts
+and atomically installs a client-prepared replacement wrap set; it is the same trust model as
+`POST /api/v1/vaults/{vaultId}/members` (`encrypted_vault_key` is opaque to the server there too).
+
+**Client-side flow (client, not server, performs steps 1–3):**
+1. Generate a new vault symmetric key locally.
+2. Re-encrypt every vault item with the new key (or lazily re-encrypt on next write — implementation
+   choice left to the client; the server does not require all items re-encrypted atomically with the key
+   rotation).
+3. For every **remaining** member (fetched via `GET /api/v1/vaults/{vaultId}/members`), wrap the new key
+   with that member's public key, producing one `encrypted_vault_key` blob per member.
+
+**Authentication:** Bearer token required; requires vault `admin` permission (or must be vault owner for a
+post-removal rotation)
+
+**Request Body:**
+```json
+{
+  "reason": "member_removed",
+  "removed_user_id": "770e8400-e29b-41d4-a716-666655440000",
+  "rewrapped_keys": [
+    {
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "encrypted_vault_key": "base64-encoded-vault-key-encrypted-for-this-member"
+    },
+    {
+      "user_id": "660e8400-e29b-41d4-a716-556655440000",
+      "encrypted_vault_key": "base64-encoded-vault-key-encrypted-for-this-member"
+    }
+  ]
+}
+```
+`reason`: `member_removed`, `scheduled_rotation`, or `suspected_compromise`.
+
+**Server-side guarantee:** `rewrapped_keys` must include an entry for **every** current vault member with
+`permission != 'read'`-excluded logic aside — i.e. every row currently in `vault_members` for this vault —
+or the request is rejected with `422` (incomplete rewrap set; a partial rewrap would silently strand some
+members' access). The update is applied in a single transaction: every `vault_members.encrypted_vault_key`
+is replaced, `vaults.version` is incremented, and a `vault.key_rotated` event is written to
+`vault_audit_events` (fail-closed per §17.10.1's pattern, applied here to the vault-level privileged-op
+audit write).
+
+**Success Response — 200 OK:**
+```json
+{
+  "vault_id": "vault-550e8400-0000-0000-0000-aabbccddeeff",
+  "version": 8,
+  "rewrapped_member_count": 4,
+  "rotated_at": "2026-06-28T17:45:00Z"
+}
+```
+
+**Error Responses:**
+
+| Status | Condition |
+|---|---|
+| 403 | Not vault owner/admin |
+| 422 | `rewrapped_keys` missing an entry for a current member (incomplete rewrap) |
+
+**Known limitation (documented, not silently glossed over):** re-wrapping the vault key does not
+retroactively invalidate a removed member's **already-downloaded** local copy of vault items encrypted
+before their removal — client-side E2E encryption means the server has no mechanism to remotely wipe data
+already decrypted and cached on a former member's device. This is the same disclosed limitation present in
+comparable zero-knowledge password managers; mitigation is procedural (rotate promptly on removal, treat
+any item a departing member had access to as potentially exposed, per org offboarding policy).
+
+---
+
 ## 5. Host Service REST API
 
 Base path: `/api/v1/hosts`, `/api/v1/groups`  
@@ -2650,6 +2861,28 @@ Broadcast input to multiple sessions simultaneously (requires org_admin permissi
 
 **Authentication:** Bearer token required; requires org `org_admin` role
 
+**Authorization + blast-radius gate.** Multi-session broadcast is the highest-blast-radius terminal
+capability in the API (one command, many hosts, `org_admin`-only by design). In addition to the role
+check:
+
+- Every `target_session_ids` entry MUST resolve to a session whose `org_id` equals the caller's current
+  org (§17.0 RLS enforces this at the database layer even if application code omitted the filter); a
+  cross-tenant session ID in the list is dropped from the batch and reported in `results` with
+  `status: "denied_cross_tenant"`, not silently skipped.
+- `target_session_ids.length` is capped by
+  `organizations.settings.broadcast_max_sessions` (default `25`); exceeding it returns `422` before any
+  session receives input (all-or-nothing — a broadcast is never partially dispatched because the request
+  itself was oversized).
+- The broadcast writes a fail-closed `session.broadcast_executed` audit event (§17.10.1 pattern,
+  synchronous commit) recording the full `target_session_ids` list and the exact `command` bytes
+  **before** dispatch to any session begins — an incident review can always reconstruct exactly what was
+  about to be sent even if delivery to some sessions subsequently failed or timed out.
+- `require_confirmation: true` causes the server to hold the command in a `pending_confirmation` state and
+  return `202 Accepted` with a `confirmation_token`; the actual send only happens once the caller
+  (or a second approver, for two-person-control-configured orgs — see `05_security_zero_trust`'s
+  break-glass/JIT controls) calls back with that token, giving a human a chance to abort an oversized or
+  mistaken broadcast before it reaches any host.
+
 **Request Body:**
 ```json
 {
@@ -2673,6 +2906,13 @@ Broadcast input to multiple sessions simultaneously (requires org_admin permissi
   ]
 }
 ```
+
+**Error Responses:**
+
+| Status | Condition |
+|---|---|
+| 403 | Caller lacks org `org_admin` role |
+| 422 | `target_session_ids.length` exceeds `organizations.settings.broadcast_max_sessions` |
 
 ---
 
@@ -3017,6 +3257,21 @@ Base path: `/api/v1/port-forwards`
 Service: `portforward-service` (port 8088 internal)  
 Database: `session_db` (port forwarding tables)
 
+**Authorization & blast-radius gating.** A `dynamic` rule (SOCKS5 proxy) is the highest-blast-radius port
+forward type — it turns the tunnel into a general-purpose proxy for arbitrary destinations reachable from
+the target host's network, not a single fixed `remote_address:remote_port`. Accordingly:
+
+- Creating (`POST`) or activating (`POST .../start`) a `dynamic` rule requires `write` permission on the
+  target host's vault **and** the org-level policy flag `organizations.settings.allow_dynamic_port_forward`
+  (default `false`) — a `local`/`remote` rule requires only ordinary `write` permission.
+- Every `start`/`stop` of a `dynamic` rule writes a fail-closed `port_forward.dynamic_started` /
+  `port_forward.dynamic_stopped` audit event (§17.10.1 pattern) recording the target host and the
+  requesting user, independent of the ordinary `port_forward.status` transition already implied by
+  `port_forward_connections`.
+- `organizations.settings.allow_dynamic_port_forward = false` causes both the create and the start call to
+  return `403` with `code: "dynamic_forwarding_disabled_by_org_policy"`, rather than silently downgrading
+  the rule to a different `type`.
+
 ---
 
 ### GET /api/v1/port-forwards
@@ -3060,7 +3315,9 @@ List all port forwarding rules.
 
 Create a port forwarding rule.
 
-**Authentication:** Bearer token required
+**Authentication:** Bearer token required; `write` permission on the target host's vault. Creating a
+`type: dynamic` rule additionally requires `organizations.settings.allow_dynamic_port_forward = true`
+(see "Authorization & blast-radius gating" above).
 
 **Request Body:**
 ```json
@@ -3081,9 +3338,15 @@ Create a port forwarding rule.
 `type` values:
 - `local`: Forward `local_port` on client to `remote_address:remote_port` on server
 - `remote`: Forward `remote_port` on server to `local_address:local_port` on client  
-- `dynamic`: SOCKS5 proxy on `local_port`
+- `dynamic`: SOCKS5 proxy on `local_port` — gated, see above
 
 **Success Response — 201 Created:** Full rule object.
+
+**Error Responses:**
+
+| Status | Condition |
+|---|---|
+| 403 | `type: dynamic` requested but `allow_dynamic_port_forward` is `false` for this org |
 
 ---
 
@@ -3123,7 +3386,15 @@ Delete a port forwarding rule. Rule is automatically stopped first.
 
 Activate a port forwarding rule (establishes SSH tunnel).
 
-**Authentication:** Bearer token required
+**Authentication:** Bearer token required; for a `type: dynamic` rule, re-checked against
+`organizations.settings.allow_dynamic_port_forward` at activation time (not just at rule-creation time — an
+org may disable dynamic forwarding after the rule was created).
+
+**Error Responses:**
+
+| Status | Condition |
+|---|---|
+| 403 | Rule is `type: dynamic` and `allow_dynamic_port_forward` is now `false` for this org |
 
 **Success Response — 200 OK:**
 ```json
@@ -3480,7 +3751,9 @@ Create a new snippet.
 }
 ```
 
-Parameters in `content` use `{{parameter_name}}` syntax for variable substitution.
+Parameters in `content` use `{{parameter_name}}` syntax for variable substitution. **This is never raw
+shell string interpolation** — see "Parameter substitution safety" under the `execute` endpoint below for
+the exact mechanism that prevents a parameter value from being interpreted as shell metacharacters.
 
 **Success Response — 201 Created:** Full snippet object.
 
@@ -3542,6 +3815,40 @@ Execute a snippet on one or more hosts.
 
 `execution_mode`: `parallel` (all hosts simultaneously) or `sequential` (one at a time).
 
+**Parameter substitution safety.** `{{parameter_name}}` tokens in `content` are **never** resolved via raw
+string interpolation into a shell command line — that would let a parameter value such as
+`/var; rm -rf / #` execute as a second, attacker-controlled command. The snippet execution engine instead:
+
+1. Parses `content` into an argument-vector template at snippet-creation time (each `{{name}}` token
+   records its position and the parameter's declared `type`: `string`, `path`, `integer`, `enum`).
+2. At execution time, validates every supplied parameter value against its declared `type` and (if
+   present) `allowed_values` / `pattern` constraint — a value containing a shell metacharacter
+   (`` ; | & $ ` \ < > ( ) newline ``) is **rejected outright** for `type: path` or `type: string`
+   parameters unless the parameter is explicitly declared `type: raw_unsafe` (an opt-in escape hatch
+   requiring vault `admin` permission on the owning vault, itself flagged in `snippet_execution_results`).
+3. Builds the remote command as an **argument vector** (`exec.Command(shell, "-c", template, "--",
+   arg1, arg2, …)` with parameters passed as positional shell arguments, not string-concatenated into the
+   template) so the underlying `/bin/sh -c` invocation never sees attacker-controlled bytes inside the
+   command-template portion of the string — equivalent to parameterized-query binding for shell exec. For
+   the common case, values are additionally single-quote-escaped (`'` → `'\''`) as a second, defense-in-depth
+   layer before substitution, so a snippet author who intentionally still uses `{{param}}` inline inside a
+   larger shell pipeline (rather than a trailing positional argument) is also protected.
+4. Rejects a template whose substitution would change the number of shell tokens the template author wrote
+   (e.g. a value containing an unescaped, unquoted space expanding into two arguments where one was
+   expected) unless the parameter is declared `type: path` with `quote: true` (the default for `path`).
+
+**Authorization + blast-radius gate.** Multi-host execution is a privileged, high-blast-radius action:
+
+- `host_ids.length > 1` requires the caller to hold `write` permission on **every** targeted host's vault
+  (not merely the snippet's own vault) — checked per-host, not just once for the snippet.
+- An org-level policy setting (`organizations.settings.snippet_max_broadcast_hosts`, default `10`) caps
+  `host_ids.length`; exceeding it returns `422` with the configured limit, unless the caller holds
+  `org_admin`.
+- Every execution writes a fail-closed `snippet.executed` audit event (§17.10.1 pattern) **before**
+  dispatch begins, recording the full `host_ids` list, `execution_mode`, and the resolved (post-validation,
+  pre-substitution) parameter values — so a blast-radius incident is fully reconstructable even if the
+  execution itself later fails or times out.
+
 **Success Response — 202 Accepted:**
 ```json
 {
@@ -3552,6 +3859,14 @@ Execute a snippet on one or more hosts.
   "started_at": "2026-06-28T17:40:00Z"
 }
 ```
+
+**Error Responses:**
+
+| Status | Condition |
+|---|---|
+| 400 | Parameter value rejected (shell metacharacter in a non-`raw_unsafe` parameter) |
+| 403 | Caller lacks `write` permission on one or more targeted hosts' vault |
+| 422 | `host_ids.length` exceeds `snippet_max_broadcast_hosts` and caller is not `org_admin` |
 
 Poll `GET /api/v1/snippets/executions/{executionId}` for results.
 
@@ -4313,6 +4628,51 @@ WebSocket close codes:
 | 4004 | Server error |
 | 4005 | Rate limit exceeded |
 | 4006 | Idle timeout (5 minutes of no input) |
+| 4007 | Reconnect window expired (see below) |
+
+**Reconnect / resume semantics.** A dropped WebSocket (client network blip, load balancer idle timeout,
+mobile app backgrounding) MUST NOT discard in-flight terminal output or force the SSH session itself to
+terminate — the underlying SSH connection to the host and the WebSocket transport to the client are
+independent lifecycles.
+
+- **Resume token.** The initial `state` message (and every subsequent one) includes a `resume_token`:
+  ```json
+  {"type": "state", "status": "connected", "host": "prod-web-01", "latency_ms": 12, "resume_token": "rt_ws_v1_xxxxxxxxxxxxxxxxxxxx"}
+  ```
+  The client persists the most recent `resume_token` (and the `last_event_id` below) in memory across a
+  disconnect.
+- **Last-event-id.** Every `output` frame carries a monotonically increasing `event_id` (backed by
+  `session_events.id`, a `BIGSERIAL`, §17.5):
+  ```json
+  {"type": "output", "data": "dG90YWwgNDgK...", "event_id": 184213}
+  ```
+  The client tracks the highest `event_id` it has successfully rendered.
+- **Reconnect request.** On reconnect, the client opens a new WebSocket to the same
+  `wss://proxy.helixterminator.io/api/v1/sessions/{sessionId}/terminal` URL and sends, as its first
+  message instead of (or in addition to) `auth`:
+  ```json
+  {"type": "resume", "resume_token": "rt_ws_v1_xxxxxxxxxxxxxxxxxxxx", "last_event_id": 184213}
+  ```
+- **Server-side resume window.** The proxy node holds the SSH connection and a bounded ring buffer of
+  recent `session_events` (default: 5 minutes or 10,000 events, whichever is smaller — configurable per
+  org) open for a **grace period** (default 60 seconds, `session:{sessionId}:state` TTL-refreshed per
+  §18.1) after the WebSocket drops, keyed by `resume_token`. A `resume` request within the grace period
+  and with a `resume_token` matching the held session:
+  1. Re-authenticates the token (same validity rules as `auth`).
+  2. **Output replay:** streams every buffered `output` event with `event_id > last_event_id` in order,
+     each still tagged with its original `event_id`, before resuming live output — the client never
+     misses or duplicates a byte of terminal output across the gap.
+  3. Replies with a fresh `state` message (new `resume_token`, same underlying SSH session) once replay
+     completes.
+- **Grace period expiry:** if no `resume` arrives within the grace period, the proxy tears down the
+  underlying SSH connection and the ring buffer, exactly as today (close code `4007` is sent to any late
+  `resume` attempt, distinguishing "your reconnect was too slow" from `4002`/`4003`). A `resume` with an
+  unrecognized/expired `resume_token` MUST fall back to the normal `POST /api/v1/sessions/ssh` new-session
+  flow — it is never treated as an implicit new session under the old session's identity (that would let a
+  stale/leaked `resume_token` silently attach a new client to someone else's session).
+- **`recording_enabled` sessions:** replayed events are also fed to the same recording pipeline exactly
+  once (deduplicated by `event_id`), so a reconnect never produces a truncated or duplicated
+  `session_recordings` artifact.
 
 ---
 
@@ -5184,11 +5544,11 @@ message ExportEventsResponse {
 
 Each microservice owns its own PostgreSQL 17.2 database. In production, each runs on a dedicated cluster or schema. In development, all schemas live in a single PostgreSQL instance with separate databases.
 
-> **DEFERRED (next increment):** Multi-tenant isolation below is **app-layer `WHERE org_id = …` only** — no
-> table in §17 has `ROW LEVEL SECURITY` enabled or a `CREATE POLICY` defined. A missing/incorrect `WHERE`
-> clause in application code is a cross-tenant data leak (IDOR) today; do not read the schemas below as
-> DB-enforced isolation. Adding RLS policies (mirroring the intended `audit_events` pattern) to every
-> multi-tenant table in §17 is deferred to the next increment.
+> **RESOLVED (this increment):** Multi-tenant isolation is no longer app-layer `WHERE org_id = …` only.
+> Every multi-tenant table in §17 now carries `ROW LEVEL SECURITY` + a `CREATE POLICY` — see **§17.0** for
+> the mandatory pattern, the session-variable wiring, and the full per-database policy enumeration. A
+> missing/incorrect `WHERE` clause in application code is now a defense-in-depth gap, not a full IDOR: the
+> database itself refuses cross-tenant rows even if the application forgets the filter.
 >
 > **DEFERRED (next increment):** No backup/restore or Point-In-Time-Recovery (PITR) procedure is specified
 > for any of the per-service PostgreSQL databases below (or for Redis in §18). Authoring RPO/RTO targets
@@ -5202,6 +5562,592 @@ Each microservice owns its own PostgreSQL 17.2 database. In production, each run
 - All `ENUM`-like status columns use `VARCHAR` with `CHECK` constraints (easier migrations than SQL ENUMs).
 - `JSONB` for flexible metadata fields with GIN indexes.
 - `BRIN` indexes on all `created_at` / `occurred_at` for append-heavy tables.
+
+---
+
+### 17.0 Row-Level Security (RLS) — Mandatory On Every Multi-Tenant Table
+
+Every table in §17 that carries tenant-scoping data — directly via an `org_id` column, indirectly via a
+same-database parent (e.g. `vault_id → vaults.org_id`), or per-user via `user_id` where a row is never
+org-partitioned (a user can belong to multiple orgs, §17.9) — is protected by PostgreSQL **Row Level
+Security** in addition to (never instead of) the application-layer `WHERE` clause. RLS is defense in
+depth: a missing/incorrect `WHERE org_id = …` in application code today is a cross-tenant IDOR; after this
+section, the same bug returns zero rows because the database itself refuses them.
+
+#### 17.0.1 Session-variable convention
+
+Two session variables carry request-scoped tenant/identity context, set **per transaction** (never
+per-session) to avoid leaking one tenant's context onto the next request when the connection is reused
+by a pool (PgBouncer transaction-pooling mode, or a Go `pgxpool` connection returned to the pool between
+requests):
+
+| Variable | Set by | Scopes |
+|---|---|---|
+| `app.current_org` | Every request handler that operates within an organization | Tables with `org_id` (direct or via same-DB join) |
+| `app.current_user_id` | Every authenticated request handler | `auth_db` tables that are not org-partitioned (§17.0.4) |
+
+Both are read inside policies via `current_setting('app.<name>', true)` — the second argument (`true`,
+"missing_ok") makes an **unset** variable evaluate to `NULL` instead of raising an error. `NULL = anything`
+is `NULL` (never `TRUE`) in a `USING`/`WITH CHECK` expression, so a connection that never set the session
+variable — the exact failure mode of a forgotten application-layer filter, or of code that reached the
+database outside the mandated wrapper below — sees **zero rows**, not all rows. This is the fail-closed
+default: RLS degrades a missing tenant context from "cross-tenant leak" to "empty result set."
+
+#### 17.0.2 Connection-checkout wiring (Go / pgx)
+
+`SET LOCAL` only takes effect inside a transaction and automatically resets at `COMMIT`/`ROLLBACK` —
+this is what makes it safe under transaction-pooling (a session-level bare `SET` would otherwise persist
+on the pooled physical connection and leak into the next, unrelated request). Every RLS-scoped query MUST
+run through this wrapper; a `go vet`-based custom analyzer (`internal/dbctx/lint`) flags any direct
+`pool.Query`/`pool.Exec` call against an RLS-protected database package that bypasses it.
+
+```go
+// internal/dbctx/tenant.go
+package dbctx
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// WithOrgScope runs fn inside a transaction with app.current_org set to orgID
+// for the lifetime of that transaction only (SET LOCAL). Commits on success,
+// rolls back (and therefore discards the session variable) on any error.
+func WithOrgScope(ctx context.Context, pool *pgxpool.Pool, orgID uuid.UUID, fn func(pgx.Tx) error) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx) // no-op once committed
+
+	if _, err := tx.Exec(ctx, "SELECT set_config('app.current_org', $1, true)", orgID.String()); err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// WithUserScope is the self-scoped equivalent for auth_db tables (§17.0.4).
+func WithUserScope(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, fn func(pgx.Tx) error) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, "SELECT set_config('app.current_user_id', $1, true)", userID.String()); err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+```
+
+`set_config(name, value, is_local=true)` is used instead of raw `SET LOCAL app.current_org = $1` because
+`SET` does not accept a bind parameter in the pgx simple/extended protocol; `set_config` is a normal SQL
+function call and accepts one safely (no string-formatting, no injection surface).
+
+#### 17.0.3 `FORCE ROW LEVEL SECURITY` — why it is mandatory, not optional
+
+By default PostgreSQL RLS does **not** apply to the table owner. Application services connect using the
+same role that owns the table via migrations (e.g. `svc_vault_rw` owns and queries `vault_db`), so without
+`FORCE ROW LEVEL SECURITY` the policy would be silently bypassed for exactly the connection that matters —
+`ENABLE ROW LEVEL SECURITY` alone would only protect against a *different*, non-owning role, which is not
+how these services are deployed. Every `CREATE POLICY` in this section is therefore always paired with:
+
+```sql
+ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;
+ALTER TABLE <table> FORCE ROW LEVEL SECURITY;
+```
+
+Migrations themselves run under a separate, non-request-serving role (`migrator`) that is never used by
+request-handling code, so schema changes are unaffected by `FORCE`.
+
+#### 17.0.4 Two scoping modes + the narrow `BYPASSRLS` exception
+
+- **ORG-SCOPED** (`app.current_org`) — the default for every table below that carries `org_id`, directly
+  or via a same-database parent join. Cross-**database** joins do not exist in this database-per-service
+  topology (§17 intro), so tables such as `hosts`, `ssh_keys`, `snippets`, `ssh_sessions` carry a
+  **denormalized** `org_id` column populated at row-creation time from the vault-membership check already
+  performed at the API layer (§4, §5) — RLS treats that denormalized column as authoritative within its
+  own database.
+- **SELF-SCOPED** (`app.current_user_id`) — `auth_db`'s user-owned tables (`users`, `user_sessions`,
+  `refresh_tokens`, `device_tokens`, the three `mfa_*` tables, `login_history`, `password_history`,
+  `sso_identities`) have no `org_id` at all, because a user can belong to multiple organizations
+  (`org_db.org_members`, a *different* database) — there is no single tenant to scope by. These are
+  self-only: a row is visible only to the user who owns it.
+- **`BYPASSRLS`** — granted to exactly three narrowly-scoped, single-purpose service roles, each audited
+  (every statement they execute is logged to `audit_events` with `source_service` set to the role name),
+  never used by a general request-handling connection pool:
+
+  | Role | Sole purpose | Grants |
+  |---|---|---|
+  | `svc_auth_authmw` | JWT-blocklist check on every authenticated request, **before** tenant/user context is known | `SELECT` on `jwt_blocklist` only |
+  | `svc_auth_admin_ro` | Cross-user directory reads for `org_admin`/`auditor` RBAC-verified requests (the caller's role is checked in the API handler **before** this connection is ever opened) | `SELECT` on `auth_db` tables only |
+  | `svc_audit_writer` | Cross-tenant `INSERT` into `audit_events` from every service (§17.10.1) | `INSERT` on `audit_events` only |
+
+  An un-enumerated or un-audited `BYPASSRLS` grant is a release blocker; the enforcement test in §17.0.6
+  asserts the live role list matches exactly this table.
+
+#### 17.0.5 Worked patterns
+
+**Direct (mirrors the `audit_events` pattern, §17.10):**
+
+```sql
+ALTER TABLE vaults ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vaults FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY vaults_org_isolation ON vaults
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+```
+
+**Indirect, same-database join** (a child table with no `org_id` of its own — worked example
+`vault_items`, scoped through its parent `vaults` row, both tables living in `vault_db`):
+
+```sql
+ALTER TABLE vault_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vault_items FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY vault_items_org_isolation ON vault_items
+  USING (vault_id IN (
+    SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid
+  ))
+  WITH CHECK (vault_id IN (
+    SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid
+  ));
+```
+
+**Self-scoped** (worked example `users`; `BYPASSRLS` roles per §17.0.4 read across users when their own
+independent RBAC check has already passed):
+
+```sql
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY users_self_only ON users
+  USING (id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (id = current_setting('app.current_user_id', true)::uuid);
+```
+
+#### 17.0.6 Enforcement-test approach
+
+Every service ships `internal/db/<service>/rls_test.go`, run as a post-build DB-integration test
+(§11.4.4(b) layer 3, real PostgreSQL 17.2 in a disposable Testcontainer, never mocked per §11.4.27):
+
+1. **Cross-tenant denial:** connect as the service's own request role (never a superuser), seed one row
+   under org **A** and one under org **B**, call `WithOrgScope(ctx, pool, orgA, …)`, `SELECT` org B's row
+   → assert **0 rows**; `UPDATE`/`DELETE` org B's row → assert **0 rows affected**.
+2. **Fail-closed on missing context:** run the same `SELECT` against a transaction that never called
+   `WithOrgScope` at all (the exact shape of a bug that forgot to wire the tenant context) → assert **0
+   rows**, proving the fail-closed default from §17.0.1, not merely that org B is denied.
+3. **Owner-role bypass proof:** run test 1 while connected as the table-owning migration role directly
+   (not through the request role) → still assert **0 rows** — proves `FORCE ROW LEVEL SECURITY` is
+   actually wired, not merely `ENABLE`.
+4. **`BYPASSRLS` roster proof:** `SELECT rolname FROM pg_roles WHERE rolbypassrls` → assert the result set
+   is **exactly** the three roles in §17.0.4's table — no more, no fewer.
+
+Paired §1.1 meta-test mutation: comment out the `FORCE ROW LEVEL SECURITY` line for one table → test 3
+must fail; the paired mutation for test 4 grants `BYPASSRLS` to a fourth, unlisted role → the roster
+assertion must fail. A mutation that does not flip the corresponding test to FAIL is itself a finding
+(§11.4 anti-bluff covenant — the gate must actually bite).
+
+#### 17.0.7 Full per-database policy enumeration
+
+The pattern above applied to every multi-tenant table across all 11 databases. Partition children inherit
+`ROW LEVEL SECURITY` from their partitioned parent automatically (PostgreSQL applies the parent's policies
+to every partition); only the parent table needs `ENABLE`/`FORCE`/`CREATE POLICY`.
+
+```sql
+-- ============================================================
+-- auth_db — self-scoped (no org_id; a user spans multiple orgs)
+-- ============================================================
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;                    ALTER TABLE users FORCE ROW LEVEL SECURITY;
+CREATE POLICY users_self_only ON users
+  USING (id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;             ALTER TABLE user_sessions FORCE ROW LEVEL SECURITY;
+CREATE POLICY user_sessions_self_only ON user_sessions
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE refresh_tokens ENABLE ROW LEVEL SECURITY;            ALTER TABLE refresh_tokens FORCE ROW LEVEL SECURITY;
+CREATE POLICY refresh_tokens_self_only ON refresh_tokens
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE device_tokens ENABLE ROW LEVEL SECURITY;             ALTER TABLE device_tokens FORCE ROW LEVEL SECURITY;
+CREATE POLICY device_tokens_self_only ON device_tokens
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE mfa_totp_credentials ENABLE ROW LEVEL SECURITY;      ALTER TABLE mfa_totp_credentials FORCE ROW LEVEL SECURITY;
+CREATE POLICY mfa_totp_credentials_self_only ON mfa_totp_credentials
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE mfa_totp_backup_codes ENABLE ROW LEVEL SECURITY;     ALTER TABLE mfa_totp_backup_codes FORCE ROW LEVEL SECURITY;
+CREATE POLICY mfa_totp_backup_codes_self_only ON mfa_totp_backup_codes
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE mfa_fido2_credentials ENABLE ROW LEVEL SECURITY;     ALTER TABLE mfa_fido2_credentials FORCE ROW LEVEL SECURITY;
+CREATE POLICY mfa_fido2_credentials_self_only ON mfa_fido2_credentials
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE login_history ENABLE ROW LEVEL SECURITY;             ALTER TABLE login_history FORCE ROW LEVEL SECURITY;
+CREATE POLICY login_history_self_only ON login_history
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE password_history ENABLE ROW LEVEL SECURITY;          ALTER TABLE password_history FORCE ROW LEVEL SECURITY;
+CREATE POLICY password_history_self_only ON password_history
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+ALTER TABLE sso_identities ENABLE ROW LEVEL SECURITY;            ALTER TABLE sso_identities FORCE ROW LEVEL SECURITY;
+CREATE POLICY sso_identities_self_only ON sso_identities
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+-- api_keys.org_id is nullable: NULL = a personal key (owner-only), NOT NULL = an
+-- org-issued key (visible to the org's admin surface for revocation/rotation).
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;                  ALTER TABLE api_keys FORCE ROW LEVEL SECURITY;
+CREATE POLICY api_keys_self_or_org ON api_keys
+  USING (
+    (org_id IS NULL AND user_id = current_setting('app.current_user_id', true)::uuid)
+    OR (org_id IS NOT NULL AND org_id = current_setting('app.current_org', true)::uuid)
+  )
+  WITH CHECK (
+    (org_id IS NULL AND user_id = current_setting('app.current_user_id', true)::uuid)
+    OR (org_id IS NOT NULL AND org_id = current_setting('app.current_org', true)::uuid)
+  );
+
+ALTER TABLE sso_providers ENABLE ROW LEVEL SECURITY;             ALTER TABLE sso_providers FORCE ROW LEVEL SECURITY;
+CREATE POLICY sso_providers_org_isolation ON sso_providers
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+-- jwt_blocklist has no per-user read API; only svc_auth_authmw (BYPASSRLS,
+-- §17.0.4) reads it, on every authenticated request before tenant context
+-- exists. RLS is still enabled so a stray non-BYPASSRLS connection sees zero
+-- rows rather than the full blocklist.
+ALTER TABLE jwt_blocklist ENABLE ROW LEVEL SECURITY;             ALTER TABLE jwt_blocklist FORCE ROW LEVEL SECURITY;
+CREATE POLICY jwt_blocklist_self_only ON jwt_blocklist
+  USING (user_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (user_id = current_setting('app.current_user_id', true)::uuid);
+
+-- ============================================================
+-- vault_db — org-scoped (direct on vaults, joined for children)
+-- ============================================================
+ALTER TABLE vaults ENABLE ROW LEVEL SECURITY;                    ALTER TABLE vaults FORCE ROW LEVEL SECURITY;
+CREATE POLICY vaults_org_isolation ON vaults
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE vault_members ENABLE ROW LEVEL SECURITY;             ALTER TABLE vault_members FORCE ROW LEVEL SECURITY;
+CREATE POLICY vault_members_org_isolation ON vault_members
+  USING (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE vault_items ENABLE ROW LEVEL SECURITY;               ALTER TABLE vault_items FORCE ROW LEVEL SECURITY;
+CREATE POLICY vault_items_org_isolation ON vault_items
+  USING (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE vault_item_versions ENABLE ROW LEVEL SECURITY;       ALTER TABLE vault_item_versions FORCE ROW LEVEL SECURITY;
+CREATE POLICY vault_item_versions_org_isolation ON vault_item_versions
+  USING (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE vault_sync_states ENABLE ROW LEVEL SECURITY;         ALTER TABLE vault_sync_states FORCE ROW LEVEL SECURITY;
+CREATE POLICY vault_sync_states_org_isolation ON vault_sync_states
+  USING (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE vault_audit_events ENABLE ROW LEVEL SECURITY;        ALTER TABLE vault_audit_events FORCE ROW LEVEL SECURITY;
+CREATE POLICY vault_audit_events_org_isolation ON vault_audit_events
+  USING (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (vault_id IN (SELECT id FROM vaults WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+-- ============================================================
+-- host_db — org-scoped (denormalized org_id direct on parents,
+-- joined through hosts/host_groups for children)
+-- ============================================================
+ALTER TABLE hosts ENABLE ROW LEVEL SECURITY;                     ALTER TABLE hosts FORCE ROW LEVEL SECURITY;
+CREATE POLICY hosts_org_isolation ON hosts
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE host_groups ENABLE ROW LEVEL SECURITY;               ALTER TABLE host_groups FORCE ROW LEVEL SECURITY;
+CREATE POLICY host_groups_org_isolation ON host_groups
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE host_group_members ENABLE ROW LEVEL SECURITY;        ALTER TABLE host_group_members FORCE ROW LEVEL SECURITY;
+CREATE POLICY host_group_members_org_isolation ON host_group_members
+  USING (host_id IN (SELECT id FROM hosts WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (host_id IN (SELECT id FROM hosts WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE host_labels ENABLE ROW LEVEL SECURITY;               ALTER TABLE host_labels FORCE ROW LEVEL SECURITY;
+CREATE POLICY host_labels_org_isolation ON host_labels
+  USING (host_id IN (SELECT id FROM hosts WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (host_id IN (SELECT id FROM hosts WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE host_known_fingerprints ENABLE ROW LEVEL SECURITY;   ALTER TABLE host_known_fingerprints FORCE ROW LEVEL SECURITY;
+CREATE POLICY host_known_fingerprints_org_isolation ON host_known_fingerprints
+  USING (host_id IN (SELECT id FROM hosts WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (host_id IN (SELECT id FROM hosts WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE host_connection_history ENABLE ROW LEVEL SECURITY;   ALTER TABLE host_connection_history FORCE ROW LEVEL SECURITY;
+CREATE POLICY host_connection_history_org_isolation ON host_connection_history
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE jump_host_chains ENABLE ROW LEVEL SECURITY;          ALTER TABLE jump_host_chains FORCE ROW LEVEL SECURITY;
+CREATE POLICY jump_host_chains_org_isolation ON jump_host_chains
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+-- ============================================================
+-- keychain_db — org-scoped (direct on ssh_keys, joined for children)
+-- ============================================================
+ALTER TABLE ssh_keys ENABLE ROW LEVEL SECURITY;                  ALTER TABLE ssh_keys FORCE ROW LEVEL SECURITY;
+CREATE POLICY ssh_keys_org_isolation ON ssh_keys
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE key_deployments ENABLE ROW LEVEL SECURITY;           ALTER TABLE key_deployments FORCE ROW LEVEL SECURITY;
+CREATE POLICY key_deployments_org_isolation ON key_deployments
+  USING (key_id IN (SELECT id FROM ssh_keys WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (key_id IN (SELECT id FROM ssh_keys WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+-- key_usage_log.key_id / certificate_store.key_id are nullable-by-reference in
+-- practice (a key can be deleted while usage history / certs are retained for
+-- audit) — the join predicate is written so a since-deleted key still resolves
+-- via ssh_keys' own soft-delete (deleted_at), never silently exposing rows
+-- whose parent key no longer resolves to any org.
+ALTER TABLE key_usage_log ENABLE ROW LEVEL SECURITY;             ALTER TABLE key_usage_log FORCE ROW LEVEL SECURITY;
+CREATE POLICY key_usage_log_org_isolation ON key_usage_log
+  USING (key_id IN (SELECT id FROM ssh_keys WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (key_id IN (SELECT id FROM ssh_keys WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE certificate_store ENABLE ROW LEVEL SECURITY;         ALTER TABLE certificate_store FORCE ROW LEVEL SECURITY;
+CREATE POLICY certificate_store_org_isolation ON certificate_store
+  USING (key_id IN (SELECT id FROM ssh_keys WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (key_id IN (SELECT id FROM ssh_keys WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+-- ============================================================
+-- session_db — org-scoped (direct on session-root tables, joined
+-- for their per-event/per-transfer/per-connection children)
+-- ============================================================
+ALTER TABLE ssh_sessions ENABLE ROW LEVEL SECURITY;              ALTER TABLE ssh_sessions FORCE ROW LEVEL SECURITY;
+CREATE POLICY ssh_sessions_org_isolation ON ssh_sessions
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE session_events ENABLE ROW LEVEL SECURITY;            ALTER TABLE session_events FORCE ROW LEVEL SECURITY;
+CREATE POLICY session_events_org_isolation ON session_events
+  USING (session_id IN (SELECT id FROM ssh_sessions WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (session_id IN (SELECT id FROM ssh_sessions WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE session_recordings ENABLE ROW LEVEL SECURITY;        ALTER TABLE session_recordings FORCE ROW LEVEL SECURITY;
+CREATE POLICY session_recordings_org_isolation ON session_recordings
+  USING (session_id IN (SELECT id FROM ssh_sessions WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (session_id IN (SELECT id FROM ssh_sessions WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE sftp_sessions ENABLE ROW LEVEL SECURITY;             ALTER TABLE sftp_sessions FORCE ROW LEVEL SECURITY;
+CREATE POLICY sftp_sessions_org_isolation ON sftp_sessions
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE sftp_transfers ENABLE ROW LEVEL SECURITY;            ALTER TABLE sftp_transfers FORCE ROW LEVEL SECURITY;
+CREATE POLICY sftp_transfers_org_isolation ON sftp_transfers
+  USING (sftp_session_id IN (SELECT id FROM sftp_sessions WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (sftp_session_id IN (SELECT id FROM sftp_sessions WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE port_forward_rules ENABLE ROW LEVEL SECURITY;        ALTER TABLE port_forward_rules FORCE ROW LEVEL SECURITY;
+CREATE POLICY port_forward_rules_org_isolation ON port_forward_rules
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE port_forward_connections ENABLE ROW LEVEL SECURITY;  ALTER TABLE port_forward_connections FORCE ROW LEVEL SECURITY;
+CREATE POLICY port_forward_connections_org_isolation ON port_forward_connections
+  USING (rule_id IN (SELECT id FROM port_forward_rules WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (rule_id IN (SELECT id FROM port_forward_rules WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+-- ============================================================
+-- snippet_db — org-scoped (direct on all three root tables)
+-- ============================================================
+ALTER TABLE snippet_categories ENABLE ROW LEVEL SECURITY;        ALTER TABLE snippet_categories FORCE ROW LEVEL SECURITY;
+CREATE POLICY snippet_categories_org_isolation ON snippet_categories
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE snippets ENABLE ROW LEVEL SECURITY;                  ALTER TABLE snippets FORCE ROW LEVEL SECURITY;
+CREATE POLICY snippets_org_isolation ON snippets
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE snippet_executions ENABLE ROW LEVEL SECURITY;        ALTER TABLE snippet_executions FORCE ROW LEVEL SECURITY;
+CREATE POLICY snippet_executions_org_isolation ON snippet_executions
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE snippet_execution_results ENABLE ROW LEVEL SECURITY; ALTER TABLE snippet_execution_results FORCE ROW LEVEL SECURITY;
+CREATE POLICY snippet_execution_results_org_isolation ON snippet_execution_results
+  USING (execution_id IN (SELECT id FROM snippet_executions WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (execution_id IN (SELECT id FROM snippet_executions WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+-- ============================================================
+-- workspace_db — org-scoped, with a nullable-org "public template"
+-- carve-out on workspace_templates
+-- ============================================================
+ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;                ALTER TABLE workspaces FORCE ROW LEVEL SECURITY;
+CREATE POLICY workspaces_org_isolation ON workspaces
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE workspace_snapshots ENABLE ROW LEVEL SECURITY;       ALTER TABLE workspace_snapshots FORCE ROW LEVEL SECURITY;
+CREATE POLICY workspace_snapshots_org_isolation ON workspace_snapshots
+  USING (workspace_id IN (SELECT id FROM workspaces WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (workspace_id IN (SELECT id FROM workspaces WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE workspace_sessions ENABLE ROW LEVEL SECURITY;        ALTER TABLE workspace_sessions FORCE ROW LEVEL SECURITY;
+CREATE POLICY workspace_sessions_org_isolation ON workspace_sessions
+  USING (workspace_id IN (SELECT id FROM workspaces WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (workspace_id IN (SELECT id FROM workspaces WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+-- workspace_templates.org_id is nullable: NULL + public = TRUE is a
+-- platform-wide template (visible to every org); NULL + public = FALSE never
+-- happens in practice (enforced by a CHECK, not by RLS) but the policy is
+-- written defensively regardless.
+ALTER TABLE workspace_templates ENABLE ROW LEVEL SECURITY;       ALTER TABLE workspace_templates FORCE ROW LEVEL SECURITY;
+CREATE POLICY workspace_templates_org_or_public ON workspace_templates
+  USING (
+    org_id = current_setting('app.current_org', true)::uuid
+    OR (org_id IS NULL AND public = TRUE)
+  )
+  WITH CHECK (
+    org_id = current_setting('app.current_org', true)::uuid
+    OR (org_id IS NULL AND public = TRUE)
+  );
+
+-- ============================================================
+-- collab_db — org-scoped (direct on collaboration_sessions, joined
+-- for participants/events)
+-- ============================================================
+ALTER TABLE collaboration_sessions ENABLE ROW LEVEL SECURITY;    ALTER TABLE collaboration_sessions FORCE ROW LEVEL SECURITY;
+CREATE POLICY collaboration_sessions_org_isolation ON collaboration_sessions
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE collaboration_participants ENABLE ROW LEVEL SECURITY; ALTER TABLE collaboration_participants FORCE ROW LEVEL SECURITY;
+CREATE POLICY collaboration_participants_org_isolation ON collaboration_participants
+  USING (collab_id IN (SELECT id FROM collaboration_sessions WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (collab_id IN (SELECT id FROM collaboration_sessions WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE collaboration_events ENABLE ROW LEVEL SECURITY;      ALTER TABLE collaboration_events FORCE ROW LEVEL SECURITY;
+CREATE POLICY collaboration_events_org_isolation ON collaboration_events
+  USING (collab_id IN (SELECT id FROM collaboration_sessions WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (collab_id IN (SELECT id FROM collaboration_sessions WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+-- ============================================================
+-- org_db — the organization row IS the tenant (id, not org_id);
+-- every other table here already carries org_id directly
+-- ============================================================
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;             ALTER TABLE organizations FORCE ROW LEVEL SECURITY;
+CREATE POLICY organizations_is_current_org ON organizations
+  USING (id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE org_members ENABLE ROW LEVEL SECURITY;               ALTER TABLE org_members FORCE ROW LEVEL SECURITY;
+CREATE POLICY org_members_org_isolation ON org_members
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;                     ALTER TABLE teams FORCE ROW LEVEL SECURITY;
+CREATE POLICY teams_org_isolation ON teams
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;              ALTER TABLE team_members FORCE ROW LEVEL SECURITY;
+CREATE POLICY team_members_org_isolation ON team_members
+  USING (team_id IN (SELECT id FROM teams WHERE org_id = current_setting('app.current_org', true)::uuid))
+  WITH CHECK (team_id IN (SELECT id FROM teams WHERE org_id = current_setting('app.current_org', true)::uuid));
+
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;                     ALTER TABLE roles FORCE ROW LEVEL SECURITY;
+CREATE POLICY roles_org_isolation ON roles
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE role_assignments ENABLE ROW LEVEL SECURITY;          ALTER TABLE role_assignments FORCE ROW LEVEL SECURITY;
+CREATE POLICY role_assignments_org_isolation ON role_assignments
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;               ALTER TABLE invitations FORCE ROW LEVEL SECURITY;
+CREATE POLICY invitations_org_isolation ON invitations
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+-- ============================================================
+-- audit_db — direct on all four tables (incl. audit_pii_keys,
+-- §17.10.1); see §17.10.1 for the privileged svc_audit_writer
+-- BYPASSRLS write path
+-- ============================================================
+ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;              ALTER TABLE audit_events FORCE ROW LEVEL SECURITY;
+CREATE POLICY audit_events_org_isolation ON audit_events
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE audit_pii_keys ENABLE ROW LEVEL SECURITY;            ALTER TABLE audit_pii_keys FORCE ROW LEVEL SECURITY;
+CREATE POLICY audit_pii_keys_org_isolation ON audit_pii_keys
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE audit_event_hash_chain ENABLE ROW LEVEL SECURITY;    ALTER TABLE audit_event_hash_chain FORCE ROW LEVEL SECURITY;
+CREATE POLICY audit_event_hash_chain_org_isolation ON audit_event_hash_chain
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE audit_exports ENABLE ROW LEVEL SECURITY;             ALTER TABLE audit_exports FORCE ROW LEVEL SECURITY;
+CREATE POLICY audit_exports_org_isolation ON audit_exports
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+-- ============================================================
+-- pki_db — direct on all four tables
+-- ============================================================
+ALTER TABLE ca_keys ENABLE ROW LEVEL SECURITY;                   ALTER TABLE ca_keys FORCE ROW LEVEL SECURITY;
+CREATE POLICY ca_keys_org_isolation ON ca_keys
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;              ALTER TABLE certificates FORCE ROW LEVEL SECURITY;
+CREATE POLICY certificates_org_isolation ON certificates
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE certificate_revocations ENABLE ROW LEVEL SECURITY;   ALTER TABLE certificate_revocations FORCE ROW LEVEL SECURITY;
+CREATE POLICY certificate_revocations_org_isolation ON certificate_revocations
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+
+ALTER TABLE crl_entries ENABLE ROW LEVEL SECURITY;               ALTER TABLE crl_entries FORCE ROW LEVEL SECURITY;
+CREATE POLICY crl_entries_org_isolation ON crl_entries
+  USING (org_id = current_setting('app.current_org', true)::uuid)
+  WITH CHECK (org_id = current_setting('app.current_org', true)::uuid);
+```
 
 ---
 
@@ -5520,16 +6466,22 @@ CREATE INDEX idx_sso_providers_slug ON sso_providers(slug);
 -- Links a local user to a remote SSO identity.
 -- ============================================================
 CREATE TABLE sso_identities (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  provider_id     UUID NOT NULL REFERENCES sso_providers(id) ON DELETE CASCADE,
-  subject         VARCHAR(512) NOT NULL,
-  access_token    TEXT,
-  refresh_token   TEXT,
-  token_expires_at TIMESTAMP WITH TIME ZONE,
-  profile_data    JSONB DEFAULT '{}',
-  created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+  id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id                 UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider_id             UUID NOT NULL REFERENCES sso_providers(id) ON DELETE CASCADE,
+  subject                 VARCHAR(512) NOT NULL,
+  -- Envelope-encrypted IdP OAuth tokens (never plaintext at rest). Encrypted
+  -- with pgcrypto pgp_sym_encrypt() using the org's KEK-wrapped DEK (same
+  -- envelope-encryption model as §17.10.1's audit PII, §4's vault keys); the
+  -- application decrypts only inside the request that needs to call the IdP
+  -- (token refresh, SCIM sync), never returns these bytes to any client API.
+  encrypted_access_token  BYTEA,
+  encrypted_refresh_token BYTEA,
+  token_key_id            UUID,
+  token_expires_at        TIMESTAMP WITH TIME ZONE,
+  profile_data            JSONB DEFAULT '{}',
+  created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX idx_sso_identities_provider_subject ON sso_identities(provider_id, subject);
@@ -6784,11 +7736,18 @@ CREATE INDEX idx_invitations_expires_at ON invitations(expires_at)
 
 ### 17.10 audit_db
 
-> **DEFERRED (next increment):** The `hash`/`prev_hash` chain below is an in-table integrity check only —
-> it has no external/independent anchoring (e.g. S3 Object Lock compliance mode, HSM signature, or
-> off-DB notarization). A DB principal with write access to `audit_db` can rewrite the chain, including
-> the genesis row, undetected. Do not read "Immutable" in the comment below as tamper-proof; it is
-> tamper-*evident* against non-privileged writers only. External WORM anchoring is deferred.
+> **RESOLVED (this increment):** The hash chain below now covers **every PII column** in the row (§17.10.1)
+> and privileged-op audit writes are **fail-closed** (§17.10.1) — a write that cannot be durably committed
+> aborts the privileged action it was recording, rather than silently proceeding unaudited.
+>
+> **DEFERRED, cross-referenced to `05_security_zero_trust`:** The chain below is still an in-table
+> integrity check only — it has no external/independent anchoring (e.g. S3 Object Lock compliance mode,
+> HSM signature, or off-DB notarization). A DB principal with write access to `audit_db` can rewrite the
+> chain, including the genesis row, undetected. Do not read "Immutable" in the comment below as
+> tamper-proof; it is tamper-*evident* against non-privileged writers only. **External WORM anchoring is
+> specified in `05_security_zero_trust` — this document defines only the DB-side chain, PII coverage,
+> fail-closed durability, and the crypto-shred erasure lifecycle (§17.10.1); it does not re-specify the
+> WORM anchor mechanism owned by doc 05.**
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -6806,14 +7765,19 @@ CREATE TABLE audit_events (
   user_id         UUID,
   resource_type   VARCHAR(50),
   resource_id     UUID,
-  resource_name   VARCHAR(512),
   outcome         VARCHAR(20) NOT NULL DEFAULT 'success'
                     CHECK (outcome IN ('success', 'failure', 'partial')),
-  ip_address      INET,
-  user_agent      TEXT,
   session_id      UUID,
   source_service  VARCHAR(50) NOT NULL,
   metadata        JSONB NOT NULL DEFAULT '{}',
+  -- PII envelope encryption (§17.10.1): ip_address/user_agent/resource_name are
+  -- stored as pgcrypto ciphertext, decryptable only while pii_key_id's DEK is
+  -- live. pii_key_id is never NULL for a system-generated event (see
+  -- audit_pii_keys below) and is the sole handle GDPR erasure ever touches.
+  ip_address      BYTEA,
+  user_agent      BYTEA,
+  resource_name   BYTEA,
+  pii_key_id      UUID NOT NULL REFERENCES audit_pii_keys(id),
   hash            VARCHAR(128) NOT NULL,
   prev_hash       VARCHAR(128),
   occurred_at     TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -6829,6 +7793,7 @@ CREATE INDEX idx_audit_events_resource ON audit_events(resource_type, resource_i
   WHERE resource_type IS NOT NULL;
 CREATE INDEX idx_audit_events_occurred_at ON audit_events USING BRIN (occurred_at);
 CREATE INDEX idx_audit_events_metadata ON audit_events USING GIN (metadata);
+CREATE INDEX idx_audit_events_pii_key_id ON audit_events(pii_key_id);
 
 CREATE TABLE audit_events_2026_01 PARTITION OF audit_events
   FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
@@ -6894,6 +7859,116 @@ CREATE TABLE audit_exports (
 
 CREATE INDEX idx_audit_exports_org_id ON audit_exports(org_id, created_at DESC);
 ```
+
+#### 17.10.1 Full-PII hash chain, fail-closed durability & crypto-shred GDPR erasure
+
+**The problem this solves.** `audit_events` is append-only and hash-chained (tamper-*evident*, §17.10
+deferred-note) — an ordinary `UPDATE`/`DELETE` to satisfy a GDPR Article 17 erasure request would either
+break the chain (if the row's bytes change, every subsequent `hash` in the chain that folded in the old
+bytes stops verifying) or require rewriting the entire downstream chain (defeating the append-only
+guarantee). `05_security_zero_trust` §9.2's `audit.AnonymizeUser` is specified there as "PII fields are
+overwritten with anonymized values while preserving event integrity" — this subsection is the concrete
+mechanism that makes both halves of that sentence true simultaneously.
+
+**Design: crypto-shredding, not in-place anonymization.** The three PII columns that can identify a
+natural person independent of `user_id` — `ip_address`, `user_agent`, `resource_name` (which may contain
+a hostname, filename, or other operator-supplied string) — are stored as **pgcrypto ciphertext**,
+encrypted with a per-subject Data Encryption Key (DEK) at write time, **before** the row's hash is
+computed:
+
+```sql
+-- Must be created BEFORE audit_events in migration order (§19.4) since
+-- audit_events.pii_key_id is a NOT NULL FK into this table.
+CREATE TABLE audit_pii_keys (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id            UUID NOT NULL,
+  subject_type      VARCHAR(20) NOT NULL DEFAULT 'user'
+                      CHECK (subject_type IN ('user', 'service_account', 'anonymous')),
+  subject_user_id   UUID,
+  wrapped_dek       BYTEA,              -- NULL once destroyed (crypto-shredded)
+  wrap_key_ref      VARCHAR(255) NOT NULL, -- org KEK reference (vault key ID, §4)
+  algorithm         VARCHAR(20) NOT NULL DEFAULT 'aes-256-gcm',
+  created_at        TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  destroyed_at      TIMESTAMP WITH TIME ZONE,
+  destroy_reason    VARCHAR(50) CHECK (destroy_reason IN (
+                       'gdpr_erasure_art17', 'key_rotation', 'org_offboarded'
+                     ))
+);
+
+CREATE UNIQUE INDEX idx_audit_pii_keys_subject ON audit_pii_keys(org_id, subject_user_id)
+  WHERE destroyed_at IS NULL AND subject_user_id IS NOT NULL;
+CREATE INDEX idx_audit_pii_keys_org_id ON audit_pii_keys(org_id);
+```
+
+**Write path (every service's audit-writer library, not application code directly):**
+
+1. Resolve (or lazily create) the acting subject's live `audit_pii_keys` row for the current org.
+2. Encrypt `ip_address`/`user_agent`/`resource_name` with that row's DEK:
+   `pgp_sym_encrypt(value::text, dek, 'cipher-algo=aes256')` → store as `BYTEA`.
+3. Compute `hash` over the **canonical, fixed-order concatenation of every column including the
+   ciphertext bytes**: `sha256(org_id || event_type || user_id || resource_type || resource_id ||
+   outcome || ip_address_ciphertext || user_agent_ciphertext || resource_name_ciphertext ||
+   session_id || source_service || metadata || pii_key_id || occurred_at || prev_hash)`. Because the
+   hash folds in the *ciphertext bytes*, not the plaintext, the hash is computed exactly once, at write
+   time, and never needs recomputation — including after the subject's key is later destroyed.
+4. Append to `audit_event_hash_chain` for the org (existing §17.10 mechanism, unchanged).
+
+**Erasure path (`audit.AnonymizeUser`, referenced from `05_security_zero_trust` §9.2):**
+
+```sql
+-- The entire GDPR Article 17 "anonymize this user's audit trail" operation is
+-- ONE update to audit_pii_keys. No audit_events row is ever touched: no
+-- UPDATE, no DELETE, no rewrite — the append-only invariant and every
+-- existing hash in the chain remain byte-for-byte valid forever.
+UPDATE audit_pii_keys
+SET wrapped_dek = NULL,
+    destroyed_at = NOW(),
+    destroy_reason = 'gdpr_erasure_art17'
+WHERE org_id = $1 AND subject_user_id = $2 AND destroyed_at IS NULL;
+```
+
+Once `wrapped_dek` is NULL, `ip_address`/`user_agent`/`resource_name` ciphertext for every past event tied
+to that `pii_key_id` is **permanently unrecoverable** — the plaintext cannot be reconstructed by anyone,
+including a database superuser, because the DEK itself no longer exists anywhere (crypto-shredding). This
+satisfies the erasure obligation without violating either the append-only rule or the hash chain. The
+erasure operation itself is recorded as a **new** `audit_events` row (event_type =
+`gdpr_erasure_completed`, its own fresh `pii_key_id`) so the erasure is auditable without itself carrying
+erasable PII. `user_id` on historical rows is left as a bare UUID (not PII-encrypted) — once the
+originating `users` row is hard-deleted per `05`'s erasure flow, an orphaned UUID with no realistic
+re-identification path is accepted pseudonymous data under GDPR guidance, consistent with `05`'s existing
+design.
+
+**Fail-closed durability for privileged-op audit writes.** Every audit write for a *privileged* operation
+(role/permission change, vault member removal, key revocation, break-glass access, org setting change —
+the closed set enumerated in `05_security_zero_trust`'s privileged-action list) runs in the **same
+database transaction** as the privileged action itself:
+
+```go
+// Fail-closed: the privileged action and its audit record commit atomically,
+// or neither does. A privileged action MUST NOT be observable if its audit
+// record failed to persist — the opposite of "fire and forget" logging.
+func RevokeVaultMember(ctx context.Context, pool *pgxpool.Pool, vaultID, userID uuid.UUID) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `DELETE FROM vault_members WHERE vault_id = $1 AND user_id = $2`, vaultID, userID); err != nil {
+		return err
+	}
+	if err := writeAuditEvent(ctx, tx, "vault.member_revoked", vaultID, userID); err != nil {
+		return err // rolls back the DELETE too — the privileged action never took effect unaudited
+	}
+	return tx.Commit(ctx) // synchronous_commit=on for this connection (below)
+}
+```
+
+The `audit_db` connection pool used for privileged-op writes runs with `synchronous_commit = on` (the
+cluster default; never downgraded to `off`/`local` for this pool even though other, non-privileged,
+high-volume audit paths may accept `synchronous_commit = local` for throughput) — a commit is not
+acknowledged to the caller until the WAL record is durably flushed, so a host crash immediately after
+commit cannot silently lose a privileged-op audit record that the caller believes succeeded.
 
 ---
 
@@ -7002,6 +8077,100 @@ CREATE INDEX idx_crl_entries_ca_key_id ON crl_entries(ca_key_id);
 ```
 
 ---
+
+### 17.12 Automated Partition Management (pg_partman)
+
+**The problem this solves.** Every `RANGE`-partitioned table in §17 (`audit_events`, `vault_audit_events`,
+`host_connection_history`, `key_usage_log`, `ssh_sessions`, `session_events`, `sftp_transfers`,
+`snippet_executions`, `collaboration_events`) has its partitions **hand-created** with an explicit end
+date (§17.10 shows `audit_events` created through `2026-12-01` to `2027-01-01`; several others stop at
+`2026_q3`/`2026_q4`). Once the last hand-created partition's range is exhausted, an `INSERT` for a
+timestamp beyond it **fails outright** (no default partition is declared) — a silent, entirely
+foreseeable outage that shows up as "audit logging stopped working" or "SSH sessions can no longer be
+recorded" on whatever date the last partition's range ends. `pg_partman` (the standard PostgreSQL
+extension for this exact problem, already assumed available on PostgreSQL 17.2 per RDS/Cloud SQL/self-
+managed images) automates future-partition creation and past-partition retention so the hand-maintained
+end date never needs to exist.
+
+**Installation + per-table registration** (run once per database that owns partitioned tables — `audit_db`,
+`vault_db`, `host_db`, `keychain_db`, `session_db`, `snippet_db`, `collab_db`):
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_partman;
+CREATE SCHEMA IF NOT EXISTS partman;
+-- (pg_partman's control tables live in the `partman` schema by convention)
+
+-- audit_db: audit_events — monthly, matching the existing hand-created scheme
+SELECT partman.create_parent(
+  p_parent_table   => 'public.audit_events',
+  p_control        => 'occurred_at',
+  p_interval       => 'monthly',
+  p_premake        => 4     -- always keep 4 months of future partitions pre-created
+);
+UPDATE partman.part_config
+  SET retention           = '7 years',     -- audit_log_retention_days default is 365d;
+                                            -- 7y is the SOC2/PCI-typical floor — retention
+                                            -- is a per-org policy read at maintenance time
+                                            -- via the trigger function below, not a fixed
+                                            -- literal, when an org's configured retention
+                                            -- exceeds this floor
+      retention_keep_table = true,          -- detach, never DROP — audit data is never
+                                             -- silently destroyed by a maintenance job
+      infinite_time_partitions = true
+  WHERE parent_table = 'public.audit_events';
+
+-- vault_db: vault_audit_events — quarterly, matching the existing scheme
+SELECT partman.create_parent('public.vault_audit_events', 'occurred_at', 'quarterly', p_premake => 4);
+
+-- host_db: host_connection_history — quarterly
+SELECT partman.create_parent('public.host_connection_history', 'started_at', 'quarterly', p_premake => 4);
+
+-- keychain_db: key_usage_log — quarterly
+SELECT partman.create_parent('public.key_usage_log', 'occurred_at', 'quarterly', p_premake => 4);
+
+-- session_db: ssh_sessions, session_events, sftp_transfers — quarterly
+SELECT partman.create_parent('public.ssh_sessions', 'started_at', 'quarterly', p_premake => 4);
+SELECT partman.create_parent('public.session_events', 'occurred_at', 'quarterly', p_premake => 4);
+SELECT partman.create_parent('public.sftp_transfers', 'transferred_at', 'quarterly', p_premake => 4);
+
+-- snippet_db: snippet_executions — quarterly
+SELECT partman.create_parent('public.snippet_executions', 'started_at', 'quarterly', p_premake => 4);
+
+-- collab_db: collaboration_events — quarterly
+SELECT partman.create_parent('public.collaboration_events', 'occurred_at', 'quarterly', p_premake => 4);
+```
+
+**Scheduled maintenance** — `pg_partman` only creates/drops partitions when its maintenance procedure
+actually runs; it does not run itself. Scheduled hourly via `pg_cron` (co-located in each database):
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+SELECT cron.schedule('partman-maintenance', '0 * * * *', $$CALL partman.run_maintenance_proc()$$);
+```
+
+An hourly cadence keeps the "next partition doesn't exist yet" window to at most one hour even under a
+`pg_cron` outage that is caught and paged the same day — compare to a hand-created scheme whose failure
+window is silent until the multi-month-away end date arrives.
+
+**Per-org retention override.** `organizations.audit_log_retention_days` / `.session_recording_retention_days`
+(§17.9) are the source of truth for how long an individual org's data must be kept; `pg_partman`'s
+`retention` column above is a **floor** (the shortest time any org's partitions are kept before even being
+considered for detach), not the enforcement mechanism for per-org retention — a nightly job reads each
+org's actual configured retention and issues a per-partition, per-org check before any detached partition
+is finally dropped from storage (never automatic-and-unconditional), so a longer-retention org's data
+inside an otherwise-eligible-for-drop partition is never destroyed early. `retention_keep_table = true`
+above additionally means the default action is always **detach** (the partition becomes an ordinary,
+still-queryable table, just no longer attached to live `INSERT`/read-path routing) rather than `DROP`,
+giving every retention decision a manual-recovery window before an operator-approved archival step
+actually deletes the detached table's storage.
+
+**Anti-bluff verification.** A post-build gate (§11.4.4(b) layer 2) asserts, for every table in this
+section, that a partition covering `NOW() + p_premake` intervals already exists — i.e. it fails loudly in
+CI/staging **before** the failure mode is "customers cannot connect because SSH session recording just
+started throwing insert errors in production."
+
+---
+
 ## 18. Redis Data Structures
 
 Redis 8 is used for ephemeral, high-throughput data: session state, rate limiting, distributed locks, caching, pub/sub, and real-time presence. All keys use a `{service}:{type}:{identifier}` namespace convention to enable Redis Cluster key sharding where appropriate.
@@ -7555,6 +8724,89 @@ EXPIRE ws:user:550e8400:connections 86400
 
 ---
 
+### 18.13 Persistence Configuration + Cluster Hash-Tags
+
+Redis persistence (AOF/RDB) is configured **per instance/cluster**, not per key — there is no Redis
+feature to durably persist one key while treating a sibling key as pure ephemeral cache. §18 marks three
+keyspaces `TTL: None`: `vault:{vaultId}:version` (§18.3), `proxy:nodes` (§18.4), and
+`presence:org:{orgId}:online` (§18.5). Every other keyspace in §18 carries an explicit TTL and is, by
+design, safe to lose on a Redis restart (the client/server simply re-derives or re-requests it). This
+subsection specifies the durability configuration for the cluster these three load-bearing keyspaces live
+in, and the cluster hash-tag convention needed for them to work correctly under Redis Cluster in the first
+place.
+
+**Persistence configuration** (applies to the Redis 8 cluster/replica-set backing all keyspaces in this
+document — a single cluster, not a special-purpose one, since AOF's overhead is negligible relative to the
+throughput headroom already budgeted for session/rate-limit traffic):
+
+```conf
+# redis.conf — durability
+appendonly yes
+appendfsync everysec          # ~1s worst-case data loss window on an unclean
+                               # shutdown; `always` is not used here because it
+                               # would add fsync latency to every rate-limit
+                               # INCR and session heartbeat in the same
+                               # keyspace, and the three load-bearing keys
+                               # below are either reconciled from PostgreSQL
+                               # (vault:version) or self-healing from a live
+                               # heartbeat (proxy:nodes, presence) within one
+                               # heartbeat interval regardless
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+
+# RDB snapshots as a secondary, fast-full-restore mechanism (not the primary
+# durability guarantee — AOF is)
+save 900 1
+save 300 10
+save 60 10000
+rdb-key-save-delay 0
+```
+
+**Startup / failover reconciliation (defense in depth beyond AOF).** Even with `appendfsync everysec`,
+an unclean shutdown can lose up to ~1 second of the most recent writes. Because `vault:{vaultId}:version`
+is a cache of the authoritative `vaults.version` column (§17.2) — not its source of truth — the
+`vault-service` runs a reconciliation pass on startup and on every Redis failover-promotion event:
+
+```sql
+-- For every vault whose Redis key is missing (or, defensively, whose cached
+-- value is LOWER than the DB value — never higher, which would indicate a
+-- Redis-side write the DB never saw and is itself a paged incident):
+SELECT id, version FROM vaults WHERE deleted_at IS NULL;
+```
+```
+-- one SET per vault, only if the Redis value is absent or stale-low:
+SET vault:{<vault-uuid>}:version <db_version>
+```
+
+`proxy:nodes` and `presence:org:{orgId}:online` require no reconciliation query — every proxy node and
+every connected client re-registers via its next heartbeat/activity ping (§18.4, §18.5) within their
+existing heartbeat interval (60s / 5min respectively), so a lost Redis write here self-heals without any
+explicit recovery code path; they are included in the persistence configuration above purely to shorten
+that self-heal window, not because their loss is otherwise unrecoverable.
+
+**Cluster hash-tags.** Under Redis Cluster, keys are sharded across slots by hashing the key name — a
+Lua script or `MULTI`/`EXEC` transaction touching two keys that hash to different slots fails with a
+`CROSSSLOT` error. Several operations in §18 touch multiple keys for the same vault/session atomically
+(e.g. the vault sync push path reads `vault:{vaultId}:version`, appends to
+`vault:{vaultId}:changes`, and updates `vault:{vaultId}:sync:{clientId}:cursor` in one Lua script). Every
+key namespaced by a given `vaultId` or `sessionId` therefore uses the **Redis Cluster hash-tag** syntax —
+the substring inside `{…}` is the only part of the key Redis Cluster hashes to choose a slot — so all keys
+sharing that tag always land on the same slot/node regardless of the rest of the key name:
+
+```
+vault:{a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c}:version
+vault:{a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c}:changes
+vault:{a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c}:sync:client-abc123:cursor
+```
+
+The same convention applies to every `session:{sessionId}:*` / `lock:session:{sessionId}` key family
+(§18.1, §18.4) and every `portfwd:{ruleId}:*` key family (§18.4), so session-resize/terminate and
+port-forward start/stop — each of which touches more than one key for the same entity — remain atomic
+under Cluster mode. Single-key operations (rate limiters, blocklist entries, presence) are unaffected and
+need no hash-tag.
+
+---
+
 ## 19. Database Migrations
 
 HelixTerminator uses [`golang-migrate/migrate`](https://github.com/golang-migrate/migrate) for all database schema migrations. Each microservice manages its own migrations in `internal/db/{service}/migrations/`.
@@ -7984,16 +9236,18 @@ CREATE UNIQUE INDEX idx_sso_providers_org_provider ON sso_providers(org_id, prov
   WHERE enabled = TRUE;
 
 CREATE TABLE sso_identities (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  provider_id      UUID NOT NULL REFERENCES sso_providers(id) ON DELETE CASCADE,
-  subject          VARCHAR(512) NOT NULL,
-  access_token     TEXT,
-  refresh_token    TEXT,
-  token_expires_at TIMESTAMP WITH TIME ZONE,
-  profile_data     JSONB DEFAULT '{}',
-  created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+  id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id                 UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider_id             UUID NOT NULL REFERENCES sso_providers(id) ON DELETE CASCADE,
+  subject                 VARCHAR(512) NOT NULL,
+  -- Envelope-encrypted at rest — see the canonical column comment in §17.1.
+  encrypted_access_token  BYTEA,
+  encrypted_refresh_token BYTEA,
+  token_key_id            UUID,
+  token_expires_at        TIMESTAMP WITH TIME ZONE,
+  profile_data            JSONB DEFAULT '{}',
+  created_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX idx_sso_identities_provider_subject ON sso_identities(provider_id, subject);
@@ -8251,7 +9505,9 @@ DROP TABLE IF EXISTS vaults;
 
 **000018_create_audit_events.up.sql**
 ```sql
--- (In audit_db)
+-- (In audit_db) — audit_pii_keys (§17.10.1) MUST be migrated in an earlier
+-- numbered file (e.g. 000017a_create_audit_pii_keys.up.sql) since pii_key_id
+-- below is a NOT NULL FK into it.
 CREATE TABLE audit_events (
   id              UUID NOT NULL DEFAULT gen_random_uuid(),
   seq             BIGSERIAL,
@@ -8260,13 +9516,15 @@ CREATE TABLE audit_events (
   user_id         UUID,
   resource_type   VARCHAR(50),
   resource_id     UUID,
-  resource_name   VARCHAR(512),
   outcome         VARCHAR(20) NOT NULL DEFAULT 'success',
-  ip_address      INET,
-  user_agent      TEXT,
   session_id      UUID,
   source_service  VARCHAR(50) NOT NULL,
   metadata        JSONB NOT NULL DEFAULT '{}',
+  -- Envelope-encrypted PII — see the canonical column comment in §17.10.1.
+  ip_address      BYTEA,
+  user_agent      BYTEA,
+  resource_name   BYTEA,
+  pii_key_id      UUID NOT NULL REFERENCES audit_pii_keys(id),
   hash            VARCHAR(128) NOT NULL,
   prev_hash       VARCHAR(128),
   occurred_at     TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -8281,6 +9539,7 @@ CREATE TABLE audit_events_2026_07 PARTITION OF audit_events
 
 CREATE INDEX idx_audit_events_org_id ON audit_events(org_id, occurred_at DESC);
 CREATE INDEX idx_audit_events_occurred_at ON audit_events USING BRIN (occurred_at);
+CREATE INDEX idx_audit_events_pii_key_id ON audit_events(pii_key_id);
 ```
 
 **000018_create_audit_events.down.sql**

@@ -21,6 +21,7 @@
 8. [Disaster Recovery](#8-disaster-recovery)
 9. [Local Development Environment](#9-local-development)
 10. [Security Hardening](#10-security-hardening)
+11. [Cost and FinOps Governance](#11-cost-and-finops-governance)
 
 ---
 
@@ -2416,6 +2417,13 @@ global:
   kafka:
     brokers: "b-1.helixterm.kafka.us-east-1.amazonaws.com:9092,b-2.helixterm.kafka.us-east-1.amazonaws.com:9092,b-3.helixterm.kafka.us-east-1.amazonaws.com:9092"
 
+  # Amazon MQ (managed RabbitMQ) — production replacement for the in-cluster
+  # rabbitmq chart disabled below. See §6.2 "Amazon MQ (Managed RabbitMQ)".
+  rabbitmq:
+    host: "helixterm-prod.mq.us-east-1.amazonaws.com"
+    port: 5671
+    tls: true
+
 gateway:
   replicaCount: 3
   resources:
@@ -2503,7 +2511,12 @@ auditService:
       memory: "1Gi"
       cpu: "2000m"
 
-# Disable in-cluster databases — use managed services in production
+# Disable in-cluster databases/brokers — use managed services in production.
+# kafka -> MSK, postgresql -> RDS Multi-AZ, redis -> ElastiCache,
+# rabbitmq -> Amazon MQ (CLUSTER_MULTI_AZ, §6.2). Every one of these four has
+# a corresponding Terraform-managed resource; none is "disabled and left
+# unprovisioned" — see the RabbitMQ production-path decision comment above
+# the `aws_mq_broker.helixterm` resource in §6.2.
 kafka:
   enabled: false
 
@@ -2725,12 +2738,99 @@ podAntiAffinity:
 
 > **NOTE — rootless Podman is the mandated target runtime (Constitution §11.4.161):**
 > HelixConstitution §11.4.161 mandates rootless Podman as the target container
-> build/runtime for HelixTerminator. Local development already supports
-> `PodmanRuntime` as an alternative to `DockerRuntime` (see Appendix B), but
-> the CI/CD pipelines in §5 of this document still build and push images with
-> Docker (`docker/setup-buildx-action` + `docker/build-push-action`). Full
-> migration of CI to rootless Podman is **DEFERRED** to a future increment —
-> this note exists so the gap is tracked explicitly rather than left unstated.
+> build/runtime for HelixTerminator, with Docker rootful mode forbidden except
+> where a target platform genuinely has no rootless option (§11.4.112,
+> documented per §11.4.112). Local development already supports
+> `PodmanRuntime` as an alternative to `DockerRuntime` (see Appendix B). CI is
+> specified below with the same rootless target — no `docker/setup-buildx-action`
+> or Docker daemon anywhere in §5's build jobs.
+
+The GitHub-hosted `ubuntu-24.04` runner ships Podman + Buildah preinstalled
+and unprivileged, so every image-build job in §5.1/§5.2/§5.3 uses one
+reusable composite action instead of hand-rolled `docker build` steps:
+
+```yaml
+# .github/actions/rootless-podman-build/action.yml
+name: 'Rootless Podman Build & Push'
+description: 'Build a multi-stage image with rootless Buildah and push to Harbor (or GHCR for pre-Harbor bootstrap)'
+inputs:
+  context:
+    description: 'Build context path'
+    required: true
+  containerfile:
+    description: 'Path to the Containerfile/Dockerfile'
+    required: true
+  image:
+    description: 'Fully-qualified image name (registry/org/service)'
+    required: true
+  tags:
+    description: 'Space-separated tags (e.g. "sha-abc123 pr-42")'
+    required: true
+  build-args:
+    description: 'Newline-separated BUILD_ARG=value pairs'
+    required: false
+    default: ''
+  registry:
+    description: 'Registry host'
+    required: true
+  registry-username:
+    description: 'Registry username'
+    required: true
+  registry-password:
+    description: 'Registry password/token'
+    required: true
+outputs:
+  digest:
+    description: 'Pushed image digest'
+    value: ${{ steps.push.outputs.digest }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Verify rootless Podman is available
+      shell: bash
+      run: |
+        podman info --format '{{.Host.Security.Rootless}}' | grep -qx true \
+          || { echo "::error::runner is not rootless — refusing to build (Constitution §11.4.161)"; exit 1; }
+        buildah --version
+
+    - id: build
+      name: Build image (rootless buildah bud)
+      uses: redhat-actions/buildah-build@v2
+      with:
+        context: ${{ inputs.context }}
+        containerfiles: ${{ inputs.containerfile }}
+        image: ${{ inputs.image }}
+        tags: ${{ inputs.tags }}
+        build-args: ${{ inputs.build-args }}
+        oci: true
+        layers: true
+        extra-args: |
+          --userns=keep-id
+          --isolation=rootless
+
+    - id: push
+      name: Push image (rootless skopeo copy, via podman)
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: ${{ steps.build.outputs.image }}
+        tags: ${{ steps.build.outputs.tags }}
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.registry-username }}
+        password: ${{ inputs.registry-password }}
+```
+
+Every job in §5.1 (`build-images`), §5.2 (`main-build-push`), and §5.3
+(`build-and-push-release`) that currently sequences
+`docker/setup-buildx-action` → `docker/build-push-action` is replaced
+one-for-one by a single `uses: ./.github/actions/rootless-podman-build`
+step carrying the same `context` / `file` / `tags` / `build-args` inputs
+those jobs already pass — no Docker daemon is started on the runner at any
+point, and the `buildah bud --isolation=rootless --userns=keep-id` flags are
+the mechanical enforcement of the §11.4.161 mandate (a build that ever
+elevates to root fails the `podman info --format '{{.Host.Security.Rootless}}'`
+guard step above before it can produce an image). Harbor (§6.3) is the
+`registry` input in production; GHCR remains the bootstrap target only until
+Harbor's first production rollout completes.
 
 ### 4.1 Go Service Dockerfile (Standard Pattern)
 
@@ -3832,7 +3932,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_ORG: helixterm
   HELM_VERSION: "3.15.2"
-  KUBECTL_VERSION: "1.30.2"
+  KUBECTL_VERSION: "1.31.2"
 
 jobs:
   # ─── Build and Push All Service Images ───────────────────────────────────────
@@ -4096,7 +4196,7 @@ on:
 
 env:
   HELM_VERSION: "3.15.2"
-  KUBECTL_VERSION: "1.30.2"
+  KUBECTL_VERSION: "1.31.2"
 
 jobs:
   # ─── Validate Release Tag ─────────────────────────────────────────────────────
@@ -4361,6 +4461,46 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+### 5.4 Canary Promotion Pipeline — Job Graph
+
+The `release.yml` workflow above is a strict linear chain gated by
+monitoring windows, not a fan-out — every promotion stage `needs:` the
+previous stage's monitor job, and `rollback-on-failure` (§5.3) fans in from
+every stage so a budget breach at *any* percentage triggers the same
+rollback path:
+
+```mermaid
+flowchart LR
+    A[deploy-canary-5] --> B[monitor-canary-5<br/>10 min window]
+    B --> C[deploy-canary-25]
+    C --> D[monitor-canary-25<br/>10 min window]
+    D --> E[deploy-canary-50]
+    E --> F[monitor-canary-50<br/>15 min window]
+    F --> G[deploy-production-100]
+    G --> H[release-notes]
+
+    A -.on failure.-> R[rollback-on-failure]
+    B -.on failure.-> R
+    C -.on failure.-> R
+    D -.on failure.-> R
+    E -.on failure.-> R
+    F -.on failure.-> R
+    G -.on failure.-> R
+
+    R --> R1[helm rollback helixterm-prod]
+    R1 --> R2[helm uninstall helixterm-prod-canary]
+    R2 --> R3[Slack page on-call]
+
+    style R fill:#7a1f1f,color:#fff
+    style R1 fill:#7a1f1f,color:#fff
+    style R2 fill:#7a1f1f,color:#fff
+    style R3 fill:#7a1f1f,color:#fff
+```
+
+See §8.9 for the sequence-level view of the same promotion (participants
+and message order rather than job dependencies), and §8.8 for the
+companion DR cross-region failover sequence diagram.
+
 ---
 
 ## 6. Terraform Infrastructure-as-Code
@@ -4380,6 +4520,8 @@ infrastructure/terraform/
 │   │   └── outputs.tf
 │   ├── elasticache/
 │   ├── msk/
+│   ├── amazon_mq/
+│   ├── harbor/
 │   ├── s3/
 │   ├── cloudfront/
 │   └── networking/
@@ -4491,7 +4633,7 @@ module "eks" {
   version = "~> 20.11"
 
   cluster_name    = "helixterm-prod"
-  cluster_version = "1.30"
+  cluster_version = "1.31"
 
   vpc_id                   = module.vpc.vpc_id
   subnet_ids               = module.vpc.private_subnets
@@ -4748,8 +4890,8 @@ resource "aws_db_instance" "helixterm_prod" {
 }
 
 resource "aws_db_parameter_group" "helixterm" {
-  name   = "helixterm-prod-pg16"
-  family = "postgres16"
+  name   = "helixterm-prod-pg17"
+  family = "postgres17"
 
   parameter {
     name  = "shared_preload_libraries"
@@ -4862,8 +5004,8 @@ resource "aws_elasticache_replication_group" "helixterm" {
 }
 
 resource "aws_elasticache_parameter_group" "helixterm" {
-  family = "redis7"
-  name   = "helixterm-prod-redis7"
+  family = "redis8"
+  name   = "helixterm-prod-redis8"
 
   parameter {
     name  = "maxmemory-policy"
@@ -4955,6 +5097,124 @@ log.retention.hours=168
 log.segment.bytes=1073741824
 log.retention.check.interval.ms=300000
 PROPERTIES
+}
+
+# ─── Amazon MQ (Managed RabbitMQ) ─────────────────────────────────────────────
+# Decision (Remediation Register §4 "RabbitMQ production path", 2026-07):
+# RabbitMQ is a real, in-use dependency (notification-service + webhook-service
+# consume from it, §2.8; docker-compose ships it for local dev, §4.4/§9.4; the
+# testing strategy doc's RabbitMQ contract/integration suite exercises it
+# against a live broker — see doc 03 §RabbitMQ Messaging Tests). Rather than
+# remove it and migrate two consumers onto Kafka (which would turn a
+# point-to-point work-queue pattern into topic/partition bookkeeping those
+# services do not need), the decision is to PROVISION it: Amazon MQ for
+# RabbitMQ, a multi-AZ managed broker cluster, is the canonical production
+# path. `helm upgrade --values values-production.yaml` already sets
+# `rabbitmq.enabled: false` (§3.4) — this resource is what that disabled
+# in-cluster chart is replaced by, mirroring the Kafka→MSK / PostgreSQL→RDS /
+# Redis→ElastiCache pattern in the same file.
+resource "aws_security_group" "amazon_mq" {
+  name        = "helixterm-amazonmq-prod"
+  description = "Security group for Amazon MQ (RabbitMQ) — AMQPS + management UI"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = 5671
+    to_port     = 5671
+    protocol    = "tcp"
+    cidr_blocks = module.vpc.private_subnets_cidr_blocks
+    description = "AMQPS (TLS-only, plaintext 5672 is not opened in prod)"
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = module.vpc.private_subnets_cidr_blocks
+    description = "RabbitMQ management console (internal only, behind VPN/bastion)"
+  }
+}
+
+resource "aws_mq_broker" "helixterm" {
+  broker_name = "helixterm-prod"
+
+  engine_type   = "RabbitMQ"
+  # Track the platform RabbitMQ pin in Appendix A; confirm against the
+  # Amazon MQ-supported engine-version list at apply time (AWS publishes a
+  # closed set of supported minor releases that lags the upstream project —
+  # do not assume the pin below is deployable without that check, §11.4.6).
+  engine_version = "3.13"
+  host_instance_type = "mq.m5.xlarge"
+
+  deployment_mode = "CLUSTER_MULTI_AZ"
+
+  publicly_accessible = false
+  subnet_ids          = [module.vpc.private_subnets[0], module.vpc.private_subnets[1]]
+  security_groups     = [aws_security_group.amazon_mq.id]
+
+  encryption_options {
+    kms_key_id        = aws_kms_key.s3.arn
+    use_aws_owned_key = false
+  }
+
+  logs {
+    general = true
+    audit   = true
+  }
+
+  maintenance_window_start_time {
+    day_of_week = "SUNDAY"
+    time_of_day = "05:00"
+    time_zone   = "UTC"
+  }
+
+  auto_minor_version_upgrade = true
+
+  user {
+    username = "helixterm"
+    password = var.rabbitmq_password
+  }
+
+  tags = {
+    Name    = "helixterm-prod"
+    Service = "notification-service+webhook-service"
+  }
+}
+
+# Cross-region DR mirror: a second, smaller Amazon MQ cluster in eu-west-1.
+# RabbitMQ has no built-in cross-region replication (unlike RDS/MSK), so
+# durability for the DR region is achieved by the Shovel plugin republishing
+# from the primary queues into the DR broker's mirror queues — a live
+# forwarding mirror, not a byte-identical replica. RPO for RabbitMQ DR is
+# therefore best-effort (seconds-to-low-minutes, shovel-lag dependent) and is
+# explicitly weaker than the PostgreSQL RPO in §8.3.4 — documented here so it
+# is never silently assumed to match (§11.4.6 no-guessing).
+resource "aws_mq_broker" "helixterm_dr" {
+  provider = aws.eu-west-1
+
+  broker_name         = "helixterm-dr"
+  engine_type         = "RabbitMQ"
+  engine_version      = "3.13"
+  host_instance_type  = "mq.m5.large"
+  deployment_mode     = "SINGLE_INSTANCE"
+  publicly_accessible = false
+  subnet_ids          = [module.vpc_dr.private_subnets[0]]
+  security_groups     = [aws_security_group.amazon_mq_dr.id]
+
+  encryption_options {
+    kms_key_id        = aws_kms_key.s3_dr.arn
+    use_aws_owned_key = false
+  }
+
+  user {
+    username = "helixterm"
+    password = var.rabbitmq_password
+  }
+
+  tags = {
+    Name = "helixterm-dr"
+    Role = "dr-shovel-target"
+  }
 }
 
 # ─── S3 Buckets ───────────────────────────────────────────────────────────────
@@ -5263,6 +5523,170 @@ resource "aws_iam_role_policy" "session_recorder_s3" {
   })
 }
 ```
+
+### 6.3 Harbor Container Registry (Self-Hosted, Rootless)
+
+`ghcr.io` (used by CI in §5) is the build-time push target; **Harbor** is the
+platform's own, self-hosted, rootless-Podman-compatible registry
+(§11.4.161 / §11.4.76 — the project's containers submodule is the sole
+orchestration layer for it) sitting in front of every production `pull`. It
+gives HelixTerminator three things GHCR alone does not: (1) a pull-through
+cache/replication mirror so no production node ever depends on an external
+registry's availability during an incident, (2) Trivy/Clair vulnerability
+scanning + a signed, project-controlled promotion gate between "built" and
+"production-approved" images, and (3) the OCI chart repository the release
+pipeline already pushes Helm charts to (`oci://${{ secrets.HARBOR_REGISTRY }}/helixterm`,
+§5.3) — which had no backing infrastructure until this section.
+
+Harbor runs in-cluster on the `system` EKS node group (same tier as other
+platform add-ons), backed by S3 for blob storage (so registry storage scales
+independently of node-local/EBS capacity) and the shared production
+PostgreSQL/Redis tier for its own metadata:
+
+```hcl
+# infrastructure/terraform/modules/harbor/main.tf
+resource "aws_s3_bucket" "harbor_registry" {
+  bucket        = "helixterm-harbor-registry-prod"
+  force_destroy = false
+}
+
+resource "aws_s3_bucket_versioning" "harbor_registry" {
+  bucket = aws_s3_bucket.harbor_registry.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "harbor_registry" {
+  bucket = aws_s3_bucket.harbor_registry.id
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.s3.arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "harbor_registry" {
+  bucket = aws_s3_bucket.harbor_registry.id
+  rule {
+    id     = "expire-untagged-manifests"
+    status = "Enabled"
+    filter {}
+    expiration {
+      days = 90  # matches Harbor's own tag-retention GC policy, see values below
+    }
+  }
+}
+
+resource "aws_iam_role" "harbor_registry" {
+  name = "helixterm-harbor-registry-prod"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = { Federated = module.eks.oidc_provider_arn }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${module.eks.oidc_provider}:sub" = "system:serviceaccount:helixterm-platform:harbor-registry"
+          "${module.eks.oidc_provider}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "harbor_registry_s3" {
+  name = "harbor-registry-s3"
+  role = aws_iam_role.harbor_registry.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:ListBucket"]
+      Resource = [aws_s3_bucket.harbor_registry.arn, "${aws_s3_bucket.harbor_registry.arn}/*"]
+    }]
+  })
+}
+```
+
+Helm values for the upstream `harbor/harbor` chart, deployed to a dedicated
+`helixterm-platform` namespace (not `helixterm-prod`, since Harbor is
+platform infrastructure, not a product microservice):
+
+```yaml
+# infrastructure/helm/harbor/values-production.yaml
+expose:
+  type: ingress
+  tls:
+    enabled: true
+    certSource: secret
+    secret:
+      secretName: harbor-tls
+  ingress:
+    hosts:
+      core: harbor.helixterminator.io
+    className: nginx
+
+externalURL: https://harbor.helixterminator.io
+
+persistence:
+  imageChartStorage:
+    type: s3
+    s3:
+      bucket: helixterm-harbor-registry-prod
+      region: us-east-1
+      encrypt: true
+      keyid: "${HARBOR_KMS_KEY_ID}"
+
+database:
+  type: external
+  external:
+    host: helixterm-prod.cluster-xxxx.us-east-1.rds.amazonaws.com
+    port: "5432"
+    username: harbor_registry
+    coreDatabase: harbor_registry   # its own logical database, §8.3.5
+
+redis:
+  type: external
+  external:
+    addr: "helixterm-prod.xxxxxx.clustercfg.use1.cache.amazonaws.com:6379"
+
+trivy:
+  enabled: true
+  vulnType: "os,library"
+  severity: "CRITICAL,HIGH,MEDIUM"
+
+notary:
+  enabled: false   # image signing is Cosign-based (§10.9), not Notary
+
+# Harbor Robot Account used by CI (§5) to push; distinct from the
+# human-admin account, scoped to project push+pull only.
+proxy:
+  htpasswd: ""  # managed via Harbor API (robot accounts), not chart values
+
+garbageCollection:
+  schedule: "0 3 * * *"   # nightly GC of untagged manifests
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true   # scraped by the existing Prometheus in §7.1
+```
+
+Replication policy (configured post-install via the Harbor API, idempotent
+script `scripts/harbor/configure-replication.sh`): a **pull-through cache**
+rule mirrors `docker.io`, `ghcr.io`, and `bitnami` base images referenced
+anywhere in §4's Dockerfiles into Harbor's local project namespaces on
+first pull, so a Docker Hub or GHCR outage never blocks a production
+rollout or a `docker pull` inside an air-gapped incident-response session.
+A second **push-based replication** rule mirrors the `helixterm/*` project
+(the platform's own built images) from `harbor.helixterminator.io` to the
+`eu-west-1` DR region's Harbor instance every 15 minutes, so a regional
+failover (§8.6) never blocks on registry availability either.
 
 ---
 
@@ -6162,6 +6586,286 @@ echo "[DR] Restore files prepared. Start PostgreSQL to begin WAL replay."
 echo "[DR] Monitor recovery progress in postgresql.log"
 ```
 
+#### 8.3.4 PostgreSQL High Availability and Automated Write-Path Failover
+
+This is the canonical PostgreSQL HA/DR specification for HelixTerminator —
+doc 01 (core architecture) references this section rather than
+re-describing it (Remediation Register §4 "PostgreSQL DR + HA"). It closes
+the gap between "PostgreSQL is on AWS RDS Multi-AZ" (a one-line claim
+elsewhere in this document, §2.10 / §6.2) and an actual, testable HA/DR
+contract with named RPO/RTO numbers and a failover mechanism per
+deployment tier.
+
+**Two HA tiers, one failover contract.** HelixTerminator runs PostgreSQL in
+two places: (1) AWS RDS Multi-AZ in production (§6.2, `aws_db_instance.helixterm_prod`)
+and (2) a self-hosted PostgreSQL StatefulSet (§2.10) for staging,
+integration tests, DR fire-drills, and any on-prem/non-AWS deployment.
+Both tiers are governed by the **same** RPO/RTO contract; only the
+failover *mechanism* differs, because RDS's synchronous Multi-AZ failover
+is an AWS-managed control plane the platform does not operate, while the
+self-hosted tier needs an explicit, self-hosted failover controller —
+**Patroni**, backed by an `etcd` distributed-consensus store.
+
+| Failure mode | RPO target | RTO target | Mechanism |
+|---|---|---|---|
+| Intra-region AZ loss (primary AZ down) | **0** (synchronous replication) | **≤ 2 minutes** | RDS Multi-AZ automatic failover (prod) / Patroni automatic leader election via `etcd` lease expiry (self-hosted) |
+| Primary instance crash (process/host, AZ healthy) | **0** (synchronous replication) | **≤ 60 seconds** | RDS Multi-AZ automatic failover (prod) / Patroni `etcd`-driven leader re-election (self-hosted) |
+| Full regional loss (`us-east-1` down) | **≤ 5 minutes** (async cross-region streaming lag budget) | **≤ 30 minutes** (matches the platform-wide §8.1 RTO) | Manual-triggered promotion of the `eu-west-1` standby — `aws rds promote-read-replica` (prod) / `patronictl failover --candidate <eu-west-1-leader>` against the Patroni standby cluster (self-hosted) |
+
+These numbers are the PostgreSQL-specific refinement of the platform-wide
+table in §8.1 — the platform RTO/RPO (30 min / 5 min) is the *outer bound*
+that must hold across every dependency; PostgreSQL's *intra-region*
+numbers (0 RPO, ≤ 2 min RTO) are materially tighter because synchronous
+Multi-AZ replication is already zero-data-loss and near-immediate.
+
+**Patroni configuration (self-hosted tier).** Patroni wraps each PostgreSQL
+process, uses `etcd` as the distributed consensus store for leader
+election, and drives promote/demote/reconfigure through PostgreSQL's own
+`pg_ctl` + `recovery.conf`/`standby.signal` mechanics — this is the same
+role AWS's internal Multi-AZ agent plays for RDS, made explicit and
+operable for the self-hosted tier:
+
+```yaml
+# infrastructure/kubernetes/base/postgresql/patroni-config.yaml
+# Mounted into every postgresql StatefulSet pod (§2.10) at
+# /etc/patroni/patroni.yml — supersedes ad-hoc postgresql.conf edits for
+# the self-hosted tier; RDS is unaffected (AWS manages its own control plane).
+scope: helixterm-postgresql
+namespace: /helixterm/
+name: "{{ POD_NAME }}"
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: "{{ POD_IP }}:8008"
+
+etcd3:
+  hosts:
+    - etcd-0.etcd.helixterm-prod.svc.cluster.local:2379
+    - etcd-1.etcd.helixterm-prod.svc.cluster.local:2379
+    - etcd-2.etcd.helixterm-prod.svc.cluster.local:2379
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576   # 1MB — refuse to promote a replica more than 1MB behind
+    synchronous_mode: true             # zero-data-loss intra-region: matches RDS Multi-AZ's RPO=0
+    synchronous_mode_strict: false     # do not block writes entirely if the sole sync replica is down
+    postgresql:
+      use_pg_rewind: true
+      parameters:
+        wal_level: replica
+        hot_standby: "on"
+        max_wal_senders: 10
+        max_replication_slots: 10
+        wal_keep_size: 1GB
+        synchronous_commit: "on"
+        archive_mode: "on"
+        archive_command: "wal-g wal-push %p"   # same WAL-G pipeline as §8.3.1
+
+  # Cross-region DR: eu-west-1 runs its own Patroni cluster in
+  # "standby cluster" mode — a full HA cluster (its own etcd + local
+  # synchronous replicas for intra-DR-region resilience) that is itself an
+  # ASYNC standby of the us-east-1 primary. This is what makes the
+  # cross-region link resilient to a single DR-region node loss without
+  # ever promoting across regions unintentionally.
+  standby_cluster:
+    host: helixterm-postgresql-leader.helixterm-prod.svc.cluster.local
+    port: 5432
+    create_replica_methods:
+      - basebackup
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: "{{ POD_IP }}:5432"
+  data_dir: /var/lib/postgresql/data
+  authentication:
+    replication:
+      username: replicator
+      password: "{{ REPLICATOR_PASSWORD }}"
+    superuser:
+      username: postgres
+      password: "{{ POSTGRES_SUPERUSER_PASSWORD }}"
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false
+```
+
+`on_role_change` / `on_start` callback that keeps the Kubernetes Service
+pointed at whichever pod Patroni just promoted (the piece that makes
+failover invisible to every service's `PGHOST`, which always resolves to
+the same in-cluster Service name regardless of which pod is currently
+primary):
+
+```bash
+#!/bin/bash
+# infrastructure/kubernetes/base/postgresql/patroni-callback.sh
+# Registered in patroni.yml as `postgresql.callbacks.on_role_change`.
+set -euo pipefail
+ROLE="$1"   # "master" or "replica" (Patroni's own vocabulary)
+NAME="$2"
+
+if [ "${ROLE}" = "master" ]; then
+  kubectl label pod "${NAME}" role=primary --overwrite -n helixterm-prod
+  kubectl label pod --all -l app=postgresql,role=primary --overwrite -n helixterm-prod \
+    --selector="!(metadata.name==${NAME})" role=replica 2>/dev/null || true
+  echo "[patroni-callback] ${NAME} promoted to primary — Service selector now routes here"
+fi
+```
+
+**Failover runbook — write-path only (self-hosted / Patroni tier).**
+Distinct from and complementary to the full application-tier failover
+runbook in §8.6 (which is written for the RDS-managed prod tier and covers
+DNS/Helm/scale-up as well as the database). This runbook is scoped purely
+to the write path when Patroni is the controller (staging, DR fire-drills
+per §8.7, or an on-prem deployment):
+
+1. **Detect** — `patronictl -c /etc/patroni/patroni.yml list` reports the
+   current leader's health, or the `etcd` lease TTL (30s, `bootstrap.dcs.ttl`
+   above) expires without renewal, which is Patroni's own automatic
+   detection signal — no external monitor is required for the automatic
+   case.
+2. **Automatic leader election (intra-region)** — the remaining
+   synchronous replica with the smallest replication lag acquires the
+   `etcd` leader key and self-promotes; `maximum_lag_on_failover` (1MB)
+   refuses to promote a replica that is materially behind, preferring to
+   stay down over a silent-data-loss promotion.
+3. **Callback fires** — `patroni-callback.sh` relabels the new leader pod;
+   the Kubernetes Service selector re-resolves within one kube-proxy
+   sync interval (typically < 5s), so `PGHOST=postgresql.helixterm-prod.svc.cluster.local`
+   never needs to change in any service's configuration.
+4. **Verify** — `patronictl list` shows exactly one `Leader` and N
+   `Sync Standby`/`Replica` rows in `streaming` state; cross-check
+   `SELECT * FROM pg_stat_replication;` on the new leader for
+   `replay_lag` near zero.
+5. **Cross-region promotion (manual, DR-only)** — operator-triggered:
+   `patronictl failover --candidate <eu-west-1-pod> --force`. This is the
+   ONLY step in this runbook that is not automatic — promoting across
+   regions is a deliberate, high-blast-radius operator decision (mirrors
+   §8.6 Step 3's `aws rds promote-read-replica` for the RDS tier), never
+   triggered by lag/lease-expiry alone.
+6. **Post-failover** — re-point the DR region's own `standby_cluster`
+   config at the new leader (or, if the DR region itself was promoted,
+   reconfigure `us-east-1` as the new standby once it recovers), then
+   follow §8.6 Steps 4–7 for the application-tier half of the recovery.
+
+**Restore-drill procedure** is specified in §8.3.5 immediately below,
+alongside the per-service-database PITR/backup cadence — the two are the
+same continuous WAL-archiving + nightly full-backup pipeline (§8.3.1/§8.3.2)
+applied per logical database rather than per instance.
+
+#### 8.3.5 Per-Service Database PITR, Retention, and Restore-Drill
+
+**Topology.** Every microservice owns a logically isolated PostgreSQL
+database (database-per-service, not shared-schema) inside the same
+Multi-AZ instance/cluster described in §6.2 — doc 01's service registry is
+the authoritative enumeration of the full service→database mapping (per
+CD-3, this document does not re-enumerate it divergently). A representative
+slice, sufficient to illustrate the retention model without asserting an
+unverified total count:
+
+| Service | Database | Notes |
+|---|---|---|
+| auth-service | `auth` | credentials, sessions, MFA state |
+| vault-service | `vault` | encrypted secret containers (client-side zero-knowledge payloads only, CD-10) |
+| rbac-service | `rbac` | roles, org/team membership |
+| audit-service | `audit` | append-only audit event log (hash-chained) |
+| session-recorder | `session_recorder` | recording index (blobs live in S3, §6.2 `session_recordings` bucket) |
+| harbor-registry (platform tier, §6.3) | `harbor_registry` | Harbor's own metadata — not a HelixTerminator microservice, but co-located on the same instance |
+| *(remaining ~20 per-service databases)* | *(see doc 01 §3 service registry)* | same backup/retention contract applies uniformly |
+
+**Retention is instance-wide, applied per database.** Continuous WAL
+archiving (§8.3.1, `archive_timeout = 60`) and the nightly full backup
+(§8.3.2, `wal-g backup-push`) operate on the whole PostgreSQL instance —
+one WAL stream, one base backup — which means every per-service database
+is captured atomically in the same backup artifact; there is no
+database-level backup gap. The retention window is:
+
+| Tier | Cadence | Retention | Applies to |
+|---|---|---|---|
+| WAL (continuous archive) | every 60s (`archive_timeout`) | 5 minutes of recovery granularity (RPO) | every database, instance-wide |
+| Full backup | daily, 02:00 UTC (§8.3.2 CronJob) | 30 daily + 4 weekly + 12 monthly (`wal-g delete retain FIND_FULL 30`) | every database, instance-wide |
+| Cross-region replica | continuous (async streaming) | ≤ 5 min replication lag budget | every database, replicated to `eu-west-1` as a unit |
+
+**Surgical single-database restore** (recovering one service's data
+without a full-instance PITR cutover) restores the whole instance into a
+disposable scratch target, then extracts only the target database:
+
+```bash
+#!/bin/bash
+# scripts/dr/postgres-restore-single-db.sh
+# Usage: ./postgres-restore-single-db.sh <SERVICE_DB_NAME> <TARGET_TIME_ISO8601>
+set -euo pipefail
+
+SERVICE_DB="${1:?Service database name required, e.g. vault}"
+TARGET_TIME="${2:?Target time required (ISO 8601)}"
+SCRATCH_HOST="postgres-restore-scratch.helixterm-prod.svc.cluster.local"
+
+echo "[DR] Restoring full instance to scratch target at ${TARGET_TIME}"
+./scripts/dr/postgres-pitr-restore.sh "${TARGET_TIME}"
+# (operator starts the scratch instance from the prepared restore path,
+#  waits for `recovery_target_action = promote` to complete)
+
+echo "[DR] Extracting single database '${SERVICE_DB}' from scratch instance"
+pg_dump --host="${SCRATCH_HOST}" --username=postgres --format=custom \
+  --dbname="${SERVICE_DB}" --file="/tmp/${SERVICE_DB}-${TARGET_TIME}.dump"
+
+echo "[DR] Restoring '${SERVICE_DB}' into target instance"
+pg_restore --host="${PGHOST}" --username=postgres --dbname="${SERVICE_DB}" \
+  --clean --if-exists "/tmp/${SERVICE_DB}-${TARGET_TIME}.dump"
+
+echo "[DR] Single-database restore complete: ${SERVICE_DB} @ ${TARGET_TIME}"
+```
+
+**Restore-drill procedure** — the automated evidence behind §8.7's
+"Backup restore verification | Weekly | Automated" row. This is not a
+manual checklist; it is a script that actually performs the restore and
+verifies content, producing a pass/fail artifact rather than a "the backup
+job didn't error" absence-of-failure claim:
+
+```bash
+#!/bin/bash
+# scripts/dr/postgres-restore-drill.sh
+# Runs weekly via CronJob (infrastructure/kubernetes/base/backup/restore-drill-cronjob.yaml).
+# Restores the most recent full backup into an isolated shadow instance and
+# verifies every per-service database is present with a sane row count —
+# never marks the drill green on "the restore command exited 0" alone.
+set -euo pipefail
+
+DRILL_ID="drill-$(date -u +%Y%m%dT%H%M%SZ)"
+SHADOW_HOST="postgres-restore-drill.helixterm-staging.svc.cluster.local"
+REPORT_PATH="/var/log/dr-drills/${DRILL_ID}.json"
+
+echo "[DRILL ${DRILL_ID}] Restoring latest full backup into shadow instance"
+LATEST_BACKUP=$(wal-g backup-list --json | jq -r 'sort_by(.start_time) | last | .backup_name')
+wal-g backup-fetch "/var/lib/postgresql/shadow-data" "${LATEST_BACKUP}"
+
+echo "[DRILL ${DRILL_ID}] Verifying per-service databases on shadow instance"
+FAILURES=0
+DBS=$(psql --host="${SHADOW_HOST}" --username=postgres --tuples-only --command="SELECT datname FROM pg_database WHERE datistemplate = false;")
+for db in ${DBS}; do
+  ROWCOUNT=$(psql --host="${SHADOW_HOST}" --username=postgres --dbname="${db}" --tuples-only \
+    --command="SELECT COALESCE(SUM(n_live_tup), 0) FROM pg_stat_user_tables;" | tr -d '[:space:]')
+  if [ "${ROWCOUNT}" -eq 0 ]; then
+    echo "[DRILL ${DRILL_ID}] FAIL: database '${db}' restored with zero live rows"
+    FAILURES=$((FAILURES + 1))
+  else
+    echo "[DRILL ${DRILL_ID}] OK: database '${db}' — ${ROWCOUNT} live rows"
+  fi
+done
+
+cat > "${REPORT_PATH}" <<EOF
+{"drill_id": "${DRILL_ID}", "backup": "${LATEST_BACKUP}", "failures": ${FAILURES}, "verdict": "$([ ${FAILURES} -eq 0 ] && echo PASS || echo FAIL)"}
+EOF
+
+echo "[DRILL ${DRILL_ID}] Report: ${REPORT_PATH}"
+[ "${FAILURES}" -eq 0 ] || exit 1
+```
+
 ### 8.4 Redis Backup Strategy
 
 Redis is configured with both RDB snapshots and AOF persistence for combined durability:
@@ -6442,6 +7146,93 @@ echo "PASS: Failover validated. API responding from DR region."
 | Full regional failover drill | Quarterly | Manual | Full runbook execution in staging |
 | Chaos engineering (pod kill) | Weekly | Automated | Chaos Mesh random pod deletion |
 | Chaos engineering (network partition) | Monthly | Manual | Simulate AZ failure in staging |
+
+### 8.8 DR Runbook Sequence Diagram
+
+The following sequence diagram is the visual form of the §8.6 cross-region
+failover runbook — the on-call engineer, PagerDuty, the DR-region Kubernetes
+API, RDS, and Route53 as the participants, in the same 7-step order §8.6
+describes in prose:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor OC as On-Call Engineer
+    participant PD as PagerDuty
+    participant K8sDR as EKS (eu-west-1, DR)
+    participant RDS as RDS PostgreSQL
+    participant R53 as Route53
+    participant Users as End Users
+
+    Note over OC,Users: us-east-1 (primary) declared down
+
+    OC->>PD: Declare incident (§8.6 Step 1)
+    PD-->>OC: Incident channel opened, on-call paged
+
+    OC->>K8sDR: kubectl config use-context helix-dr-eu-west-1
+    OC->>K8sDR: Verify cluster health + replication lag (§8.6 Step 2)
+    K8sDR-->>OC: Nodes Ready, pods Pending (scaled to 0)
+
+    OC->>RDS: aws rds promote-read-replica (§8.6 Step 3)
+    RDS-->>OC: Promotion in progress (~3-5 min)
+    RDS-->>OC: DB instance available, now primary
+
+    OC->>K8sDR: kubectl scale deployment --all --replicas=2 (§8.6 Step 4)
+    K8sDR-->>OC: Rollout complete
+    OC->>K8sDR: helm upgrade --set global.region=eu-west-1
+
+    OC->>R53: UPSERT api.helixterm.io -> DR ALB (§8.6 Step 5)
+    R53-->>Users: DNS resolves to eu-west-1 (propagation ~60s, low TTL)
+
+    OC->>K8sDR: scripts/dr/validate-failover.sh (§8.6 Step 6)
+    K8sDR-->>OC: /healthz 200, auth smoke test token issued
+    OC->>PD: Mark incident mitigated
+
+    Note over OC,Users: Post-failover (§8.6 Step 7): status page, retro,<br/>re-establish replication back to us-east-1, failback test in 48h
+```
+
+### 8.9 Canary Promotion Sequence Diagram
+
+Companion diagram for the §5.3 release pipeline's five-stage canary
+promotion (5% → 25% → 50% → 100%), each stage gated by an automated
+monitoring window before the next promotion — see §5.4 for the CI/CD job
+graph this diagram is drawn from.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant GH as GitHub Actions (release.yml)
+    participant Harbor as Harbor / OCI Chart Repo
+    participant K8s as EKS (us-east-1, prod)
+    participant Mon as monitor-canary.py (Prometheus)
+    actor OC as On-Call / Release Owner
+
+    GH->>Harbor: helm upgrade helixterm-prod-canary --set canary.weight=5
+    Harbor-->>K8s: Chart pulled, canary pods rolled out (5% traffic)
+    GH->>Mon: Monitor canary 5% (10 min)
+    Mon-->>GH: error-rate/latency within budget -> proceed
+
+    GH->>Harbor: helm upgrade --set canary.weight=25
+    Harbor-->>K8s: Canary scaled to 25% traffic
+    GH->>Mon: Monitor canary 25% (10 min)
+    Mon-->>GH: within budget -> proceed
+
+    GH->>Harbor: helm upgrade --set canary.weight=50
+    Harbor-->>K8s: Canary scaled to 50% traffic
+    GH->>Mon: Monitor canary 50% (15 min)
+    Mon-->>GH: within budget -> proceed
+
+    GH->>K8s: helm upgrade helixterm-prod (100%, full promotion)
+    K8s-->>GH: Rollout complete
+    GH->>K8s: helm uninstall helixterm-prod-canary
+
+    alt Any monitoring window breaches budget
+        Mon-->>GH: error-rate/latency budget breached
+        GH->>K8s: helm rollback helixterm-prod --wait
+        GH->>K8s: helm uninstall helixterm-prod-canary
+        GH->>OC: Slack page :rotating_light: PRODUCTION ROLLBACK TRIGGERED
+    end
+```
 
 ---
 
@@ -7210,6 +8001,117 @@ func NewStripeMockServer() *httptest.Server {
     return httptest.NewServer(mux)
 }
 ```
+
+### 9.10 Cloud Development Environment (Coder, Rootless)
+
+§9.1–§9.9 cover a laptop-local dev loop; this subsection specifies the
+**cloud development environment** — a self-hosted, browser-accessible
+workspace for contributors who cannot (or should not) run the full 25-service
+dependency stack (§9.4) on a laptop, and for onboarding a new engineer to a
+fully-provisioned environment in minutes rather than a multi-hour local
+setup. This was previously unprovisioned (no infra, no Terraform, no
+workspace template existed anywhere in this document) — it is specified
+here as a self-hosted **Coder** deployment, chosen over a third-party SaaS
+(GitHub Codespaces, Gitpod) so workspace containers can run **rootless
+Podman** (§11.4.161) end to end instead of a vendor-managed Docker-in-Docker
+sidecar the platform does not control.
+
+**Placement.** Coder's control plane runs on the `system` EKS node group
+(same tier as Harbor, §6.3) in a dedicated `helixterm-dev` namespace;
+per-developer workspaces are Kubernetes Pods on the `general` node group,
+so workspace capacity autoscales with the same cluster autoscaler already
+managing production load.
+
+```hcl
+# infrastructure/terraform/modules/coder/main.tf
+resource "kubernetes_namespace" "helixterm_dev" {
+  metadata {
+    name = "helixterm-dev"
+    labels = {
+      "pod-security.kubernetes.io/enforce" = "baseline"  # workspaces run rootless Podman, not privileged Docker
+    }
+  }
+}
+
+resource "helm_release" "coder" {
+  name       = "coder"
+  namespace  = kubernetes_namespace.helixterm_dev.metadata[0].name
+  repository = "https://helm.coder.com/v2"
+  chart      = "coder"
+  version    = "2.18.0"
+
+  values = [yamlencode({
+    coder = {
+      env = [
+        { name = "CODER_ACCESS_URL", value = "https://dev.helixterminator.io" }
+        { name = "CODER_OIDC_ISSUER_URL", value = "https://auth.helixterminator.io" }  # SSO via the platform's own auth-service (§7 IdP)
+        { name = "CODER_OIDC_CLIENT_ID", valueFrom = { secretKeyRef = { name = "coder-oidc", key = "client-id" } } }
+        { name = "CODER_OIDC_CLIENT_SECRET", valueFrom = { secretKeyRef = { name = "coder-oidc", key = "client-secret" } } }
+      ]
+      ingress = {
+        enable = true
+        host   = "dev.helixterminator.io"
+        tls    = { enable = true, secretNames = ["coder-tls"] }
+      }
+    }
+  })]
+}
+```
+
+**Workspace template** — every workspace is a rootless-Podman-capable Pod
+(the same `containers.ContainerRuntime` abstraction from Appendix B, using
+`PodmanRuntime`, not `DockerRuntime`), with the repo cloned and `go.work`
+(§9.3) pre-resolved, and the local dependency stack (§9.4) available via
+`podman-compose` inside the workspace itself — never a shared multi-tenant
+Postgres/Kafka/Redis, so one developer's workload cannot corrupt another's:
+
+```hcl
+# infrastructure/terraform/modules/coder/templates/helixterminator-workspace/main.tf
+resource "coder_agent" "main" {
+  os             = "linux"
+  arch           = "amd64"
+  startup_script = <<-EOT
+    set -euo pipefail
+    git clone --recurse-submodules git@github.com:HelixDevelopment/helix_terminator.git ~/helix_terminator
+    cd ~/helix_terminator
+    bash scripts/dev/init-repo.sh   # §9.2 — same bootstrap laptop-local dev uses
+    code-server --auth none --port 13337 &
+  EOT
+}
+
+resource "kubernetes_pod" "workspace" {
+  metadata {
+    name      = "coder-${data.coder_workspace.me.owner}-${data.coder_workspace.me.name}"
+    namespace = "helixterm-dev"
+  }
+  spec {
+    security_context {
+      run_as_non_root = true
+      run_as_user      = 65532   # matches the distroless nonroot UID used by every service image, §4.1
+      seccomp_profile { type = "RuntimeDefault" }
+    }
+    container {
+      name    = "workspace"
+      image   = "harbor.helixterminator.io/helixterm/dev-workspace:1.0.0"  # built via §5, includes go1.25 + podman + code-server
+      command = ["sh", "-c", coder_agent.main.init_script]
+
+      resources {
+        requests = { cpu = "2", memory = "4Gi" }
+        limits   = { cpu = "4", memory = "8Gi" }
+      }
+
+      port { container_port = 8080 }  # code-server / dev preview (matches the platform's internal gateway port, §2.3)
+      port { container_port = 443 }   # local TLS-terminated preview of the gateway under test
+    }
+  }
+}
+```
+
+**Cost + lifecycle controls** (tie-in to §11 FinOps): workspaces
+auto-stop after 2 hours of idle CPU (`coder templates edit --ttl 2h`,
+`autostop_requirement`), so an abandoned workspace never runs at full
+`general` node group cost indefinitely — the single biggest historical
+source of "forgotten dev box" spend in cloud-dev-environment deployments.
 
 ---
 
@@ -8041,6 +8943,144 @@ Before any service reaches production, it must pass this security review:
 | Container | Runs as non-root, read-only filesystem, no privilege escalation | Platform team |
 | Network | Outbound connections declared in NetworkPolicy | Platform team |
 | Audit trail | All sensitive operations emit audit events to Kafka | Backend team |
+
+---
+
+## 11. Cost and FinOps Governance
+
+Every managed AWS resource this document provisions — EKS (§6.2), RDS
+Multi-AZ + cross-region replica (§6.2, §8.3.4), ElastiCache Redis (§6.2),
+MSK Kafka (§6.2), Amazon MQ (§6.2), the `eu-west-1` DR footprint (§8.2),
+Harbor's S3 backend (§6.3), and the Coder cloud dev environment (§9.10) —
+carries a real, ongoing cost. This section was previously absent from an
+8,000+ line infrastructure spec; it exists so cost is a first-class,
+reviewed input to every infrastructure decision rather than an
+after-the-fact surprise.
+
+> **All figures below are planning-order-of-magnitude ESTIMATES**, not a
+> vendor quote — rounded to avoid false precision, using On-Demand US
+> `us-east-1` list pricing as the baseline before any of the discounting
+> strategies in §11.2 are applied. Re-price before committing budget; do
+> not treat these numbers as a committed spend ceiling.
+
+### 11.1 Per-Environment Monthly Cost Estimate
+
+| Component | Dev/Sandbox | Staging | Production (`us-east-1`) | DR (`eu-west-1`) |
+|---|---|---|---|---|
+| EKS control plane | $73 | $73 | $73 | $73 |
+| EKS nodes (system + general + gpu, §6.2) | ~$400 (small, scaled to 0 gpu) | ~$1,800 (min-size node groups) | ~$9,000 (desired-size: 3 system m6i.xlarge + 9 general m6i/m6a.2xlarge) | ~$1,200 (scaled-down standby, §8.2) |
+| RDS PostgreSQL (§6.2) | db.t4g.medium, single-AZ, ~$100 | db.r6g.large Multi-AZ, ~$700 | db.r6g.2xlarge Multi-AZ + reporting read replica, ~$4,200 | Cross-region async read replica, db.r6g.xlarge, ~$1,100 |
+| ElastiCache Redis (§6.2) | cache.t4g.micro, ~$25 | cache.r7g.large x2, ~$600 | cache.r7g.xlarge x3 Multi-AZ, ~$2,700 | Not replicated (Redis is cache-tier, rebuilt on failover) |
+| MSK Kafka (§6.2, §8.5) | Not provisioned (docker-compose, §9.4) | kafka.m5.large x3, ~$1,100 | kafka.m5.2xlarge x3 + 3TB storage, ~$3,600 | MirrorMaker2 target, kafka.m5.large x3, ~$1,100 |
+| Amazon MQ / RabbitMQ (§6.2) | Not provisioned (docker-compose, §9.4) | mq.m5.large single-instance, ~$220 | mq.m5.xlarge CLUSTER_MULTI_AZ, ~$900 | mq.m5.large single-instance (shovel target), ~$220 |
+| S3 (session recordings + backups + Harbor + logs) | ~$20 | ~$150 | ~$1,200 (storage + cross-region replication egress, §6.2) | (covered by CRR into DR bucket above) |
+| CloudFront + Route53 | ~$10 | ~$30 | ~$500 (egress-driven) | — |
+| Observability (Prometheus/Grafana/Loki/Jaeger/OTel, §7) | ~$50 (in-cluster, no extra infra) | ~$200 | ~$800 (in-cluster storage + CloudWatch log export retention) | ~$150 |
+| Harbor registry (§6.3, in-cluster + S3) | — | ~$50 | ~$300 | ~$100 (DR replica bucket) |
+| Coder cloud dev environment (§9.10) | ~$150 (few active workspaces) | — | — | — |
+| **Estimated total (rounded)** | **~$830/mo** | **~$4,900/mo** | **~$23,300/mo** | **~$3,940/mo** |
+
+Production + DR combined is the platform's steady-state AWS bill —
+**≈ $27,000/month, planning-order-of-magnitude** — before any of the
+discounting strategies in §11.2 are applied; those strategies are expected
+to bring the production figure down materially (Compute Savings Plans
+alone typically discount steady-state EC2/Fargate spend by 20-40% relative
+to On-Demand list price).
+
+### 11.2 Cost-Allocation Tags
+
+Every Terraform resource in §6 MUST carry the same tag schema so cost is
+attributable per environment, per team, and per service without a manual
+reconciliation pass:
+
+```hcl
+# infrastructure/terraform/shared/tags.tf
+locals {
+  mandatory_tags = {
+    Project     = "helix-terminator"
+    Environment = var.environment          # dev | staging | production | dr
+    CostCenter  = var.cost_center           # e.g. "platform-eng", set per environment/team
+    Team        = var.owning_team           # e.g. "platform", "ssh-domain", "vault-domain"
+    ManagedBy   = "terraform"
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+  default_tags {
+    tags = local.mandatory_tags
+  }
+}
+```
+
+`default_tags` on the AWS provider block (Terraform native, not a custom
+wrapper) means every resource created by `module.eks`, `aws_db_instance`,
+`aws_elasticache_replication_group`, `aws_msk_cluster`, `aws_mq_broker`,
+and every `aws_s3_bucket` in §6 inherits the tag set automatically — no
+per-resource tag block to remember or drift out of sync.
+
+### 11.3 Rightsizing, Savings Plans, and Spot Strategy
+
+| Workload | Strategy | Rationale |
+|---|---|---|
+| EKS `system` + `general` node groups (§6.2) | **1-year, No-Upfront Compute Savings Plan** sized to the p50 steady-state vCPU-hour usage from the first 60 days of Cost Explorer data | Baseline, always-on capacity; a Savings Plan (not RIs) covers EC2 + Fargate + Lambda uniformly if any service moves to Fargate later |
+| EKS `gpu` node group (§6.2, ML anomaly detection) | **Spot** with the AWS Node Termination Handler + Karpenter consolidation | Batch/interruptible session-analysis workload (min_size = 0); a 2-minute Spot interruption notice is acceptable because jobs checkpoint to Kafka (§8.5) and resume |
+| RDS PostgreSQL prod primary (§6.2) | **1-year Reserved Instance** (No Upfront) on `db.r6g.2xlarge` once the instance class is confirmed stable post-launch | Always-on, cannot Spot; RI is the correct always-on discount instrument for RDS (Savings Plans do not cover RDS) |
+| RDS reporting read replica + cross-region replica | On-Demand initially, re-evaluate for RI after 90 days of stable usage | Newer/less proven usage pattern; avoid committing to a 1-year term before the read-replica sizing is confirmed correct |
+| MSK, Amazon MQ, ElastiCache | On-Demand (no RI/Savings-Plan equivalent as of this pin) | AWS does not offer a reservation instrument for these three services at time of writing — re-check the AWS pricing page at each cost review (§11.4 no-guessing: do not assume a discount instrument exists without checking) |
+| Coder dev workspaces (§9.10) | **On-Demand + 2-hour idle auto-stop** | Bursty, short-lived, per-developer — reservation makes no sense; the auto-stop TTL is the actual cost control |
+
+**Rightsizing cadence.** AWS Compute Optimizer (EC2/EBS/Lambda) and
+`kubecost`/`OpenCost` (in-cluster, namespace/pod-level cost attribution,
+deployed alongside the Prometheus stack in §7.1) are reviewed monthly;
+any node group or RDS instance class running below 40% average CPU
+utilization for 30 consecutive days is a rightsizing candidate, tracked
+the same way any other workable item is tracked in this project's
+governance model.
+
+### 11.4 Budget Alerts
+
+```hcl
+# infrastructure/terraform/shared/budgets.tf
+resource "aws_budgets_budget" "helixterm_prod_monthly" {
+  name         = "helixterm-prod-monthly"
+  budget_type  = "COST"
+  limit_amount = "26000"   # planning ceiling, ~12% headroom over the §11.1 production estimate
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
+
+  cost_filter {
+    name   = "TagKeyValue"
+    values = ["user:Environment$production"]
+  }
+
+  dynamic "notification" {
+    for_each = [50, 80, 100, 120]
+    content {
+      comparison_operator        = "GREATER_THAN"
+      threshold                  = notification.value
+      threshold_type             = "PERCENTAGE"
+      notification_type          = "ACTUAL"
+      subscriber_sns_topic_arns  = [aws_sns_topic.finops_alerts.arn]
+    }
+  }
+}
+
+resource "aws_sns_topic" "finops_alerts" {
+  name = "helixterm-finops-alerts"
+}
+
+# SNS -> Slack via the same Lambda pattern the observability stack (§7) uses
+# for PagerDuty/Slack routing — not duplicated here, see §7.2 alert-routing.
+```
+
+Budget alerts fire at 50/80/100/120% of the monthly ceiling into the
+`#finops-alerts` Slack channel (same routing infrastructure as the
+production alert rules in §7.2), so a cost anomaly (runaway autoscaling,
+an orphaned Coder workspace stuck below its idle-detector threshold, an
+accidental Multi-AZ enable on a staging resource) is caught within the
+same billing cycle it occurs, not discovered a month later on the AWS
+invoice.
 
 ---
 

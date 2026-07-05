@@ -65,6 +65,85 @@ Threat actors modeled in this specification:
 - **Malicious insider**: A legitimate employee with valid credentials acting outside their authorization
 - **Nation-state adversary**: Advanced persistent threat with long time horizons and sophisticated techniques
 
+#### 1.2.1 Trust-Boundary Diagram
+
+Every arrow below crosses a **zero-trust checkpoint** — no data crosses a boundary without independent authentication and authorization at that boundary, regardless of what happened at the previous hop.
+
+```mermaid
+flowchart LR
+    subgraph Ext["External Zone (Zero Trust)"]
+        C["Client\n(Flutter app / CLI)"]
+    end
+    subgraph Edge["Edge Zone"]
+        GW["API Gateway\n(TLS 1.3 terminate, WAF, rate-limit)"]
+    end
+    subgraph Mesh["Service Mesh Zone (SPIFFE/mTLS STRICT)"]
+        AUTH["auth-service"]
+        VAULT["vault-service"]
+        PKI["pki-ca (ca-signer)"]
+        SESS["session-manager"]
+        AUD["audit-service"]
+    end
+    subgraph Data["Data Tier"]
+        PG[("PostgreSQL\n(per-service DB)")]
+        KAFKA[("Kafka\naudit-events")]
+    end
+    subgraph Egress["SSH Egress Zone"]
+        HOST["Customer SSH Host\n(untrusted network)"]
+    end
+
+    C -- "1: HTTPS/TLS 1.3 + OIDC JWT" --> GW
+    GW -- "2: mTLS SPIFFE SVID" --> AUTH
+    GW -- "2: mTLS SPIFFE SVID" --> VAULT
+    AUTH -- "3: mTLS, short-TTL SVID" --> PKI
+    SESS -- "3: mTLS, short-TTL SVID" --> PKI
+    VAULT -- "4: authenticated conn, encrypted at rest" --> PG
+    AUD -- "4: authenticated conn" --> PG
+    AUTH -. "5: audit event (Kafka)" .-> KAFKA
+    VAULT -. "5: audit event (Kafka)" .-> KAFKA
+    KAFKA -. "6: consume" .-> AUD
+    SESS == "7: SSH cert-based session\n(egress, host key verified)" ==> HOST
+
+    style Ext fill:#1e293b,color:#fff,stroke:#f87171
+    style Edge fill:#312e1e,color:#fff,stroke:#fbbf24
+    style Mesh fill:#1e2e1e,color:#fff,stroke:#34d399
+    style Data fill:#1e1e33,color:#fff,stroke:#818cf8
+    style Egress fill:#3a1e1e,color:#fff,stroke:#f87171
+```
+
+Boundary 1 (client↔gateway) and boundary 7 (services↔SSH egress) are the two boundaries that cross an **untrusted network the platform does not control** (the public internet and the customer's infrastructure, respectively); boundaries 2–6 are internal-mesh and rely on SPIFFE/mTLS rather than network location for trust.
+
+#### 1.2.2 STRIDE Threat Model per Trust Boundary
+
+The table below applies the STRIDE categories (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege) to each of the four real trust boundaries traversed by a request, and maps every cell to the concrete control that mitigates it. This is the canonical threat-model reference for the platform; every new service integration MUST re-run this table for its own ingress/egress edges before launch.
+
+| Boundary | STRIDE Category | Concrete Threat | Mitigating Control |
+|---|---|---|---|
+| **Client ↔ Gateway** | Spoofing | Attacker replays or forges a client session without valid credentials | OIDC JWT (EdDSA/Ed25519, §2.6) + device certificate binding (§1.5.2) + FIDO2/WebAuthn phishing-resistant MFA (§2.3) |
+| | Tampering | Request/response body modified in transit (MITM) | TLS 1.3 only (§8.1), HSTS, certificate pinning on mobile (§8.6) |
+| | Repudiation | User denies performing an authenticated action | Append-only hash-chained audit log (§7) capturing `actor_id`, `session_id`, `access_token_jti` per event |
+| | Information Disclosure | Token or vault ciphertext leaked via logs, error messages, or a misconfigured CORS policy | Structured logging with automatic secret redaction (see `07_api_and_database.md` §14 for the redaction filter), strict CORS allowlist (§8.3), CSP (§8.4) |
+| | Denial of Service | Credential-stuffing or volumetric attack against `/v1/auth/login` | Login rate limiting + exponential backoff (§2.1.2), Cloudflare/WAF edge DDoS protection (§8.5) |
+| | Elevation of Privilege | Client forges a role claim or replays a stale token after a role downgrade | Roles are server-computed and embedded server-side at token-issuance time (never client-supplied), continuous verification terminates sessions within 60s of a policy change (§1.6) |
+| **Gateway ↔ Services** | Spoofing | A rogue pod impersonates `vault-service` inside the cluster | SPIFFE SVIDs (§1.3) — cryptographic workload identity, not IP/hostname-based |
+| | Tampering | A compromised sidecar or node modifies inter-service traffic | Istio STRICT mTLS mesh-wide (§1.4.2) — payload integrity is guaranteed by the TLS record layer, not application logic |
+| | Repudiation | A service denies having made a privileged call to another service | Envoy access logs carry `source_principal` (SPIFFE URI, §1.4.1) correlated with the audit event emitted by the calling service |
+| | Information Disclosure | Lateral movement from a compromised low-privilege service reads data it should not see | Least-privilege `AuthorizationPolicy` per service (§1.4.3) + network micro-segmentation default-deny (§1.7) |
+| | Denial of Service | A compromised or buggy service floods a peer with requests | Istio circuit breakers / outlier detection (destination rule, per-service; see `01_core_architecture.md` for the resilience baseline) |
+| | Elevation of Privilege | A service calls an API path outside its declared scope (e.g., `vault-service` calling `pki-ca`'s signing endpoint) | `AuthorizationPolicy` allow-lists exact source principals + exact paths per service (§1.4.3); explicit `deny-all` default |
+| **Services ↔ Vault** | Spoofing | An attacker-controlled service impersonates a legitimate vault client | Vault ciphertext is opaque to every service except the client that holds the Item/Vault Key (§4) — server-side identity spoofing cannot yield plaintext |
+| | Tampering | Ciphertext or wrapped-key blob modified at rest or in transit | AES-256-GCM authenticated encryption (§4.3) — any tamper fails GCM tag verification on decrypt; TLS 1.3 in transit |
+| | Repudiation | A team member denies having been granted or revoked vault access | `vault.shared` / `vault.access.revoked` / `vault.key.rotated` audit events (§7.2), each referencing the client-signed re-wrap request (§4.6) |
+| | Information Disclosure | The vault-service database or backup is exfiltrated | Zero-knowledge design (§4.1): exfiltrating the server's data yields ciphertext + wrapped keys only, never plaintext or unwrapped keys |
+| | Denial of Service | Bulk vault-sync requests exhaust vault-service capacity | Per-org rate limiting at the gateway (§1.4.3 AuthorizationPolicy path scoping) + Kubernetes HPA on `vault-service` |
+| | Elevation of Privilege | A revoked team member continues decrypting newly-shared items after removal | Mandatory Vault Key rotation on `RevokeMember` (§4.7) — old wrapped keys are deleted and cannot unwrap post-rotation ciphertext |
+| **Services ↔ SSH Egress** | Spoofing | Client connects to an attacker-controlled host impersonating the intended target | SSH host certificates signed by the platform CA (§3.6) — host identity is cryptographically verified, not TOFU |
+| | Tampering | An on-path attacker modifies SSH session traffic | SSH transport-layer integrity (RFC 4253) + hardened cipher/MAC allowlist (§8.2) |
+| | Repudiation | An operator denies having executed a destructive command on a production host | Full session recording + `session.command.executed` audit events (§7.2), tamper-evident via the hash chain (§7.3) and anchored externally (§7.4) |
+| | Information Disclosure | SSH session output containing secrets is captured in recordings or forwarded to the AI-assist path | Secret redaction pipeline before persistence/AI-context handoff (see `07_api_and_database.md` §14) |
+| | Denial of Service | A malicious or compromised host holds an SSH connection open to exhaust `session-manager` connection pools | Per-session TTL bound to the SSH certificate lifetime (§1.5.4, max 8h) + idle-session timeout (§1.6 continuous verification) |
+| | Elevation of Privilege | A standard `member` obtains a certificate with elevated principals (e.g., `root`) | Certificate issuance API enforces role-to-principal mapping server-side (§3.4) — the client cannot request principals beyond its RBAC grant (§6); break-glass elevation requires two-person approval (§6.5) |
+
 ### 1.3 SPIFFE/SPIRE Workload Identity
 
 #### 1.3.1 Overview
@@ -2351,7 +2430,7 @@ This is achieved through client-side encryption: all encryption and decryption o
 
 **Scope of this guarantee (per CANONICAL_FACTS CD-10):** zero-knowledge is a **HARD** requirement for *vault items* — client-side encryption/decryption only, with the server relaying ciphertext it cannot open. This guarantee does **not** extend to SSH host credentials under password-based host authentication, nor to server-side SSH key generation (see `07_api_and_database.md` §4 and `POST /keys/generate`): those are a distinct, lower-assurance credential class that requires the server to handle plaintext at connection time. This document, and every sibling document, must stop describing password-based SSH host authentication as zero-knowledge — it explicitly is not.
 
-> **DEFERRED (next increment):** the vault's zero-knowledge posture stated above is the design target but is not yet fully realized by the implementation shown in §4.6–§4.7 below — see the inline `DEFERRED` notes there for the specific server-side key-handling gaps (a plaintext `VaultKey` field in a backend-looking struct, and a re-wrap flow that can execute server-side) that must be removed to make this guarantee true rather than aspirational.
+**Client/server package boundary (closes the prior design gap):** §4.6–§4.7 below define the concrete `vaultclient` (client-only, plaintext-capable) / `vaultrelay` (server-only, ciphertext-only) package split that makes this guarantee a structural, CI-checkable fact rather than a narrative claim — the server module never imports a package capable of unwrapping a Vault Key or Item Key. `auth_method=password` SSH host credentials remain outside this guarantee (see previous paragraph) and are handled entirely by `07_api_and_database.md` §4/§5's server-mediated credential path, which this document does not duplicate.
 
 ### 4.2 Key Hierarchy
 
@@ -2369,6 +2448,45 @@ Item Key (AES-256, one per vault item)
     │
     ▼ AES-256-GCM decrypt(Encrypted Item Data, Item Key)
 Plaintext Item Data
+```
+
+```mermaid
+flowchart TD
+    PW["User Password\n(never stored, never transmitted)"]
+    MK["Master Key\n(Argon2id derivation — ephemeral, client memory only)"]
+    VK["Vault Key\n(AES-256, one per vault — CLIENT-GENERATED, never leaves client unencrypted)"]
+    IK["Item Key\n(AES-256, one per item — envelope DEK)"]
+    DATA["Plaintext Item Data"]
+    DEV["Device Keypair\n(X25519, private key in Secure Enclave/Keychain/TPM)"]
+    MEMBER["Team-Member Public Keys\n(X25519, fetched from server as opaque directory)"]
+
+    PW -- "Argon2id KDF" --> MK
+    MK -- "unwraps (AES-256-GCM)" --> VK
+    VK -- "wraps/unwraps (per item)" --> IK
+    IK -- "wraps/unwraps" --> DATA
+    DEV -- "ECDH + HKDF wraps VK for this device" --> VK
+    MEMBER -- "ECDH + HKDF wraps VK for each team member (client-side only)" --> VK
+
+    subgraph Client["CLIENT DEVICE — the ONLY place plaintext keys ever exist"]
+        PW
+        MK
+        VK
+        IK
+        DATA
+        DEV
+    end
+    subgraph Server["SERVER — opaque ciphertext relay, never holds an unwrapped key"]
+        SVAULT[("wrapped Vault Keys\n(one ciphertext blob per member/device)")]
+        SITEM[("wrapped Item Keys + encrypted item data")]
+        SDIR[("device/member public-key directory\n(non-secret)")]
+    end
+
+    VK -. "upload: ciphertext only" .-> SVAULT
+    IK -. "upload: ciphertext only" .-> SITEM
+    SDIR -. "download: public keys only" .-> MEMBER
+
+    style Client fill:#1e2e1e,color:#fff,stroke:#34d399
+    style Server fill:#3a1e1e,color:#fff,stroke:#f87171
 ```
 
 **Key storage model:**
@@ -2661,70 +2779,170 @@ func CombineShares(shares [][]byte) ([]byte, error) {
 }
 ```
 
-### 4.6 Team Vault Key Sharing
+### 4.6 Team Vault Key Sharing — Client-Side Envelope Encryption (True Zero-Knowledge)
+
+**This section supersedes the prior server-executable design.** Per `CANONICAL_FACTS` CD-10, zero-knowledge is a **HARD** requirement for vault items: the server MUST NEVER hold, compute with, or have code-paths capable of producing an unwrapped Vault Key or Item Key. The design below removes server-side key generation and server-side re-wrap entirely and replaces them with an explicit **client ↔ server package boundary**: the `vaultclient` package (compiled into the Flutter app / CLI / desktop client only) is the *only* code in the entire system that ever holds a plaintext key; the server-side `vaultrelay` package operates exclusively on opaque byte blobs it cannot open.
+
+**Key hierarchy recap (client-side only, per §4.2):** every vault item is protected by envelope encryption — a per-item Data Encryption Key (the "Item Key") encrypts the item's plaintext, and the Item Key is itself wrapped once per authorized principal (once for the owning user's Vault Key, and additionally once per team member when the vault is shared). The server stores the item ciphertext and every wrapped-DEK blob; it never stores or sees an unwrapped DEK.
 
 ```go
-// digital.vasic.security/vault/team.go
-package vault
+// digital.vasic.security/vaultclient/team.go
+// Package vaultclient runs ONLY inside the client (Flutter/CLI/desktop).
+// It is never linked into any server binary. This is enforced by the
+// build system (§11.4.28 decoupling: the server module does not import
+// this package) and by CI (`go list -deps ./cmd/vault-service/...` MUST
+// NOT contain `vaultclient`).
+package vaultclient
 
-// TeamVault manages key distribution for shared team vaults.
-type TeamVault struct {
-	VaultID        string
-	VaultKey       []byte   // plaintext vault key (only in memory)
-	MemberWraps    map[string]*DeviceWrappedKey // user_id -> wrapped key
+// TeamVaultClient is the client-side-only representation of a shared team
+// vault. Unlike the prior server-executable design, VaultKey here is a
+// runtime value that exists ONLY for the lifetime of an unlocked session
+// in client process memory — it is never serialized, logged, or sent to
+// the server in any form other than individually re-wrapped ciphertext.
+type TeamVaultClient struct {
+	VaultID  string
+	VaultKey []byte // plaintext — client process memory ONLY, zeroed on lock/exit
 }
 
-// AddMember grants vault access to a new team member by wrapping the vault
-// key with the member's device public key.
-func (tv *TeamVault) AddMember(ctx context.Context, userID string, devicePubKey [32]byte) error {
-	wrapped, err := WrapVaultKeyForDevice(devicePubKey, tv.VaultKey)
+// AddMember grants vault access to a new team member. This function runs
+// ONLY on the device of an existing authorized member (owner or
+// team_admin per §6.2 vault:share). It performs the ECDH wrap locally and
+// uploads ONLY the resulting ciphertext; the server never receives
+// tv.VaultKey.
+func (tv *TeamVaultClient) AddMember(ctx context.Context, memberUserID string, memberDevicePubKey [32]byte) error {
+	wrapped, err := WrapVaultKeyForDevice(memberDevicePubKey, tv.VaultKey) // client-side ECDH+AEAD, §4.4
 	if err != nil {
-		return fmt.Errorf("failed to wrap vault key for user %s: %w", userID, err)
+		return fmt.Errorf("failed to wrap vault key for user %s: %w", memberUserID, err)
 	}
-	tv.MemberWraps[userID] = wrapped
-	return saveWrappedKey(ctx, tv.VaultID, userID, wrapped)
+	// uploadWrappedKey POSTs opaque ciphertext to
+	// PUT /v1/vaults/{vault_id}/members/{user_id}/wrapped-key — the server
+	// stores the blob verbatim and cannot decrypt it.
+	return uploadWrappedKey(ctx, tv.VaultID, memberUserID, wrapped)
 }
 
-// RevokeMember removes a member's access to the team vault.
-// This is a two-step process:
-//   1. Delete their wrapped key (immediate — they can no longer decrypt new data)
-//   2. Rotate the vault key (prevents offline decryption of previously synced data)
-//
-// Step 2 requires that all remaining members re-sync their wrapped key,
-// which is triggered asynchronously.
-func (tv *TeamVault) RevokeMember(ctx context.Context, revokedUserID string) error {
-	// Step 1: Delete wrapped key
-	if err := deleteWrappedKey(ctx, tv.VaultID, revokedUserID); err != nil {
+// RevokeMember removes a member's access. The re-wrap of every remaining
+// member's key and the generation of the new Vault Key both happen on
+// THIS client (the initiating admin's device) — see the Member-Removal
+// Re-Wrap Protocol below. The server's only role is to accept the
+// resulting batch of ciphertext blobs atomically and to reject any read
+// of the old wrapped keys once the new ones are committed.
+func (tv *TeamVaultClient) RevokeMember(ctx context.Context, revokedUserID string) error {
+	// Step 1: instruct server to delete the revoked member's wrapped key
+	// (immediate revocation of access to NOT-YET-ROTATED data).
+	if err := requestDeleteWrappedKey(ctx, tv.VaultID, revokedUserID); err != nil {
 		return err
 	}
-	delete(tv.MemberWraps, revokedUserID)
 
-	// Step 2: Trigger vault key rotation
-	return scheduleKeyRotation(ctx, tv.VaultID, KeyRotationReasonMemberRevoked)
+	// Step 2: perform full client-side key rotation (§4.7) — this client
+	// downloads the current wrapped Item Keys, unwraps them locally with
+	// the OLD Vault Key, generates a NEW Vault Key, re-wraps every Item
+	// Key under the new Vault Key, re-wraps the new Vault Key for every
+	// REMAINING member's device public key, and uploads the entire batch
+	// as opaque ciphertext in one atomic relay transaction. The revoked
+	// member is excluded from the re-wrap fan-out.
+	return RotateVaultKey(ctx, tv.VaultID, KeyRotationReasonMemberRevoked)
 }
 ```
 
-> **DEFERRED (next increment):** security redesign — `TeamVault.VaultKey []byte` holds the plaintext vault key in memory inside a `vault` package with no client-boundary marker, and `AddMember`/`RevokeMember` call `WrapVaultKeyForDevice`/`scheduleKeyRotation` in a way that reads as server-executable code. Per CANONICAL_FACTS CD-10 (zero-knowledge is HARD for vault items), this must be redesigned so key-wrap and key-combination operations are provably client-side only, with the server acting solely as a relay for opaque ciphertext it cannot open. Not done this increment.
+```go
+// digital.vasic.security/vaultrelay/team.go
+// Package vaultrelay is the SERVER-SIDE component. It has NO function
+// capable of producing plaintext key material — there is no Decrypt,
+// Unwrap, or Combine call anywhere in this package. It is a pure
+// authenticated blob store keyed by (vault_id, member_id) plus an
+// atomic multi-row commit for rotation batches.
+package vaultrelay
 
-### 4.7 Key Rotation Procedure
+// WrappedKeyBlob is opaque to the server: it cannot be unwrapped without
+// the recipient device's private key, which never leaves that device.
+type WrappedKeyBlob struct {
+	VaultID            string
+	MemberUserID       string
+	EphemeralPublicKey []byte // non-secret, part of the ECDH exchange
+	Ciphertext         []byte // AES-256-GCM sealed Vault Key — opaque to the server
+	KeyVersion         int    // monotonic; incremented by every client-driven rotation
+}
 
-Full key rotation procedure (triggered by member revocation, periodic rotation policy, or manual trigger):
+// StoreWrappedKey persists a client-produced ciphertext blob verbatim.
+// This is the ENTIRE server-side surface for team-vault key sharing —
+// no key material is generated, combined, or unwrapped here.
+func (r *Relay) StoreWrappedKey(ctx context.Context, blob WrappedKeyBlob) error {
+	return r.db.UpsertWrappedKey(ctx, blob)
+}
+
+// CommitRotationBatch atomically replaces every wrapped-key row for a
+// vault with the client-supplied new-key-version batch, or rejects the
+// entire batch if any row is missing a required recipient (fail-closed:
+// a rotation that would leave an active member unable to decrypt is
+// rejected, not partially applied).
+func (r *Relay) CommitRotationBatch(ctx context.Context, vaultID string, batch []WrappedKeyBlob, expectedRecipients []string) error {
+	if !coversAllRecipients(batch, expectedRecipients) {
+		return fmt.Errorf("rotation batch missing recipient wrapped-keys; aborting to avoid partial lockout")
+	}
+	return r.db.ReplaceWrappedKeysAtomic(ctx, vaultID, batch)
+}
+```
+
+#### 4.6.1 Member-Add / Member-Remove Re-Wrap Protocol (Sequence)
+
+```mermaid
+sequenceDiagram
+    participant Admin as Admin Client\n(vaultclient, holds VK)
+    participant Server as vault-service\n(vaultrelay — opaque relay)
+    participant Member as Remaining Member Client
+    participant Revoked as Revoked Member Client
+
+    Note over Admin: Admin initiates RevokeMember(revokedUserID)
+    Admin->>Server: DELETE /v1/vaults/{id}/members/{revokedUserID}/wrapped-key
+    Server-->>Admin: 200 OK (revoked key deleted; access to future data cut immediately)
+
+    Note over Admin: Client-side rotation begins (§4.7)
+    Admin->>Server: GET /v1/vaults/{id}/items (wrapped Item Keys, ciphertext)
+    Server-->>Admin: wrapped Item Keys + ciphertext (opaque to server)
+    Note over Admin: Admin unwraps Item Keys with OLD VK,\ngenerates NEW VK,\nre-wraps every Item Key under NEW VK,\nre-wraps NEW VK for every remaining member's device public key
+    Admin->>Server: GET /v1/vaults/{id}/members (public keys only, non-secret)
+    Server-->>Admin: member device public-key directory
+
+    Admin->>Server: POST /v1/vaults/{id}/rotate\n(batch: re-wrapped Item Keys + re-wrapped VK per remaining member)
+    Note over Server: CommitRotationBatch — atomic;\nrejects if any active member's wrap is missing
+    Server-->>Admin: 200 OK (key_version incremented)
+
+    Server-->>Member: push: vault.key.rotated (key_version)
+    Member->>Server: GET /v1/vaults/{id}/members/{self}/wrapped-key
+    Server-->>Member: new wrapped VK (ciphertext)
+    Note over Member: Member unwraps locally with own device private key — server never involved in plaintext
+
+    Revoked--xServer: (no wrapped key exists post-rotation — cannot decrypt any item re-wrapped after revocation)
+```
+
+**Why this closes the CD-10 gap:** in the prior design, `TeamVault.VaultKey []byte` lived in a package importable by server binaries and `AddMember`/`RevokeMember` called wrap/rotation functions with no stated execution boundary — a reviewer (or an attacker who fully compromises the server) could not distinguish this from server-executable code that handles plaintext keys. The redesign above makes the boundary a **structural, CI-enforced fact**: `vaultclient` (plaintext-capable) is never imported by any server module, and `vaultrelay` (server-side) has no function whose signature accepts or returns an unwrapped key. The `CM-VAULT-ZERO-KNOWLEDGE-BOUNDARY` gate (recommended, paired with a §1.1 mutation that adds a `vaultclient` import to a server `go.mod` and asserts the gate FAILs) makes this durable rather than a one-time review finding.
+
+### 4.7 Key Rotation Procedure — Execution Boundary Made Explicit
+
+Full key rotation procedure (triggered by member revocation, periodic rotation policy, or manual trigger). **Every step below runs on the initiating client** (the `vaultclient` package, §4.6); the `[CLIENT]` / `[SERVER]` tag on each step makes the execution boundary unambiguous — this is the concrete fix for the prior ambiguity where steps 2a/2b read as server-side operations on decrypted key material:
 
 ```
-1. Generate new Vault Key (32 random bytes)
-2. For each vault item:
-   a. Decrypt Item Key with old Vault Key
-   b. Wrap Item Key with new Vault Key
-   c. Store re-wrapped Item Key (item DATA is not re-encrypted — only the key wrapping changes)
-3. For each active member device:
-   a. Wrap new Vault Key with member device public key
-   b. Store new wrapped Vault Key
-4. Delete old wrapped Vault Keys
-5. Log rotation event to audit log
-6. Notify all active sessions of key rotation (triggers client re-sync)
+1. [CLIENT] Generate new Vault Key (32 random bytes, crypto/rand) — never transmitted in plaintext form.
+2. [CLIENT] Fetch current wrapped Item Keys + item ciphertext from the server (GET /v1/vaults/{id}/items).
+   For each vault item, ON THE CLIENT:
+   a. [CLIENT] Decrypt (unwrap) Item Key with the OLD Vault Key — held only in this client's process memory.
+   b. [CLIENT] Re-wrap Item Key with the NEW Vault Key.
+   c. [SERVER]  Accept the re-wrapped Item Key as an opaque blob and store it
+       (item DATA is not re-encrypted or re-uploaded — only the key-wrapping ciphertext changes).
+3. [CLIENT] Fetch the public-key directory for every active member device (GET /v1/vaults/{id}/members — non-secret).
+   For each active member device, ON THE CLIENT:
+   a. [CLIENT] Wrap the new Vault Key with the member device's public key (X25519 ECDH + HKDF, §4.4).
+   b. [SERVER]  Accept the new wrapped Vault Key as an opaque blob and store it.
+4. [SERVER] Atomically replace the vault's wrapped-key row set with the client-submitted batch
+   (`CommitRotationBatch`, §4.6) — fail-closed if any active member's wrap is missing from the batch;
+   old wrapped Vault Keys are deleted only after the atomic commit succeeds.
+5. [SERVER] Log the rotation event to the audit log (`vault.key.rotated`, §7.2) — the audit event
+   records the actor, vault ID, and new key version; it never records key material.
+6. [SERVER] Notify all active sessions of the key-version bump (triggers each client to re-fetch
+   its own wrapped Vault Key and unwrap it locally, §4.6.1 sequence diagram).
 ```
 
-> **DEFERRED (next increment):** security redesign — steps 2a/2b (Item Key decrypt/re-wrap under the new Vault Key) are described without a stated execution boundary and, combined with §4.6's server-callable `RevokeMember`/`scheduleKeyRotation`, currently read as server-side operations on decrypted key material. Per CANONICAL_FACTS CD-10, re-wrap must be performed client-side (or via blinded/opaque server relay only); the server must never hold an unwrapped Item Key or Vault Key. Not done this increment.
+**Server never holds an unwrapped key at any step.** Steps tagged `[SERVER]` operate exclusively on ciphertext blobs (ID + bytes) and never invoke a decrypt/unwrap/combine function — there is structurally no code path in the server binary capable of producing plaintext key material from a rotation request, satisfying CANONICAL_FACTS CD-10.
 
 ### 4.8 Recovery Code Mechanism
 
@@ -3338,6 +3556,116 @@ func (e *Engine) evaluateConditions(ctx context.Context, req EvaluationRequest) 
 }
 ```
 
+### 6.5 Break-Glass Emergency Access, Just-in-Time Elevation, and Separation of Duties
+
+Sections 10.2/10.5 above define the **emergency lockout** path (revoke access when something is wrong). This section defines the complementary **emergency grant** path — how an authorized responder gets *in* to a system during an incident when the normal approval chain would be too slow — together with the routine controls (JIT elevation, two-person integrity) that prevent that emergency path from becoming a standing privilege-escalation hole.
+
+#### 6.5.1 Break-Glass Emergency Grant
+
+Break-glass is a **time-boxed, fully-audited, self-expiring** grant of elevated access, distinct from a normal `role_assignments` row:
+
+```sql
+-- ============================================================
+-- Break-glass emergency access — extends the RBAC schema (§6.3)
+-- ============================================================
+CREATE TABLE break_glass_grants (
+    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    requested_by      UUID        NOT NULL REFERENCES users(id),
+    granted_role_id   UUID        NOT NULL REFERENCES roles(id),
+    org_id            UUID        NOT NULL REFERENCES organizations(id),
+    scope_resource_type VARCHAR(64), -- NULL = org-wide; else e.g. 'host', 'vault'
+    scope_resource_id  UUID,
+    justification     TEXT        NOT NULL,       -- mandatory free-text reason, ties to incident_id
+    incident_id       VARCHAR(64),                -- correlates to the P0/P1 incident channel (§10.1)
+    approved_by       UUID        REFERENCES users(id), -- NULL until second-person approval lands
+    approved_at       TIMESTAMPTZ,
+    requested_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at        TIMESTAMPTZ NOT NULL,       -- MUST be requested_at + <= 4 hours (enforced by CHECK)
+    revoked_at        TIMESTAMPTZ,                -- explicit early revocation, if any
+    CONSTRAINT break_glass_max_4h CHECK (expires_at <= requested_at + INTERVAL '4 hours')
+);
+
+-- A break-glass grant is active only while: approved, not expired, not revoked.
+CREATE VIEW active_break_glass_grants AS
+    SELECT * FROM break_glass_grants
+    WHERE approved_by IS NOT NULL
+      AND expires_at > NOW()
+      AND revoked_at IS NULL;
+```
+
+```go
+// pkg/rbac/breakglass.go
+package rbac
+
+// RequestBreakGlass creates a time-boxed emergency-access request. It does
+// NOT grant access by itself — the grant is inert until ApproveBreakGlass
+// is called by a SECOND, different principal (two-person control, §6.5.2).
+// Auto-revocation is enforced by a scheduled sweep (every 60s) that checks
+// active_break_glass_grants and terminates any session whose grant has
+// expired — mirroring the continuous-verification sweep of §1.6.
+func RequestBreakGlass(ctx context.Context, req BreakGlassRequest) (*BreakGlassGrant, error) {
+	if req.RequestedDuration > 4*time.Hour {
+		return nil, fmt.Errorf("break-glass duration capped at 4 hours; request a follow-on grant if needed")
+	}
+	if req.Justification == "" || req.IncidentID == "" {
+		return nil, fmt.Errorf("break-glass requires justification and an incident_id — no anonymous emergency grants")
+	}
+	grant, err := store.InsertBreakGlassGrant(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	// Fires immediately — every request is visible to on-call security
+	// whether or not it is ultimately approved (§10.1 P0/P1 channel).
+	auditor.Log(ctx, audit.Event{Type: audit.EventBreakGlassRequested, ActorID: req.RequestedBy, Metadata: req})
+	notifyOnCallSecurity(ctx, grant)
+	return grant, nil
+}
+
+// ApproveBreakGlass activates a pending grant. MUST be called by a
+// principal different from RequestedBy (enforced below) and MUST itself
+// hold org_admin or super_admin — a break-glass grant of super_admin
+// scope requires TWO super_admins.
+func ApproveBreakGlass(ctx context.Context, grantID string, approverID string) error {
+	grant, err := store.GetBreakGlassGrant(ctx, grantID)
+	if err != nil {
+		return err
+	}
+	if grant.RequestedBy == approverID {
+		return fmt.Errorf("two-person control violation: approver must differ from requester (%s)", approverID)
+	}
+	if err := store.ApproveBreakGlassGrant(ctx, grantID, approverID); err != nil {
+		return err
+	}
+	auditor.Log(ctx, audit.Event{Type: audit.EventBreakGlassApproved, ActorID: approverID, TargetID: grantID})
+	return scheduleAutoRevoke(ctx, grantID, grant.ExpiresAt) // hard revoke at expiry, no extension without a new request
+}
+```
+
+#### 6.5.2 Two-Person Control (Separation of Duties) for `super_admin` / `org_admin` Sensitive Operations
+
+The following operations MUST NOT be executable by a single principal acting alone, regardless of role:
+
+| Sensitive Operation | Rationale | Second-Approver Requirement |
+|---|---|---|
+| Break-glass grant approval (§6.5.1) | Prevents a single compromised/malicious admin from self-granting emergency access | A second `org_admin` (or `super_admin` for org-wide scope) — never the requester |
+| CA root/intermediate key ceremony (§3.2, §10.4) | A single-operator CA ceremony is a single point of catastrophic compromise | Two named key-ceremony participants, both physically present, per §3.2 |
+| Org-wide audit-log export or retention-policy change | Prevents an admin from covering their own tracks by exporting-then-purging | A second `org_admin` approval, logged as its own `admin.audit_policy.changed` event |
+| `super_admin` role grant to a new principal | The highest-privilege role in the system (§6.1) | An existing `super_admin` different from the grantor, both actions independently audited |
+| Vault key rotation triggered manually (outside member-revocation) for an org-wide vault | Distinguishes routine client-driven rotation (§4.7) from an admin-forced rotation that could be used to lock out legitimate members | `org_admin` request + `team_admin` (of the affected team) confirmation |
+
+Enforcement is at the policy-evaluation layer (§6.4): `RequireApproval` conditions on the relevant `resource_policies` row require a `role_assignments` record showing the second approver is distinct from the actor, evaluated the same way `evaluateConditions` evaluates MFA and IP-allowlist conditions.
+
+#### 6.5.3 Just-in-Time (JIT) Elevation for Routine Privileged Access
+
+Not every privileged action rises to break-glass severity. Routine JIT elevation (e.g., a `member` temporarily needing `team_admin`-scoped `host:delete` for a scheduled decommission) follows a lighter-weight, still fully-audited path:
+
+1. Requester submits a JIT request scoped to a specific resource + action + duration (max 8 hours, matching the standard SSH certificate TTL, §1.5.4).
+2. A `team_admin` or `org_admin` approves (single-approver — JIT is not break-glass; it does not bypass two-person control for the §6.5.2 sensitive-operation list).
+3. The elevation is materialized as a time-boxed `role_assignments` row with a non-NULL `expires_at`; the continuous-verification sweep (§1.6) treats expiry identically to a policy change and terminates the elevated grant's effect within 60 seconds of expiry.
+4. Every JIT grant, use, and expiry is an audit event (`admin.jit.granted` / `admin.jit.used` / `admin.jit.expired`, §7.2).
+
+JIT elevation is the routine control that keeps standing privilege low (supporting least-privilege, §1.1); break-glass (§6.5.1) is the exception path for when even the JIT approval loop is too slow for an active incident.
+
 ---
 
 ## 7. Audit Logging
@@ -3633,7 +3961,144 @@ func VerifyChain(ctx context.Context, db *sql.DB, startID, endID string) (*Chain
 }
 ```
 
-### 7.4 SIEM Integration
+### 7.4 Audit WORM Anchoring — External Tamper-Evidence Beyond the Database
+
+**The gap this closes:** the hash chain in §7.3 proves internal self-consistency of the `audit_events` table, but a `postgres` superuser (or an attacker who obtains superuser credentials) can still rewrite the entire table — including every `prev_hash`/`event_hash` value — and the chain will re-verify against itself perfectly. `CREATE RULE no_audit_update`/`no_audit_delete` (§7.2) block ordinary `UPDATE`/`DELETE` statements but do **not** block a superuser using `ALTER TABLE ... DISABLE RULE` or a direct WAL-level restore from a doctored backup. Genuine tamper-evidence requires an anchor **outside** the database that the platform operator does not control.
+
+#### 7.4.1 Anchoring Mechanism
+
+At a fixed cadence, the current tip of the hash chain (the `event_hash` of the most-recently-written `audit_events` row) is anchored externally using **S3 Object Lock in Compliance mode** (the AWS-native WORM primitive — Compliance mode means *no principal, including the AWS account root*, can shorten the retention period or delete the object before it expires):
+
+```go
+// pkg/audit/wormanchor/anchor.go
+package wormanchor
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+)
+
+// AnchorRecord is the externally-anchored checkpoint. It is written once
+// per anchoring interval and NEVER updated in place — each interval
+// produces a new, independently-locked object.
+type AnchorRecord struct {
+	AnchorID       string    `json:"anchor_id"`        // e.g. "anchor_2026-07-05T00-00-00Z"
+	ChainTipHash   string    `json:"chain_tip_hash"`   // event_hash of the last row covered
+	ChainTipEventID string   `json:"chain_tip_event_id"`
+	PrevAnchorHash string    `json:"prev_anchor_hash"` // hash of the PREVIOUS anchor object — anchors form their own chain
+	EventCount     int64     `json:"event_count"`      // total events covered since genesis
+	AnchoredAt     time.Time `json:"anchored_at"`
+	Signature      []byte    `json:"signature"`        // Ed25519 signature over the above, signed by the audit-service SVID key
+}
+
+// AnchorCadence: the platform anchors every 15 minutes (near-real-time
+// tamper detection window) AND on every P0/P1 incident declaration
+// (§10.1), whichever is more frequent at the time.
+const AnchorCadence = 15 * time.Minute
+
+// PublishAnchor computes the current chain tip, signs it, and writes it
+// to an Object-Lock-protected S3 bucket in Compliance mode with a
+// 10-year retention (matching the `critical` retention class, §7.6).
+// Compliance mode means the object cannot be deleted or shortened by
+// ANY principal — including a compromised or malicious AWS root account —
+// until the retain-until date, satisfying the "outside operator control"
+// requirement.
+func PublishAnchor(ctx context.Context, s3Client *s3.Client, bucket string, tip ChainTip, prevAnchorHash string, signer ed25519.PrivateKey) (*AnchorRecord, error) {
+	rec := AnchorRecord{
+		AnchorID:        fmt.Sprintf("anchor_%s", time.Now().UTC().Format("2006-01-02T15-04-05Z")),
+		ChainTipHash:    tip.EventHash,
+		ChainTipEventID: tip.EventID,
+		PrevAnchorHash:  prevAnchorHash,
+		EventCount:      tip.EventCount,
+		AnchoredAt:      time.Now().UTC(),
+	}
+	payload, err := json.Marshal(rec)
+	if err != nil {
+		return nil, err
+	}
+	rec.Signature = ed25519.Sign(signer, payload)
+
+	final, err := json.Marshal(rec)
+	if err != nil {
+		return nil, err
+	}
+
+	retainUntil := time.Now().AddDate(10, 0, 0) // 10-year retention — matches `critical` class (§7.6)
+	_, err = s3Client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:                    aws.String(bucket),
+		Key:                       aws.String(fmt.Sprintf("audit-anchors/%s.json", rec.AnchorID)),
+		Body:                      bytes.NewReader(final),
+		ObjectLockMode:            types.ObjectLockModeCompliance,
+		ObjectLockRetainUntilDate: aws.Time(retainUntil),
+		ContentType:               aws.String("application/json"),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to publish WORM anchor (fail-closed: audit pipeline alerts, does NOT silently continue): %w", err)
+	}
+	return &rec, nil
+}
+```
+
+**Anchor-of-anchors chaining:** each `AnchorRecord.PrevAnchorHash` links to the previous anchor, forming a second, coarser-grained hash chain over the anchors themselves. This means even a full, self-consistent forged replacement of `audit_events` (with a matching internal §7.3 chain) can be detected by comparing the *anchored* chain tips against the *current* database chain — any divergence between an anchor's `chain_tip_hash` and the recomputed hash at that point in the current table is conclusive proof of tampering, because the anchor object itself cannot have been altered (S3 Object Lock Compliance mode) or backdated (the signature is over a timestamp the audit-service's own SPIFFE-bound key produced at write time).
+
+**Alternative/complementary mechanism — external transparency log:** for organizations requiring third-party-verifiable proof (not just "the S3 bucket says so"), the same `chain_tip_hash` MAY additionally be submitted to a public RFC 6962-style Certificate-Transparency-pattern log (reusing the SSH Certificate Transparency Log infrastructure already specified in §3.7) as a generic Merkle-tree entry. This gives an externally-auditable, cryptographically-provable timestamp independent of both HelixTerminator and AWS. This is a `RECOMMENDED` enhancement, not required for MVP — the S3 Object Lock anchor alone satisfies the "external, operator-uncontrollable WORM anchor" requirement.
+
+#### 7.4.2 Verification Procedure
+
+```go
+// VerifyAgainstAnchors re-verifies the internal hash chain (§7.3
+// VerifyChain) AND cross-checks every anchor's recorded chain_tip_hash
+// against the hash recomputed from the CURRENT audit_events table at
+// that point in the chain. A mismatch means the database was altered
+// after the anchor was published — the anchor is authoritative.
+func VerifyAgainstAnchors(ctx context.Context, db *sql.DB, s3Client *s3.Client, bucket string) (*AnchorVerificationResult, error) {
+	anchors, err := listAnchors(ctx, s3Client, bucket) // lists all objects under audit-anchors/, oldest first
+	if err != nil {
+		return nil, err
+	}
+
+	var prevAnchorHash string
+	for _, anchor := range anchors {
+		// 1. Verify the anchor-chain linkage itself.
+		if prevAnchorHash != "" && anchor.PrevAnchorHash != prevAnchorHash {
+			return &AnchorVerificationResult{Valid: false, BrokenAtAnchor: anchor.AnchorID, Reason: "anchor chain linkage broken"}, nil
+		}
+		// 2. Verify the anchor's own signature (proves it was produced by
+		//    the audit-service's SPIFFE-bound signing key, not forged).
+		if !ed25519.Verify(auditServicePublicKey, canonicalize(anchor), anchor.Signature) {
+			return &AnchorVerificationResult{Valid: false, BrokenAtAnchor: anchor.AnchorID, Reason: "anchor signature invalid"}, nil
+		}
+		// 3. Recompute the internal chain hash UP TO this anchor's
+		//    chain_tip_event_id from the CURRENT database state, and
+		//    compare against what was anchored.
+		recomputed, err := audit.ComputeChainTipHash(ctx, db, anchor.ChainTipEventID)
+		if err != nil {
+			return nil, err
+		}
+		if recomputed != anchor.ChainTipHash {
+			return &AnchorVerificationResult{
+				Valid:          false,
+				BrokenAtAnchor: anchor.AnchorID,
+				Reason:         "database chain tip does not match externally-anchored value — audit log has been altered since this anchor was published",
+			}, nil
+		}
+		prevAnchorHash = anchorObjectHash(anchor)
+	}
+	return &AnchorVerificationResult{Valid: true, AnchorsVerified: len(anchors)}, nil
+}
+```
+
+**Operational cadence:** `VerifyAgainstAnchors` runs (a) on every P0/P1 incident's evidence-preservation step (§10.2 step 3, extending "Kafka offsets frozen" to include an immediate anchor-verification run), (b) on a daily scheduled job feeding its PASS/FAIL into the SIEM pipeline (§7.5) as a `audit.anchor.verified` / `audit.anchor.verification_failed` event, and (c) on demand during SOC 2 / ISO 27001 audit evidence collection (§9.1, §9.5).
+
+### 7.5 SIEM Integration
 
 ```go
 // pkg/audit/siem/splunk.go
@@ -3686,14 +4151,14 @@ func (s *SplunkForwarder) batchWorker(ctx context.Context) {
 }
 ```
 
-### 7.5 Retention and Archival
+### 7.6 Retention and Archival
 
 | Classification | Examples | Retention | Storage |
 |---------------|---------|-----------|---------|
 | `debug` | Token refreshes, key uses | 90 days | Hot (PostgreSQL) |
 | `standard` | Logins, sessions, vault access | 1 year | Hot → Cold (S3) |
 | `compliance` | Role changes, MFA changes, key exports | 7 years | Hot (1y) + Archive (S3 Glacier) |
-| `critical` | Key ceremonies, CA operations, breach events | 10 years | Permanent archive |
+| `critical` | Key ceremonies, CA operations, breach events | 10 years | Permanent archive + WORM anchor (§7.4, S3 Object Lock Compliance mode, 10-year retain-until matching this class) |
 
 ---
 
@@ -3993,15 +4458,20 @@ HelixTerminator maps its controls to the AICPA Trust Services Criteria (SOC 2):
 - IP addresses in audit logs anonymized after 90 days (last octet zeroed)
 - Session recording requires explicit opt-in and is disclosed to users
 
-**Right to erasure (GDPR Article 17):**
+**Right to erasure vs. audit-log immutability — the crypto-shredding reconciliation:**
+
+`audit_events` (§7.2) enforces immutability with `CREATE RULE no_audit_update AS ON UPDATE TO audit_events DO INSTEAD NOTHING` — by design, **no UPDATE statement against that table ever takes effect**, including one intended to anonymize PII. A naive `AnonymizeUser` that issues `UPDATE audit_events SET actor_email = '[redacted]' WHERE actor_id = $1` therefore silently no-ops: the statement returns success, the erasure "completes," and the PII remains in every historical row untouched. This is the contradiction the Fix-Now pass in this doc's remediation register flags, and it cannot be closed by weakening the immutability rule (that would defeat §7's tamper-evidence guarantee) — it is closed by never storing directly-erasable PII in an immutable row in the first place.
+
+**Design principle: crypto-shredding (a.k.a. cryptographic erasure).** PII fields that must appear in the audit log for operational/compliance value (`actor_email`, `actor_name`, `target_name`, and any free-text `metadata` that could contain PII) are not stored as plaintext columns on the immutable `audit_events` row. Instead, each such field is stored as a **tokenized reference** into a separate, small, *mutable* `pii_vault` table keyed by a random token; the audit event stores only the token (an opaque UUID with no PII content). Erasure becomes: destroy the one small symmetric key (or delete the one small row) that makes the token resolvable — the audit event itself, its hash chain, and its WORM anchor (§7.4) are never touched, because they never contained the plaintext PII to begin with.
 
 ```go
 // pkg/gdpr/erasure.go
 package gdpr
 
-// EraseUserData implements GDPR Article 17 right to erasure.
-// It soft-deletes the user and schedules hard deletion of personal data
-// after the legally required retention period.
+// EraseUserData implements GDPR Article 17 right to erasure, reconciled
+// with the append-only audit hash chain (§7.3) via crypto-shredding:
+// PII referenced by historical audit events is destroyed by revoking the
+// per-user tokenization key, NEVER by mutating an audit_events row.
 func EraseUserData(ctx context.Context, userID string) error {
 	// 1. Revoke all active sessions immediately
 	if err := sessions.RevokeAll(ctx, userID); err != nil {
@@ -4013,15 +4483,25 @@ func EraseUserData(ctx context.Context, userID string) error {
 		return err
 	}
 
-	// 3. Delete personal vault items (user explicitly requested erasure)
+	// 3. Delete personal vault items (user explicitly requested erasure).
+	// Because the vault is zero-knowledge client-side envelope encryption
+	// (§4), deleting the wrapped Item Keys from vaultrelay storage is
+	// itself a crypto-shred: the ciphertext that remains (if any backup
+	// copy exists) is permanently unrecoverable without the destroyed key.
 	if err := vaults.DeletePersonalVault(ctx, userID); err != nil {
 		return err
 	}
 
-	// 4. Anonymize audit log entries (replace PII with anonymized placeholders)
-	// Note: audit log events cannot be deleted (immutable), but PII fields
-	// are overwritten with anonymized values while preserving event integrity
-	if err := audit.AnonymizeUser(ctx, userID); err != nil {
+	// 4. CRYPTO-SHRED the user's PII token key. This is the erasure step
+	// for audit-log PII: it does NOT touch any audit_events row (which
+	// would silently no-op under `no_audit_update`, §7.2). It destroys
+	// the tokenization key in pii_vault, which is the ONLY place the
+	// plaintext PII referenced by historical audit_events.actor_pii_token
+	// values lives. After this call, every historical audit event
+	// remains hash-chain-valid and WORM-anchor-valid (§7.4) — the event
+	// rows are byte-for-byte unchanged — but the PII token they reference
+	// resolves to nothing.
+	if err := audit.CryptoShredUserPII(ctx, userID); err != nil {
 		return err
 	}
 
@@ -4029,6 +4509,57 @@ func EraseUserData(ctx context.Context, userID string) error {
 	return users.MarkErased(ctx, userID)
 }
 ```
+
+```sql
+-- ============================================================
+-- PII tokenization vault — MUTABLE, small, separate from audit_events.
+-- This is the ONLY table that ever holds plaintext audit-log PII.
+-- ============================================================
+CREATE TABLE pii_vault (
+    token           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID        NOT NULL REFERENCES users(id),
+    field_type      VARCHAR(32) NOT NULL,  -- 'actor_email' | 'actor_name' | 'target_name'
+    -- Plaintext is envelope-encrypted with a per-user tokenization key
+    -- (KEK held in KMS); erasure = KMS key deletion/revocation, which is
+    -- immediate and does not require a row-by-row scan.
+    encrypted_value BYTEA       NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    shredded_at     TIMESTAMPTZ -- set at erasure time; encrypted_value becomes permanently unrecoverable
+);
+CREATE INDEX pii_vault_user_idx ON pii_vault (user_id);
+
+-- audit_events (§7.2) stores ONLY the non-PII token reference, added as
+-- an additive column (does not remove the existing schema — the direct
+-- PII columns `actor_email`/`actor_name`/`target_name` become optional
+-- convenience denormalizations that MAY be left NULL for new writes and
+-- are what CryptoShredUserPII targets when a legacy row still has them
+-- populated; new writes SHOULD populate only the token):
+ALTER TABLE audit_events ADD COLUMN actor_pii_token UUID REFERENCES pii_vault(token);
+```
+
+```go
+// pkg/audit/pii.go
+package audit
+
+// CryptoShredUserPII destroys the KMS data-key used to decrypt every
+// pii_vault row for this user, and marks those rows shredded. This is an
+// operation against the MUTABLE pii_vault table — it never issues an
+// UPDATE or DELETE against the immutable audit_events table, so it is
+// not blocked by `no_audit_update`/`no_audit_delete` (§7.2) and does not
+// invalidate the hash chain (§7.3) or any published WORM anchor (§7.4):
+// the audit_events rows referencing the now-shredded token are unchanged
+// bytes, they simply resolve to no recoverable PII on lookup.
+func CryptoShredUserPII(ctx context.Context, userID string) error {
+	if err := kms.RevokeUserDataKey(ctx, userID); err != nil {
+		return fmt.Errorf("failed to revoke PII tokenization key for user %s: %w", userID, err)
+	}
+	// Best-effort housekeeping: mark rows shredded and null out encrypted
+	// bytes that are already unrecoverable (mutable table — safe to UPDATE).
+	return store.MarkPIIVaultShredded(ctx, userID)
+}
+```
+
+**Result:** GDPR Article 17 erasure and §7's append-only tamper-evidence guarantee no longer contend for the same row. The audit trail's *structure* (who did what, when, to which resource, with what outcome) is permanently preserved for compliance and forensic purposes — satisfying retention requirements (§7.6) and the immutability the hash chain (§7.3) and WORM anchor (§7.4) exist to prove — while the *directly-identifying* PII a user requested erased becomes permanently unrecoverable. This is the standard "pseudonymize now, crypto-shred later" pattern recommended for immutable/append-only logs under GDPR Recital 26 and Article 4(5) (pseudonymization).
 
 **Data portability (GDPR Article 20):**
 
