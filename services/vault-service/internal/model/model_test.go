@@ -2,6 +2,7 @@ package model_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,7 @@ func TestValidSecretTypes(t *testing.T) {
 }
 
 func TestToSecretResponse(t *testing.T) {
+	now := time.Now().UTC()
 	secret := &model.Secret{
 		ID:        uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"),
 		UserID:    uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12"),
@@ -28,8 +30,8 @@ func TestToSecretResponse(t *testing.T) {
 		Type:      model.SecretTypeAPIToken,
 		Metadata:  map[string]interface{}{"key": "value"},
 		Tags:      []string{"prod"},
-		CreatedAt: secret.CreatedAt,
-		UpdatedAt: secret.UpdatedAt,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	resp := model.ToSecretResponse(secret)
 	assert.Equal(t, secret.ID, resp.ID)

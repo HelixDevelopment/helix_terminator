@@ -73,6 +73,10 @@ func (r *Repository) GetSessionByID(ctx context.Context, id uuid.UUID) (*model.T
 
 // ListSessions retrieves terminal sessions with optional filtering.
 func (r *Repository) ListSessions(ctx context.Context, userID, hostID, status string, limit, offset int) ([]*model.TerminalSession, error) {
+	if r.pool == nil {
+		return nil, fmt.Errorf("database not connected")
+	}
+
 	conditions := "WHERE 1=1"
 	args := []interface{}{}
 	argIdx := 1

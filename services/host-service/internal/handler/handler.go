@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -61,8 +62,13 @@ func (h *Handler) CreateHost(c *gin.Context) {
 		UpdatedAt:        time.Now().UTC(),
 	}
 
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
+		return
+	}
+
 	if err := h.repo.CreateHost(c.Request.Context(), host); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -79,6 +85,10 @@ func (h *Handler) GetHost(c *gin.Context) {
 
 	host, err := h.repo.GetHostByID(c.Request.Context(), id)
 	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusNotFound, gin.H{"error": "host not found"})
 		return
 	}
@@ -110,12 +120,20 @@ func (h *Handler) ListHosts(c *gin.Context) {
 
 	hosts, err := h.repo.ListHosts(c.Request.Context(), userID, orgID, req.Tags, req.Status, req.Limit, req.Offset)
 	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list hosts"})
 		return
 	}
 
 	count, err := h.repo.CountHosts(c.Request.Context(), userID, orgID)
 	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		count = len(hosts)
 	}
 
@@ -143,6 +161,10 @@ func (h *Handler) UpdateHost(c *gin.Context) {
 
 	host, err := h.repo.GetHostByID(c.Request.Context(), id)
 	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusNotFound, gin.H{"error": "host not found"})
 		return
 	}
@@ -174,6 +196,10 @@ func (h *Handler) UpdateHost(c *gin.Context) {
 	host.UpdatedAt = time.Now().UTC()
 
 	if err := h.repo.UpdateHost(c.Request.Context(), host); err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update host"})
 		return
 	}
@@ -190,6 +216,10 @@ func (h *Handler) DeleteHost(c *gin.Context) {
 	}
 
 	if err := h.repo.DeleteHost(c.Request.Context(), id); err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete host"})
 		return
 	}
@@ -207,6 +237,10 @@ func (h *Handler) TestConnection(c *gin.Context) {
 
 	_, err = h.repo.GetHostByID(c.Request.Context(), id)
 	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusNotFound, gin.H{"error": "host not found"})
 		return
 	}
@@ -236,6 +270,10 @@ func (h *Handler) GetConnectionLogs(c *gin.Context) {
 
 	logs, err := h.repo.GetConnectionLogs(c.Request.Context(), id, limit)
 	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get connection logs"})
 		return
 	}
@@ -255,10 +293,10 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 // ReadinessCheck returns readiness status.
 func (h *Handler) ReadinessCheck(c *gin.Context) {
 	ready := true
-	if h.repo != nil {
-		if err := h.repo.Ping(c.Request.Context()); err != nil {
-			ready = false
-		}
+	if h.repo == nil {
+		ready = false
+	} else if err := h.repo.Ping(c.Request.Context()); err != nil {
+		ready = false
 	}
 	status := http.StatusOK
 	if !ready {

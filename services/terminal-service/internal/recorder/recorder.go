@@ -76,19 +76,24 @@ func (rec *Recorder) WriteOutput(ctx context.Context, sessionID uuid.UUID, outpu
 		state.mu.Unlock()
 
 		// Persist to DB
-		output := &model.TerminalOutput{
-			ID:          uuid.New(),
-			SessionID:   sessionID,
-			OutputType:  outputType,
-			Data:        data,
-			Timestamp:   time.Now().UTC(),
-			SequenceNum: seq,
+		if rec.repo != nil {
+			output := &model.TerminalOutput{
+				ID:          uuid.New(),
+				SessionID:   sessionID,
+				OutputType:  outputType,
+				Data:        data,
+				Timestamp:   time.Now().UTC(),
+				SequenceNum: seq,
+			}
+			_ = rec.repo.CreateOutput(ctx, output)
 		}
-		_ = rec.repo.CreateOutput(ctx, output)
 		return nil
 	}
 
 	// Not recording; just persist to DB
+	if rec.repo == nil {
+		return nil
+	}
 	output := &model.TerminalOutput{
 		ID:          uuid.New(),
 		SessionID:   sessionID,

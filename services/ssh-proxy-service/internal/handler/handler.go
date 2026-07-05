@@ -144,12 +144,14 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid host_id"})
 		return
 	}
+	_ = hostID
 
 	userIDStr := c.Query("user_id")
 	if userIDStr == "" {
 		userIDStr = "00000000-0000-0000-0000-000000000000"
 	}
 	userID, _ := uuid.Parse(userIDStr)
+	_ = userID
 
 	port := c.Query("port")
 	if port == "" {

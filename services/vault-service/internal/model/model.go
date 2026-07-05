@@ -110,6 +110,19 @@ type ListSecretsResponse struct {
 	Offset  int               `json:"offset"`
 }
 
+// ListSecretVersionsResponse represents the response payload for listing secret versions.
+type ListSecretVersionsResponse struct {
+	Versions []*SecretVersion `json:"versions"`
+}
+
+// RotateSecretRequest represents the request payload for rotating a secret.
+type RotateSecretRequest struct {
+	EncryptedValue string    `json:"encrypted_value" binding:"required"`
+	IV             string    `json:"iv" binding:"required"`
+	Salt           string    `json:"salt" binding:"required"`
+	CreatedBy      uuid.UUID `json:"created_by" binding:"required"`
+}
+
 // ToSecretResponse converts a Secret to a SecretResponse (omits encrypted fields).
 func ToSecretResponse(s *Secret) *SecretResponse {
 	return &SecretResponse{

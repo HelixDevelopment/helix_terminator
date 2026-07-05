@@ -1,6 +1,10 @@
 package sshclient
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"os"
@@ -98,6 +102,28 @@ func AuthMethodFromKey(privateKeyPEM string) (ssh.AuthMethod, error) {
 		return nil, fmt.Errorf("failed to parse private key: %w", err)
 	}
 	return ssh.PublicKeys(signer), nil
+}
+
+func generateTestKey() (pub ssh.PublicKey, privPEM string, err error) {
+	// Generate a real Ed25519 key pair for tests
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, "", err
+	}
+	privPEMBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		return nil, "", err
+	}
+	block := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: privPEMBytes,
+	}
+	privPEM = string(pem.EncodeToMemory(block))
+	pub, err = ssh.NewPublicKey(priv.Public())
+	if err != nil {
+		return nil, "", err
+	}
+	return pub, privPEM, nil
 }
 
 // AuthMethodFromAgent returns an ssh.AuthMethod using the local SSH agent.

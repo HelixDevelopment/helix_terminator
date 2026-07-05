@@ -118,7 +118,7 @@ func TestCreateHostValidation(t *testing.T) {
 				"username": "admin",
 				"auth_type": "password",
 			},
-			wantStatus: http.StatusInternalServerError, // DB not available
+			wantStatus: http.StatusServiceUnavailable, // DB not available
 		},
 	}
 
@@ -158,6 +158,6 @@ func TestCreateHostWithPort(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 
-	// DB not available, so internal server error
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	// DB not available, so service unavailable
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 }

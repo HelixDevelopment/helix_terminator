@@ -14,7 +14,6 @@ import (
 	"github.com/helixdevelopment/terminal-service/internal/handler"
 	"github.com/helixdevelopment/terminal-service/internal/model"
 	"github.com/helixdevelopment/terminal-service/internal/recorder"
-	"github.com/helixdevelopment/terminal-service/internal/repository"
 )
 
 func setupTestRouter() (*gin.Engine, *handler.Handler) {

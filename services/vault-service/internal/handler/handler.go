@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -9,16 +10,28 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/helixdevelopment/vault-service/internal/model"
-	"github.com/helixdevelopment/vault-service/internal/repository"
 )
+
+// Repository defines the interface for vault persistence operations.
+type Repository interface {
+	CreateSecret(ctx context.Context, secret *model.Secret) error
+	GetSecretByID(ctx context.Context, id uuid.UUID) (*model.Secret, error)
+	ListSecrets(ctx context.Context, userID, orgID uuid.UUID, secretType model.SecretType, tags []string, limit, offset int) ([]*model.Secret, error)
+	UpdateSecret(ctx context.Context, secret *model.Secret) error
+	DeleteSecret(ctx context.Context, id uuid.UUID) error
+	CreateSecretVersion(ctx context.Context, version *model.SecretVersion) error
+	GetSecretVersions(ctx context.Context, secretID uuid.UUID, limit int) ([]*model.SecretVersion, error)
+	CountSecrets(ctx context.Context, userID, orgID uuid.UUID) (int, error)
+	Ping(ctx context.Context) error
+}
 
 // Handler holds vault service handlers.
 type Handler struct {
-	repo *repository.Repository
+	repo Repository
 }
 
 // New returns a new Handler with dependencies.
-func New(repo *repository.Repository) *Handler {
+func New(repo Repository) *Handler {
 	return &Handler{repo: repo}
 }
 

@@ -22,16 +22,26 @@ func New(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-// Ping verifies connectivity.
-func (r *Repository) Ping(ctx context.Context) error {
+func (r *Repository) checkPool() error {
 	if r.pool == nil {
 		return fmt.Errorf("database not connected")
+	}
+	return nil
+}
+
+// Ping verifies connectivity.
+func (r *Repository) Ping(ctx context.Context) error {
+	if err := r.checkPool(); err != nil {
+		return err
 	}
 	return r.pool.Ping(ctx)
 }
 
 // CreateHost creates a new host.
 func (r *Repository) CreateHost(ctx context.Context, host *model.Host) error {
+	if err := r.checkPool(); err != nil {
+		return err
+	}
 	query := `
 		INSERT INTO hosts (
 			id, user_id, org_id, name, hostname, port, username, auth_type,
@@ -52,10 +62,13 @@ func (r *Repository) CreateHost(ctx context.Context, host *model.Host) error {
 
 // GetHostByID retrieves a host by ID.
 func (r *Repository) GetHostByID(ctx context.Context, id uuid.UUID) (*model.Host, error) {
+	if err := r.checkPool(); err != nil {
+		return nil, err
+	}
 	query := `
 		SELECT id, user_id, org_id, name, hostname, port, username, auth_type,
-		       vault_secret_id, connection_params, tags, last_connected_at,
-		       connection_status, last_error, created_at, updated_at, deleted_at
+			   vault_secret_id, connection_params, tags, last_connected_at,
+			   connection_status, last_error, created_at, updated_at, deleted_at
 		FROM hosts
 		WHERE id = $1 AND deleted_at IS NULL
 	`
@@ -78,6 +91,9 @@ func (r *Repository) GetHostByID(ctx context.Context, id uuid.UUID) (*model.Host
 
 // ListHosts lists hosts with optional filtering.
 func (r *Repository) ListHosts(ctx context.Context, userID, orgID uuid.UUID, tags []string, status string, limit, offset int) ([]*model.Host, error) {
+	if err := r.checkPool(); err != nil {
+		return nil, err
+	}
 	conditions := []string{"deleted_at IS NULL"}
 	args := []interface{}{}
 	argIdx := 1
@@ -105,8 +121,8 @@ func (r *Repository) ListHosts(ctx context.Context, userID, orgID uuid.UUID, tag
 
 	query := fmt.Sprintf(`
 		SELECT id, user_id, org_id, name, hostname, port, username, auth_type,
-		       vault_secret_id, connection_params, tags, last_connected_at,
-		       connection_status, last_error, created_at, updated_at, deleted_at
+			   vault_secret_id, connection_params, tags, last_connected_at,
+			   connection_status, last_error, created_at, updated_at, deleted_at
 		FROM hosts
 		WHERE %s
 		ORDER BY created_at DESC
@@ -139,6 +155,9 @@ func (r *Repository) ListHosts(ctx context.Context, userID, orgID uuid.UUID, tag
 
 // UpdateHost updates an existing host.
 func (r *Repository) UpdateHost(ctx context.Context, host *model.Host) error {
+	if err := r.checkPool(); err != nil {
+		return err
+	}
 	query := `
 		UPDATE hosts
 		SET name = $2, hostname = $3, port = $4, username = $5, auth_type = $6,
@@ -157,6 +176,9 @@ func (r *Repository) UpdateHost(ctx context.Context, host *model.Host) error {
 
 // DeleteHost performs a soft delete on a host.
 func (r *Repository) DeleteHost(ctx context.Context, id uuid.UUID) error {
+	if err := r.checkPool(); err != nil {
+		return err
+	}
 	query := `
 		UPDATE hosts
 		SET deleted_at = $2, updated_at = $2
@@ -171,6 +193,9 @@ func (r *Repository) DeleteHost(ctx context.Context, id uuid.UUID) error {
 
 // UpdateConnectionStatus updates the connection status and last error of a host.
 func (r *Repository) UpdateConnectionStatus(ctx context.Context, id uuid.UUID, status model.ConnectionStatus, errorMsg string) error {
+	if err := r.checkPool(); err != nil {
+		return err
+	}
 	query := `
 		UPDATE hosts
 		SET connection_status = $2, last_error = $3, last_connected_at = $4, updated_at = $4
@@ -186,6 +211,9 @@ func (r *Repository) UpdateConnectionStatus(ctx context.Context, id uuid.UUID, s
 
 // CreateConnectionLog creates a new connection log entry.
 func (r *Repository) CreateConnectionLog(ctx context.Context, log *model.HostConnectionLog) error {
+	if err := r.checkPool(); err != nil {
+		return err
+	}
 	query := `
 		INSERT INTO host_connection_logs (id, host_id, event_type, details, created_at)
 		VALUES ($1, $2, $3, $4, $5)
@@ -199,6 +227,9 @@ func (r *Repository) CreateConnectionLog(ctx context.Context, log *model.HostCon
 
 // GetConnectionLogs retrieves connection logs for a host.
 func (r *Repository) GetConnectionLogs(ctx context.Context, hostID uuid.UUID, limit int) ([]*model.HostConnectionLog, error) {
+	if err := r.checkPool(); err != nil {
+		return nil, err
+	}
 	if limit <= 0 {
 		limit = 50
 	}
@@ -232,6 +263,9 @@ func (r *Repository) GetConnectionLogs(ctx context.Context, hostID uuid.UUID, li
 
 // CountHosts counts hosts for a user/org.
 func (r *Repository) CountHosts(ctx context.Context, userID, orgID uuid.UUID) (int, error) {
+	if err := r.checkPool(); err != nil {
+		return 0, err
+	}
 	conditions := []string{"deleted_at IS NULL"}
 	args := []interface{}{}
 	argIdx := 1

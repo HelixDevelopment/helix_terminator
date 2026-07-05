@@ -85,6 +85,7 @@ func New(logger Logger) (*Server, error) {
 
 	// API routes (no auth required for this service scaffold)
 	api := r.Group("/api/v1")
+	api.Use(s.authMiddleware())
 	{
 		api.POST("/hosts", h.CreateHost)
 		api.GET("/hosts", h.ListHosts)

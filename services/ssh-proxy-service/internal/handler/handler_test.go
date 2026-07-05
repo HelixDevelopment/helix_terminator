@@ -34,6 +34,8 @@ func TestReadinessCheck(t *testing.T) {
 	h, _ := setupTestHandler()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
+	// gin test context doesn't have a request; set one
+	c.Request, _ = http.NewRequest("GET", "/healthz/ready", nil)
 	h.ReadinessCheck(c)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "ready")

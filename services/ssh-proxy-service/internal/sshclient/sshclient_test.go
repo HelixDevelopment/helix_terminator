@@ -14,18 +14,14 @@ import (
 func TestAuthMethodFromPassword(t *testing.T) {
 	am := AuthMethodFromPassword("secret123")
 	require.NotNil(t, am)
-	// ssh.AuthMethod is a function; we can verify it's non-nil
 	assert.NotNil(t, am)
 }
 
 func TestAuthMethodFromKey_Valid(t *testing.T) {
-	// Ed25519 test key
-	privateKeyPEM := `-----BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACB0aGVyZWFsbHlzZWNyZXRrZXl0ZXN0aW5nAAAAFHRlc3R1c2VyQGV4YW1w
-bGUuY29tAAAAHHN0dWJ0ZXN0a2V5Zm9ydW5pdHRlc3Rpbmc=
------END OPENSSH PRIVATE KEY-----`
-	am, err := AuthMethodFromKey(privateKeyPEM)
+	// Generate a valid Ed25519 key for testing
+	_, privPEM, err := generateTestKey()
+	require.NoError(t, err)
+	am, err := AuthMethodFromKey(privPEM)
 	require.NoError(t, err)
 	require.NotNil(t, am)
 }
@@ -43,15 +39,12 @@ func TestAuthMethodFromAgent(t *testing.T) {
 }
 
 func TestSSHClient_ConnectAndClose(t *testing.T) {
-	// Start a mock SSH server for testing
 	config := &ssh.ServerConfig{
 		NoClientAuth: true,
 	}
-	privateKey, err := ssh.ParseRawPrivateKey([]byte(`-----BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACB0aGVyZWFsbHlzZWNyZXRrZXl0ZXN0aW5nAAAAFHRlc3R1c2VyQGV4YW1w
-bGUuY29tAAAAHHN0dWJ0ZXN0a2V5Zm9ydW5pdHRlc3Rpbmc=
------END OPENSSH PRIVATE KEY-----`))
+	_, privPEM, err := generateTestKey()
+	require.NoError(t, err)
+	privateKey, err := ssh.ParseRawPrivateKey([]byte(privPEM))
 	require.NoError(t, err)
 	signer, err := ssh.NewSignerFromKey(privateKey)
 	require.NoError(t, err)

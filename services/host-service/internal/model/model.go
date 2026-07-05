@@ -60,7 +60,7 @@ type HostConnectionLog struct {
 type CreateHostRequest struct {
 	Name             string                 `json:"name" binding:"required,max=255"`
 	Hostname         string                 `json:"hostname" binding:"required,max=255"`
-	Port             int                    `json:"port" binding:"min=1,max=65535"`
+	Port             int                    `json:"port" binding:"omitempty,min=1,max=65535"`
 	Username         string                 `json:"username" binding:"required,max=255"`
 	AuthType         AuthType               `json:"auth_type" binding:"required,oneof=password key agent vault_key"`
 	VaultSecretID    *uuid.UUID             `json:"vault_secret_id,omitempty"`
