@@ -38,8 +38,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); dates are ISO-86
   labeling; region/port/version/org/domain canonicalization across the corpus.
 - Result: `tests/docs_consistency_gate.sh` passes GREEN (independently verified).
 
-### Deferred (tracked in REMEDIATION_REGISTER.md / CANONICAL_FACTS.md — NOT yet done)
-- Deep-work (~30 items): RLS-enforced tenant isolation, audit WORM anchoring, PostgreSQL DR/HA +
-  RPO/RTO, ZK server-keygen removal, roadmap Phases 2–5 acceptance criteria, single service
-  registry, dual-product scope section, Go module-path standardization, missing diagrams,
-  full real-time-collaboration spec.
+### Added (MVP spec — Deep-work Waves A/B + cross-cutting)
+- **Security/data (07, 05):** Row-Level Security across all multi-tenant DBs; full-PII audit hash
+  chain + crypto-shred GDPR erasure + WORM anchoring; true client-side zero-knowledge vault design
+  (server keygen/re-wrap removed); item-level vault endpoints + ZK key rotation; SSO token
+  encryption; blast-radius/authz gating; WebSocket resume; break-glass/JIT/SoD; STRIDE threat model.
+- **Resilience/infra (04, 01):** PostgreSQL DR/HA (RPO/RTO, cross-region, Patroni, PITR); FinOps/cost
+  section; RabbitMQ prod path; C4 context diagram; per-service circuit-breaker table; API versioning.
+- **Product/client/UX (08, 02, 06):** roadmap Phases 2–5 (entry/exit/acceptance/DoD) + risk register +
+  owners/estimates + Gantt; collaboration client spec + auto-update + mobile background-exec + conflict
+  UI + error taxonomy; Vault/Org/Billing/Collab wireframes + Button spec + light-theme tokens + diagrams.
+- **Perf/testing (09, 03):** collaboration SLO model + soak/chaos/stress PLANS (labeled planned);
+  device/topology matrix + terminal-render perf methodology + native a11y + Pact contracts + SBOM gate.
+- **Cross-cutting:** `SERVICE_REGISTRY.md` (single canonical 25-service list) and `SCOPE_AND_MODULES.md`
+  (dual-scope Module A + Module B reconciliation).
+
+### Deferred (HONEST — still NOT done; tracked in REMEDIATION_REGISTER.md)
+- Go module-path standardization (`digital.vasic.*`, 600+ refs) — high-churn, deliberately deferred.
+- PDF internal TOC-links do not resolve (pandoc→weasyprint id-slug mismatch) — corpus-wide,
+  pre-existing; source anchors are clean per the gate.
+- Minor: not every ASCII diagram converted to mermaid; `regenerate_exports.sh` leaves temp files in CWD.
