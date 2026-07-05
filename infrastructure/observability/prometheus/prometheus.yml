@@ -1,0 +1,6 @@
+# Prometheus Config
+
+## TODO
+- [ ] Add scrape configs for all services
+- [ ] Add alerting rules
+- [ ] Add recording rules

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package pki_service;
+
+option go_package = "github.com/helixdevelopment/pki-service/api/proto;pki_service";
+
+// TODO: define service RPCs and messages
+
+service PkiServiceService {
+	rpc HealthCheck (HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+	bool healthy = 1;
+}

@@ -1,0 +1,34 @@
+name: Nightly
+on:
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  full-test-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Run all tests
+        run: make test
+      - name: Run e2e tests
+        run: cd test/e2e && go test ./...
+      - name: Run integration tests
+        run: cd test/integration && go test ./...
+      - name: Run k6 performance tests
+        run: |
+          docker run -v $(pwd)/test/performance/k6:/tests grafana/k6 run /tests/load.js
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for outdated dependencies
+        run: |
+          for svc in services/*/; do
+            if [ -f "$svc/go.mod" ]; then
+              cd "$svc" && go list -u -m all && cd -;
+            fi
+          done

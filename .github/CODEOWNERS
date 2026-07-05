@@ -1,0 +1,41 @@
+# CODEOWNERS
+* @helixdevelopment/platform-team
+
+# Service ownership
+/services/gateway-service @helixdevelopment/platform-team
+/services/auth-service @helixdevelopment/security-team
+/services/user-service @helixdevelopment/platform-team
+/services/vault-service @helixdevelopment/security-team
+/services/host-service @helixdevelopment/platform-team
+/services/ssh-proxy-service @helixdevelopment/platform-team
+/services/terminal-service @helixdevelopment/platform-team
+/services/sftp-service @helixdevelopment/platform-team
+/services/port-forward-service @helixdevelopment/platform-team
+/services/snippet-service @helixdevelopment/platform-team
+/services/keychain-service @helixdevelopment/security-team
+/services/workspace-service @helixdevelopment/platform-team
+/services/collaboration-service @helixdevelopment/platform-team
+/services/notification-service @helixdevelopment/platform-team
+/services/audit-service @helixdevelopment/security-team
+/services/analytics-service @helixdevelopment/data-team
+/services/ai-service @helixdevelopment/ai-team
+/services/recording-service @helixdevelopment/platform-team
+/services/pki-service @helixdevelopment/security-team
+/services/org-service @helixdevelopment/platform-team
+/services/billing-service @helixdevelopment/platform-team
+/services/config-service @helixdevelopment/platform-team
+/services/health-service @helixdevelopment/platform-team
+/services/container-bridge-service @helixdevelopment/platform-team
+/services/helixtrack-bridge-service @helixdevelopment/platform-team
+
+# Infrastructure
+/infrastructure/ @helixdevelopment/sre-team
+
+# Clients
+/clients/ @helixdevelopment/mobile-team
+
+# Security
+/security/ @helixdevelopment/security-team
+
+# Docs
+/docs/ @helixdevelopment/docs-team

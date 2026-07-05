@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package audit_service;
+
+option go_package = "github.com/helixdevelopment/audit-service/api/proto;audit_service";
+
+// TODO: define service RPCs and messages
+
+service AuditServiceService {
+	rpc HealthCheck (HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+	bool healthy = 1;
+}

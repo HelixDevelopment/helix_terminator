@@ -1,0 +1,30 @@
+name: helix-terminator
+version: 0.1.0
+services:
+  - gateway-service
+  - auth-service
+  - user-service
+  - vault-service
+  - host-service
+  - ssh-proxy-service
+  - terminal-service
+  - sftp-service
+  - port-forward-service
+  - snippet-service
+  - keychain-service
+  - workspace-service
+  - collaboration-service
+  - notification-service
+  - audit-service
+  - analytics-service
+  - ai-service
+  - recording-service
+  - pki-service
+  - org-service
+  - billing-service
+  - config-service
+  - health-service
+  - container-bridge-service
+  - helixtrack-bridge-service
+
+# TODO: pin exact versions for Go, Docker, K8s, Terraform, Flutter

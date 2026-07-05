@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: helixterminator
+  labels:
+    app.kubernetes.io/name: helixterminator
+    app.kubernetes.io/managed-by: kustomize

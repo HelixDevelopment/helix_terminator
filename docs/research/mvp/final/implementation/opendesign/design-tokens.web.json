@@ -1,0 +1,24 @@
+{
+  "platform": "web",
+  "description": "Web-specific design token overrides for HelixTerminator",
+  "overrides": {
+    "typography": {
+      "primitive": {
+        "fontFamily": {
+          "ui": {
+            "value": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+            "type": "fontFamily"
+          }
+        }
+      }
+    },
+    "component": {
+      "scrollbar": {
+        "width": { "value": "8px", "type": "dimension" },
+        "track": { "value": "transparent", "type": "color" },
+        "thumb": { "value": "{color.primitive.neutral.800}", "type": "color" },
+        "thumbHover": { "value": "{color.primitive.neutral.700}", "type": "color" }
+      }
+    }
+  }
+}

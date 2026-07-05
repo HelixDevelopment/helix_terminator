@@ -1,0 +1,300 @@
+syntax = "proto3";
+
+package helixterm.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/v1;helixtermv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service CollaborationService {
+  rpc CreateCollaborationSession(CreateCollaborationSessionRequest) returns (CollaborationSession);
+  rpc GetCollaborationSession(GetCollaborationSessionRequest) returns (CollaborationSession);
+  rpc ListCollaborationSessions(ListCollaborationSessionsRequest) returns (ListCollaborationSessionsResponse);
+  rpc JoinCollaborationSession(JoinCollaborationSessionRequest) returns (CollaborationSession);
+  rpc LeaveCollaborationSession(LeaveCollaborationSessionRequest) returns (google.protobuf.Empty);
+  rpc EndCollaborationSession(EndCollaborationSessionRequest) returns (google.protobuf.Empty);
+  rpc SendCollaborationMessage(SendCollaborationMessageRequest) returns (CollaborationMessage);
+  rpc GetCollaborationMessages(GetCollaborationMessagesRequest) returns (CollaborationMessageStream);
+  rpc ShareCursorPosition(ShareCursorPositionRequest) returns (google.protobuf.Empty);
+  rpc GetCursorPositions(GetCollaborationSessionRequest) returns (CursorPositionStream);
+  rpc RequestControl(RequestControlRequest) returns (ControlResponse);
+  rpc ReleaseControl(ReleaseControlRequest) returns (google.protobuf.Empty);
+  rpc GetSessionParticipants(GetCollaborationSessionRequest) returns (SessionParticipants);
+  rpc InviteParticipant(InviteParticipantRequest) returns (Participant);
+  rpc RemoveParticipant(RemoveParticipantRequest) returns (google.protobuf.Empty);
+  rpc UpdateParticipantRole(UpdateParticipantRoleRequest) returns (Participant);
+  rpc GetCollaborationHistory(GetCollaborationSessionRequest) returns (CollaborationHistory);
+  rpc ExportCollaborationSession(ExportCollaborationSessionRequest) returns (ExportCollaborationResponse);
+  rpc RecordCollaborationSession(RecordCollaborationSessionRequest) returns (Recording);
+  rpc GetCollaborationPermissions(GetCollaborationSessionRequest) returns (CollaborationPermissions);
+  rpc UpdateCollaborationPermissions(UpdateCollaborationPermissionsRequest) returns (CollaborationPermissions);
+  rpc SetSessionLock(SetSessionLockRequest) returns (CollaborationSession);
+  rpc GetSessionLock(GetCollaborationSessionRequest) returns (SessionLock);
+  rpc BroadcastToParticipants(BroadcastToParticipantsRequest) returns (google.protobuf.Empty);
+  rpc GetCollaborationMetrics(GetCollaborationSessionRequest) returns (CollaborationMetrics);
+  rpc SubscribeToEvents(SubscribeToEventsRequest) returns (stream CollaborationEvent);
+}
+
+message CollaborationSession {
+  string id = 1;
+  string workspace_id = 2;
+  string host_id = 3;
+  string owner_id = 4;
+  string status = 5;
+  string mode = 6;
+  bool is_locked = 7;
+  string controller_id = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  google.protobuf.Timestamp ended_at = 11;
+  map<string, string> metadata = 12;
+}
+
+message CollaborationMessage {
+  string id = 1;
+  string session_id = 2;
+  string sender_id = 3;
+  string type = 4;
+  string content = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  map<string, string> metadata = 7;
+}
+
+message CollaborationMessageStream {
+  repeated CollaborationMessage messages = 1;
+  string next_page_token = 2;
+}
+
+message CursorPosition {
+  string user_id = 1;
+  string file_path = 2;
+  int32 line = 3;
+  int32 column = 4;
+  string color = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message CursorPositionStream {
+  repeated CursorPosition positions = 1;
+}
+
+message ControlResponse {
+  bool granted = 1;
+  string controller_id = 2;
+  string message = 3;
+}
+
+message Participant {
+  string user_id = 1;
+  string role = 2;
+  string status = 3;
+  google.protobuf.Timestamp joined_at = 4;
+  google.protobuf.Timestamp last_active_at = 5;
+  map<string, string> metadata = 6;
+}
+
+message SessionParticipants {
+  string session_id = 1;
+  repeated Participant participants = 2;
+}
+
+message CollaborationHistory {
+  string session_id = 1;
+  repeated CollaborationHistoryEntry entries = 2;
+}
+
+message CollaborationHistoryEntry {
+  string action = 1;
+  string actor_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  map<string, string> details = 4;
+}
+
+message Recording {
+  string id = 1;
+  string session_id = 2;
+  string status = 3;
+  int64 duration_seconds = 4;
+  int64 file_size = 5;
+  google.protobuf.Timestamp started_at = 6;
+  google.protobuf.Timestamp ended_at = 7;
+}
+
+message CollaborationPermissions {
+  string session_id = 1;
+  repeated CollaborationPermission permissions = 2;
+}
+
+message CollaborationPermission {
+  string user_id = 1;
+  string role = 2;
+  repeated string actions = 3;
+}
+
+message SessionLock {
+  string session_id = 1;
+  bool is_locked = 2;
+  string locked_by = 3;
+  google.protobuf.Timestamp locked_at = 4;
+  string reason = 5;
+}
+
+message CollaborationMetrics {
+  string session_id = 1;
+  int32 total_participants = 2;
+  int32 active_participants = 3;
+  int64 total_messages = 4;
+  int64 total_commands = 5;
+  int64 duration_seconds = 6;
+  google.protobuf.Timestamp collected_at = 7;
+}
+
+message CollaborationEvent {
+  string event_type = 1;
+  string session_id = 2;
+  string actor_id = 3;
+  map<string, string> payload = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+message CreateCollaborationSessionRequest {
+  string workspace_id = 1;
+  string host_id = 2;
+  string owner_id = 3;
+  string mode = 4;
+  map<string, string> metadata = 5;
+}
+
+message GetCollaborationSessionRequest {
+  string id = 1;
+}
+
+message ListCollaborationSessionsRequest {
+  string workspace_id = 1;
+  string host_id = 2;
+  string status = 3;
+  string owner_id = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListCollaborationSessionsResponse {
+  repeated CollaborationSession sessions = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message JoinCollaborationSessionRequest {
+  string id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+
+message LeaveCollaborationSessionRequest {
+  string id = 1;
+  string user_id = 2;
+}
+
+message EndCollaborationSessionRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message SendCollaborationMessageRequest {
+  string session_id = 1;
+  string sender_id = 2;
+  string type = 3;
+  string content = 4;
+  map<string, string> metadata = 5;
+}
+
+message GetCollaborationMessagesRequest {
+  string session_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  google.protobuf.Timestamp since = 4;
+}
+
+message ShareCursorPositionRequest {
+  string session_id = 1;
+  string user_id = 2;
+  string file_path = 3;
+  int32 line = 4;
+  int32 column = 5;
+  string color = 6;
+}
+
+message RequestControlRequest {
+  string session_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message ReleaseControlRequest {
+  string session_id = 1;
+  string user_id = 2;
+}
+
+message InviteParticipantRequest {
+  string session_id = 1;
+  string user_id = 2;
+  string role = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message RemoveParticipantRequest {
+  string session_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message UpdateParticipantRoleRequest {
+  string session_id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+
+message ExportCollaborationSessionRequest {
+  string id = 1;
+  string format = 2;
+  bool include_messages = 3;
+  bool include_history = 4;
+}
+
+message ExportCollaborationResponse {
+  bytes data = 1;
+  string format = 2;
+}
+
+message RecordCollaborationSessionRequest {
+  string id = 1;
+  string initiated_by = 2;
+  bool auto_stop = 3;
+}
+
+message UpdateCollaborationPermissionsRequest {
+  string session_id = 1;
+  repeated CollaborationPermission permissions = 2;
+  bool replace = 3;
+}
+
+message SetSessionLockRequest {
+  string session_id = 1;
+  bool is_locked = 2;
+  string locked_by = 3;
+  string reason = 4;
+}
+
+message BroadcastToParticipantsRequest {
+  string session_id = 1;
+  string message_type = 2;
+  string content = 3;
+  repeated string exclude_user_ids = 4;
+}
+
+message SubscribeToEventsRequest {
+  string session_id = 1;
+  string user_id = 2;
+  repeated string event_types = 3;
+}

@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package helixterminator.v1;
+
+option go_package = "github.com/HelixDevelopment/helix_terminator/services/gateway-service/api/proto;gatewaypb";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// Gateway service routes external requests to internal services
+service GatewayService {
+  // Proxy request to upstream service
+  rpc Proxy(ProxyRequest) returns (ProxyResponse);
+  
+  // Health check
+  rpc Health(google.protobuf.Empty) returns (HealthResponse);
+  
+  // Metrics
+  rpc Metrics(google.protobuf.Empty) returns (MetricsResponse);
+}
+
+message ProxyRequest {
+  string service = 1;
+  string method = 2;
+  bytes payload = 3;
+  map<string, string> headers = 4;
+  string request_id = 5;
+}
+
+message ProxyResponse {
+  int32 status_code = 1;
+  bytes payload = 2;
+  map<string, string> headers = 3;
+  string request_id = 4;
+}
+
+message HealthResponse {
+  string status = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  map<string, ServiceHealth> services = 3;
+}
+
+message ServiceHealth {
+  string status = 1;
+  int64 latency_ms = 2;
+  string version = 3;
+}
+
+message MetricsResponse {
+  int64 total_requests = 1;
+  int64 active_connections = 2;
+  double avg_latency_ms = 3;
+  double p95_latency_ms = 4;
+  double p99_latency_ms = 5;
+  map<string, int64> requests_by_service = 6;
+}

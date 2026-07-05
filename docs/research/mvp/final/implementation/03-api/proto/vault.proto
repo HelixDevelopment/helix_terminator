@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package helixterminator.v1;
+
+option go_package = "github.com/HelixDevelopment/helix_terminator/services/vault-service/api/proto;vaultpb";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// Vault service for zero-knowledge encrypted storage
+service VaultService {
+  // Create vault
+  rpc CreateVault(CreateVaultRequest) returns (Vault);
+  
+  // Get vault
+  rpc GetVault(GetVaultRequest) returns (Vault);
+  
+  // List vaults
+  rpc ListVaults(ListVaultsRequest) returns (ListVaultsResponse);
+  
+  // Delete vault
+  rpc DeleteVault(DeleteVaultRequest) returns (google.protobuf.Empty);
+  
+  // Create vault item
+  rpc CreateItem(CreateItemRequest) returns (VaultItem);
+  
+  // Get vault item
+  rpc GetItem(GetItemRequest) returns (VaultItem);
+  
+  // List vault items
+  rpc ListItems(ListItemsRequest) returns (ListItemsResponse);
+  
+  // Delete item
+  rpc DeleteItem(DeleteItemRequest) returns (google.protobuf.Empty);
+  
+  // Share vault
+  rpc ShareVault(ShareVaultRequest) returns (VaultShare);
+  
+  // Rotate vault key
+  rpc RotateKey(RotateKeyRequest) returns (google.protobuf.Empty);
+  
+  // Health check
+  rpc Health(google.protobuf.Empty) returns (HealthResponse);
+}
+
+message Vault {
+  string id = 1;
+  string org_id = 2;
+  string owner_id = 3;
+  string name = 4;
+  string description = 5;
+  string encrypted_key = 6;
+  bytes key_derivation_params = 7;
+  int32 item_count = 8;
+  bool shared = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message CreateVaultRequest {
+  string name = 1;
+  string description = 2;
+  bool encrypted = 3;
+  string encrypted_key = 4;
+  bytes key_derivation_params = 5;
+}
+
+message GetVaultRequest {
+  string id = 1;
+}
+
+message ListVaultsRequest {
+  string org_id = 1;
+  string owner_id = 2;
+}
+
+message ListVaultsResponse {
+  repeated Vault vaults = 1;
+}
+
+message DeleteVaultRequest {
+  string id = 1;
+}
+
+message VaultItem {
+  string id = 1;
+  string vault_id = 2;
+  string type = 3;
+  string name = 4;
+  string encrypted_data = 5;
+  string encrypted_metadata = 6;
+  string iv = 7;
+  string auth_tag = 8;
+  string salt = 9;
+  int32 version = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message CreateItemRequest {
+  string vault_id = 1;
+  string type = 2;
+  string name = 3;
+  string encrypted_data = 4;
+  string encrypted_metadata = 5;
+  string iv = 6;
+  string auth_tag = 7;
+  string salt = 8;
+}
+
+message GetItemRequest {
+  string id = 1;
+  string vault_id = 2;
+}
+
+message ListItemsRequest {
+  string vault_id = 1;
+}
+
+message ListItemsResponse {
+  repeated VaultItem items = 1;
+}
+
+message DeleteItemRequest {
+  string id = 1;
+  string vault_id = 2;
+}
+
+message ShareVaultRequest {
+  string vault_id = 1;
+  repeated string user_ids = 2;
+  string access_level = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  string encrypted_key_share = 5;
+}
+
+message VaultShare {
+  string id = 1;
+  string vault_id = 2;
+  string shared_with = 3;
+  string access_level = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message RotateKeyRequest {
+  string vault_id = 1;
+  string new_encrypted_key = 2;
+  repeated string user_key_shares = 3;
+}
+
+message HealthResponse {
+  string status = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}

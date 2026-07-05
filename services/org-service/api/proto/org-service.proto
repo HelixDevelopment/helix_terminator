@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package org_service;
+
+option go_package = "github.com/helixdevelopment/org-service/api/proto;org_service";
+
+// TODO: define service RPCs and messages
+
+service OrgServiceService {
+	rpc HealthCheck (HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+	bool healthy = 1;
+}

@@ -1,0 +1,32 @@
+{
+  "name": "Helix Dark",
+  "description": "Default HelixTerminator dark terminal color scheme",
+  "type": "dark",
+  "background": "#0E0E14",
+  "foreground": "#FFFFFF",
+  "cursor": "#6C63FF",
+  "selection": "rgba(108, 99, 255, 0.3)",
+  "colors": {
+    "black": "#1E1E2A",
+    "red": "#FF6B6B",
+    "green": "#00D4B1",
+    "yellow": "#F59E0B",
+    "blue": "#6C63FF",
+    "magenta": "#FF79C6",
+    "cyan": "#8BE9FD",
+    "white": "#F8F8F2",
+    "brightBlack": "#3A3A4A",
+    "brightRed": "#FF8A8A",
+    "brightGreen": "#26D4B1",
+    "brightYellow": "#FFD54D",
+    "brightBlue": "#7D6DE2",
+    "brightMagenta": "#FF4DAE",
+    "brightCyan": "#4DEFFF",
+    "brightWhite": "#FFFFFF"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "author": "HelixDevelopment",
+    "license": "MIT"
+  }
+}

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package vault_service;
+
+option go_package = "github.com/helixdevelopment/vault-service/api/proto;vault_service";
+
+// TODO: define service RPCs and messages
+
+service VaultServiceService {
+	rpc HealthCheck (HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+	bool healthy = 1;
+}

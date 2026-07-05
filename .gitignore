@@ -36,3 +36,6 @@ go.work.sum
 
 # pandoc/weasyprint PDF-engine temp artifacts
 toPdfViaTempFile*
+.claude/
+.claude/
+submodules/open-design/

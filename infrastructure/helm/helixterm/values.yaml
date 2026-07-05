@@ -1,0 +1,17 @@
+# Default values for helixterm.
+# TODO: define values for each subchart
+replicaCount: 1
+
+image:
+  repository: helixterminator
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+
+resources: {}

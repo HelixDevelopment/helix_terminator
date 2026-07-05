@@ -1,0 +1,64 @@
+name: PR Checks
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - gateway-service
+          - auth-service
+          - user-service
+          - vault-service
+          - host-service
+          - ssh-proxy-service
+          - terminal-service
+          - sftp-service
+          - port-forward-service
+          - snippet-service
+          - keychain-service
+          - workspace-service
+          - collaboration-service
+          - notification-service
+          - audit-service
+          - analytics-service
+          - ai-service
+          - recording-service
+          - pki-service
+          - org-service
+          - billing-service
+          - config-service
+          - health-service
+          - container-bridge-service
+          - helixtrack-bridge-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: cd services/${{ matrix.service }} && go test ./...
+
+  flutter-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+      - run: cd clients/flutter && flutter pub get && flutter test

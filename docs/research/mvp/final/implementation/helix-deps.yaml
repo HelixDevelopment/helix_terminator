@@ -1,0 +1,558 @@
+# HelixTerminator Dependency Manifest
+# Version: 1.0.0
+# Format: helix-deps.yaml v1
+# Last updated: 2026-07-05
+
+manifest:
+  name: helixterminator
+  version: 1.0.0
+  description: Secure Terminal Platform & Zero-Trust Connection Broker
+  owner: HelixDevelopment
+  license: PROPRIETARY
+
+# ============================================
+# GO BACKEND DEPENDENCIES
+# ============================================
+go:
+  runtime:
+    - name: go
+      version: "1.26.4"
+      source: https://go.dev/dl/
+      license: BSD-3-Clause
+      approved_by: helix-architecture
+      approved_date: 2026-01-15
+      usage: All microservices
+
+  web_framework:
+    - name: gin
+      version: "v1.10.0"
+      module: github.com/gin-gonic/gin
+      license: MIT
+      approved_by: helix-backend
+      approved_date: 2026-01-20
+      usage: HTTP API gateway and REST services
+
+    - name: grpc-go
+      version: "v1.71.0"
+      module: google.golang.org/grpc
+      license: Apache-2.0
+      approved_by: helix-backend
+      approved_date: 2026-01-20
+      usage: Internal service-to-service communication
+
+  database:
+    - name: pgx
+      version: "v5.7.2"
+      module: github.com/jackc/pgx/v5
+      license: MIT
+      approved_by: helix-backend
+      approved_date: 2026-01-25
+      usage: PostgreSQL driver
+
+    - name: golang-migrate
+      version: "v4.18.2"
+      module: github.com/golang-migrate/migrate/v4
+      license: MIT
+      approved_by: helix-backend
+      approved_date: 2026-01-25
+      usage: Database migrations
+
+    - name: redis-go
+      version: "v9.7.3"
+      module: github.com/redis/go-redis/v9
+      license: BSD-2-Clause
+      approved_by: helix-backend
+      approved_date: 2026-01-25
+      usage: Redis client
+
+  messaging:
+    - name: kafka-go
+      version: "v0.4.47"
+      module: github.com/segmentio/kafka-go
+      license: MIT
+      approved_by: helix-backend
+      approved_date: 2026-02-01
+      usage: Kafka producer/consumer
+
+    - name: amqp
+      version: "v1.15.0"
+      module: github.com/rabbitmq/amqp091-go
+      license: BSD-2-Clause
+      approved_by: helix-backend
+      approved_date: 2026-02-01
+      usage: RabbitMQ client
+
+  security:
+    - name: spiffe-go
+      version: "v1.2.5"
+      module: github.com/spiffe/go-spiffe/v2
+      license: Apache-2.0
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: SPIFFE/SPIRE workload identity
+
+    - name: crypto
+      version: "v0.36.0"
+      module: golang.org/x/crypto
+      license: BSD-3-Clause
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: Ed25519, Argon2id, SSH
+
+    - name: jwt-go
+      version: "v5.2.2"
+      module: github.com/golang-jwt/jwt/v5
+      license: MIT
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: JWT signing and validation
+
+  observability:
+    - name: otel-go
+      version: "v1.35.0"
+      module: go.opentelemetry.io/otel
+      license: Apache-2.0
+      approved_by: helix-ops
+      approved_date: 2026-02-15
+      usage: OpenTelemetry tracing
+
+    - name: prometheus-client
+      version: "v1.21.1"
+      module: github.com/prometheus/client_golang
+      license: Apache-2.0
+      approved_by: helix-ops
+      approved_date: 2026-02-15
+      usage: Metrics exposition
+
+    - name: zap
+      version: "v1.27.0"
+      module: go.uber.org/zap
+      license: MIT
+      approved_by: helix-ops
+      approved_date: 2026-02-15
+      usage: Structured logging
+
+  testing:
+    - name: testify
+      version: "v1.10.0"
+      module: github.com/stretchr/testify
+      license: MIT
+      approved_by: helix-qa
+      approved_date: 2026-02-20
+      usage: Test assertions
+
+    - name: testcontainers-go
+      version: "v0.35.0"
+      module: github.com/testcontainers/testcontainers-go
+      license: MIT
+      approved_by: helix-qa
+      approved_date: 2026-02-20
+      usage: Integration test containers
+
+    - name: mockery
+      version: "v2.53.2"
+      module: github.com/vektra/mockery/v2
+      license: BSD-3-Clause
+      approved_by: helix-qa
+      approved_date: 2026-02-20
+      usage: Mock generation
+
+# ============================================
+# FLUTTER CLIENT DEPENDENCIES
+# ============================================
+flutter:
+  sdk:
+    - name: flutter
+      version: "3.27.0"
+      channel: stable
+      source: https://flutter.dev
+      license: BSD-3-Clause
+      approved_by: helix-mobile
+      approved_date: 2026-01-15
+      usage: Cross-platform UI framework
+
+    - name: dart
+      version: "3.6.0"
+      source: https://dart.dev
+      license: BSD-3-Clause
+      approved_by: helix-mobile
+      approved_date: 2026-01-15
+      usage: Dart runtime
+
+  state_management:
+    - name: flutter_bloc
+      version: "^9.0.0"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-mobile
+      approved_date: 2026-01-20
+      usage: BLoC state management
+
+    - name: equatable
+      version: "^2.0.7"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-mobile
+      approved_date: 2026-01-20
+      usage: Value equality
+
+  networking:
+    - name: dio
+      version: "^5.8.0"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-mobile
+      approved_date: 2026-01-25
+      usage: HTTP client
+
+    - name: web_socket_channel
+      version: "^3.0.2"
+      source: pub.dev
+      license: BSD-3-Clause
+      approved_by: helix-mobile
+      approved_date: 2026-01-25
+      usage: WebSocket connections
+
+  database:
+    - name: drift
+      version: "^2.25.0"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-mobile
+      approved_date: 2026-01-25
+      usage: SQLite ORM
+
+    - name: sqlite3_flutter_libs
+      version: "^0.5.30"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-mobile
+      approved_date: 2026-01-25
+      usage: SQLite native libraries
+
+  crypto:
+    - name: pointycastle
+      version: "^3.9.1"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: Cryptographic operations
+
+    - name: encrypt
+      version: "^5.0.3"
+      source: pub.dev
+      license: BSD-3-Clause
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: AES encryption
+
+  testing:
+    - name: bloc_test
+      version: "^10.0.0"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-qa
+      approved_date: 2026-02-20
+      usage: BLoC testing
+
+    - name: mocktail
+      version: "^1.0.4"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-qa
+      approved_date: 2026-02-20
+      usage: Mocking
+
+    - name: golden_toolkit
+      version: "^0.15.0"
+      source: pub.dev
+      license: MIT
+      approved_by: helix-qa
+      approved_date: 2026-02-20
+      usage: Golden/snapshot tests
+
+# ============================================
+# INFRASTRUCTURE DEPENDENCIES
+# ============================================
+infrastructure:
+  container:
+    - name: docker
+      version: "27.5.0"
+      source: https://docker.com
+      license: Apache-2.0
+      approved_by: helix-ops
+      approved_date: 2026-01-15
+      usage: Container runtime
+
+    - name: kubernetes
+      version: "1.31.0"
+      source: https://kubernetes.io
+      license: Apache-2.0
+      approved_by: helix-ops
+      approved_date: 2026-01-15
+      usage: Container orchestration
+
+    - name: helm
+      version: "3.17.0"
+      source: https://helm.sh
+      license: Apache-2.0
+      approved_by: helix-ops
+      approved_date: 2026-01-15
+      usage: K8s package manager
+
+  service_mesh:
+    - name: istio
+      version: "1.24.0"
+      source: https://istio.io
+      license: Apache-2.0
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: Service mesh, mTLS
+
+    - name: spire
+      version: "1.11.0"
+      source: https://spiffe.io
+      license: Apache-2.0
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: Workload identity
+
+  iac:
+    - name: terraform
+      version: "1.10.0"
+      source: https://terraform.io
+      license: BUSL-1.1
+      approved_by: helix-ops
+      approved_date: 2026-01-15
+      usage: Infrastructure as code
+
+    - name: aws-provider
+      version: "5.86.0"
+      source: registry.terraform.io
+      license: MPL-2.0
+      approved_by: helix-ops
+      approved_date: 2026-01-15
+      usage: AWS provisioning
+
+  observability:
+    - name: prometheus
+      version: "v3.1.0"
+      source: https://prometheus.io
+      license: Apache-2.0
+      approved_by: helix-ops
+      approved_date: 2026-02-15
+      usage: Metrics collection
+
+    - name: grafana
+      version: "11.5.0"
+      source: https://grafana.com
+      license: AGPL-3.0
+      approved_by: helix-ops
+      approved_date: 2026-02-15
+      usage: Visualization
+
+    - name: jaeger
+      version: "1.65.0"
+      source: https://jaegertracing.io
+      license: Apache-2.0
+      approved_by: helix-ops
+      approved_date: 2026-02-15
+      usage: Distributed tracing
+
+    - name: loki
+      version: "3.3.0"
+      source: https://grafana.com/loki
+      license: AGPL-3.0
+      approved_by: helix-ops
+      approved_date: 2026-02-15
+      usage: Log aggregation
+
+  security:
+    - name: falco
+      version: "0.40.0"
+      source: https://falco.org
+      license: Apache-2.0
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: Runtime security
+
+    - name: trivy
+      version: "v0.59.0"
+      source: https://aquasecurity.github.io/trivy
+      license: Apache-2.0
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: Vulnerability scanning
+
+    - name: cosign
+      version: "v2.4.0"
+      source: https://github.com/sigstore/cosign
+      license: Apache-2.0
+      approved_by: helix-security
+      approved_date: 2026-02-10
+      usage: Container signing
+
+# ============================================
+# EXTERNAL SERVICES
+# ============================================
+external:
+  - name: stripe
+    version: "API 2024-12-18"
+    source: https://stripe.com
+    license: PROPRIETARY
+    approved_by: helix-billing
+    approved_date: 2026-02-01
+    usage: Payment processing
+
+  - name: sendgrid
+    version: "API v3"
+    source: https://sendgrid.com
+    license: PROPRIETARY
+    approved_by: helix-notifications
+    approved_date: 2026-02-01
+    usage: Email delivery
+
+  - name: twilio
+    version: "API v2010-04-01"
+    source: https://twilio.com
+    license: PROPRIETARY
+    approved_by: helix-notifications
+    approved_date: 2026-02-01
+    usage: SMS delivery
+
+# ============================================
+# SUBMODULES
+# ============================================
+submodules:
+  - name: constitution
+    path: constitution
+    url: git@github.com:HelixDevelopment/HelixConstitution.git
+    commit: e6504c2
+    required: true
+    approved_by: helix-governance
+
+  - name: open-design
+    path: submodules/open-design
+    url: git@github.com:nexu-io/open-design.git
+    required: true
+    approved_by: helix-design
+
+  - name: helixqa
+    path: submodules/helixqa
+    url: git@github.com:HelixDevelopment/helixqa.git
+    required: true
+    approved_by: helix-qa
+
+  - name: challenges
+    path: submodules/challenges
+    url: git@github.com:vasic-digital/challenges.git
+    required: false
+    approved_by: helix-qa
+
+  - name: digital.vasic/security
+    path: submodules/digital.vasic/security
+    url: git@github.com:vasic-digital/security.git
+    required: true
+    approved_by: helix-security
+
+  - name: digital.vasic/auth
+    path: submodules/digital.vasic/auth
+    url: git@github.com:vasic-digital/auth.git
+    required: true
+    approved_by: helix-security
+
+  - name: digital.vasic/cache
+    path: submodules/digital.vasic/cache
+    url: git@github.com:vasic-digital/cache.git
+    required: true
+    approved_by: helix-backend
+
+  - name: digital.vasic/database
+    path: submodules/digital.vasic/database
+    url: git@github.com:vasic-digital/database.git
+    required: true
+    approved_by: helix-backend
+
+  - name: digital.vasic/messaging
+    path: submodules/digital.vasic/messaging
+    url: git@github.com:vasic-digital/messaging.git
+    required: true
+    approved_by: helix-backend
+
+  - name: digital.vasic/middleware
+    path: submodules/digital.vasic/middleware
+    url: git@github.com:vasic-digital/middleware.git
+    required: true
+    approved_by: helix-backend
+
+  - name: digital.vasic/observability
+    path: submodules/digital.vasic/observability
+    url: git@github.com:vasic-digital/observability.git
+    required: true
+    approved_by: helix-ops
+
+  - name: digital.vasic/ratelimiter
+    path: submodules/digital.vasic/ratelimiter
+    url: git@github.com:vasic-digital/ratelimiter.git
+    required: true
+    approved_by: helix-backend
+
+  - name: digital.vasic/recovery
+    path: submodules/digital.vasic/recovery
+    url: git@github.com:vasic-digital/recovery.git
+    required: true
+    approved_by: helix-backend
+
+  - name: digital.vasic/concurrency
+    path: submodules/digital.vasic/concurrency
+    url: git@github.com:vasic-digital/concurrency.git
+    required: true
+    approved_by: helix-backend
+
+  - name: digital.vasic/containers
+    path: submodules/digital.vasic/containers
+    url: git@github.com:vasic-digital/containers.git
+    required: true
+    approved_by: helix-backend
+
+  - name: digital.vasic/docs_chain
+    path: submodules/digital.vasic/docs_chain
+    url: git@github.com:vasic-digital/docs_chain.git
+    required: true
+    approved_by: helix-backend
+
+  - name: helixtrack.ru/core
+    path: submodules/helixtrack.ru/core
+    url: git@github.com:HelixTrack/core.git
+    required: false
+    approved_by: helix-backend
+
+# ============================================
+# APPROVAL WORKFLOW
+# ============================================
+approval_workflow:
+  new_dependency:
+    - step: "Security review"
+      owner: helix-security
+      sla: "3 business days"
+    - step: "License compliance"
+      owner: helix-legal
+      sla: "2 business days"
+    - step: "Architecture review"
+      owner: helix-architecture
+      sla: "2 business days"
+    - step: "Final approval"
+      owner: helix-steward
+      sla: "1 business day"
+
+  version_update:
+    - step: "Security scan"
+      owner: helix-security
+      sla: "1 business day"
+    - step: "Automated test"
+      owner: helix-qa
+      sla: "CI pipeline"
+    - step: "Approval"
+      owner: helix-backend
+      sla: "1 business day"

@@ -1,0 +1,28 @@
+name: Dependency Update
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Update Go dependencies
+        run: |
+          for svc in services/*/; do
+            if [ -f "$svc/go.mod" ]; then
+              cd "$svc" && go get -u ./... && go mod tidy && cd -;
+            fi
+          done
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: deps/update-weekly
+          title: 'chore(deps): weekly dependency update'
+          body: |
+            Automated dependency update for all Go services.

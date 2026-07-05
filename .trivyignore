@@ -1,0 +1,5 @@
+# Known false positives / accepted risks
+# TODO: review and justify each entry
+
+# CVE-2023-XXXX: distroless base image scanning noise
+# CVE-2024-YYYY: test dependency only

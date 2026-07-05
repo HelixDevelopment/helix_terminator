@@ -1,0 +1,31 @@
+{
+  "platform": "android",
+  "description": "Android-specific design token overrides for HelixTerminator",
+  "overrides": {
+    "typography": {
+      "primitive": {
+        "fontFamily": {
+          "ui": {
+            "value": "'Inter', 'Google Sans', 'Roboto', sans-serif",
+            "type": "fontFamily"
+          },
+          "mono": {
+            "value": "'JetBrains Mono', 'Droid Sans Mono', monospace",
+            "type": "fontFamily"
+          }
+        }
+      }
+    },
+    "spacing": {
+      "safeAreaTop": { "value": "24px", "type": "dimension" },
+      "safeAreaBottom": { "value": "0px", "type": "dimension" },
+      "systemNavHeight": { "value": "48px", "type": "dimension" }
+    },
+    "component": {
+      "bottomNav": {
+        "height": { "value": "56px", "type": "dimension" },
+        "elevation": { "value": "8px", "type": "dimension" }
+      }
+    }
+  }
+}

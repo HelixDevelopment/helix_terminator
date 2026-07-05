@@ -1,0 +1,439 @@
+syntax = "proto3";
+
+package helixterm.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/v1;helixtermv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service ContainerBridgeService {
+  rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
+  rpc GetContainer(GetContainerRequest) returns (Container);
+  rpc CreateContainer(CreateContainerRequest) returns (Container);
+  rpc UpdateContainer(UpdateContainerRequest) returns (Container);
+  rpc DeleteContainer(DeleteContainerRequest) returns (google.protobuf.Empty);
+  rpc StartContainer(StartContainerRequest) returns (Container);
+  rpc StopContainer(StopContainerRequest) returns (Container);
+  rpc RestartContainer(RestartContainerRequest) returns (Container);
+  rpc GetContainerLogs(GetContainerLogsRequest) returns (ContainerLogStream);
+  rpc GetContainerMetrics(GetContainerRequest) returns (ContainerMetrics);
+  rpc ExecuteInContainer(ExecuteInContainerRequest) returns (ExecutionResult);
+  rpc StreamContainerLogs(StreamContainerLogsRequest) returns (stream ContainerLogEntry);
+  rpc GetContainerStats(GetContainerRequest) returns (ContainerStats);
+  rpc GetContainerProcesses(GetContainerRequest) returns (ContainerProcesses);
+  rpc GetContainerFiles(GetContainerFilesRequest) returns (ContainerFiles);
+  rpc UploadToContainer(stream UploadToContainerRequest) returns (FileInfo);
+  rpc DownloadFromContainer(DownloadFromContainerRequest) returns (stream DownloadFromContainerResponse);
+  rpc GetContainerNetworks(GetContainerRequest) returns (ContainerNetworks);
+  rpc GetContainerVolumes(GetContainerRequest) returns (ContainerVolumes);
+  rpc AttachToContainer(AttachToContainerRequest) returns (stream ContainerOutput);
+  rpc ResizeContainerTTY(ResizeContainerTTYRequest) returns (google.protobuf.Empty);
+  rpc GetContainerEvents(GetContainerEventsRequest) returns (stream ContainerEvent);
+  rpc GetContainerHealth(GetContainerRequest) returns (ContainerHealth);
+  rpc GetContainerDiff(GetContainerDiffRequest) returns (ContainerDiff);
+  rpc CommitContainer(CommitContainerRequest) returns (ContainerImage);
+  rpc GetContainerImages(ListContainerImagesRequest) returns (ListContainerImagesResponse);
+  rpc DeleteContainerImage(DeleteContainerImageRequest) returns (google.protobuf.Empty);
+  rpc BuildContainerImage(stream BuildContainerImageRequest) returns (stream BuildProgress);
+  rpc GetContainerRegistries(google.protobuf.Empty) returns (ContainerRegistries);
+  rpc PullContainerImage(PullContainerImageRequest) returns (stream PullProgress);
+  rpc PushContainerImage(PushContainerImageRequest) returns (stream PushProgress);
+  rpc GetContainerComposeProjects(ListContainerComposeProjectsRequest) returns (ListContainerComposeProjectsResponse);
+  rpc DeployComposeProject(DeployComposeProjectRequest) returns (ComposeProject);
+  rpc GetContainerComposeProject(GetContainerComposeProjectRequest) returns (ComposeProject);
+  rpc DeleteComposeProject(DeleteComposeProjectRequest) returns (google.protobuf.Empty);
+}
+
+message Container {
+  string id = 1;
+  string name = 2;
+  string image = 3;
+  string status = 4;
+  string state = 5;
+  repeated string labels = 6;
+  repeated string ports = 7;
+  repeated string volumes = 8;
+  repeated string networks = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp started_at = 11;
+  google.protobuf.Timestamp finished_at = 12;
+  string exit_code = 13;
+  string host_id = 14;
+  string organization_id = 15;
+  map<string, string> metadata = 16;
+}
+
+message ContainerMetrics {
+  string id = 1;
+  float cpu_percent = 2;
+  float memory_percent = 3;
+  int64 memory_usage_bytes = 4;
+  int64 memory_limit_bytes = 5;
+  int64 network_rx_bytes = 6;
+  int64 network_tx_bytes = 7;
+  int64 block_read_bytes = 8;
+  int64 block_write_bytes = 9;
+  int32 pids = 10;
+  google.protobuf.Timestamp collected_at = 11;
+}
+
+message ContainerStats {
+  string id = 1;
+  int64 total_cpu_usage = 2;
+  int64 total_memory_usage = 3;
+  int64 total_network_rx = 4;
+  int64 total_network_tx = 5;
+  google.protobuf.Timestamp collected_at = 6;
+}
+
+message ContainerProcess {
+  int32 pid = 1;
+  string user = 2;
+  float cpu_percent = 3;
+  float memory_percent = 4;
+  string command = 5;
+  string start_time = 6;
+}
+
+message ContainerProcesses {
+  string id = 1;
+  repeated ContainerProcess processes = 2;
+}
+
+message ContainerFile {
+  string path = 1;
+  string name = 2;
+  int64 size = 3;
+  string type = 4;
+  string permissions = 5;
+  google.protobuf.Timestamp modified_at = 6;
+}
+
+message ContainerFiles {
+  string id = 1;
+  repeated ContainerFile files = 2;
+}
+
+message FileInfo {
+  string path = 1;
+  string name = 2;
+  int64 size = 3;
+  string type = 4;
+  google.protobuf.Timestamp modified_at = 5;
+}
+
+message ContainerLogEntry {
+  string id = 1;
+  string stdout = 2;
+  string stderr = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message ContainerLogStream {
+  string id = 1;
+  repeated ContainerLogEntry entries = 2;
+}
+
+message ContainerOutput {
+  string id = 1;
+  string data = 2;
+  string type = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message ContainerEvent {
+  string id = 1;
+  string type = 2;
+  string action = 3;
+  map<string, string> attributes = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+message ContainerHealth {
+  string id = 1;
+  string status = 2;
+  int32 failing_streak = 3;
+  google.protobuf.Timestamp last_check = 4;
+  string log = 5;
+}
+
+message ContainerDiff {
+  string id = 1;
+  repeated ContainerDiffEntry changes = 2;
+}
+
+message ContainerDiffEntry {
+  string path = 1;
+  string type = 2;
+  int64 size = 3;
+}
+
+message ContainerImage {
+  string id = 1;
+  string name = 2;
+  string tag = 3;
+  int64 size = 4;
+  google.protobuf.Timestamp created_at = 5;
+  map<string, string> labels = 6;
+}
+
+message ListContainerImagesResponse {
+  repeated ContainerImage images = 1;
+}
+
+message BuildProgress {
+  string id = 1;
+  string status = 2;
+  string stream = 3;
+  string error = 4;
+  int32 progress = 5;
+}
+
+message ContainerRegistry {
+  string name = 1;
+  string url = 2;
+  bool authenticated = 3;
+}
+
+message ContainerRegistries {
+  repeated ContainerRegistry registries = 1;
+}
+
+message PullProgress {
+  string id = 1;
+  string status = 2;
+  string progress = 3;
+  string error = 4;
+}
+
+message PushProgress {
+  string id = 1;
+  string status = 2;
+  string progress = 3;
+  string error = 4;
+}
+
+message ComposeProject {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+  repeated Container services = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ListContainerComposeProjectsResponse {
+  repeated ComposeProject projects = 1;
+}
+
+message ExecutionResult {
+  string id = 1;
+  string stdout = 2;
+  string stderr = 3;
+  int32 exit_code = 4;
+  int64 execution_time_ms = 5;
+  google.protobuf.Timestamp executed_at = 6;
+}
+
+message ListContainersRequest {
+  string host_id = 1;
+  string organization_id = 2;
+  string status = 3;
+  string image = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListContainersResponse {
+  repeated Container containers = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message GetContainerRequest {
+  string id = 1;
+}
+
+message CreateContainerRequest {
+  string name = 1;
+  string image = 2;
+  string host_id = 3;
+  string organization_id = 4;
+  repeated string commands = 5;
+  repeated string ports = 6;
+  repeated string volumes = 7;
+  repeated string env = 8;
+  map<string, string> labels = 9;
+  map<string, string> metadata = 10;
+}
+
+message UpdateContainerRequest {
+  string id = 1;
+  string name = 2;
+  repeated string ports = 3;
+  repeated string volumes = 4;
+  repeated string env = 5;
+  map<string, string> labels = 6;
+  map<string, string> metadata = 7;
+}
+
+message DeleteContainerRequest {
+  string id = 1;
+  bool force = 2;
+  bool remove_volumes = 3;
+}
+
+message StartContainerRequest {
+  string id = 1;
+}
+
+message StopContainerRequest {
+  string id = 1;
+  int32 timeout = 2;
+}
+
+message RestartContainerRequest {
+  string id = 1;
+  int32 timeout = 2;
+}
+
+message GetContainerLogsRequest {
+  string id = 1;
+  int32 tail = 2;
+  bool timestamps = 3;
+  google.protobuf.Timestamp since = 4;
+}
+
+message ExecuteInContainerRequest {
+  string id = 1;
+  repeated string command = 2;
+  bool tty = 3;
+  bool stdin = 4;
+  int32 timeout = 5;
+}
+
+message StreamContainerLogsRequest {
+  string id = 1;
+  bool follow = 2;
+  bool stdout = 3;
+  bool stderr = 4;
+  bool timestamps = 5;
+  int32 tail = 6;
+}
+
+message GetContainerFilesRequest {
+  string id = 1;
+  string path = 2;
+}
+
+message UploadToContainerRequest {
+  string id = 1;
+  string path = 2;
+  string filename = 3;
+  bytes chunk = 4;
+  int64 offset = 5;
+  bool is_last = 6;
+}
+
+message DownloadFromContainerRequest {
+  string id = 1;
+  string path = 2;
+}
+
+message DownloadFromContainerResponse {
+  bytes chunk = 1;
+  bool is_last = 2;
+}
+
+message AttachToContainerRequest {
+  string id = 1;
+  bool stdin = 2;
+  bool stdout = 3;
+  bool stderr = 4;
+  bool tty = 5;
+}
+
+message ResizeContainerTTYRequest {
+  string id = 1;
+  int32 width = 2;
+  int32 height = 3;
+}
+
+message GetContainerEventsRequest {
+  string id = 1;
+  repeated string event_types = 2;
+  google.protobuf.Timestamp since = 3;
+}
+
+message GetContainerDiffRequest {
+  string id = 1;
+  string parent_image = 2;
+}
+
+message CommitContainerRequest {
+  string id = 1;
+  string repository = 2;
+  string tag = 3;
+  string author = 4;
+  string comment = 5;
+}
+
+message ListContainerImagesRequest {
+  string host_id = 1;
+  string organization_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message DeleteContainerImageRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+message BuildContainerImageRequest {
+  string host_id = 1;
+  string dockerfile = 2;
+  string tag = 3;
+  bytes context_chunk = 4;
+  bool is_last = 5;
+  map<string, string> build_args = 6;
+}
+
+message PullContainerImageRequest {
+  string host_id = 1;
+  string image = 2;
+  string tag = 3;
+  string registry = 4;
+}
+
+message PushContainerImageRequest {
+  string host_id = 1;
+  string image = 2;
+  string tag = 3;
+  string registry = 4;
+}
+
+message ListContainerComposeProjectsRequest {
+  string host_id = 1;
+  string organization_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message DeployComposeProjectRequest {
+  string host_id = 1;
+  string name = 2;
+  bytes compose_file = 3;
+  string organization_id = 4;
+  map<string, string> env = 5;
+}
+
+message GetContainerComposeProjectRequest {
+  string id = 1;
+}
+
+message DeleteComposeProjectRequest {
+  string id = 1;
+  bool remove_volumes = 2;
+}

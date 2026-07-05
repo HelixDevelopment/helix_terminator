@@ -1,0 +1,31 @@
+{
+  "platform": "ios",
+  "description": "iOS-specific design token overrides for HelixTerminator",
+  "overrides": {
+    "typography": {
+      "primitive": {
+        "fontFamily": {
+          "ui": {
+            "value": "'Inter', -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif",
+            "type": "fontFamily"
+          },
+          "mono": {
+            "value": "'JetBrains Mono', 'SF Mono', 'Courier New', monospace",
+            "type": "fontFamily"
+          }
+        }
+      }
+    },
+    "spacing": {
+      "safeAreaTop": { "value": "44px", "type": "dimension" },
+      "safeAreaBottom": { "value": "34px", "type": "dimension" },
+      "homeIndicator": { "value": "34px", "type": "dimension" }
+    },
+    "component": {
+      "bottomSheet": {
+        "cornerRadius": { "value": "20px", "type": "dimension" },
+        "handleBar": { "value": "true", "type": "boolean" }
+      }
+    }
+  }
+}

@@ -1,3 +1,6 @@
 [submodule "constitution"]
 	path = constitution
 	url = git@github.com:HelixDevelopment/HelixConstitution.git
+[submodule "open-design"]
+	path = submodules/open-design
+	url = git@github.com:nexu-io/open-design.git

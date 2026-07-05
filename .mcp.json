@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "open-design": {
+      "command": "npx",
+      "args": ["-y", "@open-design/mcp@latest"],
+      "env": {
+        "OPEN_DESIGN_API_KEY": "${OPEN_DESIGN_API_KEY}"
+      }
+    }
+  },
+  "dependencies": {
+    "design-systems": [
+      {
+        "name": "helix-terminator",
+        "source": "./docs/research/mvp/final/implementation/opendesign",
+        "extends": "default"
+      }
+    ]
+  },
+  "openDesign": {
+    "brandId": "helix-terminator",
+    "tokenFile": "docs/research/mvp/final/implementation/opendesign/design-tokens.json",
+    "manifest": "docs/research/mvp/final/implementation/opendesign/opendesign-manifest.json"
+  }
+}

@@ -1,0 +1,2 @@
+-- 001_init.sql
+-- TODO: create tables, indexes, and constraints for vault-service

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package notification_service;
+
+option go_package = "github.com/helixdevelopment/notification-service/api/proto;notification_service";
+
+// TODO: define service RPCs and messages
+
+service NotificationServiceService {
+	rpc HealthCheck (HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+	bool healthy = 1;
+}
