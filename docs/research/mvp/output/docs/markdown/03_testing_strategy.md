@@ -168,37 +168,119 @@ The mandate is enforced by a pre-commit hook that rejects any `*.go` or `*.dart`
 │  4. contract tests (Pact verification) REQUIRED (all pass)      │
 │  5. coverage gate                      REQUIRED (≥ thresholds)  │
 │  6. anti-bluff audit                   REQUIRED (exit 0)        │
-│  7. build (docker image)               REQUIRED                 │
+│  7. Dart/Flutter SBOM + vuln gate      REQUIRED (no high/crit)  │
+│     (§11.5 pub audit + OSV-Scanner)                              │
+│  8. build (docker image)               REQUIRED                 │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │  MAIN PIPELINE (blocks deployment)                               │
 │  ─────────────────────────────────────────────────────────────  │
 │  All of the above, PLUS:                                        │
-│  8. E2E tests (staging environment)    REQUIRED (all pass)      │
-│  9. performance regression check       REQUIRED (< 10% p95)     │
-│  10. SAST scan (Semgrep + govulncheck) REQUIRED (no high/crit)  │
-│  11. helixqa autonomous QA session     REQUIRED (exit 0)        │
+│  9. E2E tests (staging environment)    REQUIRED (all pass)      │
+│  10. device/topology matrix subset     REQUIRED (Tier-1 rows,   │
+│      §4.4 — one physical/virtual per platform family)           │
+│  11. performance regression check      REQUIRED (< 10% p95)     │
+│  12. SAST scan (Semgrep + govulncheck) REQUIRED (no high/crit)  │
+│  13. helixqa autonomous QA session     REQUIRED (exit 0)        │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │  NIGHTLY PIPELINE (blocks next-day development)                  │
 │  ─────────────────────────────────────────────────────────────  │
-│  12. chaos experiments (LitmusChaos)   ADVISORY (alerting)      │
-│  13. mutation testing (go-mutesting)   REQUIRED (≥ 80% kill)    │
-│  14. full regression suite             REQUIRED (all pass)      │
-│  15. property-based / fuzz tests       REQUIRED (no crashes)    │
+│  14. chaos experiments (LitmusChaos)   ADVISORY (alerting)      │
+│  15. mutation testing (go-mutesting)   REQUIRED (≥ 80% kill)    │
+│  16. full regression suite             REQUIRED (all pass)      │
+│  17. property-based / fuzz tests       REQUIRED (no crashes)    │
+│  18. terminal-render perf suite        REQUIRED (§5.3 budgets)  │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
 │  RELEASE PIPELINE (blocks release tag)                           │
 │  ─────────────────────────────────────────────────────────────  │
-│  16. full nightly suite                REQUIRED                 │
-│  17. penetration test report gate      REQUIRED (signed report) │
-│  18. DAST scan (OWASP ZAP)            REQUIRED (no high/crit)   │
-│  19. accessibility audit (axe-core)   REQUIRED (WCAG 2.2 AA)   │
-│  20. golden/snapshot test baseline    REQUIRED (no regressions) │
+│  19. full nightly suite                REQUIRED                 │
+│  20. penetration test report gate      REQUIRED (signed report) │
+│  21. DAST scan (OWASP ZAP)            REQUIRED (no high/crit)   │
+│  22. accessibility audit (axe-core, web + §10.7 native)        │
+│      REQUIRED (WCAG 2.2 AA + native SR pass)                    │
+│  23. golden/snapshot test baseline    REQUIRED (no regressions) │
+│  24. full device/topology matrix       REQUIRED (§4.4, all      │
+│      Tier-1 + Tier-2 rows green)                                 │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+The box diagram above is retained as a quick terminal-readable index. The authoritative
+gate graph — including blocking edges between pipelines and the fail-closed behavior on
+any REQUIRED gate — is the following flowchart:
+
+```mermaid
+flowchart TD
+    subgraph PR["PR Pipeline — blocks merge"]
+        direction TB
+        PR1["1. Lint\ngolangci-lint + flutter analyze"]
+        PR2["2. Unit tests"]
+        PR3["3. Integration tests"]
+        PR4["4. Contract tests\nPact verification"]
+        PR5["5. Coverage gate"]
+        PR6["6. Anti-bluff audit"]
+        PR7["7. Dart/Flutter SBOM + vuln gate\n§11.5"]
+        PR8["8. Build docker image"]
+        PR1 --> PR2 --> PR3 --> PR4 --> PR5 --> PR6 --> PR7 --> PR8
+    end
+
+    PRGate{"All PR gates GREEN?"}
+    PR8 --> PRGate
+    PRGate -- "No — any REQUIRED gate red" --> PRBlock["Merge BLOCKED"]
+    PRGate -- "Yes" --> MergeToMain["Merge to main"]
+
+    subgraph MAIN["Main Pipeline — blocks deployment"]
+        direction TB
+        M1["9. E2E tests\nstaging environment"]
+        M2["10. Device/topology matrix subset\n§4.4 Tier-1"]
+        M3["11. Performance regression check\n< 10% p95"]
+        M4["12. SAST scan\nSemgrep + govulncheck"]
+        M5["13. HelixQA autonomous QA session"]
+        M1 --> M2 --> M3 --> M4 --> M5
+    end
+
+    MergeToMain --> M1
+    MainGate{"All Main gates GREEN?"}
+    M5 --> MainGate
+    MainGate -- "No" --> MainBlock["Deployment BLOCKED"]
+    MainGate -- "Yes" --> Deploy["Deploy to staging"]
+
+    subgraph NIGHTLY["Nightly Pipeline — blocks next-day development"]
+        direction TB
+        N1["14. Chaos experiments\nLitmusChaos — ADVISORY"]
+        N2["15. Mutation testing\n≥ 80% kill"]
+        N3["16. Full regression suite"]
+        N4["17. Property-based / fuzz tests"]
+        N5["18. Terminal-render perf suite\n§5.3 budgets"]
+        N1 -.-> N2 --> N3 --> N4 --> N5
+    end
+
+    Deploy --> N1
+    NightlyGate{"All REQUIRED nightly gates GREEN?"}
+    N5 --> NightlyGate
+    NightlyGate -- "No" --> NightlyBlock["Next-day dev BLOCKED\n(chaos is advisory-only)"]
+    NightlyGate -- "Yes" --> ReleaseReady["Eligible for release tag"]
+
+    subgraph RELEASE["Release Pipeline — blocks release tag"]
+        direction TB
+        R1["19. Full nightly suite"]
+        R2["20. Penetration test report gate\nsigned report < 90 days"]
+        R3["21. DAST scan\nOWASP ZAP"]
+        R4["22. Accessibility audit\naxe-core web + §10.7 native SR"]
+        R5["23. Golden/snapshot baseline"]
+        R6["24. Full device/topology matrix\n§4.4 Tier-1 + Tier-2"]
+        R1 --> R2 --> R3 --> R4 --> R5 --> R6
+    end
+
+    ReleaseReady --> R1
+    ReleaseGate{"All release gates GREEN?"}
+    R6 --> ReleaseGate
+    ReleaseGate -- "No" --> ReleaseBlock["Release tag BLOCKED"]
+    ReleaseGate -- "Yes" --> Tag["Release tag published\n(all owned submodules + main, §11.4.113)"]
 ```
 
 ### 1.7 HelixQA Integration Overview
@@ -2418,6 +2500,15 @@ func TestRedisTokenStore_CacheMiss_Integration(t *testing.T) {
 
 ### 3.5 RabbitMQ Integration Tests
 
+RabbitMQ is real, in-use infrastructure — `notification-service` (email/Slack/webhook fan-out) and
+`webhook-service` (outbound webhook delivery with retry queue) are both live AMQP consumers (see
+`04_devops_infrastructure.md` §6.2 "Amazon MQ (Managed RabbitMQ)" and the RabbitMQ production-path
+decision recorded there). These integration tests exercise the same message shapes against a
+`testcontainers-go` RabbitMQ container in CI; the production path is Amazon MQ (a managed,
+multi-AZ RabbitMQ-engine broker per doc 04), not the in-cluster Bitnami chart used for local/dev —
+the container image pinned in `testinfra` (§3.1) is a test-time substitute for that engine, not a
+claim that RabbitMQ ships as a self-managed in-cluster broker in production.
+
 ```go
 // services/sshproxy/command_routing_integration_test.go
 //go:build integration
@@ -3064,6 +3155,142 @@ func TestE2E_MFASetupAndUse(t *testing.T) {
 }
 ```
 
+### 4.4 Device / Topology Test Matrix
+
+The product roadmap commits HelixTerminator to five platform families (iOS, Android, macOS,
+Windows, Linux desktop, and Web) each with per-platform performance and accessibility SLOs. Prior
+to this section, no explicit device/OS/browser version list existed anywhere in the corpus — E2E
+and HelixQA configuration referenced platform *names* only (`web`, `desktop`, `android`, `ios`).
+This matrix is the canonical, versioned list every E2E/HelixQA/device-farm job MUST resolve
+against; it replaces "the device farm has some devices" with an auditable row set.
+
+**Tiering.** **Tier-1** rows run on every Main-pipeline build (a representative subset — one
+device/OS/browser per family, chosen for highest install-base share). **Tier-2** rows run on the
+Nightly and Release pipelines (the full matrix). A platform/feature cell with no Tier-1 row is a
+release-blocker gap per §11.4.25 (Full-Automation-Coverage Mandate) and must be filed as a tracked
+item.
+
+#### 4.4.1 Mobile (iOS / Android)
+
+| Platform | OS Version | Device Class | Farm | Tier | Feature Coverage |
+|---|---|---|---|---|---|
+| iOS | 18.1 (latest stable) | iPhone 16 Pro (A18 Pro, 6GB RAM) | Physical device farm (BrowserStack App Live) | Tier-1 | Auth, Vault, SSH session, biometric login, push notifications |
+| iOS | 17.6 (N-1 stable) | iPhone 13 (A15, 4GB RAM) | Physical device farm | Tier-2 | Auth, Vault, SSH session |
+| iOS | 16.7 (min-supported, per App Store min-OS policy) | iPhone SE 3rd-gen (A15, 4GB RAM) | Physical device farm | Tier-2 | Auth, cold-start budget only (§5.3.4) |
+| Android | 15 (API 35, latest stable) | Pixel 9 (Tensor G4, 12GB RAM) | `adb` over farm (Firebase Test Lab) | Tier-1 | Auth, Vault, SSH session, biometric login, WorkManager background sync |
+| Android | 14 (API 34) | Samsung Galaxy S23 (Snapdragon 8 Gen 2, 8GB RAM) | Firebase Test Lab | Tier-2 | Auth, Vault, SSH session |
+| Android | 12 (API 31, min-supported per `minSdkVersion`) | Pixel 4a (Snapdragon 730G, 6GB RAM, low-end reference) | Firebase Test Lab | Tier-2 | Auth, cold-start budget, low-end frame-time budget (§5.3.3) |
+
+#### 4.4.2 Desktop (macOS / Windows / Linux)
+
+| Platform | OS Version | Hardware Class | Runner | Tier | Feature Coverage |
+|---|---|---|---|---|---|
+| macOS | 15 Sequoia (latest stable) | Apple Silicon (M3, arm64) | GitHub Actions `macos-15` | Tier-1 | Full desktop client suite |
+| macOS | 13 Ventura (N-2, oldest supported per client EOL policy) | Intel x86_64 | Self-hosted macOS 13 runner | Tier-2 | Auth, SSH session, Vault |
+| Windows | 11 23H2 (latest stable) | x86_64, 8GB RAM reference | GitHub Actions `windows-2022` | Tier-1 | Full desktop client suite |
+| Windows | 10 22H2 (oldest supported, EOL 2028-10) | x86_64, 4GB RAM low-end reference | Self-hosted Windows 10 runner | Tier-2 | Auth, SSH session, low-end frame-time budget |
+| Linux | Ubuntu 24.04 LTS (primary reference distro) | x86_64, GNOME/X11 | GitHub Actions `ubuntu-24.04` | Tier-1 | Full desktop client suite |
+| Linux | Fedora 41 (Wayland reference) | x86_64 | Self-hosted Fedora 41 runner | Tier-2 | Auth, SSH session, Wayland-specific input handling |
+
+#### 4.4.3 Web (Browser × Version)
+
+| Browser | Version Policy | Rendering Engine | Executor | Tier | Feature Coverage |
+|---|---|---|---|---|---|
+| Chrome/Chromium | Latest stable + latest-1 | Blink | Playwright (`chromium` channel) | Tier-1 | Full web client suite |
+| Firefox | Latest stable (ESR tracked separately) | Gecko | Playwright (`firefox` channel) | Tier-1 | Full web client suite |
+| Safari | Latest stable (macOS-bundled, no standalone version) | WebKit | Playwright (`webkit` channel) on `macos-15` runner | Tier-1 | Auth, Vault, SSH session (WebKit-specific WebSocket/WebCrypto checks) |
+| Edge | Latest stable | Blink (Chromium-based) | Playwright (`msedge` channel) | Tier-2 | Auth, SSH session |
+
+#### 4.4.4 Screen-Size / Viewport Matrix
+
+Applied orthogonally to every mobile and web row above (desktop clients target a fixed 1280×800
+minimum window per the UX spec):
+
+| Class | Representative Resolution | Applies To |
+|---|---|---|
+| Small phone | 375×667 (@2x) | iOS SE-class, Android compact |
+| Standard phone | 393×852 (@3x) | iOS Pro-class, Android Pixel-class |
+| Tablet | 834×1194 (@2x) | iPadOS split-view SSH sessions |
+| Small laptop viewport | 1366×768 | Web Tier-1 minimum |
+| Standard desktop | 1920×1080 | Web Tier-1 default, desktop client default |
+| Ultrawide | 3440×1440 | Terminal multi-pane layout regression only |
+
+#### 4.4.5 HelixQA Wiring
+
+The matrix above is registered as `devicematrix/topology.yaml` and consumed by the `helixqa`
+orchestrator's platform resolver (extends the `.helixqa.yaml` `platforms:` block in §10.2, which
+today only names platform families with no version pins):
+
+```yaml
+# devicematrix/topology.yaml
+version: "1"
+tiers:
+  tier1_gate: main        # Tier-1 rows run on every Main-pipeline build
+  tier2_gate: release      # Tier-2 rows run on Nightly + Release pipelines
+
+rows:
+  - id: ios-18.1-iphone16pro
+    platform: ios
+    os_version: "18.1"
+    device: "iPhone 16 Pro"
+    farm: browserstack-app-live
+    tier: 1
+    features: [auth, vault, ssh_session, biometric_login, push_notifications]
+
+  - id: android-15-pixel9
+    platform: android
+    os_version: "15"
+    api_level: 35
+    device: "Pixel 9"
+    farm: firebase-test-lab
+    tier: 1
+    features: [auth, vault, ssh_session, biometric_login, background_sync]
+
+  - id: macos-15-arm64
+    platform: macos
+    os_version: "15"
+    arch: arm64
+    runner: macos-15
+    tier: 1
+    features: [full_desktop_suite]
+
+  - id: windows-11-23h2
+    platform: windows
+    os_version: "11-23H2"
+    runner: windows-2022
+    tier: 1
+    features: [full_desktop_suite]
+
+  - id: linux-ubuntu-24.04
+    platform: linux
+    os_version: "24.04"
+    runner: ubuntu-24.04
+    tier: 1
+    features: [full_desktop_suite]
+
+  - id: web-chromium-latest
+    platform: web
+    browser: chromium
+    version_policy: latest
+    executor: playwright
+    tier: 1
+    features: [full_web_suite]
+
+  - id: web-webkit-latest
+    platform: web
+    browser: webkit
+    version_policy: latest
+    executor: playwright
+    runner: macos-15
+    tier: 1
+    features: [auth, vault, ssh_session]
+```
+
+A CI job (`make devicematrix-verify`) diffs the checked-in `topology.yaml` against the live farm
+inventory (BrowserStack/Firebase Test Lab device-list APIs) on a weekly schedule and files a
+tracked item (§11.4.15) when a pinned OS version is deprecated by the vendor, so the matrix never
+silently drifts from what the farms actually still support.
+
 ---
 
 ## 5. Performance & Load Tests
@@ -3669,6 +3896,205 @@ func BenchmarkAES256GCM_Encrypt_64KB(b *testing.B) {
     }
 }
 ```
+
+### 5.3 Terminal-Rendering Performance Test Methodology (Flutter Client)
+
+The product roadmap treats five terminal-rendering properties as **contractual SLOs** — 60fps
+scroll, <16ms keystroke-to-render latency, vttest conformance, Impeller GPU-memory ceiling, and
+per-platform cold-start budgets. Prior to this section no test methodology existed for any of the
+five; Flutter tests in this document were functional/widget-level only (`flutter_test`
+`WidgetTester`, no frame-timing instrumentation). This subsection defines, per SLO: the
+instrumentation used, the exact procedure, and the numeric pass threshold.
+
+#### 5.3.1 60fps Scroll / Render Test
+
+**Instrumentation:** `flutter drive` + `flutter_driver`'s `Timeline` API (`traceAction`), post-
+processed with `flutter_driver`'s `TimelineSummary`, which is the first-party Flutter tool for
+frame-build/frame-raster timing (no third-party dependency required).
+
+**Procedure:**
+1. Launch the terminal client in `--profile` mode (never `--debug` — debug builds disable the
+   Skia/Impeller frame-timing fast path and produce unrepresentative numbers).
+2. Drive a synthetic terminal session emitting 10,000 lines of mixed ANSI output (256-color text,
+   cursor-movement escapes, a `top`-style redrawing pane) at the PTY's native write rate.
+3. Perform a programmatic fling-scroll gesture (`driver.scroll(..., duration: 300ms)`) across the
+   full 10,000-line scrollback, 20 repetitions.
+4. Capture the `Timeline` for the full drive, summarize with `TimelineSummary.summarizeToJson()`.
+
+**Pass threshold:** `average_frame_build_time_millis` **and** `90th_percentile_frame_rasterizer_
+time_millis` MUST both stay ≤ 16.67ms (the 60fps frame budget); `missed_frame_build_budget_count`
+MUST be 0 across all 20 repetitions on every Tier-1 device (§4.4). A single missed-frame-budget
+event on a Tier-1 device is a FAIL, not an average-tolerant metric — dropped frames are perceptible
+to the end user as stutter regardless of the mean.
+
+```dart
+// test_driver/terminal_scroll_perf_test.dart
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_driver/flutter_driver.dart';
+import 'package:test/test.dart';
+
+void main() {
+  group('Terminal 60fps scroll', () {
+    late FlutterDriver driver;
+
+    setUpAll(() async {
+      driver = await FlutterDriver.connect();
+    });
+
+    tearDownAll(() async {
+      await driver.close();
+    });
+
+    test('scrolling 10k-line scrollback stays within the 60fps budget', () async {
+      await driver.requestData('load_synthetic_10k_line_session');
+
+      final timeline = await driver.traceAction(() async {
+        for (var i = 0; i < 20; i++) {
+          await driver.scroll(
+            find.byValueKey('terminal-scrollback'),
+            0,
+            -4000,
+            const Duration(milliseconds: 300),
+          );
+        }
+      });
+
+      final summary = TimelineSummary.summarize(timeline);
+      await summary.writeSummaryToFile('terminal_scroll_perf', pretty: true);
+      await summary.writeTimelineToFile('terminal_scroll_perf', pretty: true);
+
+      final json = jsonDecode(await File(
+              'build/terminal_scroll_perf.timeline_summary.json')
+          .readAsString()) as Map<String, dynamic>;
+
+      expect(json['average_frame_build_time_millis'], lessThanOrEqualTo(16.67));
+      expect(json['90th_percentile_frame_rasterizer_time_millis'],
+          lessThanOrEqualTo(16.67));
+      expect(json['missed_frame_build_budget_count'], equals(0));
+    });
+  });
+}
+```
+
+#### 5.3.2 Keystroke-to-Render Latency (<16ms)
+
+**Instrumentation:** a synthetic-input harness measuring wall-clock delta between the PTY write
+syscall (`write(2)` on the pseudo-terminal master) and the corresponding `SchedulerBinding.
+instance.addPostFrameCallback` firing for the frame that painted the resulting glyph — the
+end-to-end path a real keystroke takes (PTY → terminal-emulation parser → Flutter widget rebuild →
+raster → present).
+
+**Procedure:** inject 500 single-character keystrokes at a fixed 50ms inter-key interval (below
+human fast-typing rate, so no two keystrokes coalesce into one frame) into a live SSH-proxied PTY
+session, timestamping the `write(2)` call and the next `addPostFrameCallback` firing for each.
+
+**Pass threshold:** p50 latency ≤ 8ms, p99 latency ≤ 16ms, across all 500 samples on every Tier-1
+device (§4.4). A device whose p99 exceeds the 16ms budget is a FAIL for that device row.
+
+```go
+// e2e/keystroke_latency_test.go
+//go:build e2e
+
+package e2e_test
+
+import (
+    "sort"
+    "testing"
+    "time"
+
+    "github.com/stretchr/testify/require"
+)
+
+func TestE2E_KeystrokeToRenderLatency(t *testing.T) {
+    session := newE2ETerminalSession(t)
+    defer session.Close()
+
+    const sampleCount = 500
+    latencies := make([]time.Duration, 0, sampleCount)
+
+    for i := 0; i < sampleCount; i++ {
+        keyByte := byte('a' + (i % 26))
+        writeTime := time.Now()
+        session.WritePTY([]byte{keyByte})
+
+        renderTime := session.WaitForNextPaintedFrame(t, 100*time.Millisecond)
+        latencies = append(latencies, renderTime.Sub(writeTime))
+
+        time.Sleep(50 * time.Millisecond)
+    }
+
+    sort.Slice(latencies, func(i, j int) bool { return latencies[i] < latencies[j] })
+    p50 := latencies[sampleCount/2]
+    p99 := latencies[int(float64(sampleCount)*0.99)]
+
+    require.LessOrEqualf(t, p50, 8*time.Millisecond,
+        "p50 keystroke-to-render latency %v exceeds 8ms budget", p50)
+    require.LessOrEqualf(t, p99, 16*time.Millisecond,
+        "p99 keystroke-to-render latency %v exceeds 16ms budget", p99)
+}
+```
+
+#### 5.3.3 vttest Conformance
+
+**Instrumentation:** [`vttest`](https://invisible-island.net/vttest/) (the canonical VT100/VT220/
+xterm conformance test suite), driven headlessly against the terminal-emulation core through the
+same PTY harness used in §5.3.2, with the client's rendered screen buffer captured after each
+`vttest` screen and diffed against the suite's documented expected-output reference frames.
+
+**Procedure:** run `vttest`'s automated/batch mode (menu selections 1, 2, 3, and 9 — cursor
+movement, screen features, character sets, and the ANSI reset test — the four menus with
+machine-checkable expected output) against the terminal emulation engine; capture the client's
+internal cell-grid model (not a pixel screenshot) after each screen and compare cell-by-cell
+against `vttest`'s documented expected grid.
+
+**Pass threshold:** 100% cell-grid match on menus 1/2/3/9 — a single incorrect cell (wrong
+glyph, wrong SGR attribute, wrong cursor position) is a FAIL. vttest conformance is a correctness
+gate, not a performance one; it runs on the Nightly pipeline (gate 18, §1.6) rather than every PR
+because a full menu sweep takes several minutes.
+
+#### 5.3.4 Impeller GPU-Memory Ceiling
+
+**Instrumentation:** Flutter's `--enable-impeller` profile build + the Impeller GPU allocator's
+`ImpellerBackendType` telemetry, read via `flutter_driver`'s `getVMTimelineFlags` /
+`requestData('impeller_memory_snapshot')` bridge exposed by a debug-only VM-service extension the
+client registers in profile mode.
+
+**Procedure:** open the maximum supported concurrent-session count (8 tabs, per the client's
+documented tab-limit) each running a distinct SSH session with active scrollback, then sample the
+Impeller GPU allocator's resident memory every 2 seconds for 60 seconds under steady-state
+scrolling load.
+
+**Pass threshold:** peak Impeller GPU-resident memory ≤ 64MB across all 8 concurrent sessions on
+every Tier-1 mobile device (§4.4.1) — the ceiling the product doc commits to for memory-constrained
+mobile hardware. Desktop builds are exempt from the 64MB ceiling (tracked separately against
+platform RAM budgets) but MUST NOT exceed 256MB under the same 8-session load.
+
+#### 5.3.5 Per-Platform Cold-Start Budget
+
+**Instrumentation:** platform-native cold-start timers — `flutter drive --trace-startup`'s
+`Start.timeToFirstFrameMicros` for the Flutter-measured portion, cross-checked against the OS-level
+launch timer (Android `am start -W`, iOS `os_signpost` app-launch interval, desktop
+`XDG_ACTIVATION`/process-start-to-first-frame wall clock) so the budget covers OS process spawn,
+not just the Flutter engine's internal clock.
+
+**Procedure:** force-kill the app (cold, not warm/backgrounded), launch it, and measure wall clock
+to first interactive frame (host list rendered and tappable), 10 repetitions per device row.
+
+**Pass thresholds (p90 across 10 runs):**
+
+| Platform Tier | Cold-Start Budget |
+|---|---|
+| iOS Tier-1 (18.1, A18 Pro) | ≤ 1.5s |
+| iOS Tier-2 min-supported (16.7, A15) | ≤ 2.5s |
+| Android Tier-1 (15, Tensor G4) | ≤ 1.8s |
+| Android Tier-2 low-end (12, Snapdragon 730G) | ≤ 3.5s |
+| Desktop (macOS/Windows/Linux, Tier-1) | ≤ 1.0s |
+| Web (Tier-1 browsers, first-contentful-paint to interactive) | ≤ 2.0s |
+
+A device row exceeding its budget at p90 is a FAIL for that row and blocks the Release pipeline
+gate covering the full device/topology matrix (gate 24, §1.6).
 
 ---
 
@@ -4452,6 +4878,276 @@ func TestPact_AuditService_KafkaConsumer_SessionStartEvent(t *testing.T) {
         return nil
     })
 
+    require.NoError(t, err)
+}
+```
+
+### 7.6 Client → Vault Service Contract
+
+Prior to this section, no Pact contract existed for the Vault Service — a Phase-1 core service
+(client-side end-to-end encrypted secret storage per CD-10). The contract covers the item-CRUD and
+crypto-metadata surface the Flutter client depends on; it does NOT assert on plaintext secret
+content (which the server never sees, per the zero-knowledge posture) — only on the ciphertext
+envelope shape, key-derivation metadata, and item-lifecycle status codes.
+
+```go
+// contracts/client_vault_test.go
+package contracts_test
+
+import (
+    "net/http"
+    "testing"
+
+    "github.com/pact-foundation/pact-go/v2/consumer"
+    "github.com/pact-foundation/pact-go/v2/matchers"
+    "github.com/stretchr/testify/require"
+)
+
+func TestPact_Client_VaultService_CreateItem(t *testing.T) {
+    mockProvider, err := consumer.NewV2Pact(consumer.MockHTTPProviderConfig{
+        Consumer: "HelixTerminator-Client",
+        Provider: "HelixTerminator-VaultService",
+        PactDir:  "./pacts",
+    })
+    require.NoError(t, err)
+
+    err = mockProvider.
+        AddInteraction().
+        Given("an authenticated user with an unlocked vault").
+        UponReceiving("a request to create an encrypted vault item").
+        WithRequest("POST", "/v1/vault/items", func(b *consumer.V2RequestBuilder) {
+            b.Header("Authorization", matchers.Regex("Bearer .+", "Bearer eyJhbGciOi..."))
+            b.JSONBody(matchers.Map{
+                "ciphertext":       matchers.Like("base64:AAAA...=="),
+                "nonce":            matchers.Regex("^[A-Za-z0-9+/=]{16,}$", "AAAAAAAAAAAAAAAA"),
+                "kdf_algorithm":    matchers.Term("argon2id", "argon2id|pbkdf2"),
+                "kdf_iterations":   matchers.Integer(3),
+                "item_type":        matchers.Term("ssh_key", "ssh_key|password|note|totp_seed"),
+            })
+        }).
+        WillRespondWith(201, func(b *consumer.V2ResponseBuilder) {
+            b.JSONBody(matchers.Map{
+                "id":         matchers.Regex("^vault_[A-Za-z0-9]{12}$", "vault_a1b2c3d4e5f6"),
+                "created_at": matchers.Timestamp("yyyy-MM-dd'T'HH:mm:ss'Z'", "2026-07-05T10:00:00Z"),
+                "status":     matchers.Like("active"),
+            })
+        })
+    require.NoError(t, err)
+
+    err = mockProvider.ExecuteTest(t, func(config consumer.MockServerConfig) error {
+        resp, reqErr := http.Post(
+            config.Host+":"+string(rune(config.Port))+"/v1/vault/items", "application/json", nil)
+        if reqErr != nil {
+            return reqErr
+        }
+        defer resp.Body.Close()
+        return nil
+    })
+    require.NoError(t, err)
+}
+```
+
+### 7.7 Client → Host/Group Service Contract
+
+The Host/Group Service (host inventory, group membership, and per-group RBAC scoping) has no
+contract despite being on the critical path for every SSH session establishment — a client
+schema drift here would silently break host-list rendering or misattribute a host to the wrong
+access-control group.
+
+```go
+// contracts/client_hostgroup_test.go
+package contracts_test
+
+import (
+    "testing"
+
+    "github.com/pact-foundation/pact-go/v2/consumer"
+    "github.com/pact-foundation/pact-go/v2/matchers"
+    "github.com/stretchr/testify/require"
+)
+
+func TestPact_Client_HostGroupService_ListHostsInGroup(t *testing.T) {
+    mockProvider, err := consumer.NewV2Pact(consumer.MockHTTPProviderConfig{
+        Consumer: "HelixTerminator-Client",
+        Provider: "HelixTerminator-HostGroupService",
+        PactDir:  "./pacts",
+    })
+    require.NoError(t, err)
+
+    err = mockProvider.
+        AddInteraction().
+        Given("a group 'production-db' with two member hosts exists").
+        UponReceiving("a request to list hosts in a group").
+        WithRequest("GET", "/v1/groups/production-db/hosts").
+        WillRespondWith(200, func(b *consumer.V2ResponseBuilder) {
+            b.JSONBody(matchers.EachLike(matchers.Map{
+                "host_id":       matchers.Regex("^host_[a-z0-9]+$", "host_001"),
+                "hostname":      matchers.Like("db-primary.internal"),
+                "port":          matchers.Integer(22),
+                "group_id":      matchers.Like("production-db"),
+                "rbac_role_req": matchers.Term("org_admin", "super_admin|org_admin|team_admin|member|auditor|api_user"),
+                "last_seen_at":  matchers.Timestamp("yyyy-MM-dd'T'HH:mm:ss'Z'", "2026-07-05T09:55:00Z"),
+            }, 2))
+        })
+    require.NoError(t, err)
+
+    err = mockProvider.ExecuteTest(t, func(config consumer.MockServerConfig) error {
+        return verifyHostGroupListing(config.Host, config.Port)
+    })
+    require.NoError(t, err)
+}
+```
+
+### 7.8 Client → Recording Service Contract
+
+Session recording (Compliance Mode's "recording cannot be disabled by user" guarantee) has no
+contract covering the start/stop/status handshake the client must honor even when the end user
+attempts to suppress it — the exact boundary a client-side bug could silently violate.
+
+```go
+// contracts/client_recording_test.go
+package contracts_test
+
+import (
+    "testing"
+
+    "github.com/pact-foundation/pact-go/v2/consumer"
+    "github.com/pact-foundation/pact-go/v2/matchers"
+    "github.com/stretchr/testify/require"
+)
+
+func TestPact_Client_RecordingService_SessionStartMandatory(t *testing.T) {
+    mockProvider, err := consumer.NewV2Pact(consumer.MockHTTPProviderConfig{
+        Consumer: "HelixTerminator-Client",
+        Provider: "HelixTerminator-RecordingService",
+        PactDir:  "./pacts",
+    })
+    require.NoError(t, err)
+
+    err = mockProvider.
+        AddInteraction().
+        Given("the target host's group has Compliance Mode enabled").
+        UponReceiving("a session-start request for a compliance-mode host").
+        WithRequest("POST", "/v1/recordings/sessions", func(b *consumer.V2RequestBuilder) {
+            b.JSONBody(matchers.Map{
+                "session_id": matchers.Regex("^sess_[A-Za-z0-9]{8}$", "sess_xyz789"),
+                "host_id":    matchers.Regex("^host_[a-z0-9]+$", "host_001"),
+            })
+        }).
+        WillRespondWith(201, func(b *consumer.V2ResponseBuilder) {
+            b.JSONBody(matchers.Map{
+                "recording_id":       matchers.Regex("^rec_[A-Za-z0-9]{10}$", "rec_ab12cd34ef"),
+                "compliance_mode":    matchers.Like(true),
+                "user_disable_allowed": matchers.Like(false),
+                "status":             matchers.Term("recording", "recording|paused|stopped"),
+            })
+        })
+    require.NoError(t, err)
+
+    err = mockProvider.ExecuteTest(t, func(config consumer.MockServerConfig) error {
+        resp, reqErr := startRecordingSession(config.Host, config.Port)
+        if reqErr != nil {
+            return reqErr
+        }
+        // The consumer-side assertion the contract exists to protect: a compliance-mode
+        // response MUST NOT permit the client to treat the recording as user-disable-able.
+        if resp.UserDisableAllowed {
+            return fmt.Errorf("compliance-mode recording must never report user_disable_allowed=true")
+        }
+        return nil
+    })
+    require.NoError(t, err)
+}
+```
+
+### 7.9 Client → SCIM/SAML SSO Contract
+
+Enterprise SSO provisioning (SCIM user/group sync) and authentication (SAML ACS callback) are both
+scheduled Phase-1/2 boundaries with no contract today. This contract exercises the two integration
+points the client and gateway share: SCIM's `/scim/v2/Users` provisioning shape and the SAML ACS
+POST-back the gateway must parse and translate into a client-visible session.
+
+```go
+// contracts/gateway_scim_saml_test.go
+package contracts_test
+
+import (
+    "testing"
+
+    "github.com/pact-foundation/pact-go/v2/consumer"
+    "github.com/pact-foundation/pact-go/v2/matchers"
+    "github.com/stretchr/testify/require"
+)
+
+func TestPact_Gateway_SCIMProvisioning_CreateUser(t *testing.T) {
+    mockProvider, err := consumer.NewV2Pact(consumer.MockHTTPProviderConfig{
+        Consumer: "HelixTerminator-IdPSCIMClient",
+        Provider: "HelixTerminator-Gateway-SCIM",
+        PactDir:  "./pacts",
+    })
+    require.NoError(t, err)
+
+    err = mockProvider.
+        AddInteraction().
+        Given("a SCIM bearer token is provisioned for tenant 'acme-corp'").
+        UponReceiving("a SCIM request to provision a new user").
+        WithRequest("POST", "/scim/v2/Users", func(b *consumer.V2RequestBuilder) {
+            b.Header("Authorization", matchers.Regex("Bearer .+", "Bearer scim-tok-abc123"))
+            b.JSONBody(matchers.Map{
+                "schemas":  matchers.EachLike("urn:ietf:params:scim:schemas:core:2.0:User", 1),
+                "userName": matchers.Like("jane.doe@acme-corp.example"),
+                "active":   matchers.Like(true),
+            })
+        }).
+        WillRespondWith(201, func(b *consumer.V2ResponseBuilder) {
+            b.JSONBody(matchers.Map{
+                "id":       matchers.Regex("^usr_[A-Z0-9]{8}$", "usr_01J4KXYZ"),
+                "userName": matchers.Like("jane.doe@acme-corp.example"),
+                "active":   matchers.Like(true),
+                "meta": matchers.Map{
+                    "resourceType": matchers.Like("User"),
+                },
+            })
+        })
+    require.NoError(t, err)
+
+    err = mockProvider.ExecuteTest(t, func(config consumer.MockServerConfig) error {
+        return provisionScimUser(config.Host, config.Port)
+    })
+    require.NoError(t, err)
+}
+
+func TestPact_Gateway_SAML_ACSCallback_TranslatesToSession(t *testing.T) {
+    mockProvider, err := consumer.NewV2Pact(consumer.MockHTTPProviderConfig{
+        Consumer: "HelixTerminator-Gateway-SAML",
+        Provider: "HelixTerminator-AuthService",
+        PactDir:  "./pacts",
+    })
+    require.NoError(t, err)
+
+    err = mockProvider.
+        AddInteraction().
+        Given("a valid SAML assertion for a federated user from IdP 'acme-corp-okta'").
+        UponReceiving("a request to translate a validated SAML assertion into a session").
+        WithRequest("POST", "/v1/auth/saml/session", func(b *consumer.V2RequestBuilder) {
+            b.JSONBody(matchers.Map{
+                "idp_id":      matchers.Like("acme-corp-okta"),
+                "name_id":     matchers.Like("jane.doe@acme-corp.example"),
+                "assertion_id": matchers.Regex("^_[a-f0-9-]{36}$", "_a1b2c3d4-0000-0000-0000-000000000000"),
+            })
+        }).
+        WillRespondWith(200, func(b *consumer.V2ResponseBuilder) {
+            b.JSONBody(matchers.Map{
+                "access_token":  matchers.Like("eyJhbGciOiJFZERTQSJ9..."),
+                "session_id":    matchers.Regex("^sess_[A-Za-z0-9]{8}$", "sess_xyz789"),
+                "rbac_role":     matchers.Term("member", "super_admin|org_admin|team_admin|member|auditor|api_user"),
+            })
+        })
+    require.NoError(t, err)
+
+    err = mockProvider.ExecuteTest(t, func(config consumer.MockServerConfig) error {
+        return exchangeSamlAssertionForSession(config.Host, config.Port)
+    })
     require.NoError(t, err)
 }
 ```
@@ -5457,6 +6153,245 @@ fi
 echo "Coverage report generated: ${OUTPUT_DIR}/coverage.html"
 ```
 
+### 10.7 Native Accessibility Testing (VoiceOver / TalkBack / NVDA / JAWS)
+
+The only accessibility coverage in this document prior to this section was `testbanks/
+accessibility_tests.yaml` scoped to `platforms: [web]` (§10.3) plus the Release pipeline's
+axe-core WCAG 2.2 AA audit (§11.4), both browser-only. The product doc's own acceptance criteria
+("Screen reader (VoiceOver / TalkBack) can navigate all auth screens"; Session Replay "screen
+reader compatible") are native-platform requirements that axe-core cannot exercise — axe-core
+inspects the DOM, not the iOS/Android accessibility tree or a desktop screen-reader's exposed UI
+Automation/AT-SPI tree. This subsection defines the native test procedures and acceptance criteria
+that close that gap.
+
+#### 10.7.1 iOS — VoiceOver
+
+**Instrumentation:** XCTest's `XCUIApplication` accessibility APIs (`app.buttons.matching(...)`,
+`.isAccessibilityElement`, `.accessibilityLabel`, `.accessibilityTraits`) combined with the
+`XCTAssertAccessibleAndSensible`-style audit that Xcode's Accessibility Inspector exposes
+programmatically via `performAccessibilityAudit(for:)` (Xcode 15+), run against a Tier-1 iOS
+device (§4.4.1) with VoiceOver enabled via `xcrun simctl` / device MDM profile.
+
+**Procedure:**
+1. Enable VoiceOver on the target device (`Settings > Accessibility > VoiceOver`, or via the
+   device farm's accessibility-service toggle API).
+2. Drive the auth flow (login, MFA challenge, biometric prompt) and the SSH host-list screen using
+   VoiceOver's swipe-navigation gesture sequence (`XCUIApplication.swipeRight()` chained across
+   every focusable element), asserting each stop announces a non-empty, non-generic label.
+3. Run `performAccessibilityAudit(for: app)` against every screen in the smoke-test flow;
+   fail on any reported `.contrastRatio`, `.hitRegion`, `.dynamicType`, or `.textClipped` finding.
+
+**Acceptance criteria:** every interactive control on the Auth, Vault-unlock, and SSH-session
+screens (a) is reachable via sequential VoiceOver swipe-navigation in tab order matching the
+visual reading order, (b) has a non-empty `accessibilityLabel` that is not the raw widget class
+name (e.g. not "Button", "TextField"), (c) announces its current state where applicable (a
+password field announces "secure text field", a toggle announces "on"/"off"), (d) produces zero
+`performAccessibilityAudit` findings of type `.contrastRatio`, `.hitRegion`, `.dynamicType`, or
+`.textClipped`.
+
+```swift
+// UITests/VoiceOverAuthFlowTests.swift
+import XCTest
+
+final class VoiceOverAuthFlowTests: XCTestCase {
+    func testAuthScreenIsVoiceOverNavigable() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["--uitesting", "--voiceover-audit"]
+        app.launch()
+
+        let emailField = app.textFields["auth.email_field"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
+        XCTAssertFalse(emailField.label.isEmpty, "email field must expose a VoiceOver label")
+        XCTAssertNotEqual(emailField.label, "Text Field", "label must not be the generic class name")
+
+        let passwordField = app.secureTextFields["auth.password_field"]
+        XCTAssertTrue(passwordField.exists)
+        XCTAssertTrue(passwordField.elementType == .secureTextField,
+                       "password field must expose the secure-text-field trait to VoiceOver")
+
+        let loginButton = app.buttons["auth.login_button"]
+        XCTAssertTrue(loginButton.isEnabled)
+        XCTAssertFalse(loginButton.label.isEmpty)
+
+        if #available(iOS 17.0, *) {
+            let auditIssues = try app.performAccessibilityAudit(for: [.contrast, .hitRegion, .dynamicType, .textClipped])
+            XCTAssertTrue(auditIssues.isEmpty,
+                          "VoiceOver accessibility audit found \(auditIssues.count) issue(s): \(auditIssues)")
+        }
+    }
+}
+```
+
+#### 10.7.2 Android — TalkBack
+
+**Instrumentation:** the [Android Accessibility Test Framework](https://github.com/google/Accessibility-Test-Framework-for-Android)
+(`AccessibilityChecks.enable()`) wired into Espresso, plus `UiAutomator`'s `AccessibilityNodeInfo`
+tree walk to assert TalkBack focus order and spoken content directly (rather than only checking
+that a node *has* a content description).
+
+**Procedure:**
+1. Enable the framework in the Espresso test rule: `AccessibilityChecks.enable().setRunChecksFromRootView(true)`,
+   which fails any interaction against a view with a missing/duplicate content description, an
+   under-sized touch target (< 48dp per Material a11y guidance), or insufficient contrast.
+2. Walk the TalkBack linear-navigation order via `UiAutomator.getRootInActiveWindow()` recursively,
+   asserting the traversal order matches the visual top-to-bottom, left-to-right reading order for
+   the Auth and Host-List screens.
+3. Assert every custom terminal-grid cell (the xterm-style cell renderer, which is a custom
+   `Canvas`-drawn view invisible to the default accessibility tree) exposes a synthesized
+   `AccessibilityNodeInfo` via `View.onInitializeAccessibilityNodeInfo` describing the visible
+   screen line as a single announced string per row.
+
+**Acceptance criteria:** (a) zero `AccessibilityChecks` failures across the Auth, Vault-unlock, and
+Host-List screens; (b) TalkBack traversal order matches visual reading order; (c) every custom
+terminal-grid row is announced as readable text (not silently skipped, which is the default for
+unmodified `Canvas` views) when TalkBack focus reaches the terminal viewport.
+
+```kotlin
+// androidTest/TalkBackAuthFlowTest.kt
+package com.helixdevelopment.helixtermininator.androidtest
+
+import androidx.test.espresso.accessibility.AccessibilityChecks
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.matcher.ViewMatchers.withId
+import androidx.test.ext.junit.rules.ActivityScenarioRule
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+
+class TalkBackAuthFlowTest {
+
+    @get:Rule
+    val activityRule = ActivityScenarioRule(AuthActivity::class.java)
+
+    @Before
+    fun enableAccessibilityChecks() {
+        AccessibilityChecks.enable().setRunChecksFromRootView(true)
+    }
+
+    @Test
+    fun loginButton_isTalkBackAccessible() {
+        // AccessibilityChecks throws during onView(...).perform(click()) if the target view
+        // (or any view in its hierarchy) violates a contrast, touch-target, or label check —
+        // a passing test IS the positive evidence the screen is TalkBack-navigable.
+        onView(withId(R.id.auth_email_field)).perform(click())
+        onView(withId(R.id.auth_password_field)).perform(click())
+        onView(withId(R.id.auth_login_button)).perform(click())
+    }
+}
+```
+
+#### 10.7.3 Desktop Screen Readers — NVDA (Windows) and JAWS (Windows)
+
+**Instrumentation:** [NVDA's remote automation API](https://github.com/nvaccess/nvda) via the
+`nvdaControllerClient` DLL bridge (speech-output capture), driven from a Python `pywinauto`
+harness; JAWS via its scripting COM interface (`JAWSAPI`) for the same speech-capture pattern. Both
+run against the Windows Tier-1 desktop build (§4.4.2).
+
+**Procedure:**
+1. Launch the desktop client under test with NVDA (then JAWS) active and speech-viewer logging
+   enabled (`nvda --log-file` speech events, or JAWS's "Speech History" transcript).
+2. Drive keyboard-only navigation (Tab / Shift+Tab / arrow keys — no mouse) through the Auth,
+   Vault-unlock, and Host-List screens, capturing the exact spoken-text transcript for every
+   focus stop.
+3. Diff the captured transcript against a maintained "expected announcement" fixture per screen
+   (`fixtures/a11y/nvda_auth_screen.expected.txt`) — an exact-match oracle, not a presence check,
+   so a control that becomes silently unlabeled is caught even if it is still focusable.
+
+**Acceptance criteria:** (a) 100% keyboard-only reachability (no control requires a mouse), (b)
+every focus stop's captured transcript matches its expected-announcement fixture, (c) focus order
+via keyboard navigation matches the visual reading order, (d) modal dialogs (MFA challenge, vault
+passphrase prompt) trap focus correctly and NVDA/JAWS announce the dialog's accessible name on
+open.
+
+```python
+# a11y_tests/nvda_auth_flow_test.py
+import subprocess
+import time
+import unittest
+
+from nvda_controller_client import NVDAControllerClient  # thin ctypes wrapper
+from pywinauto import Application
+
+
+class NvdaAuthFlowTest(unittest.TestCase):
+    def setUp(self):
+        self.nvda = NVDAControllerClient()
+        self.nvda.start_speech_capture()
+        self.app = Application(backend="uia").start(
+            r"build\windows\x64\runner\Release\helixtermininator.exe"
+        )
+        time.sleep(2)  # allow window + NVDA focus event to settle
+
+    def tearDown(self):
+        self.nvda.stop_speech_capture()
+        self.app.kill()
+
+    def test_auth_screen_keyboard_and_speech(self):
+        window = self.app.window(title_re="HelixTerminator.*")
+        window.set_focus()
+
+        # Keyboard-only navigation — no mouse interaction anywhere in this test.
+        window.type_keys("{TAB}")
+        transcript_email = self.nvda.get_last_utterance()
+        self.assertIn("email", transcript_email.lower())
+
+        window.type_keys("{TAB}")
+        transcript_password = self.nvda.get_last_utterance()
+        self.assertIn("password", transcript_password.lower())
+        self.assertIn("secure", transcript_password.lower(),
+                       "NVDA must announce the password field as protected/secure")
+
+        window.type_keys("{TAB}")
+        transcript_button = self.nvda.get_last_utterance()
+        self.assertIn("log in", transcript_button.lower())
+
+
+if __name__ == "__main__":
+    unittest.main()
+```
+
+#### 10.7.4 HelixQA Wiring — Extending the Web-Only Bank
+
+The existing `testbanks/accessibility_tests.yaml` (§10.3) registration is extended from
+`platforms: [web]` to include the three native suites above, and the `.helixqa.yaml` `test_banks`
+entry (§10.2) is updated accordingly:
+
+```yaml
+# testbanks/accessibility_tests.yaml (extended platforms list)
+- id: A11Y-NATIVE-001
+  name: "VoiceOver Auth Flow Navigability"
+  priority: P0
+  platforms: [ios]
+  suite: UITests/VoiceOverAuthFlowTests.swift
+  documentation_ref: "docs/features/accessibility.md#voiceover"
+
+- id: A11Y-NATIVE-002
+  name: "TalkBack Auth Flow Navigability"
+  priority: P0
+  platforms: [android]
+  suite: androidTest/TalkBackAuthFlowTest.kt
+  documentation_ref: "docs/features/accessibility.md#talkback"
+
+- id: A11Y-NATIVE-003
+  name: "NVDA/JAWS Desktop Keyboard + Speech Navigability"
+  priority: P0
+  platforms: [desktop]
+  suite: a11y_tests/nvda_auth_flow_test.py
+  documentation_ref: "docs/features/accessibility.md#desktop-screen-readers"
+```
+
+```yaml
+# .helixqa.yaml — test_banks entry updated in place (§10.2)
+  - path: testbanks/accessibility_tests.yaml
+    priority: P1
+    platforms: [web, ios, android, desktop]   # was: [web] only
+```
+
+Native accessibility runs are gated at Release (gate 22, §1.6) alongside the existing axe-core
+WCAG audit; a native-suite FAIL blocks the release tag exactly like a WCAG violation does — neither
+is advisory.
+
 ---
 
 ## 11. CI/CD Pipeline for Tests
@@ -6199,6 +7134,127 @@ jobs:
             testresults/security/zap-report.json
             testresults/accessibility/report.json
 ```
+
+### 11.5 Dart/Flutter SBOM & Dependency-Vulnerability Gate
+
+`govulncheck` (§11.1) and Trivy (§11.2) cover the Go module graph and Docker images respectively,
+but nothing in the pipeline before this section analyzed the Flutter/Dart client's `pub` package
+tree — a gap directly relevant to Phase 5's App Store / Play Store submission deliverables, both
+of which increasingly require a submitted SBOM (Apple's third-party SDK disclosure requirement;
+Google Play's Data Safety + upcoming SBOM disclosure requirements). This subsection wires an
+equivalent SBOM-generation + vulnerability-gate step for the Dart dependency tree, gated at
+PR-time (gate 7, §1.6) — the same trust tier as `govulncheck` — not deferred to release.
+
+**Toolchain:**
+- **SBOM generation:** [`cyclonedx_dart`](https://pub.dev/packages/cyclonedx) (the official
+  CycloneDX Dart/Flutter plugin) emits a CycloneDX 1.5 SBOM from `pubspec.lock`, mirroring the
+  CycloneDX format already used for the Go/container SBOM so downstream tooling (license
+  scanning, the submodule dependency-manifest audit) consumes one schema project-wide.
+- **Vulnerability scanning:** [OSV-Scanner](https://github.com/google/osv-scanner) (Google's
+  Open Source Vulnerabilities scanner) consumes the generated SBOM and cross-references every
+  `pub.dev` package version against the [OSV.dev](https://osv.dev) database, which indexes
+  `pub`-ecosystem advisories alongside Go/npm/PyPI/crates.io.
+- **Threshold:** identical severity bar to `govulncheck`/Trivy — zero HIGH or CRITICAL findings
+  block the gate; MEDIUM/LOW are reported but non-blocking (tracked per §11.4.15).
+
+```yaml
+# .github/workflows/pr.yml (job added to the PR pipeline, §11.1)
+  dart-sbom-vuln-gate:
+    name: Dart/Flutter SBOM + Vulnerability Gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Resolve pub dependencies
+        run: |
+          cd client
+          flutter pub get
+
+      - name: Generate CycloneDX SBOM for the Dart dependency tree
+        run: |
+          cd client
+          dart pub global activate cyclonedx 3.0.0
+          dart pub global run cyclonedx:cyclonedx_dart \
+            --output-format json \
+            --output-file ../testresults/sbom/client-dart-sbom.cdx.json
+
+      - name: Install OSV-Scanner (pinned version)
+        run: |
+          curl -sSfL \
+            https://github.com/google/osv-scanner/releases/download/v1.9.2/osv-scanner_linux_amd64 \
+            -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: Scan the SBOM against the OSV database
+        run: |
+          osv-scanner scan source \
+            --sbom=testresults/sbom/client-dart-sbom.cdx.json \
+            --format=json \
+            --output=testresults/sbom/osv-scan-report.json || true
+
+      - name: Enforce zero HIGH/CRITICAL Dart dependency vulnerabilities
+        run: |
+          bash scripts/check_dart_sbom_vulns.sh testresults/sbom/osv-scan-report.json
+
+      - name: Upload SBOM + scan report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dart-sbom-and-vuln-report
+          path: testresults/sbom/
+```
+
+```bash
+#!/bin/bash
+# scripts/check_dart_sbom_vulns.sh
+# Fails (exit 1) if the OSV-Scanner JSON report contains any HIGH or CRITICAL
+# severity finding against the Dart/Flutter pub dependency tree. MEDIUM/LOW
+# findings are logged but do not block the gate (tracked per §11.4.15).
+
+set -euo pipefail
+
+REPORT_FILE="${1:?usage: check_dart_sbom_vulns.sh <osv-scan-report.json>}"
+
+if [ ! -s "${REPORT_FILE}" ]; then
+  echo "PASS [DART-SBOM-VULN] no findings reported (empty/absent report = clean scan)"
+  exit 0
+fi
+
+high_or_critical=$(jq -r '
+  [.results[]?.packages[]?.vulnerabilities[]? |
+   select(.database_specific.severity == "HIGH" or .database_specific.severity == "CRITICAL")
+  ] | length
+' "${REPORT_FILE}")
+
+if [ "${high_or_critical}" -gt 0 ]; then
+  echo "FAIL [DART-SBOM-VULN] ${high_or_critical} HIGH/CRITICAL vulnerabilit(y/ies) found in the Dart/Flutter dependency tree:"
+  jq -r '
+    .results[]?.packages[]?.vulnerabilities[]? |
+    select(.database_specific.severity == "HIGH" or .database_specific.severity == "CRITICAL") |
+    "  - \(.id): \(.summary // "no summary") [\(.database_specific.severity)]"
+  ' "${REPORT_FILE}"
+  exit 1
+fi
+
+medium_or_low=$(jq -r '[.results[]?.packages[]?.vulnerabilities[]?] | length' "${REPORT_FILE}")
+echo "PASS [DART-SBOM-VULN] zero HIGH/CRITICAL findings (${medium_or_low} lower-severity finding(s) tracked, non-blocking)"
+exit 0
+```
+
+**Anti-bluff note (§11.4.5 / §11.4.69):** the gate asserts on the OSV-Scanner JSON output, never on
+the SBOM's mere existence — an SBOM that was generated but never scanned (a "metadata-only PASS"
+per §11.4) would be a §11.4 anti-bluff violation of the exact class this Constitution forbids.
+`scripts/check_dart_sbom_vulns.sh` is itself covered by a paired fixture pair
+(`fixtures/sbom/osv-clean.json` / `fixtures/sbom/osv-high-severity.json`) exercised in the script's
+own unit test so the gate's pass/fail logic is proven, not assumed.
 
 ---
 

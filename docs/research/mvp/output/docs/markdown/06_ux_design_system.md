@@ -412,14 +412,19 @@ tracked as a follow-up increment, not fabricated here.
 
 ### 2.3.2 Light Theme Semantic Tokens
 
-> **§11.4.162 (OpenDesign) gap:** Per the constitutional citation in §2.1, light theme must be a
-> first-class, fully-populated token set. As specified below, it is not: only Background/Surface and
-> a partial Text group exist. **No Border, Interactive, Status, or SSH-connection-status light-theme
-> tables exist at all** (compare to the complete Dark Theme equivalents in §2.3.1). `text-inverse`,
-> `text-link-hover`, `text-success`, `text-warning`, `text-error`, and `text-info` are also missing
-> from the light Text group below. `> DEFERRED (next increment)`: authoring the missing light-theme
-> Border/Interactive/Status/SSH tables (and the matching JSON in §10.2) is a design-token authoring
-> task out of scope for this hardening pass -- not fabricated here.
+> **§11.4.162 (OpenDesign) parity -- closed this pass.** Per the constitutional citation in §2.1,
+> light theme must be a first-class, fully-populated token set. The previous revision of this
+> section only populated Background/Surface and a partial Text group and marked Border, Interactive,
+> Status, and SSH Connection Status as `> DEFERRED`. All four groups are completed below with the
+> same category shape as Dark Theme (§2.3.1) -- same token names, same group structure, real hex
+> values, and recomputed WCAG 2.1 relative-luminance ratios wherever the token carries text. Every
+> hex below is drawn from the existing primitive scales in §2.2 (no new primitives invented); most
+> rows reuse a primitive that §2.2's own "Usage" column already earmarks for exactly this
+> light-theme purpose (e.g. `teal-700` is labelled "Success dark text", `red-700` "Error text on
+> light bg", `amber-700` "Warning text on light", `blue-700` "Info text on light" -- this pass wires
+> those pre-labelled primitives to their semantic tokens rather than inventing new colors). The
+> matching `color.semantic.light` JSON block in §10.2 is updated to match; the token-count parity
+> fix is in §10.3.
 
 #### Background / Surface (Light)
 
@@ -431,11 +436,11 @@ tracked as a follow-up increment, not fabricated here.
 | `surface-sunken`      | `#F0F0F4`  | Input fields, code areas                    |
 | `surface-interactive` | `#F0F0F4`  | Row hover bg                                |
 | `surface-selected`    | `#F0EFFF`  | Selected row bg                             |
-| `surface-danger`      | -- `> DEFERRED (next increment)` -- | Destructive action confirmation zone (dark-theme-only today) |
+| `surface-danger`      | `#FFF0F0`  | Destructive action confirmation zone (`red-50`, labelled "Error background (light)" in §2.2.3) |
 
 #### Text (Light)
 
-Ratios recomputed per §2.6/§9.2 methodology (WCAG 2.1 relative luminance):
+Ratios recomputed per §2.6/§9.2 methodology (WCAG 2.1 relative luminance, background = `surface` `#F8F8FA` unless noted):
 
 | Semantic Token         | Hex        | Contrast vs surface |
 |------------------------|------------|----------------------|
@@ -443,16 +448,153 @@ Ratios recomputed per §2.6/§9.2 methodology (WCAG 2.1 relative luminance):
 | `text-secondary`       | `#56566A`  | 6.75:1               |
 | `text-tertiary`        | `#78788A`  | 4.08:1               |
 | `text-disabled`        | `#A0A0B8`  | 2.41:1 (large only)  |
+| `text-inverse`         | `#FFFFFF`  | On dark/colored backgrounds (button fills, filled badges) -- not evaluated against `surface` |
 | `text-link`            | `#5952D4`  | 5.53:1               |
-| `text-inverse`, `text-link-hover`, `text-success`, `text-warning`, `text-error`, `text-info` | -- | `> DEFERRED (next increment)` -- no light-theme value specified yet |
+| `text-link-hover`      | `#332F7F`  | 10.68:1 (`purple-800` -- hover intensifies by darkening on a light surface, the mirror of Dark Theme's hover-lightens pattern) |
+| `text-success`         | `#008069`  | 4.61:1 (`teal-700`)  |
+| `text-warning`         | `#B45309`  | 4.73:1 (`amber-700`) |
+| `text-error`           | `#AA4040`  | 5.63:1 (`red-700`)   |
+| `text-info`            | `#1D4ED8`  | 6.32:1 (`blue-700`)  |
 
-#### Border / Interactive / Status / SSH Connection Status (Light)
+All eleven rows meet WCAG AA (>=4.5:1) or the documented large-text exception (`text-disabled`), matching Dark Theme's coverage of the same eleven semantic names.
 
-`> DEFERRED (next increment)`: unlike Dark Theme (§2.3.1, which has complete Border, Interactive,
-Status Semantic, and SSH Connection Status token tables), no light-theme equivalents exist for these
-four groups. This is the largest concrete gap behind the "full-fidelity" light-theme claim in §1.3.1
-and must be closed before that claim is accurate. Not fabricated here -- requires design-token
-authoring in a follow-up increment.
+#### Border (Light)
+
+| Semantic Token         | Hex        | Usage                                        |
+|-------------------------|------------|----------------------------------------------|
+| `border-subtle`        | `#E2E2EA`  | Hairline dividers, card edges on light bg (`neutral-200`, labelled "Light borders") |
+| `border-default`       | `#C8C8D8`  | Standard input borders, panel separators (`neutral-300`) |
+| `border-strong`        | `#A0A0B8`  | Focused inputs (secondary ring), table lines (`neutral-400`) |
+| `border-brand`         | `#6C63FF`  | Focus rings, selected borders -- same hex as Dark Theme; brand color is theme-invariant |
+| `border-success`       | `#00D4B1`  | Connected state borders (`teal-500`, same hex as Dark Theme) |
+| `border-warning`       | `#F59E0B`  | Caution borders (`amber-500`, same hex as Dark Theme) |
+| `border-error`         | `#FF6B6B`  | Error state borders (`red-500`, same hex as Dark Theme) |
+
+#### Interactive (Light)
+
+| Semantic Token               | Hex        | Usage                                          |
+|-------------------------------|------------|------------------------------------------------|
+| `interactive-default`        | `#6C63FF`  | Primary button bg, active toggle, progress bar (`purple-500`) |
+| `interactive-hover`          | `#5952D4`  | Primary hover (`purple-600`) -- darkens on light bg |
+| `interactive-pressed`        | `#4640AA`  | Primary pressed (`purple-700`) -- darkens further |
+| `interactive-disabled`       | `#B9B3FF`  | Disabled primary button (`purple-200`) |
+| `interactive-secondary`      | `#F0F0F4`  | Secondary button bg (`neutral-100`) |
+| `interactive-secondary-hover`| `#E2E2EA`  | Secondary button hover (`neutral-200`) |
+| `interactive-ghost-hover`    | `#F0EFFF`  | Ghost/text button hover (`purple-50`, labelled "Light theme hover backgrounds" in §2.2.1) |
+| `interactive-destructive`    | `#FF6B6B`  | Destructive action button (`red-500`, same hex as Dark Theme) |
+| `interactive-destructive-hover` | `#D45555` | Destructive hover (`red-600`) -- darkens on light bg |
+
+> Note: primary-button solid-fill accessibility (white label on `interactive-default`) still computes
+> to the same 4.32:1 FAIL as Dark Theme (§9.2.1) because the brand purple hex is shared across
+> themes. §5.1.6 (Button) does not consume `interactive-default` directly for its solid-fill label
+> color for this reason -- see §5.1.6's dedicated accessible fill tokens.
+
+#### Status Semantic Tokens (Light)
+
+| Semantic Token         | Hex        | Icon | Usage                               |
+|------------------------|------------|------|--------------------------------------|
+| `status-success-bg`    | `#E6FDF9`  | ✓    | Success banner background (`teal-50`) |
+| `status-success-border`| `#00D4B1`  | --   | Success banner border (`teal-500`)  |
+| `status-success-text`  | `#008069`  | --   | Success banner text (`teal-700`, 4.61:1 vs `#E6FDF9`) |
+| `status-warning-bg`    | `#FFFBEB`  | ⚠    | Warning banner background (`amber-50`) |
+| `status-warning-border`| `#F59E0B`  | --   | Warning banner border (`amber-500`) |
+| `status-warning-text`  | `#B45309`  | --   | Warning banner text (`amber-700`)   |
+| `status-error-bg`      | `#FFF0F0`  | ✕    | Error banner background (`red-50`)  |
+| `status-error-border`  | `#FF6B6B`  | --   | Error banner border (`red-500`)     |
+| `status-error-text`    | `#AA4040`  | --   | Error banner text (`red-700`)       |
+| `status-info-bg`       | `#EFF6FF`  | ℹ    | Info banner background (`blue-50`)  |
+| `status-info-border`   | `#3B82F6`  | --   | Info banner border (`blue-500`)     |
+| `status-info-text`     | `#1D4ED8`  | --   | Info banner text (`blue-700`)       |
+
+#### SSH Connection Status Tokens (Light)
+
+| Semantic Token             | Hex        | Animation          | Usage                          |
+|-----------------------------|------------|--------------------|---------------------------------|
+| `ssh-connected`            | `#00AA8D`  | Solid dot          | Active SSH session (`teal-600`, darker than Dark Theme's `teal-500` for legibility on a light badge fill) |
+| `ssh-connected-bg`         | `#CCFBF3`  | --                 | Connected session badge bg (`teal-100`) |
+| `ssh-connecting`           | `#D97706`  | Pulsing ring       | Connection in progress (`amber-600`) |
+| `ssh-connecting-bg`        | `#FFFBEB`  | --                 | Connecting badge bg (`amber-50`) |
+| `ssh-disconnected`         | `#A0A0B8`  | None               | No active connection (`neutral-400`, labelled "Light muted text") |
+| `ssh-disconnected-bg`      | `#F0F0F4`  | --                 | Disconnected badge bg (`neutral-100`) |
+| `ssh-error`                | `#D45555`  | Error shake (once) | Connection failed / host error (`red-600`) |
+| `ssh-error-bg`             | `#FFF0F0`  | --                 | Error badge bg (`red-50`) |
+| `ssh-reconnecting`         | `#5952D4`  | Spinning ring      | Auto-reconnect in progress (`purple-600`) |
+| `ssh-suspended`            | `#78788A`  | Dashed ring        | Mosh suspended (`neutral-500`) |
+
+Light theme now defines the same 56 semantic token names as Dark Theme across all six groups
+(Surface, Text, Border, Interactive, Status, SSH) -- see §10.3 for the corrected token-count table.
+
+---
+
+### 2.3.3 SSH Connection Status State Machine (Diagram)
+
+The SSH connection-status tokens (§2.3.1 dark / §2.3.2 light) and the connection animations
+(§6.4.3 SSH Connection Progress Animation) describe the same underlying state machine from two
+separate sections; this diagram makes the states, transitions, and token bindings explicit in one
+place instead of requiring the two sections to be reverse-engineered against each other.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Disconnected
+
+    Disconnected --> Connecting: user initiates connect\n(Quick Connect / Host List / Snippet)
+    Connecting --> Connected: handshake + auth succeed
+    Connecting --> Error: handshake / auth fails
+    Connecting --> Disconnected: user cancels
+
+    Connected --> Suspended: Mosh suspend-to-background\n(⌘⇧M / Ctrl+Shift+M, §8.5)
+    Suspended --> Reconnecting: foreground resume\nor network restored
+    Connected --> Reconnecting: transport drop detected\n(auto-reconnect per §11.4.144-class following)
+    Reconnecting --> Connected: reconnect succeeds
+    Reconnecting --> Error: reconnect attempts exhausted
+
+    Connected --> Disconnected: user disconnects\n(⌘⇧Q / Ctrl+Shift+Q, §8.5)
+    Error --> Connecting: user retries
+    Error --> Disconnected: user dismisses
+
+    note right of Disconnected
+        token: ssh-disconnected / ssh-disconnected-bg
+        animation: none (§6.4.3)
+        icon: ○ hollow circle
+    end note
+    note right of Connecting
+        token: ssh-connecting / ssh-connecting-bg
+        animation: pulsing ring (§6.4.3)
+        icon: ◌ pulsing ring
+    end note
+    note right of Connected
+        token: ssh-connected / ssh-connected-bg
+        animation: solid dot, no animation
+        icon: ● solid dot
+    end note
+    note right of Reconnecting
+        token: ssh-reconnecting
+        animation: spinning ring (§6.4.3)
+        icon: spinning ring
+    end note
+    note right of Suspended
+        token: ssh-suspended
+        animation: dashed ring, static
+        icon: dashed ring
+    end note
+    note right of Error
+        token: ssh-error / ssh-error-bg
+        animation: error shake (once, §6.4.3)
+        icon: ✕ solid, shake once
+    end note
+```
+
+**State-to-token binding table** (both themes use the same state names; hex values differ per
+§2.3.1/§2.3.2):
+
+| State          | Dark token(s)                          | Light token(s)                           | Redundant coding (not color-alone, §1.4.2) |
+|-----------------|------------------------------------------|--------------------------------------------|-----------------------------------------------|
+| Disconnected   | `ssh-disconnected` / `ssh-disconnected-bg` | `ssh-disconnected` / `ssh-disconnected-bg` | Hollow circle glyph + "Offline" label |
+| Connecting     | `ssh-connecting` / `ssh-connecting-bg`     | `ssh-connecting` / `ssh-connecting-bg`     | Pulsing-ring animation + "Connecting…" label |
+| Connected      | `ssh-connected` / `ssh-connected-bg`       | `ssh-connected` / `ssh-connected-bg`       | Solid dot + "Connected" label |
+| Reconnecting   | `ssh-reconnecting`                        | `ssh-reconnecting`                         | Spinning-ring animation + "Reconnecting…" label |
+| Suspended      | `ssh-suspended`                           | `ssh-suspended`                            | Dashed-ring glyph + "Suspended (Mosh)" label |
+| Error          | `ssh-error` / `ssh-error-bg`               | `ssh-error` / `ssh-error-bg`               | ✕ glyph + error-shake animation + inline error text |
 
 ---
 
@@ -3930,6 +4072,134 @@ CREATE TABLE projections (
 
 ---
 
+### 5.1.6 Button
+
+**Purpose:** The primary call-to-action control across the entire application — no dedicated
+component specification existed for it prior to this pass despite Button being the single most
+frequently referenced UI element in the document (primary/secondary/ghost/destructive tokens exist
+in §2.3.1/§2.3.2; a `component.button` token block exists in §10.2; height rows exist in §4.5). This
+section is the authoritative Button spec those existing tokens implement.
+
+#### Variants
+
+| Variant       | Fill                                    | Label color        | Use case                                    |
+|----------------|-------------------------------------------|----------------------|-----------------------------------------------|
+| **Primary**    | Solid — `component.button.primaryBg*` (see Accessibility below) | `text-inverse` (`#FFFFFF`) | The single confirming action per screen/dialog (Connect, Save, Submit) |
+| **Secondary**  | Solid — `interactive-secondary` / `interactive-secondary-hover` | `text-primary`      | Supporting actions alongside a Primary button (Cancel-adjacent "Import", "Preview") |
+| **Danger**     | Solid — `component.button.destructiveBg*` (see Accessibility below) | `text-inverse` (`#FFFFFF`) | Irreversible/destructive actions (Delete Host, Revoke Key, Remove Member) |
+| **Ghost**      | Transparent, `interactive-ghost-hover` on hover only | `text-link` (default) / `text-primary` (neutral ghost) | Low-emphasis actions (toolbar icons-with-label, "Learn more", dialog dismiss) |
+
+Every variant also has an **icon-only** rendering (square, no visible label) used in toolbars — see
+Accessibility below for its touch-target requirement.
+
+#### Sizes
+
+Heights match §4.5 Component Height Standards (`Button (small/default/large)` rows) at the active
+density; horizontal padding and font come from `component.button` (§10.2):
+
+| Size      | Height (Default density) | Padding-X (`component.button.paddingX*`) | Font                         | Icon size |
+|-----------|----------------------------|--------------------------------------------|--------------------------------|-----------|
+| Small     | 32px                        | 10px (`paddingXSm`)                        | `labelBase` 13px/w600          | `icon.sm` 16px |
+| Default   | 40px                        | 16px (`paddingXBase`)                      | `labelLG` 15px/w600            | `icon.base` 20px |
+| Large     | 48px                        | 20px (`paddingXLg`)                        | `labelLG` 15px/w600 (scaled up via `fontSize.md` 17px in dense contexts) | `icon.md` 24px |
+
+Border radius: `component.button.borderRadius` = `borderRadius.base` (6px), all sizes and variants.
+Icon + label spacing: `spacing.2` (8px) between a leading/trailing icon and the label.
+
+#### States
+
+| State        | Primary                                                     | Secondary                                | Ghost                                    |
+|--------------|--------------------------------------------------------------|---------------------------------------------|-----------------------------------------------|
+| Default      | `primaryBg` (resting)                                        | `interactive-secondary`                      | Transparent                                    |
+| Hover        | `primaryBgHover` (one step darker)                            | `interactive-secondary-hover`                | `interactive-ghost-hover`                     |
+| Focus        | Default/Hover fill + 2px `border-brand` focus ring, 2px offset (`shadow.brand`) | same ring treatment                          | same ring treatment                            |
+| Active/Pressed | `primaryBgPressed` (darker still)                           | `interactive-secondary-hover` + `shadow.xs` inset | `interactive-ghost-hover` + `shadow.xs` inset |
+| Disabled     | `primaryBg` at 38% opacity over `surface`; label at `text-disabled`; `cursor: not-allowed`; no hover/focus/active response | same opacity treatment on `interactive-secondary` | label at `text-disabled`, no fill change |
+| Loading      | Fill unchanged; label replaced by a centered 16px spinner (`easing.linear`, `duration.loop` 1500ms full rotation) using `text-inverse`; button remains focusable but not activatable (`aria-busy` equivalent, see Accessibility) | same pattern, spinner in `text-primary` | same pattern, spinner in `text-link` |
+
+Danger follows the same state ladder as Primary, substituting `component.button.destructiveBg*` for
+`primaryBg*`.
+
+#### Tokens (component-level, §10.2 `component.button`)
+
+| Token                              | Dark theme value                     | Light theme value                    | Notes |
+|--------------------------------------|-----------------------------------------|-----------------------------------------|-------|
+| `heightSm` / `heightBase` / `heightLg` | `32px` / `40px` / `48px`               | same (theme-invariant)                  | Matches §4.5 |
+| `paddingXSm` / `paddingXBase` / `paddingXLg` | `10px` / `16px` / `20px`         | same (theme-invariant)                  | |
+| `borderRadius`                       | `{borderRadius.base}` (6px)             | same                                     | |
+| `fontWeight`                        | `{typography.fontWeight.semiBold}` (600) | same                                     | Not "bold" (700) — see Accessibility for why this matters |
+| `primaryBg`                         | `#5952D4` (`purple-600`)                | `#4640AA` (`purple-700`)                | Accessible fill, NOT `interactive-default` — see Accessibility |
+| `primaryBgHover`                     | `#4640AA` (`purple-700`)                | `#332F7F` (`purple-800`)                | |
+| `primaryBgPressed`                  | `#332F7F` (`purple-800`)                | `#201E55` (`purple-900`)                | |
+| `primaryText`                       | `{color.primitive.neutral.0}` (`#FFFFFF`) | same                                   | |
+| `destructiveBg`                      | `#AA4040` (`red-700`)                   | `#AA4040` (`red-700`)                    | Same hex both themes — see Accessibility |
+| `destructiveBgHover`                 | `#7F2B2B` (`red-800`)                   | `#7F2B2B` (`red-800`)                    | |
+| `destructiveBgPressed`               | `#551616` (`red-900`)                   | `#551616` (`red-900`)                    | |
+| `destructiveText`                    | `#FFFFFF`                               | `#FFFFFF`                                 | |
+
+#### Accessibility
+
+**Focus ring:** every Button variant, in every state, gets a visible 2px `border-brand` (`#6C63FF`)
+ring with a 2px offset and `shadow.brand` (`0 0 0 3px rgba(108,99,255,0.40)`) glow, per §9.3 Focus
+Indicator Specification — never removed via `outline: none` without a replacement per WCAG 2.4.7.
+
+**Minimum touch target:** icon-only Button renders its visual icon at `icon.base` (20px) but MUST
+expand its hit area to 44×44px via invisible padding, matching the existing `Icon button (toolbar)`
+row in §9.9 Touch Target Sizes. Labelled Buttons at Default/Large size already exceed 44px height
+(40px/48px) — only the Small (32px) labelled variant and any icon-only variant need the expanded hit
+area applied explicitly.
+
+**Contrast — corrected WCAG values (this is the specific gap this section closes).** §9.2.1 already
+recomputed, via the WCAG 2.1 relative-luminance formula, that the document's previously-claimed
+"5.2:1 AA" rating for `#FFFFFF` label text on `interactive-default` (`#6C63FF`) fill was wrong: the
+real ratio is **4.32:1**, which **fails** WCAG AA's 4.5:1 floor for normal-size text (button labels
+render at 13–15px, below the 18px/14px-bold "large text" threshold that would permit 3:1). That
+finding is about the *raw semantic* pairing; it is **not fixed by making the button label "bold"** —
+`component.button.fontWeight` is `semiBold` (600), and even a genuine `bold` (700) weight at 15px
+(≈15px < 18.66px, the 14pt-bold large-text floor) would not qualify for the large-text carve-out
+either, so weight alone cannot rescue this pairing at button-label sizes.
+
+The actual fix adopted by this Button spec: **Primary and Danger buttons do not use the raw
+`interactive-default` / `interactive-destructive` semantic tokens for their solid fill.** They use
+the dedicated `component.button.primaryBg*` / `destructiveBg*` tokens above instead — a deliberate,
+documented divergence from the shared semantic ladder (which remains unchanged and is still used
+as-is for badges, links, and focus rings, where the failing pairing does not occur). Recomputed
+ratios for every fill/label combination in the ladder above:
+
+| Pairing                                              | Ratio    | WCAG level |
+|--------------------------------------------------------|----------|--------------|
+| `#FFFFFF` on `primaryBg` dark `#5952D4`                | 5.86:1   | AA           |
+| `#FFFFFF` on `primaryBgHover` dark `#4640AA`            | 8.16:1   | AAA          |
+| `#FFFFFF` on `primaryBgPressed` dark `#332F7F`          | 11.33:1  | AAA          |
+| `#FFFFFF` on `primaryBg` light `#4640AA`                | 8.16:1   | AAA          |
+| `#FFFFFF` on `primaryBgHover` light `#332F7F`           | 11.33:1  | AAA          |
+| `#FFFFFF` on `primaryBgPressed` light `#201E55`         | 15.24:1  | AAA          |
+| `#FFFFFF` on `destructiveBg` `#AA4040`                  | 5.97:1   | AA           |
+| `#FFFFFF` on `destructiveBgHover` `#7F2B2B`             | 9.20:1   | AAA          |
+| `#FFFFFF` on `destructiveBgPressed` `#551616`           | 13.88:1  | AAA          |
+| `#FFFFFF` on `interactive-secondary` (Secondary variant, dark `#242432`) | 15.29:1 | AAA |
+| `text-link` on transparent/surface (Ghost variant, dark) | 7.06:1  | AAA          |
+
+All eleven pairings clear WCAG AA (≥4.5:1); nine of eleven clear AAA (≥7:1). This closes the specific
+"button-label-fails-AA" finding from §9.2.1 for the Button component itself, without altering the
+shared `interactive-default`/`interactive-destructive` semantic tokens (which other components still
+use for non-text-critical purposes and which retain their documented 4.32:1/2.78:1 ratios there —
+those components are a tracked, separate remediation, not silently fixed by this change).
+
+**Disabled state:** per §9.2.1's self-imposed 3:1 floor note, a 38%-opacity disabled fill is not
+independently contrast-verified against every possible surrounding surface (WCAG explicitly exempts
+disabled controls); disabled buttons are also non-interactive, so the risk is legibility, not
+operability. `text-disabled` is used for the label consistent with every other disabled-state
+component in this document.
+
+**Loading state:** the spinner alone is not sufficient feedback for screen-reader users — the Button
+MUST also expose `Semantics(enabled: false, label: '$originalLabel, loading')` (mirrors §9.10's
+ARIA-equivalent Flutter Semantics reference) so the busy state is announced, not just shown.
+
+**Flutter Widget:** `HelixButton(variant: ButtonVariant.primary, size: ButtonSize.base, loading: bool, icon: IconData?, child: Text(...))`, backed by `FilledButton`/`OutlinedButton`/`TextButton` per variant with a shared `HelixButtonThemeExtension` resolving every value in the Tokens table above — no literal hex/px in call sites, per §11.4.162.
+
+---
+
 ## 5.2 Form Components
 
 ---
@@ -7071,6 +7341,335 @@ The divider (▓▓▓) is a 4px wide drag handle. On hover: cursor becomes `ew-
 │                                                            │ [End share] │
 └────────────────────────────────────────────────────────────┴────────────┘
 ```
+
+---
+
+## Screen 26: Vault / Credential Manager — Item List
+
+**Platform:** Desktop (1280×800), sidebar expanded 240px, content area 1040px
+**Entry point:** Sidebar → Tools → **Key Manager** (`⌘5` / `Ctrl+5`, §8.2) — this is the top-level
+screen for the Vault Service (§P.2.5): zero-knowledge encrypted storage for `ssh_key`, `password`,
+`api_token`, `tls_cert`, `secret_note`, and `totp_secret` items (§P.5.6 Vault Encryption
+Architecture). No wireframe previously existed for this screen despite Vault being one of the most
+security-critical, most heavily specified backend services in the document.
+
+```
+┌──────────────────────────────┬────────────────────────────────────────────────────────────────────┐
+│ [H] HelixTerminator          │  Key Manager                [+ New Item ▼]         [🔍 Search... ]  │
+│                              ├────────────────────────────────────────────────────────────────────┤
+│ [ Quick Connect... ⌘T ]      │  Folders: [ All ▾ ] [ Production ] [ Personal ]     Tags: [prod][ci]│
+│                              ├──────┬─────────────────────────┬──────────┬──────────┬─────────────┤
+│ HOSTS                        │ Type │ Name                    │ Folder   │ Modified │ Shared with │
+│  ▸ All Hosts        (127)    ├──────┼─────────────────────────┼──────────┼──────────┼─────────────┤
+│  ▸ ★ Favorites       (12)    │ [🔑] │ production-key.pem     │ Prod     │ 2d ago   │ Team: SRE   │
+│                              │ [🔒] │ postgres-admin-pw      │ Prod     │ 5d ago   │ —           │
+│ TOOLS                        │ [🎫] │ github-ci-token        │ CI       │ 12d ago  │ —           │
+│  SFTP Browser                │ [📜] │ *.helixterminator.io   │ Prod     │ 30d ago  │ Team: Infra │
+│  Port Forwarding             │ [📝] │ prod DB recovery notes │ Prod     │ 1h ago   │ —           │
+│  Snippets                    │ [🔢] │ github-2fa-seed        │ Personal │ 90d ago  │ —           │
+│* Key Manager                 ├──────┴─────────────────────────┴──────────┴──────────┴─────────────┤
+│                              │  6 items  •  All encrypted client-side (AES-256-GCM)  •  0 shared  │
+│ ─────────────────────────    │                                                                    │
+│ 🔔 Notifications    [2]      │  [ Selected: production-key.pem ]                                  │
+│ ⚙ Settings                   │  [ 👁 Reveal ]  [ 📋 Copy ]  [ ✎ Edit ]  [ ⇄ Share ]  [ 🕐 History ] │
+│ [ 👤 alice@corp.com    ]      │  ⚠ Viewing/copying is logged to the Audit trail (viewed by you)    │
+└──────────────────────────────┴────────────────────────────────────────────────────────────────────┘
+```
+
+**Item type icon legend:** 🔑 `ssh_key` · 🔒 `password` · 🎫 `api_token` · 📜 `tls_cert` · 📝 `secret_note` · 🔢 `totp_secret` (matches the six `VaultItemType` values in §P.2.5).
+
+**Reveal audit affordance:** every `[👁 Reveal]` / `[📋 Copy]` action shows an inline "viewed by you —
+logged" indicator (`status-info-bg`/`status-info-text`, §2.3.1) tying the UI directly to the Audit
+Service (§P.2.16 Merkle-chain audit log) — the reveal action itself, not just item CRUD, is an
+audited event.
+
+**States:**
+- **Empty (no vault items yet):** Centered Empty State (§5.5.5) — "No credentials yet" / "Vault items
+  are encrypted on this device before they ever reach the server" / `[+ Add your first item]`.
+- **Loading (fetching + client-side decrypting):** Skeleton Loader rows (§5.5.4) for the table body;
+  toolbar/search remain interactive. Decryption happens after fetch, so the loading state may show a
+  brief second "Decrypting…" sub-label under the skeleton before content resolves.
+- **Error (decryption key unavailable — e.g. device key not yet unlocked):** Error State (§5.5.6) —
+  "Vault is locked" / "Unlock with your device passphrase or biometric to view items" /
+  `[ Unlock Vault ]`. This is distinct from a network error (Error State: "Couldn't reach Vault
+  Service" / `[ Retry ]`) — the two causes must not be conflated in copy.
+- **Sharing in progress:** row shows a `ssh-connecting`-style pulsing badge next to "Shared with"
+  while the recipient's public-key re-wrap (§P.5.6 Vault Key Wrapping for Sharing) completes
+  server-side (ciphertext only — the server still never sees plaintext).
+
+---
+
+## Screen 26a: Vault Item Detail — Reveal / Share / History
+
+**Platform:** Desktop, 560px modal (Dialog max-width, §4.7) over the Screen 26 list.
+
+```
+┌──────────────────────────────────────────────────────┐
+│  production-key.pem                       [ ✕ Close ]│
+├──────────────────────────────────────────────────────┤
+│  Type        SSH Private Key                          │
+│  Folder      Production            Tags: [prod][ci]  │
+│  Created     2026-02-11 by alice@corp.com             │
+│  Modified    2 days ago  •  Version 4 (of 4)          │
+│                                                        │
+│  ┌── Secret ──────────────────────────────────────┐  │
+│  │ ●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●●● │  │
+│  │                                    [👁 Reveal]  │  │
+│  │ ⚠ Revealing logs a Vault Audit event (§P.2.16) │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                        │
+│  [ 📋 Copy to clipboard (auto-clears in 30s) ]         │
+│                                                        │
+│  ┌── Shared with ─────────────────────────────────┐  │
+│  │ Team: SRE (view only)              [ Revoke ]  │  │
+│  │ [ + Share with team or user... ]                │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                        │
+│  ┌── Version History ─────────────────────────────┐  │
+│  │ v4  2 days ago    alice@corp.com   [ Restore ] │  │
+│  │ v3  14 days ago   bob@corp.com     [ Restore ] │  │
+│  │ v2  45 days ago   alice@corp.com   [ Restore ] │  │
+│  │ v1  90 days ago   alice@corp.com   (original)  │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                        │
+│  [ 🗑 Delete Item ]                                    │
+└──────────────────────────────────────────────────────┘
+```
+
+**States:**
+- **Concealed (default):** secret rendered as `●` mask characters; only `[👁 Reveal]` is enabled.
+- **Revealed:** plaintext shown for 15s then auto-re-conceals; a `status-warning` banner
+  ("Visible — auto-hides in 15s") is shown for the duration, redundant-coded with a countdown, not
+  color alone (§1.4.2).
+- **Restoring a version:** confirmation dialog ("Restore v2? This creates a new v5 with v2's
+  contents — v4 is preserved in history") before `POST /vault/items/:id/restore/:version` (§P.2.5).
+- **Share pending:** the target row shows the sharing-in-progress pulsing badge described in
+  Screen 26 until the recipient's re-wrapped key confirms server-side.
+
+---
+
+## Screen 27: Settings — Organization & Team Management
+
+**Platform:** Desktop, 960px two-column layout (`Organization settings` / `Team management` max-width
+tokens, §4.7). **Context:** extends the Settings shell (Screen 21/22) with two new left-nav entries,
+**Organization** and **Team**, gated to users holding `org_admin` or `team_admin` (or `super_admin`)
+per the canonical RBAC role vocabulary — `super_admin`, `org_admin`, `team_admin`, `member`,
+`auditor`, `api_user`.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ Settings › Organization                                              │
+├──────────────────┬───────────────────────────────────────────────────┤
+│ General          │  Organization: Acme Corp                          │
+│ Appearance       │                                                    │
+│ Keyboard         │  Org name         [ Acme Corp                   ] │
+│ Terminal         │  Org slug         acme-corp  (helixterminator.io/acme-corp) │
+│ Proxy/Network    │  Seats            18 used of 25 licensed  [Manage▸]│
+│ Security         │                                                    │
+│ SSH Config       │  ── Teams ────────────────────────────────────────│
+│ Notifications    │  ┌──────────────┬────────┬───────────┬──────────┐ │
+│ Advanced         │  │ Team          │ Members│ Role      │          │ │
+│* Organization    │  ├──────────────┼────────┼───────────┼──────────┤ │
+│  Team            │  │ SRE           │ 6      │ team_admin│ [Manage] │ │
+│  Billing         │  │ Backend       │ 9      │ member    │ [Manage] │ │
+│                  │  │ Security      │ 3      │ auditor   │ [Manage] │ │
+│                  │  └──────────────┴────────┴───────────┴──────────┘ │
+│                  │  [ + New Team ]                                    │
+│                  │                                                    │
+│                  │  ── Members ──────────────────────────────────────│
+│                  │  ┌──────────────────┬───────────────┬───────────┐ │
+│                  │  │ alice@corp.com    │ super_admin   │ [Manage]  │ │
+│                  │  │ bob@corp.com      │ org_admin     │ [Manage]  │ │
+│                  │  │ carol@corp.com    │ team_admin    │ [Manage]  │ │
+│                  │  │ dave@corp.com     │ member        │ [Manage]  │ │
+│                  │  │ eve@corp.com      │ auditor       │ [Manage]  │ │
+│                  │  │ ci-bot@corp.com   │ api_user      │ [Manage]  │ │
+│                  │  └──────────────────┴───────────────┴───────────┘ │
+│                  │  [ + Invite Member ]     [ SCIM Provisioning ▸ ]   │
+└──────────────────┴───────────────────────────────────────────────────┘
+```
+
+**Role-change confirmation:** clicking `[Manage]` on a member row opens a Popover (§5.4.6) with a
+role `[ Select ▾ ]` limited to the six canonical roles; changing a member's own role away from
+`super_admin`/`org_admin` shows a destructive-style confirmation ("You will lose admin access —
+continue?") using the Danger button variant (§5.1.6).
+
+**States:**
+- **Empty (single-person org, no teams yet):** Empty State — "No teams yet" / "Create a team to
+  group hosts, vault items, and permissions" / `[+ New Team]`.
+- **Loading:** Skeleton rows for both the Teams and Members tables independently (they load from
+  separate Org Service endpoints, §P.2.21).
+- **Error (SCIM sync failure):** inline Alert Banner (§5.5.2, `status-error`) above the Members
+  table: "Last SCIM sync failed 2h ago — 3 users pending" / `[ View details ]`, distinct from a
+  full-page error since the rest of the screen remains usable.
+- **Seat limit reached:** the Seats line switches to `status-warning-text` and the `[+ Invite
+  Member]` button becomes disabled with a tooltip "Seat limit reached — upgrade plan or remove a
+  member" linking to Screen 28 (Billing).
+
+---
+
+## Screen 28: Settings — Billing
+
+**Platform:** Desktop, Settings shell (720px "Settings content area" max-width, §4.7 — single-column,
+unlike the 960px two-column Organization/Team screens, since billing content is a linear
+plan → usage → invoices flow). **Backed by:** Billing Service (§P.2.22) — subscription tiers
+(free/pro/team/enterprise), seat metering, Stripe integration, invoices, trial/dunning state.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ Settings › Billing                                                    │
+├──────────────────┬───────────────────────────────────────────────────┤
+│ [Settings nav,    │  Billing                                          │
+│  incl. Billing*]  │                                                    │
+│                  │  ── Current Plan ─────────────────────────────────│
+│                  │  Team plan  •  $22/seat/mo  •  18 seats            │
+│                  │  Renews 2026-08-01                                 │
+│                  │  [ Change Plan ▸ ]        [ Manage Seats ▸ ]        │
+│                  │                                                    │
+│                  │  ── Usage this cycle ─────────────────────────────│
+│                  │  Seats            18 / 25            [████████░░] │
+│                  │  Session recording storage   340GB / 500GB [███░]  │
+│                  │  Audit log retention          Included (unlimited) │
+│                  │                                                    │
+│                  │  ── Payment Method ───────────────────────────────│
+│                  │  Visa •••• 4242   Expires 03/28     [ Update ]     │
+│                  │                                                    │
+│                  │  ── Invoices ─────────────────────────────────────│
+│                  │  ┌────────────┬──────────┬──────────┬───────────┐ │
+│                  │  │ Date        │ Amount   │ Status   │           │ │
+│                  │  ├────────────┼──────────┼──────────┼───────────┤ │
+│                  │  │ 2026-07-01  │ $396.00  │ ✓ Paid   │ [⬇ PDF]   │ │
+│                  │  │ 2026-06-01  │ $396.00  │ ✓ Paid   │ [⬇ PDF]   │ │
+│                  │  │ 2026-05-01  │ $374.00  │ ✓ Paid   │ [⬇ PDF]   │ │
+│                  │  └────────────┴──────────┴──────────┴───────────┘ │
+└──────────────────┴───────────────────────────────────────────────────┘
+```
+
+**States:**
+- **Empty / Free tier:** no Invoices table section rendered; "Current Plan" shows "Free — 3 seats
+  max" with a single `[ Upgrade to Pro ▸ ]` primary button replacing the usage/payment sections.
+- **Loading:** the "Current Plan" and "Usage" blocks resolve from a fast local cache first (last
+  known plan/usage), then the "Invoices" table streams in separately as a Skeleton Loader — invoices
+  are the slowest call (Stripe round-trip) and must not block the rest of the page.
+- **Error (payment failed / dunning):** a full-width Alert Banner (`status-error`) pinned above
+  "Current Plan": "Payment failed on 2026-07-01 — update your payment method within 7 days to avoid
+  seat downgrade" / `[ Update Payment Method ]`, matching Billing Service's dunning/grace-period
+  responsibility (§P.2.22).
+- **Trial:** "Current Plan" shows "Pro Trial — 9 days remaining" in `status-warning-text` with
+  `[ Add payment method ]` instead of `[ Change Plan ]`.
+
+---
+
+## Screen 29: Collaboration & Presence Hub
+
+**Platform:** Desktop (1280×800). **Distinct from Screen 25** (the in-terminal, per-session
+Collaboration Panel): Screen 29 is the org-wide **presence** surface — who on the team is online and
+what they are doing right now — reachable from the sidebar Collaboration icon or `⌘⇧C` (new global
+shortcut, scoped in §8.13). It surfaces the Collaboration Service's (§P.2.14) participant/session
+state across the whole org, not just one active session.
+
+```
+┌──────────────────────────────┬────────────────────────────────────────────────────────────────────┐
+│ [H] HelixTerminator          │  Collaboration                                    [🔍 Filter team...]│
+│                              ├────────────────────────────────────────────────────────────────────┤
+│ [ Quick Connect... ⌘T ]      │  ONLINE NOW (4)                                                     │
+│                              │  ┌────────────────────────────────────────────────────────────────┐ │
+│ HOSTS                        │  │ ● Alice   — active on prod-web-01 (owner)      [ Join as observer ]│ │
+│  ▸ All Hosts        (127)    │  │ ● Bob     — active on prod-db-01 (co_pilot)    [ Join as observer ]│ │
+│                              │  │ ● Carol   — idle 4m (Host List)                [ — ]              │ │
+│ TOOLS                        │  │ ● You (Alice's teammate)                        [ — ]              │ │
+│ * Collaboration              │  └────────────────────────────────────────────────────────────────┘ │
+│  SFTP Browser                │                                                                      │
+│  Port Forwarding             │  RECENTLY OFFLINE                                                    │
+│  Snippets                    │  ○ Dave — last seen 2h ago                                            │
+│  Key Manager                 │  ○ Eve  — last seen yesterday                                         │
+│                              │                                                                      │
+│ ─────────────────────────    │  BROADCAST SESSIONS (§P.2.14 broadcast mode)                          │
+│ 🔔 Notifications    [2]      │  ┌────────────────────────────────────────────────────────────────┐ │
+│ ⚙ Settings                   │  │ ▶ "Prod incident walkthrough" — Bob broadcasting, 47 watching  │ │
+│ [ 👤 alice@corp.com    ]      │  │   [ Watch (read-only) ]                                        │ │
+└──────────────────────────────┴  └────────────────────────────────────────────────────────────────┘─┘
+```
+
+**Presence indicator legend:** ● solid `ssh-connected`-family teal dot = actively viewing/editing a
+session; hollow with "idle Nm" label = connected to the app but not in an active session for N
+minutes; ○ hollow `ssh-disconnected`-family gray = offline (redundant-coded with the "last seen" text
+label, not color alone, per §1.4.2).
+
+**"Join as observer" flow:** clicking it sends a join request honoring the Collaboration Service's
+role model (§P.2.14: observer / co_pilot / owner) — the session owner sees a join-request toast
+(§5.5.1) they can accept/deny before the observer's view attaches; this differs from Screen 25's
+"already inside a shared session" panel, which assumes the join has already been approved.
+
+**States:**
+- **Empty (solo user, no teammates yet or none online):** Empty State — "No one else is online right
+  now" / "Invite teammates from Settings › Organization to collaborate on sessions" /
+  `[ Go to Organization Settings ]` (deep-links to Screen 27).
+- **Loading:** presence list renders from the last-known Redis pub/sub snapshot (§P.2.14) instantly,
+  then live-updates via WebSocket — no blocking spinner for presence itself; only the "Broadcast
+  Sessions" section shows a Skeleton Loader row while its separate query resolves.
+- **Error (Collaboration Service / WebSocket unreachable):** presence list freezes with a
+  `status-warning` banner — "Presence updates paused — reconnecting…" — rather than clearing the
+  list to empty (an honest stale-but-visible state beats a false "no one online" while merely
+  disconnected).
+- **Join request denied:** Toast (§5.5.1, `status-error` variant) — "Alice declined your join
+  request".
+
+---
+
+## 7.2 Screen Navigation Flow (Diagram)
+
+A flowchart of all 29 documented screens' navigation relationships. Prior to this pass, Vault/Key
+Manager, Organization, Team, Billing, and the org-wide Collaboration Hub were dead ends with zero
+screens — this diagram both documents the now-complete flow and gives implementers an authoritative
+IA map instead of a flat numbered list.
+
+```mermaid
+flowchart TD
+    S1["Screen 1: Splash"] -->|auth valid| S9["Screen 9/10: Host List"]
+    S1 -->|auth required| S5["Screen 5/6: Login"]
+    S5 --> S7["Screen 7/8: MFA"]
+    S7 --> S9
+    S1 -->|first launch| S2["Screen 2-4: Onboarding"]
+    S2 --> S9
+
+    S9 --> S11["Screen 11: Host Detail/Edit"]
+    S9 --> S12["Screen 12: Quick Connect"]
+    S12 --> S13["Screen 13/14: Terminal"]
+    S11 --> S13
+    S13 --> S15["Screen 15/16: Split View"]
+    S13 --> S17["Screen 17: SFTP Browser"]
+    S13 --> S18["Screen 18: Port Forwarding"]
+    S13 --> S19["Screen 19: Snippet Library"]
+    S13 --> S20["Screen 20: AI Command Palette"]
+    S13 --> S25["Screen 25: In-session Collaboration Panel"]
+
+    S9 --> S26["Screen 26: Key Manager / Vault List"]
+    S26 --> S26a["Screen 26a: Vault Item Detail (Reveal/Share/History)"]
+
+    S9 -->|sidebar Settings| S21["Screen 21: Settings - Appearance"]
+    S21 --> S22["Screen 22: Settings - Keyboard Shortcuts"]
+    S21 --> S27["Screen 27: Settings - Organization and Team"]
+    S21 --> S28["Screen 28: Settings - Billing"]
+    S27 -.->|seat limit reached| S28
+
+    S9 -->|sidebar Collaboration| S29["Screen 29: Collaboration and Presence Hub"]
+    S29 -->|Join as observer, approved| S25
+    S29 -.->|Invite teammates| S27
+
+    S9 --> S23["Screen 23: Audit Log Viewer"]
+    S9 --> S24["Screen 24: Notification Center"]
+
+    classDef newScreen fill:#00D4B1,color:#0E0E14,stroke:#008069,stroke-width:2px
+    class S26,S26a,S27,S28,S29 newScreen
+```
+
+Screens highlighted in teal (26, 26a, 27, 28, 29) are the wireframes added in this pass; all other
+nodes existed previously. Dashed edges denote a cross-link (deep-link / suggestion) rather than a
+primary navigation path.
+
+---
+
 # Appendix P.6 -- Platform Architecture Context (see docs 01/07): API Specification
 
 ## P.6.1 API Conventions
@@ -7939,6 +8538,53 @@ When user presses `?`, a full-screen overlay displays all shortcuts organized by
 │  ⌘⇧S SFTP       │  ⌘V  Paste           │                          │
 └──────────────────┴──────────────────────┴──────────────────────────┘
 ```
+
+---
+
+## 8.13 Keyboard Shortcut Scope Map (Diagram)
+
+Every shortcut in §8.2–§8.11 belongs to exactly one **scope** — the context in which it is active.
+The two collisions already resolved in this document (`⌘K` Command Palette vs. the old `⌘K` Clear
+Terminal binding, §8.4.3; `⌘⇧Z` Redo vs. the old `⌘⇧Z` Mosh-suspend binding, §8.5) both existed
+because no explicit scope model separated "always active" from "active only while the terminal has
+focus." This diagram makes that scope hierarchy explicit so a future shortcut addition can be
+checked against it before a new collision ships.
+
+```mermaid
+flowchart TD
+    Global["GLOBAL SCOPE\n(active from any screen)\n⌘K Command Palette · ⌘1-5 section nav\n⌘, Settings · ⌘B Sidebar · ⌘Z Undo · ⌘⇧Z Redo"]
+
+    Global --> HostList["HOST-LIST SCOPE\n(§8.3, active when Host List has focus)\n↑/↓ navigate · Enter connect · ⌘N add host\n⌘⇧V toggle grid/list · F toggle favorite"]
+
+    Global --> Terminal["TERMINAL SCOPE\n(§8.4, active when a terminal pane has focus)\n⌘T new tab · ⌘W close tab · ⌘⌥→/↓ split\n⌘⇧L Clear terminal (was ⌘K -- reassigned)\n⌘+ / ⌘- font size"]
+
+    Terminal --> TerminalSSH["TERMINAL + SSH SUB-SCOPE\n(§8.5, active only on a live SSH session)\n⌘⇧Q Disconnect · ⌘⇧M Suspend/Mosh (was ⌘⇧Z -- reassigned)\n⌘⇧B Broadcast · ⌘⇧⏺ Record"]
+
+    Global --> SFTP["SFTP SCOPE\n(§8.6, active when SFTP Browser has focus)\n⌘L Go to path · ⌘U Upload · ⌘D Download\n⌘→/⌘← Transfer · Tab switch pane"]
+
+    Global --> CmdPalette["COMMAND PALETTE SCOPE\n(§8.7, active only while palette overlay is open)\ncaptures all keystrokes until Esc"]
+
+    Global --> FormDialog["FORM/DIALOG SCOPE\n(§8.8, active only while a modal/dialog is open)\nTab next field · ⌘Enter submit · Esc cancel\ntraps focus -- Global shortcuts suspended beneath it"]
+
+    classDef scope fill:#6C63FF,color:#FFFFFF,stroke:#4640AA,stroke-width:2px
+    class Global,HostList,Terminal,TerminalSSH,SFTP,CmdPalette,FormDialog scope
+```
+
+**Scope precedence rule:** a modal scope (Form/Dialog, Command Palette) always wins over Global while
+open — this is what makes `Esc` unambiguous (closes the topmost modal scope, never falls through to
+a Global `Esc` binding, because none exists). Within a non-modal screen, the most specific active
+scope wins over Global for any key both define; this is the rule that resolved both prior collisions:
+`⌘K` is Global (Command Palette) everywhere *except* nowhere else claims it anymore (Clear Terminal
+moved to the Terminal-scope-only `⌘⇧L`); `⌘⇧Z` is Global (Redo) everywhere, and Mosh-suspend — a
+Terminal+SSH sub-scope action — was moved to `⌘⇧M` specifically so it never has to out-rank Global.
+
+**Collision-check rule for future shortcuts:** before binding a new shortcut, walk this diagram from
+Global down to the target scope; a proposed key combo is safe only if no ancestor scope on that path
+already claims it. A new SFTP-scope shortcut may safely reuse a key already bound in Terminal scope
+(they are siblings, never simultaneously focused), but may NOT reuse a key already bound in Global.
+
+---
+
 # Appendix P.7 -- Platform Architecture Context (see docs 01/07): Performance Architecture
 
 ## P.7.1 Performance Targets
@@ -9567,26 +10213,67 @@ All values include:
           "overlay":     { "value": "{color.primitive.neutral.0}", "type": "color" },
           "sunken":      { "value": "{color.primitive.neutral.100}", "type": "color" },
           "interactive": { "value": "{color.primitive.neutral.100}", "type": "color" },
-          "selected":    { "value": "{color.primitive.purple.50}", "type": "color" }
+          "selected":    { "value": "{color.primitive.purple.50}", "type": "color" },
+          "danger":      { "value": "{color.primitive.red.50}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" }
         },
         "text": {
-          "primary":   { "value": "{color.primitive.neutral.950}", "type": "color" },
-          "secondary": { "value": "{color.primitive.neutral.600}", "type": "color" },
-          "tertiary":  { "value": "{color.primitive.neutral.500}", "type": "color" },
-          "disabled":  { "value": "{color.primitive.neutral.400}", "type": "color" },
-          "link":      { "value": "{color.primitive.purple.700}", "type": "color" }
+          "primary":    { "value": "{color.primitive.neutral.950}", "type": "color" },
+          "secondary":  { "value": "{color.primitive.neutral.600}", "type": "color" },
+          "tertiary":   { "value": "{color.primitive.neutral.500}", "type": "color" },
+          "disabled":   { "value": "{color.primitive.neutral.400}", "type": "color" },
+          "inverse":    { "value": "{color.primitive.neutral.0}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "link":       { "value": "{color.primitive.purple.700}", "type": "color" },
+          "linkHover":  { "value": "{color.primitive.purple.800}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "success":    { "value": "{color.primitive.teal.700}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "warning":    { "value": "{color.primitive.amber.700}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "error":      { "value": "{color.primitive.red.700}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "info":       { "value": "{color.primitive.blue.700}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" }
         },
         "border": {
           "subtle":   { "value": "{color.primitive.neutral.200}", "type": "color" },
           "default":  { "value": "{color.primitive.neutral.300}", "type": "color" },
           "strong":   { "value": "{color.primitive.neutral.400}", "type": "color" },
-          "brand":    { "value": "{color.primitive.purple.500}", "type": "color" }
+          "brand":    { "value": "{color.primitive.purple.500}", "type": "color" },
+          "success":  { "value": "{color.primitive.teal.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "warning":  { "value": "{color.primitive.amber.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "error":    { "value": "{color.primitive.red.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" }
         },
         "interactive": {
-          "default":  { "value": "{color.primitive.purple.500}", "type": "color" },
-          "hover":    { "value": "{color.primitive.purple.600}", "type": "color" },
-          "pressed":  { "value": "{color.primitive.purple.700}", "type": "color" },
-          "disabled": { "value": "{color.primitive.purple.200}", "type": "color" }
+          "default":              { "value": "{color.primitive.purple.500}", "type": "color" },
+          "hover":                { "value": "{color.primitive.purple.600}", "type": "color" },
+          "pressed":              { "value": "{color.primitive.purple.700}", "type": "color" },
+          "disabled":             { "value": "{color.primitive.purple.200}", "type": "color" },
+          "secondary":            { "value": "{color.primitive.neutral.100}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "secondaryHover":       { "value": "{color.primitive.neutral.200}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "ghostHover":           { "value": "{color.primitive.purple.50}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "destructive":          { "value": "{color.primitive.red.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "destructiveHover":     { "value": "{color.primitive.red.600}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" }
+        },
+        "status": {
+          "successBg":     { "value": "{color.primitive.teal.50}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "successBorder": { "value": "{color.primitive.teal.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "successText":   { "value": "{color.primitive.teal.700}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "warningBg":     { "value": "{color.primitive.amber.50}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "warningBorder": { "value": "{color.primitive.amber.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "warningText":   { "value": "{color.primitive.amber.700}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "errorBg":       { "value": "{color.primitive.red.50}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "errorBorder":   { "value": "{color.primitive.red.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "errorText":     { "value": "{color.primitive.red.700}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "infoBg":        { "value": "{color.primitive.blue.50}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "infoBorder":    { "value": "{color.primitive.blue.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "infoText":      { "value": "{color.primitive.blue.700}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" }
+        },
+        "ssh": {
+          "connected":        { "value": "{color.primitive.teal.600}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "connectedBg":      { "value": "{color.primitive.teal.100}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "connecting":       { "value": "{color.primitive.amber.600}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "connectingBg":     { "value": "{color.primitive.amber.50}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "disconnected":     { "value": "{color.primitive.neutral.400}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "disconnectedBg":   { "value": "{color.primitive.neutral.100}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "error":            { "value": "{color.primitive.red.600}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "errorBg":          { "value": "{color.primitive.red.50}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "reconnecting":     { "value": "{color.primitive.purple.600}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" },
+          "suspended":        { "value": "{color.primitive.neutral.500}", "type": "color", "description": "Added -- §2.3.2 light-theme parity pass" }
         }
       }
     }
@@ -9750,9 +10437,17 @@ All values include:
       "paddingXLg":     { "value": "20px", "type": "dimension" },
       "borderRadius":   { "value": "{borderRadius.base}", "type": "dimension" },
       "fontWeight":     { "value": "{typography.fontWeight.semiBold}", "type": "number" },
-      "primaryBg":      { "value": "{color.semantic.dark.interactive.default}", "type": "color" },
-      "primaryBgHover": { "value": "{color.semantic.dark.interactive.hover}", "type": "color" },
-      "primaryText":    { "value": "{color.primitive.neutral.0}", "type": "color" }
+      "primaryBg":      { "value": "{color.primitive.purple.600}", "type": "color", "description": "§5.1.6 accessible fill (dark) -- was {color.semantic.dark.interactive.default}, which computes to 4.32:1 with a white label and fails WCAG AA; purple.600 computes to 5.86:1" },
+      "primaryBgHover": { "value": "{color.primitive.purple.700}", "type": "color", "description": "§5.1.6 accessible fill (dark) -- 8.16:1" },
+      "primaryBgPressed": { "value": "{color.primitive.purple.800}", "type": "color", "description": "§5.1.6 accessible fill (dark) -- 11.33:1" },
+      "primaryBgLight":      { "value": "{color.primitive.purple.700}", "type": "color", "description": "§5.1.6 accessible fill (light) -- 8.16:1" },
+      "primaryBgHoverLight": { "value": "{color.primitive.purple.800}", "type": "color", "description": "§5.1.6 accessible fill (light) -- 11.33:1" },
+      "primaryBgPressedLight": { "value": "{color.primitive.purple.900}", "type": "color", "description": "§5.1.6 accessible fill (light) -- 15.24:1" },
+      "primaryText":    { "value": "{color.primitive.neutral.0}", "type": "color" },
+      "destructiveBg":         { "value": "{color.primitive.red.700}", "type": "color", "description": "§5.1.6 accessible fill (both themes) -- was {color.semantic.*.interactive.destructive} = red.500, which computes to 2.78:1 with a white label and fails WCAG AA far worse than the primary-button case; red.700 computes to 5.97:1" },
+      "destructiveBgHover":    { "value": "{color.primitive.red.800}", "type": "color", "description": "§5.1.6 accessible fill -- 9.20:1" },
+      "destructiveBgPressed":  { "value": "{color.primitive.red.900}", "type": "color", "description": "§5.1.6 accessible fill -- 13.88:1" },
+      "destructiveText":       { "value": "{color.primitive.neutral.0}", "type": "color" }
     },
     "input": {
       "height":         { "value": "40px", "type": "dimension" },
@@ -10000,8 +10695,8 @@ All values include:
 | Category              | Token Count |
 |-----------------------|-------------|
 | Color primitives      | 88          |
-| Color semantic (dark) | 62          |
-| Color semantic (light)| 24          |
+| Color semantic (dark) | 56          |
+| Color semantic (light)| 56          |
 | Spacing               | 15          |
 | Typography            | 38          |
 | Border radius         | 9           |
@@ -10011,19 +10706,26 @@ All values include:
 | Z-index               | 10          |
 | Breakpoints           | 8           |
 | Icon sizes            | 7           |
-| Component tokens      | 95          |
+| Component tokens      | 103         |
 | Density               | 9           |
 | Terminal schemes      | 64 (4 colors × 16 per scheme) |
-| **TOTAL**             | **~512**    |
+| **TOTAL**             | **~546**    |
 
-**Color semantic (dark) 62 vs. (light) 24 is not incidental** — it is the numeric footprint of the
-§2.3.2 / §11.4.162 gap noted above: light theme is missing its Border, Interactive, Status, and
-SSH-connection-status groups entirely. `> DEFERRED (next increment)` until those groups are
-authored and the two counts reach parity.
+**Color semantic (dark) = (light) = 56 — parity achieved this pass.** The dark-theme row is also
+corrected here: a direct recount of the six semantic groups (Surface 7, Text 11, Border 7,
+Interactive 9, Status 12, SSH 10 = 56) shows the previously-published "62" was itself an
+uncorrected estimate, the same class of error the §9.2/§9.2.1 contrast-table recompute already
+found and fixed elsewhere in this document — hand-typed counts, not generated from the JSON. Light
+theme's Border, Interactive, Status, and SSH-connection-status groups (previously entirely missing,
+§2.3.2) are now authored with the same six token names as Dark Theme per group, closing the
+§11.4.162 parity gap. Component tokens rose from 95 to 103 to account for the eight new
+`component.button.*` accessible-fill tokens introduced in §5.1.6 (`primaryBgPressed`,
+`primaryBgLight`, `primaryBgHoverLight`, `primaryBgPressedLight`, `destructiveBg`,
+`destructiveBgHover`, `destructiveBgPressed`, `destructiveText`).
 
-All 512+ tokens are defined in the JSON above plus the additional terminal scheme tokens for all 12 themes (HelixDark, HelixLight, Solarized Dark, Solarized Light, Dracula, One Dark, Monokai, Nord, Gruvbox Dark, Gruvbox Light, Tokyo Night, Catppuccin Mocha) × 20 values each = 240 additional terminal tokens. Only 3 of these 12 schemes (`helixDark`, `dracula`, `nord`) are currently present as concrete JSON in §10.2 (see gap note above); the remaining 9, including `helixLight`, are `> DEFERRED (next increment)`.
+All 546+ tokens are defined in the JSON above plus the additional terminal scheme tokens for all 12 themes (HelixDark, HelixLight, Solarized Dark, Solarized Light, Dracula, One Dark, Monokai, Nord, Gruvbox Dark, Gruvbox Light, Tokyo Night, Catppuccin Mocha) × 20 values each = 240 additional terminal tokens. Only 3 of these 12 schemes (`helixDark`, `dracula`, `nord`) are currently present as concrete JSON in §10.2; the remaining 9, including `helixLight`, remain `> DEFERRED (next increment)` — that gap is independent of the semantic-color parity fixed in this pass (terminal ANSI schemes are a separate token category from semantic UI colors) and is not fabricated here.
 
-**Total token count: 512 + 240 (remaining terminal schemes) = 752 tokens.**
+**Total token count: 546 + 240 (remaining terminal schemes) = 786 tokens.**
 
 ---
 
@@ -10073,6 +10775,82 @@ ThemeData helixDarkTheme = ThemeData(
   fontFamily: 'Inter',
 );
 ```
+
+---
+
+## 10.5 Design Token Hierarchy (Diagram)
+
+A visualization of the three-tier primitive → semantic → component architecture described in §2.1,
+showing which component tokens resolve per-theme (light and dark both feed in) versus which
+previously resolved only against `color.semantic.dark.*` — the specific gap §2.1 and §2.3.2 flagged
+before this pass's light-theme parity fix, and the one fix (§5.1.6 Button) still applies
+intentionally for accessibility reasons rather than incompleteness.
+
+```mermaid
+flowchart TD
+    subgraph Primitive["TIER 1 -- PRIMITIVE (§2.2)"]
+        direction LR
+        P1["purple-50..950"]
+        P2["teal-50..900"]
+        P3["red-50..900"]
+        P4["amber-50..900"]
+        P5["blue-50..900"]
+        P6["neutral-0..1000"]
+    end
+
+    subgraph SemanticDark["TIER 2 -- SEMANTIC: dark (§2.3.1)"]
+        direction LR
+        SD1["surface.*  (7)"]
+        SD2["text.*  (11)"]
+        SD3["border.*  (7)"]
+        SD4["interactive.*  (9)"]
+        SD5["status.*  (12)"]
+        SD6["ssh.*  (10)"]
+    end
+
+    subgraph SemanticLight["TIER 2 -- SEMANTIC: light (§2.3.2)"]
+        direction LR
+        SL1["surface.*  (7)"]
+        SL2["text.*  (11)"]
+        SL3["border.*  (7)"]
+        SL4["interactive.*  (9)"]
+        SL5["status.*  (12)"]
+        SL6["ssh.*  (10)"]
+    end
+
+    subgraph Component["TIER 3 -- COMPONENT (§10.2 component.*)"]
+        direction LR
+        C1["input.* -- theme-parametric\n(resolves per active theme)"]
+        C2["card.* -- theme-parametric"]
+        C3["button.primaryBg / primaryBgHover / primaryBgPressed\n(dark) + *Light variants (light)\n-- INTENTIONALLY theme-specific accessible fills,\nnot the shared interactive.default (§5.1.6)"]
+    end
+
+    Primitive --> SemanticDark
+    Primitive --> SemanticLight
+    SemanticDark --> Component
+    SemanticLight --> Component
+
+    classDef primitive fill:#78788A,color:#FFFFFF,stroke:#56566A
+    classDef semantic fill:#6C63FF,color:#FFFFFF,stroke:#4640AA
+    classDef component fill:#00D4B1,color:#0E0E14,stroke:#008069
+    class P1,P2,P3,P4,P5,P6 primitive
+    class SD1,SD2,SD3,SD4,SD5,SD6,SL1,SL2,SL3,SL4,SL5,SL6 semantic
+    class C1,C2,C3 component
+```
+
+**Reading this diagram:** a theme switch (dark ↔ light) at runtime swaps which Tier 2 subgraph feeds
+Tier 3 — this is the "single theme change cascades to all components" promise from §2.1. Prior to
+this pass, several `component.*` tokens hard-referenced `color.semantic.dark.*` literally (not a
+theme-relative reference), which would have broken that promise the moment a component actually
+shipped in light mode; §10.2's `input`/`card`/other component groups should be audited against this
+diagram in a follow-up pass to confirm every one resolves per-theme rather than hard-coding `dark`.
+`component.button.*` is the one deliberate, documented exception: §5.1.6 explains why the Button's
+solid-fill tokens are *not* simple pass-throughs of `interactive.default`/`interactive.destructive`
+in either theme — they are dedicated, WCAG-AA-verified fills chosen specifically because the shared
+semantic tokens fail contrast at button-label sizes (§9.2.1).
+
+---
+
 # Appendix P.9 -- Platform Architecture Context (see docs 01/07): Submodule Integration
 
 ## P.9.1 Integration Philosophy (HelixConstitution §11.4.74)

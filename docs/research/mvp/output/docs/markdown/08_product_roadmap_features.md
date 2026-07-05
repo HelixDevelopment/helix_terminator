@@ -661,9 +661,36 @@ All development follows these non-negotiable principles:
 
 ### 2.2 Phase 2: Core Features (Months 4–7)
 
-> DEFERRED (next increment): Phases 2-5 need entry/exit criteria, DoD, owners, estimates, risk register. Unlike Phase 1's Sprints 1-6, the Month-by-Month deliverable lists below (Phases 2-5) do not yet carry per-phase Acceptance Criteria, Test Requirements, or a Definition of Done checklist, nor named owners/effort estimates, nor a project risk register (likelihood/impact/mitigation/owner), nor scheduling for several fully-specified features (e.g. SSH Playground, Config Diff, Collaborative Debugging, Terminal Multiplayer, Break-Glass, JIT Access) that currently have no Phase/Sprint/Month home. This gap is tracked honestly here rather than bluffed; authoring it is out of scope for this increment.
-
 **Phase Goal:** Deliver a fully functional SSH client with terminal emulator, SFTP, port forwarding, snippets, keychain, and workspaces — sufficient for individual developer daily use.
+
+**Entry Criteria** (must all hold before Phase 2 work starts):
+- [ ] Phase 1 Definition of Done satisfied for Sprints 1–6 (Auth, Vault, Host/Group, SSH Proxy, Flutter skeleton all deployed to dev cluster).
+- [ ] SSH Proxy Service passes the 1,000-concurrent-session load test from Sprint 5 with no resource leak after 10 minutes.
+- [ ] Flutter client builds without warnings on all 5 target platforms (iOS, Android, macOS, Windows, Linux).
+- [ ] Design system tokens (colors, typography, spacing) frozen and published per `06_ux_design_system`.
+
+**Exit Criteria** (must all hold before Phase 3 starts):
+- [ ] Terminal emulator passes vttest and the Section 5.7 rendering SLOs (60fps scroll, <16ms keystroke latency) on all 5 platforms.
+- [ ] SFTP, port forwarding, snippets, keychain, and workspaces are usable end-to-end by an individual developer with no server-side enterprise dependency.
+- [ ] Terminal Multiplayer MVP (session sharing + observer mode) and SSH Playground are functional in the dev environment (hardening deferred to Phase 3 per the schedule below).
+- [ ] Phase 2 Definition of Done (§2.2.6) is 100% checked with captured evidence for every item.
+- [ ] Zero open Critical/blocking defects against any Phase 2 deliverable in the workable-items tracker.
+
+**Owners & Effort Estimates (Phase 2, in person-weeks, one person-week = one engineer-week of focused capacity):**
+
+| Month | Epic | Owner (role) | Effort (person-weeks) |
+|---|---|---|---|
+| 4 | Terminal emulator (Dart/Impeller) | Client Platform Lead + 2× Client Engineer | 10 |
+| 4 | SSH key auth + multi-hop jump chains (client) | Client Engineer (SSH focus) | 3 |
+| 5 | SFTP file manager + bidirectional sync engine | Client Engineer (Storage focus) + 1× Client Engineer | 7 |
+| 6 | Port forwarding UI + tunnel manager | Client Engineer | 3 |
+| 6 | Snippets editor/execution/library | Client Engineer + Backend Engineer (Snippet Service) | 5 |
+| 6 | Keychain (key gen/import/deploy, vault passphrase storage) | Security Engineer + Client Engineer | 4 |
+| 7 | Workspaces save/restore + templates | Client Engineer | 3 |
+| 7 | Terminal Multiplayer MVP (session sharing, observer mode) | Backend Engineer (Realtime) + Client Engineer | 6 |
+| 7 | SSH Playground (ephemeral sandbox containers) | Backend Engineer (Platform) | 4 |
+| 7 | AI autocomplete integration, Mosh support, offline mode, perf pass | Client Platform Lead + 2× Client Engineer | 8 |
+| — | **Phase 2 total** | — | **53 person-weeks** (≈ 4–5 engineers sustained across 4 months) |
 
 #### Month 4 — Terminal Emulator & Core SSH UX
 
@@ -679,11 +706,24 @@ All development follows these non-negotiable principles:
 - Connection history per host
 - SSH agent integration (interact with `ssh-agent` / macOS Keychain agent)
 
-**Phase 2 Acceptance Criteria (Terminal):**
+**Acceptance Criteria:**
 - Terminal renders 100,000 lines of `cat /dev/urandom | xxd` without UI jank (< 1 dropped frame at 60fps)
 - All 256 color codes render correctly (verified against reference screenshot)
 - Terminal passes vttest suite (automated)
 - Keystroke latency from keydown to SSH server receives input: < 16ms on LAN (measured via instrumentation)
+- Given a 10-hop jump chain configuration, When a developer connects, Then the session establishes within the Section 5.3 SSH connection SLO with per-hop auth failures surfaced individually
+
+**Test Requirements:**
+- Automated vttest suite run on every PR touching the terminal-rendering package
+- Golden-frame regression tests for the 256-color palette and font-rendering across all 5 platforms
+- Load test: 100,000-line scrollback buffer scroll benchmark, frame-time histogram captured
+
+**Definition of Done:**
+- [ ] Terminal emulator package published with vttest pass recorded in `docs/performance/month4.md`
+- [ ] Multi-hop jump chain tested against a real 3-hop Docker Compose topology
+- [ ] Owner: Client Platform Lead; effort tracked against the 13 person-week Month 4 estimate above
+
+---
 
 #### Month 5 — SFTP File Manager
 
@@ -699,6 +739,23 @@ All development follows these non-negotiable principles:
 - Bidirectional sync (core engine, basic conflict resolution)
 - Multi-hop SFTP (through jump chain)
 
+**Acceptance Criteria:**
+- Given a 100GB file transfer interrupted at 50%, When the connection recovers, Then the transfer resumes from the last acknowledged byte range without re-transferring completed bytes
+- Given two devices editing the same synced file, When both are online again, Then the conflict-resolution UI (EC-VAULT-style manual-merge pattern, §4) surfaces the conflict rather than silently overwriting either version
+- File browser lists a 10,000-entry remote directory within 2 seconds (p95)
+
+**Test Requirements:**
+- Integration tests against a real SFTP server (OpenSSH `sftp-server`) covering upload/download/resume/permissions
+- Chaos test: kill the network mid-transfer at 10 different byte offsets, verify resume correctness via checksum
+- Bidirectional sync conflict-injection test suite (concurrent edit on both sides, verify no silent data loss)
+
+**Definition of Done:**
+- [ ] SFTP file manager functional on all 5 platforms against a real SFTP server
+- [ ] Resume-after-interruption verified with checksum-level integrity proof
+- [ ] Owner: Client Engineer (Storage focus); effort tracked against the 7 person-week Month 5 estimate above
+
+---
+
 #### Month 6 — Port Forwarding, Snippets, Keychain
 
 **Deliverables:**
@@ -713,7 +770,26 @@ All development follows these non-negotiable principles:
 - Key deployment to host via `ssh-copy-id` equivalent
 - Passphrase-protected key storage in vault
 
-#### Month 7 — Workspaces, Polish, Platform Consistency
+**Acceptance Criteria:**
+- Given a dynamic SOCKS5 tunnel configured on a laptop that sleeps/wakes, When the laptop wakes, Then the tunnel auto-restarts within 10 seconds of network availability
+- Given a snippet with a required typed parameter left blank, When the user attempts to execute it, Then client-side validation blocks execution with a field-level error (no round-trip to the server needed)
+- Generated Ed25519 keypairs are never transmitted in plaintext; the private key is encrypted client-side before touching the vault sync channel (zero-knowledge posture per CD-10)
+
+**Test Requirements:**
+- Tunnel-drop chaos test: kill the underlying TCP connection 50 times in a row, verify auto-restart succeeds every time with no port-leak
+- Snippet parameter-validation unit tests covering all 4 typed-parameter kinds (int, string, enum, secret)
+- Security test: verify no plaintext private-key bytes appear in any client log, crash report, or network capture during key generation/import
+
+**Definition of Done:**
+- [ ] Port forwarding, snippets, and keychain functional end-to-end on all 5 platforms
+- [ ] Zero-knowledge key-generation claim independently verified by a Security Engineer with a network-capture review
+- [ ] Owner: Client Engineer + Security Engineer; effort tracked against the 12 person-week Month 6 estimate above
+
+---
+
+#### Month 7 — Workspaces, Collaboration MVP, SSH Playground, Polish
+
+> Schedules the previously-orphaned **Terminal Multiplayer (Collaborative Terminal, §1.7)** and **SSH Playground (§1.16.13)** features. Terminal Multiplayer ships here as an MVP (session sharing + observer mode only); the full RBAC-per-participant, session-recording, and voice-channel spec is hardened in Phase 3 Month 9 once the Session Recording Service exists (§2.3, Month 9) — recording and per-participant RBAC cannot be delivered before that dependency lands.
 
 **Deliverables:**
 - Full workspace save/restore (layout, host assignments, active tunnels)
@@ -724,6 +800,44 @@ All development follows these non-negotiable principles:
 - Settings deep-dive: SSH connection options, terminal preferences, notification preferences
 - Offline mode: all vault data accessible offline, sessions reconnect automatically
 - Performance profiling pass: profile Flutter UI and fix any jank in hot paths
+- **Terminal Multiplayer MVP** (§1.7): session-sharing link (invite + QR code), observer mode (read-only, unlimited observers), owner/editor/observer participant roles, live text chat overlay, permission promotion/demotion mid-session. Session recording, WebRTC voice, and admin-enforced Compliance Mode recording are explicitly deferred to Month 9.
+- **SSH Playground** (§1.16.13): ephemeral sandboxed container provisioning (Alpine/Ubuntu, user choice), guided scenarios ("Set up a web server", "Configure SSH keys", "Write your first shell script"), 2h-inactivity / 24h-absolute auto-termination, filesystem snapshot between sessions
+
+**Acceptance Criteria:**
+- Given a workspace with 4 saved sessions and 2 active tunnels, When the developer restores it on a new device, Then all sessions reconnect and tunnels re-establish within 10 seconds
+- Given a Terminal Multiplayer session with 1 owner and 3 observers, When the owner types a command, Then all 3 observers see the output within 200ms (p95) over a LAN
+- Given an SSH Playground session left inactive for 2 hours, When the inactivity threshold is reached, Then the container is terminated and the filesystem snapshot is preserved for the next session
+- App cold-start time remains < 2 seconds on a mid-range device after the Month 7 feature additions (regression guard against Sprint 6's baseline)
+
+**Test Requirements:**
+- End-to-end workspace restore test across a simulated device-swap scenario
+- Terminal Multiplayer load test: 1 owner + 20 concurrent observers, verify no dropped frames and no output desync
+- SSH Playground container-lifecycle test: provision → guided scenario completion → inactivity timeout → snapshot → resume, verified via automated container-state assertions
+- Full regression pass of Sprints 1–6 + Months 4–6 test suites (Phase 2 exit gate)
+
+**Definition of Done:**
+- [ ] Workspaces, Terminal Multiplayer MVP, and SSH Playground deployed to the dev cluster and demoed end-to-end
+- [ ] Terminal Multiplayer MVP explicitly documented as MVP-scope (recording/voice/RBAC deferred to Month 9) in the release notes so support and sales do not over-promise
+- [ ] Owner: Client Platform Lead (workspaces/polish) + Backend Engineer/Realtime (collaboration) + Backend Engineer/Platform (playground); effort tracked against the 21 person-week Month 7 estimate above
+- [ ] Phase 2 Exit Criteria (above) all checked before Phase 3 kickoff
+
+#### 2.2.6 Phase 2 Definition of Done (Program-Level)
+
+- [ ] All four Month DoD checklists (Months 4–7) above are 100% checked with captured evidence (test logs, demo recordings, performance reports under `docs/performance/`).
+- [ ] No Critical or High severity defect remains open against any Phase 2 feature.
+- [ ] Phase 2 Exit KPIs (below) are measured on the dev/staging cluster and meet target.
+- [ ] Code review gate (Constitution §11.4.125/§11.4.134) has returned a clean GO for the full Phase 2 batch.
+
+#### 2.2.7 Phase 2 Exit KPIs
+
+| KPI | Target | Measurement source |
+|---|---|---|
+| Terminal render frame drop rate | < 1 dropped frame per 100,000 lines at 60fps | Automated vttest + frame-time instrumentation (Month 4 DoD) |
+| SSH connection establishment (LAN, single hop) | p95 < 500ms | Section 5.3 SSH Connection Performance benchmark |
+| SFTP resume-after-interruption success rate | 100% (checksum-verified) | Month 5 chaos-test suite |
+| Terminal Multiplayer observer fan-out latency | p95 < 200ms for 20 concurrent observers | Month 7 collaboration load test |
+| SSH Playground container provision time | < 5 seconds cold-start | Month 7 container-lifecycle test |
+| Individual-developer daily-use readiness | 100% of Phase 2 features usable with zero enterprise-tier dependency | Phase 2 Exit Criteria checklist
 
 ---
 
@@ -731,7 +845,41 @@ All development follows these non-negotiable principles:
 
 **Phase Goal:** Deliver the enterprise feature set required for team sales: PKI/CA, RBAC, audit logging, compliance, session recording, SSO/SAML, and SCIM provisioning.
 
-#### Month 8 — PKI/CA + Advanced RBAC
+**Entry Criteria** (must all hold before Phase 3 work starts):
+- [ ] Phase 2 Exit Criteria (§2.2) all satisfied and demoed.
+- [ ] Terminal Multiplayer MVP (session sharing + observer mode, Month 7) is stable in the dev cluster with zero open Critical defects.
+- [ ] Vault Service supports item-level secret storage sufficient to hold CA private-key references and break-glass approval-group configuration.
+- [ ] Security Engineer capacity allocated for the full Phase 3 duration (PKI, RBAC, break-glass/JIT, compliance are all security-critical).
+
+**Exit Criteria** (must all hold before Phase 4 starts):
+- [ ] SSH CA issues and revokes certificates end-to-end, with FIDO2-backed enrollment functional.
+- [ ] Session recording, Compliance Mode, and the immutable audit log are all functional and mutually consistent (a Compliance Mode session cannot terminate before its recording upload completes).
+- [ ] Break-Glass and JIT Access both function end-to-end against a real CA-issued short-lived certificate.
+- [ ] Terminal Multiplayer is hardened to its full §1.7 spec (per-participant RBAC, recording, WebRTC voice, Compliance Mode integration) and Collaborative Debugging (§1.16.6) is functional.
+- [ ] SSO/SAML and SCIM provisioning both verified against at least 2 real IdPs (Okta + one of Azure AD/Google Workspace/JumpCloud).
+- [ ] Phase 3 Exit KPIs (§2.3.7) measured and within target; Phase 3 Definition of Done (§2.3.6) 100% checked.
+
+**Owners & Effort Estimates (Phase 3, in person-weeks):**
+
+| Month | Epic | Owner (role) | Effort (person-weeks) |
+|---|---|---|---|
+| 8 | SSH Certificate Authority service | Security Engineer + Backend Engineer (PKI focus) | 8 |
+| 8 | Advanced RBAC engine (resource-based + ABAC) | Backend Engineer (Access Control) | 6 |
+| 8 | Break-Glass Emergency Access | Security Engineer + Backend Engineer (Access Control) | 4 |
+| 8 | Just-in-Time (JIT) Access | Backend Engineer (Access Control) + Backend Engineer (PKI focus) | 4 |
+| 8 | FIDO2 hardware key enrollment | Security Engineer | 3 |
+| 9 | Session recording service (capture, AsciiCast v2, replay player) | Backend Engineer (Realtime) + Client Engineer | 8 |
+| 9 | Compliance Mode enforcement | Security Engineer + Backend Engineer (Realtime) | 4 |
+| 9 | Immutable audit log service | Backend Engineer (Data) | 5 |
+| 9 | Terminal Multiplayer full hardening (RBAC, recording, voice, compliance) | Backend Engineer (Realtime) + Client Engineer | 7 |
+| 9 | Collaborative Debugging | Client Engineer + Backend Engineer (Realtime) | 4 |
+| 10 | SAML 2.0 SSO + SCIM 2.0 provisioning | Backend Engineer (IdM) + Security Engineer | 7 |
+| 10 | Team management UI + billing/seat integration | Client Engineer + Backend Engineer (IdM) | 5 |
+| — | **Phase 3 total** | — | **65 person-weeks** (≈ 5–6 engineers sustained across 3 months) |
+
+#### Month 8 — PKI/CA + Advanced RBAC + Break-Glass + JIT Access
+
+> Schedules the previously-orphaned **Break-Glass Emergency Access (§1.16.8)** and **Just-in-Time (JIT) Access (§1.16.9)** features. Both are scheduled here — not earlier — because both require the SSH Certificate Authority and Advanced RBAC engine delivered in this same month as a hard dependency: JIT-issued certificates "encode the escalated principal" (§1.16.9) and both flows evaluate against the RBAC policy engine built this month.
 
 **Deliverables:**
 - SSH Certificate Authority service (`/services/pki`)
@@ -747,8 +895,31 @@ All development follows these non-negotiable principles:
   - Principle of least privilege enforcement (deny by default)
   - ABAC extension: attribute-based conditions (e.g., "allow access only from VPN IP range")
 - FIDO2 hardware key enrollment and SSH authentication via sk-ed25519
+- **Break-Glass Emergency Access** (§1.16.8): break-glass request submission with mandatory justification; dual-approval workflow (on-call manager + security officer, both required) via push notification; configurable access window (default 1 hour); mandatory session recording during break-glass access; automatic expiry; post-incident review task auto-created in HelixTrack; fully immutable audit trail of the entire flow
+- **Just-in-Time (JIT) Access** (§1.16.9): JIT request submission with mandatory ticket reference; policy engine evaluation (time-of-day, approver tier, host sensitivity); certificate issuance scoped to exactly the requested window via the CA service above; 5-minute pre-expiry warning to active sessions; automatic session termination at window close
 
-#### Month 9 — Session Recording, Audit, Compliance
+**Acceptance Criteria:**
+- Given a valid CSR and an RBAC-approved principal, When a certificate is requested, Then a short-lived certificate is issued and auto-renews client-side 15 minutes before expiry with zero session interruption
+- Given a break-glass request with only one of the two required approvals, When the requester attempts to connect, Then access is denied until both approvals are recorded
+- Given a JIT-access window that expires while a session is active, When the window closes, Then the session receives a 5-minute warning and is then forcibly terminated regardless of in-flight commands
+- Given a revoked certificate, When a connection is attempted with it, Then the SSH Proxy rejects it via CRL/OCSP check within the connection-timeout SLO
+
+**Test Requirements:**
+- Integration tests against a real HSM-backed (or PKCS#11-emulated) CA covering issuance, renewal, and revocation
+- Security test: attempt to bypass dual-approval on break-glass via API-level race condition (concurrent approval submission)
+- Chaos test: kill the JIT policy engine mid-evaluation, verify fail-closed (deny by default) behavior
+- End-to-end test: full break-glass flow from request → dual approval → session → auto-expiry → HelixTrack review task creation
+
+**Definition of Done:**
+- [ ] CA, RBAC, Break-Glass, and JIT Access all deployed to the dev cluster and demoed end-to-end against a real host
+- [ ] Fail-closed behavior independently verified by a Security Engineer for both Break-Glass and JIT under induced-failure conditions
+- [ ] Owner: Security Engineer + Backend Engineer (PKI/Access Control); effort tracked against the 25 person-week Month 8 estimate above
+
+---
+
+#### Month 9 — Session Recording, Audit, Compliance, Collaboration Hardening
+
+> Hardens **Terminal Multiplayer (§1.7)** to its full spec and schedules the previously-orphaned **Collaborative Debugging (§1.16.6)** feature. Both depend on the Session Recording Service delivered in this same month — recording, WebRTC voice, and per-participant RBAC could not be delivered in Phase 2 because the recording infrastructure did not yet exist.
 
 **Deliverables:**
 - Session recording service (`/services/recording`)
@@ -767,13 +938,34 @@ All development follows these non-negotiable principles:
   - Audit log export: CSV, JSON, SIEM-compatible CEF/LEEF formats
   - Audit log search: full-text + faceted filtering (user, host, event type, time range)
   - Alert rules on audit events (configurable via admin UI)
+- **Terminal Multiplayer — full hardening** (§1.7): full owner/editor/observer RBAC (promoted from the Month 7 MVP's link-based sharing), session recording via the pipeline above, optional WebRTC voice channel (DTLS/SRTP), pointer sharing (color-coded cursors), Compliance Mode integration (admin-enforced mandatory recording for groups), time-limited session invitations
+- **Collaborative Debugging** (§1.16.6): shared environment-variables panel, shared watch expressions, shared annotatable notes, "mark as evidence" capture into a shared incident timeline, Markdown incident-report export
+
+**Acceptance Criteria:**
+- Given Compliance Mode enabled on a host group, When a user attempts to disable session recording, Then the UI control is unavailable and the server rejects any API-level disable attempt
+- Given a Terminal Multiplayer session with Compliance Mode active, When the session ends, Then session termination is blocked until the recording upload to object storage completes and its HMAC-SHA256 hash chain is verified
+- Given a Collaborative Debugging session where a participant marks 3 pieces of output as evidence, When the session ends, Then the exported Markdown incident report contains all 3 evidence items in chronological order with participant attribution
+- Audit log search over 1,000,000 events returns faceted results within 1 second (p95)
+
+**Test Requirements:**
+- Integration test: full Compliance Mode session lifecycle (start → mandatory recording → real-time streaming → end blocked until upload → hash-chain verification)
+- Load test: Terminal Multiplayer with 20 concurrent observers + active WebRTC voice channel, measure CPU/bandwidth per participant
+- Security test: attempt to disable recording via direct API call while Compliance Mode is active (must be rejected server-side, not just client-side)
+- Contract test: Audit service consumes every Kafka event topic emitted by every other Phase 1–3 service (no silent gaps)
+
+**Definition of Done:**
+- [ ] Session recording, Compliance Mode, audit log, Terminal Multiplayer hardening, and Collaborative Debugging deployed to the dev cluster
+- [ ] Compliance Mode's "cannot be disabled" guarantee independently verified server-side by a Security Engineer (not just a client-side UI check)
+- [ ] Owner: Backend Engineer (Realtime) + Security Engineer + Backend Engineer (Data); effort tracked against the 28 person-week Month 9 estimate above
+
+---
 
 #### Month 10 — SSO/SAML, SCIM, Team Management
 
 **Deliverables:**
 - SAML 2.0 SP-initiated SSO
   - IdP configuration UI (Okta, Azure AD, Google Workspace templates)
-  - JIT provisioning: create user account on first SSO login
+  - JIT user provisioning: create user account on first SSO login (SAML-attribute-driven provisioning — distinct from the §1.16.9 JIT Access-escalation feature delivered in Month 8)
   - Attribute mapping: map SAML attributes to HelixTerminator roles and groups
   - SSO enforcement: admin can require SSO for all org members
 - SCIM 2.0 provisioning
@@ -786,11 +978,70 @@ All development follows these non-negotiable principles:
   - Org-level settings: password policy, MFA enforcement, session timeout
   - Billing and seat management integration (with Stripe)
 
+**Acceptance Criteria:**
+- Given a SAML assertion from Okta for a first-time user, When the user logs in, Then a HelixTerminator account is JIT-provisioned with roles mapped from the SAML attributes within 2 seconds
+- Given a SCIM deactivation request from Azure AD, When the request is processed, Then the user's active sessions are terminated and their access revoked within 30 seconds
+- Given an org with SSO enforcement enabled, When a member attempts password-based login, Then the attempt is rejected with a redirect to the configured IdP
+
+**Test Requirements:**
+- End-to-end SSO tests against real Okta, Azure AD, and Google Workspace test tenants
+- SCIM conformance test suite run against Okta, Azure AD, and JumpCloud SCIM connectors
+- Security test: verify SAML assertion signature validation rejects a tampered/replayed assertion
+
+**Definition of Done:**
+- [ ] SSO/SAML and SCIM functional against at least 2 real IdPs with recorded evidence (per §11.4.83 QA transcript requirements)
+- [ ] Team management UI functional including Stripe billing/seat integration in a sandboxed billing account
+- [ ] Owner: Backend Engineer (IdM) + Client Engineer; effort tracked against the 12 person-week Month 10 estimate above
+- [ ] Phase 3 Exit Criteria (above) all checked before Phase 4 kickoff
+
+#### 2.3.6 Phase 3 Definition of Done (Program-Level)
+
+- [ ] All three Month DoD checklists (Months 8–10) above are 100% checked with captured evidence.
+- [ ] No Critical or High severity defect remains open against any Phase 3 feature, with particular scrutiny on Break-Glass, JIT, and Compliance Mode fail-closed behavior.
+- [ ] Phase 3 Exit KPIs (below) are measured on the staging cluster and meet target.
+- [ ] External or internal security review of PKI/CA, RBAC, Break-Glass, and JIT completed with all Critical/High findings resolved (feeds the Phase 5 external audit — this is an interim internal pass, not the final Cure53-class review).
+
+#### 2.3.7 Phase 3 Exit KPIs
+
+| KPI | Target | Measurement source |
+|---|---|---|
+| Certificate issuance latency | p95 < 250ms | Month 8 CA integration test |
+| Break-glass dual-approval enforcement | 100% — zero single-approval bypasses across 50 fuzz-test attempts | Month 8 security test suite |
+| JIT window-expiry termination accuracy | 100% of sessions terminated within 60s of window close | Month 8 end-to-end test |
+| Compliance Mode recording-disable bypass rate | 0% — zero successful client or API-level disable attempts | Month 9 security test |
+| Terminal Multiplayer full-spec observer fan-out (with voice) | p95 < 300ms with WebRTC voice active, 20 observers | Month 9 load test |
+| SSO/SCIM real-IdP conformance | 100% pass against Okta + 1 additional IdP | Month 10 SSO/SCIM test suite |
+
 ---
 
 ### 2.4 Phase 4: AI & Advanced Features (Months 11–12)
 
 **Phase Goal:** Deliver the AI-powered features and the advanced platform capabilities that differentiate HelixTerminator from any other SSH client.
+
+**Entry Criteria** (must all hold before Phase 4 work starts):
+- [ ] Phase 3 Exit Criteria (§2.3) all satisfied and demoed, including SSO/SCIM against 2 real IdPs.
+- [ ] AI provider accounts/keys provisioned for GPT-4o, Claude 3.5 Haiku, and the HelixLLM 8B local-inference stub, each with a cost budget and rate-limit ceiling agreed with Finance/Platform.
+- [ ] Bulk Operations engine (concurrent multi-host SSH dispatch, §1.16.14) is available in at least a beta form — Config Diff (Month 12) depends on multi-host connection fan-out.
+
+**Exit Criteria** (must all hold before Phase 5 starts):
+- [ ] All 5 AI features (Autocomplete, Explainer, Error Diagnosis, Snippet Generator, Security Guard) function against both a cloud model and the local HelixLLM stub, with privacy mode verified to emit zero telemetry.
+- [ ] Container Terminal Bridge, Infrastructure Map, HelixTrack Integration, Performance Dashboard, Automated Health Checks, and Config Diff are all functional end-to-end.
+- [ ] Phase 4 Exit KPIs (§2.4.6) measured and within target; Phase 4 Definition of Done (§2.4.5) 100% checked.
+
+**Owners & Effort Estimates (Phase 4, in person-weeks):**
+
+| Month | Epic | Owner (role) | Effort (person-weeks) |
+|---|---|---|---|
+| 11 | AI Autocomplete (production, multi-model routing) | AI/ML Engineer + Client Engineer | 7 |
+| 11 | AI Command Explainer + Error Diagnosis | AI/ML Engineer | 4 |
+| 11 | AI Snippet Generator + Security Guard | AI/ML Engineer + Backend Engineer (Snippet Service) | 5 |
+| 12 | Container Terminal Bridge (Docker/K8s/ECS) | Backend Engineer (Platform) | 6 |
+| 12 | Infrastructure Map (MVP) | Client Engineer + Backend Engineer (Data) | 6 |
+| 12 | HelixTrack Integration | Backend Engineer (Integrations) | 3 |
+| 12 | Performance Dashboard + HelixAgent | Backend Engineer (Platform) + Client Engineer | 6 |
+| 12 | Automated Health Checks | Backend Engineer (Platform) | 3 |
+| 12 | Config Diff | Client Engineer + Backend Engineer (Platform) | 4 |
+| — | **Phase 4 total** | — | **44 person-weeks** (≈ 4 engineers sustained across 2 months) |
 
 #### Month 11 — AI Features
 
@@ -815,7 +1066,28 @@ All development follows these non-negotiable principles:
   - Warns on: `rm -rf /*`, `chmod 777 /etc`, arbitrary curl | bash, etc.
   - Configurable sensitivity levels
 
-#### Month 12 — Container Bridge, Infrastructure Map, HelixTrack Integration
+**Acceptance Criteria:**
+- Given a partially-typed command, When the user pauses typing for 100ms, Then an autocomplete suggestion appears within 50ms (p95) from the routed model
+- Given Privacy Mode enabled, When any AI feature is invoked, Then zero bytes of command content leave the device (verified via network capture) and only the local HelixLLM 8B model is used
+- Given a command that matches an AI Security Guard danger pattern (e.g. `rm -rf /*`), When the user attempts to execute it, Then a blocking confirmation dialog appears explaining the specific risk before execution proceeds
+- Given a non-zero exit status with AI Error Diagnosis enabled, When the analysis completes, Then a "Run this fix" suggestion is offered only after explicit user review — no remediation command executes automatically
+
+**Test Requirements:**
+- Network-capture test proving zero telemetry egress in Privacy Mode across all 5 AI features
+- Adversarial test suite for AI Security Guard: 50+ known-dangerous command patterns, verify 100% detection with zero false-negatives on the curated set
+- Latency benchmark for autocomplete suggestion round-trip across all 3 routed models (cloud primary, cloud fast, local)
+- Multi-shell compatibility test (bash/zsh/fish/PowerShell/Python one-liners/AWK/sed) for AI Command Explainer
+
+**Definition of Done:**
+- [ ] All 5 AI features deployed to the dev cluster and functional against both cloud and local model backends
+- [ ] Privacy Mode zero-telemetry claim independently verified by a Security Engineer with a network-capture review
+- [ ] Owner: AI/ML Engineer; effort tracked against the 16 person-week Month 11 estimate above
+
+---
+
+#### Month 12 — Container Bridge, Infrastructure Map, HelixTrack Integration, Config Diff
+
+> Schedules the previously-orphaned **Config Diff (§1.16.15)** feature. Config Diff is scheduled here — alongside Infrastructure Map and the Container Bridge — because it depends on the same multi-host, concurrent-connection fan-out infrastructure (Bulk Operations engine, §1.16.14) that this month's other admin/ops tooling shares, and because it is lower-risk/lower-priority than the Phase 3 security-critical features that took precedence in Months 8–10.
 
 **Deliverables:**
 - Container Terminal Bridge:
@@ -843,12 +1115,79 @@ All development follows these non-negotiable principles:
   - Scheduler UI (cron expression with plain-English preview)
   - Alert channels: in-app, email, Slack, PagerDuty
   - Health check history and trend chart
+- **Config Diff** (§1.16.15): connect to a selected host set, read a target file (e.g. `/etc/ssh/sshd_config`, `/etc/nginx/nginx.conf`), render a multi-host diff against a baseline (first host, nominated "golden" host, or a committed Git config file); line-by-line diff with hosts as columns; one-click remediation pushing the baseline to deviating hosts as a previewed, confirmed snippet execution
+
+**Acceptance Criteria:**
+- Given a container exec session through the bridge, When the session runs, Then it is recorded through the same pipeline and subject to the same Compliance Mode policy as an SSH session
+- Given a 50-host Config Diff run against `/etc/ssh/sshd_config`, When the diff completes, Then every host is classified as matching-baseline or deviating, with the specific deviating lines highlighted per host
+- Given a Config Diff remediation action, When the operator confirms it, Then the baseline is pushed only to the explicitly-selected deviating hosts with a preview shown before execution (no silent mass-write)
+- Infrastructure Map renders a 500-host topology within 3 seconds and supports click-to-connect from any node
+
+**Test Requirements:**
+- Integration test: Container Terminal Bridge exec session against real Docker, Kubernetes (kind cluster), and AWS ECS (via SSM) backends
+- Config Diff correctness test: seed 20 hosts with known, deliberately-varied config content, verify the diff engine reports the exact expected deviation set
+- Load test: Infrastructure Map with 1,000 simulated hosts, measure render + interaction latency
+- HelixTrack webhook integration test against Jira, GitHub Issues, Linear, and ServiceNow sandbox instances
+
+**Definition of Done:**
+- [ ] Container Bridge, Infrastructure Map, HelixTrack Integration, Performance Dashboard, Automated Health Checks, and Config Diff all deployed to the dev cluster and demoed end-to-end
+- [ ] Config Diff remediation action independently verified to require explicit confirmation before any multi-host write (no accidental mass-config-push path exists)
+- [ ] Owner: Backend Engineer (Platform) + Client Engineer + Backend Engineer (Integrations); effort tracked against the 28 person-week Month 12 estimate above
+- [ ] Phase 4 Exit Criteria (above) all checked before Phase 5 kickoff
+
+#### 2.4.5 Phase 4 Definition of Done (Program-Level)
+
+- [ ] Both Month DoD checklists (Months 11–12) above are 100% checked with captured evidence.
+- [ ] No Critical or High severity defect remains open against any Phase 4 feature.
+- [ ] Phase 4 Exit KPIs (below) are measured on the staging cluster and meet target.
+- [ ] AI feature cost telemetry (per-request token cost, monthly projection) reviewed against the Finance/Platform budget agreed at Phase 4 entry.
+
+#### 2.4.6 Phase 4 Exit KPIs
+
+| KPI | Target | Measurement source |
+|---|---|---|
+| AI Autocomplete suggestion latency | p95 < 50ms | Month 11 latency benchmark |
+| Privacy Mode telemetry egress | 0 bytes of command content | Month 11 network-capture test |
+| AI Security Guard danger-pattern detection | 100% on the curated 50+ pattern set, 0 false-negatives | Month 11 adversarial test suite |
+| Container Terminal Bridge session-recording parity | 100% of container sessions recorded identically to SSH sessions | Month 12 integration test |
+| Config Diff deviation-detection accuracy | 100% match against seeded known-deviation test set | Month 12 correctness test |
+| Infrastructure Map render latency (1,000 hosts) | < 3 seconds | Month 12 load test |
 
 ---
 
 ### 2.5 Phase 5: GA Release (Month 13)
 
 **Phase Goal:** Achieve production readiness. All features hardened, security audited, penetration tested, and documentation complete.
+
+**Entry Criteria** (must all hold before Phase 5 work starts):
+- [ ] Phase 4 Exit Criteria (§2.4) all satisfied and demoed.
+- [ ] Every feature scheduled in Phases 1–4 (including the previously-orphaned Terminal Multiplayer, Break-Glass, JIT, SSH Playground, Config Diff, and Collaborative Debugging) is functional in the staging environment with zero open Critical defects.
+- [ ] External security-audit vendor (Cure53 or equivalent) contracted and scheduled with a start date inside Month 13.
+- [ ] Support/on-call rotation staffed and trained on the product ahead of the Self-Hosted Support Runbook go-live (below).
+
+**Exit Criteria (= GA readiness gate — must all hold before public GA announcement):**
+- [ ] External security audit complete; all Critical and High findings resolved, Medium findings triaged with a tracked remediation date.
+- [ ] Penetration test complete with no unresolved Critical/High finding.
+- [ ] Performance hardening targets (100,000 concurrent SSH sessions, 1M req/s API gateway, 100,000 events/s Kafka) all verified on a staging cluster sized to match the production topology.
+- [ ] Documentation set (user guide, admin guide, API reference, architecture reference, security whitepaper, self-hosted deployment guide) complete and cross-linked from the README doc-link section (Constitution §11.4.57).
+- [ ] Self-hosted Kubernetes packaging installs cleanly via the one-command Helm install on a clean cluster, verified by an operator who did not author the chart.
+- [ ] App store submissions accepted (or in active, non-blocking review) on all 5 platforms' stores.
+- [ ] Self-Hosted Support Runbook (§2.5.6) live, staffed, and its first 24h-P0 drill completed with a measured time-to-acknowledge and time-to-mitigate within the SLA target.
+- [ ] Beta → GA migration executed on a rehearsal environment with zero data loss.
+
+**Owners & Effort Estimates (Phase 5, in person-weeks):**
+
+| Epic | Owner (role) | Effort (person-weeks) |
+|---|---|---|
+| External security audit coordination + remediation | Security Engineer + on-call rotation across all backend engineers | 6 (coordination) + remediation capacity reserved |
+| Penetration testing coordination + remediation | Security Engineer | 3 |
+| Performance hardening (load/throughput verification) | Backend Platform Lead + 2× Backend Engineer | 6 |
+| Documentation set | Technical Writer + one engineer per domain (reviewers) | 6 |
+| Self-hosted Kubernetes packaging | DevOps/SRE Engineer | 5 |
+| App store submissions (5 platforms) | Client Platform Lead | 4 |
+| Self-Hosted Support Runbook + on-call readiness | Support Lead + DevOps/SRE Engineer | 3 |
+| Beta → GA migration | Backend Engineer (Data) + Support Lead | 3 |
+| — **Phase 5 total** | — | **36 person-weeks** (≈ 8–9 people partially allocated across a single intensive month) |
 
 **Deliverables:**
 1. **Security Audit:**
@@ -890,6 +1229,150 @@ All development follows these non-negotiable principles:
    - Feature flag cleanup (all shipped flags removed)
    - Pricing tier enforcement
    - Support portal integration (Intercom)
+8. **Self-Hosted Support Runbook** (operationalizes the §6.6 SLA — "Enterprise (Self-Hosted): Hotfix within 24h for P0 bugs"):
+   - On-call rotation of at least 2 engineers per shift, 24/7/365 coverage for P0 self-hosted incidents, published rotation schedule
+   - Severity taxonomy: P0 (production down / data-loss risk / security breach — 24h hotfix SLA), P1 (major feature broken, no workaround — 5 business-day SLA), P2 (minor feature degraded, workaround exists — best-effort), P3 (cosmetic/documentation)
+   - Intake channels: support portal (Intercom) ticket auto-tagged `self-hosted`, dedicated PagerDuty-equivalent escalation path, customer-provided diagnostic bundle (`helix-support-bundle` CLI collecting logs/config/version with secrets redacted per §11.4.10)
+   - Runbook steps: (1) acknowledge within 1 hour of a P0 report — measured and reported to the customer; (2) triage against the last-known-good release tag (Constitution §11.4.114 regression-isolation discipline) within 4 hours; (3) root-cause + candidate fix within 16 hours; (4) hotfix released as a patch release (project-prefixed per Constitution §11.4.151) + hotfix Helm chart bump within the 24h window; (5) post-incident report delivered to the customer within 48 hours
+   - Escalation matrix: on-call engineer → Backend Platform Lead → VP Engineering, with each tier's maximum response-time budget documented
+   - Runbook rehearsal: a synthetic P0 drilled at least once per quarter with time-to-acknowledge and time-to-mitigate measured and published internally
+   - Runbook lives at `docs/support/SELF_HOSTED_SUPPORT_RUNBOOK.md`, kept in sync with the §6.6 SLA table under Constitution §11.4.45 integration-status-doc discipline
+
+**Acceptance Criteria:**
+- Given a P0 self-hosted incident reported through the support portal, When the on-call engineer receives it, Then acknowledgement is sent to the customer within 1 hour and a hotfix (or documented workaround) is delivered within 24 hours
+- Given the Helm chart's one-command install run on a clean Kubernetes cluster by an operator who did not author it, When installation completes, Then all services report healthy within 10 minutes with zero manual intervention
+- Given the external security audit's Critical/High findings, When remediation is claimed complete, Then each finding is independently re-verified by the auditor (or an equivalent internal reviewer) before being marked resolved
+- Given the 100,000-concurrent-SSH-session load test, When it runs for 30 minutes sustained, Then no proxy pod OOMs, no session drops beyond a documented acceptable rate, and p99 latency stays within the Section 5.3 SSH performance targets
+
+**Test Requirements:**
+- Full penetration test executed by the external security firm against the staging environment configured identically to production
+- Chaos-drill of the Self-Hosted Support Runbook: inject a synthetic P0 (e.g., simulated vault-service outage) and time the full acknowledge → triage → fix → release cycle
+- Clean-room Helm install test performed by an operator outside the packaging team, on infrastructure they did not pre-configure
+- Full regression pass of every prior phase's test suite (Phases 1–4) as the final pre-GA gate
+
+**Definition of Done:**
+- [ ] All 8 Phase 5 deliverables above complete with captured evidence
+- [ ] Self-Hosted Support Runbook rehearsed at least once with a documented time-to-acknowledge and time-to-mitigate within SLA
+- [ ] GA Exit Criteria (above) 100% satisfied
+- [ ] Owner: Security Engineer (audit/pentest) + DevOps/SRE Engineer (packaging/runbook) + Client Platform Lead (app stores) + Support Lead (runbook/migration); effort tracked against the 36 person-week Phase 5 estimate above
+
+#### 2.5.6 Self-Hosted Support Runbook — Summary Table
+
+| Severity | Definition | Acknowledge SLA | Fix/Mitigation SLA | Escalation path |
+|---|---|---|---|---|
+| P0 | Production down, data-loss risk, or active security breach | 1 hour | 24 hours (hotfix or documented workaround) | On-call → Backend Platform Lead → VP Engineering |
+| P1 | Major feature broken, no workaround | 4 hours | 5 business days | On-call → Backend Platform Lead |
+| P2 | Minor feature degraded, workaround exists | 1 business day | Best-effort, next scheduled patch | On-call |
+| P3 | Cosmetic or documentation defect | 3 business days | Next scheduled minor/major release | Support Lead backlog |
+
+#### 2.5.7 Phase 5 Exit KPIs (GA Readiness Gate)
+
+| KPI | Target | Measurement source |
+|---|---|---|
+| External audit Critical/High findings open at GA | 0 | Security audit close-out report |
+| Penetration test unresolved Critical/High findings | 0 | Penetration test close-out report |
+| Sustained concurrent SSH sessions | 100,000 with p99 within Section 5.3 targets | Performance hardening load test |
+| API gateway throughput | 1,000,000 requests/second | Performance hardening load test |
+| Clean-room Helm install success rate | 100% (zero manual intervention) | Clean-room install test |
+| Self-Hosted Support Runbook P0 drill time-to-acknowledge | < 1 hour | Runbook rehearsal drill |
+| Self-Hosted Support Runbook P0 drill time-to-mitigate | < 24 hours | Runbook rehearsal drill |
+| Beta → GA data migration data-loss incidents | 0 | Migration rehearsal report |
+
+---
+
+### 2.6 Program-Level Risk Register
+
+Top delivery, security, and scaling risks across the full 13-month roadmap. Likelihood and Impact are each rated Low/Medium/High; a risk with both High is a program-level escalation item reviewed at every Phase Entry/Exit gate (§2.2–§2.5).
+
+| # | Risk | Likelihood | Impact | Mitigation | Owner (role) |
+|---|---|---|---|---|---|
+| R1 | Terminal rendering performance SLOs (60fps, <16ms keystroke latency) are not met on lower-end mobile/Linux hardware, forcing late-stage rework of the Flutter Impeller rendering path. | Medium | High | Front-load the Month 4 performance instrumentation and vttest suite; run the Month 4 acceptance criteria against a deliberately low-spec device matrix, not just reference hardware; reserve 2 buffer weeks in the Month 7 "polish" allocation. | Client Platform Lead |
+| R2 | PKI/CA + Break-Glass + JIT Access (Month 8) is the highest-blast-radius security surface in the roadmap; a flaw in fail-closed behavior could grant unauthorized production access. | Low | High | Dedicated Security Engineer allocation for the full Month 8; mandatory adversarial/chaos testing (race-condition and induced-failure tests, §2.3 Month 8 Test Requirements) before Month 8 Definition of Done; independent internal security review ahead of the Phase 5 external audit. | Security Engineer |
+| R3 | Real-time collaboration (Terminal Multiplayer, Collaborative Debugging) requires WebRTC + recording + RBAC to compose correctly; cross-feature interaction bugs (e.g., recording missing frames during a permission promotion) are historically undertested. | Medium | Medium | Explicit cross-feature interaction test in Month 9 Test Requirements (Compliance Mode + Terminal Multiplayer lifecycle test); Constitution §11.4.92 multi-pass change evaluation applied to every collaboration-touching commit. | Backend Engineer (Realtime) |
+| R4 | AI feature cost (multi-model routing across GPT-4o / Claude 3.5 Haiku / HelixLLM) scales unpredictably with usage, risking a Month 11+ budget overrun or a forced feature-quality downgrade. | Medium | Medium | Per-request token-cost telemetry from day one of Month 11; Phase 4 Definition of Done requires a cost review against the Finance/Platform budget; local HelixLLM 8B inference available as a cost-ceiling fallback. | AI/ML Engineer |
+| R5 | 100,000-concurrent-SSH-session and 1,000,000 req/s API gateway performance targets (Phase 5) are discovered to be unachievable on the reference infrastructure only during the final Month 13 load test, with no runway left to redesign. | Low | High | Run an early Month 9 or Month 10 smoke-scale load test (10% of the Phase 5 target) against the same infrastructure topology to surface architectural bottlenecks 2-3 months before the Phase 5 gate, not at it. | Backend Platform Lead |
+| R6 | External security audit (Cure53 or equivalent, Month 13) surfaces Critical findings late, with insufficient time in the single-month Phase 5 window to remediate and re-verify before GA. | Medium | High | Schedule the external audit's kickoff for the first week of Month 13 (not mid-month); run an internal security review (Month 8-10 features) ahead of time so the external audit finds fewer net-new Critical issues; reserve explicit remediation capacity across all backend engineers in the Phase 5 owner/effort table (§2.5). | Security Engineer |
+| R7 | Cross-platform parity (iOS/Android/macOS/Windows/Linux) drifts as Phases 2-4 features ship, with one or more platforms silently lagging behind by GA (Constitution §11.4.81 cross-platform-parity mandate). | Medium | Medium | Every Month's Definition of Done requires explicit "on all 5 platforms" verification (not just the primary development platform); Phase 2/3/4 Exit Criteria include an explicit parity check before phase advancement. | Client Platform Lead |
+| R8 | SSO/SCIM (Month 10) integration is validated against sandbox IdP tenants only; real customer IdP configurations (custom attribute mappings, non-standard claims) surface integration failures post-GA. | Medium | Medium | Recruit at least one design-partner enterprise customer during Phase 3 to validate SSO/SCIM against their real (non-sandbox) IdP configuration before the Month 10 Definition of Done is signed off. | Backend Engineer (IdM) |
+| R9 | Self-Hosted Support Runbook's 24h-P0 SLA is contractually promised (§6.6) before the on-call rotation has been operationally rehearsed, risking a missed SLA on the first real customer incident. | Low | High | Mandatory quarterly-cadence runbook drill starting in Phase 5 (§2.5 Deliverable 8); GA Exit Criteria explicitly require at least one completed drill with a measured, in-SLA time-to-acknowledge/time-to-mitigate before public GA announcement. | Support Lead |
+| R10 | Orphaned-feature scheduling introduced in this remediation (Terminal Multiplayer, Break-Glass, JIT, SSH Playground, Config Diff, Collaborative Debugging) increases Phase 2-4 person-week totals beyond originally-assumed team capacity, silently compressing other deliverables. | Medium | Medium | Program-Level Owner/Effort Rollup (§2.7) is reviewed against actual staffed headcount at every phase Entry Criteria gate; a capacity shortfall triggers an explicit scope/schedule renegotiation rather than silent feature-cutting. | Backend Platform Lead |
+
+### 2.7 Program-Level Owner & Effort Rollup (Phases 2–5)
+
+Aggregated from the per-phase Owner & Effort Estimate tables in §2.2, §2.3, §2.4, and §2.5. Figures are person-weeks of focused engineering capacity; a "sustained" team size assumes full-time allocation across the phase's full duration.
+
+| Phase | Duration | Total effort (person-weeks) | Implied sustained team size |
+|---|---|---|---|
+| Phase 2 — Core Features | Months 4–7 (4 months ≈ 17 weeks) | 53 | ≈ 3–4 engineers |
+| Phase 3 — Enterprise | Months 8–10 (3 months ≈ 13 weeks) | 65 | ≈ 5 engineers |
+| Phase 4 — AI & Advanced Features | Months 11–12 (2 months ≈ 9 weeks) | 44 | ≈ 5 engineers |
+| Phase 5 — GA Release | Month 13 (1 month ≈ 4 weeks) | 36 | ≈ 9 people, partially allocated |
+| **Total (Phases 2–5)** | **10 months** | **198 person-weeks** | — |
+
+This rollup excludes Phase 1 (Sprints 1–6, already fully specified with its own owner/effort discipline in §2.1) and is the input to the Phase Entry Criteria capacity check in Risk R10 above.
+
+### 2.8 Roadmap Gantt & Dependency Diagram
+
+```mermaid
+gantt
+    title HelixTerminator Roadmap — Phases 1-5 (Months 1-13)
+    dateFormat  YYYY-MM-DD
+    axisFormat  M%m
+    excludes    weekends
+
+    section Phase 1 — Foundation
+    Sprint 1 Monorepo/CI/CD/Infra      :p1s1, 2026-08-01, 14d
+    Sprint 2 Auth + User Service       :p1s2, after p1s1, 14d
+    Sprint 3 Vault Service             :p1s3, after p1s2, 14d
+    Sprint 4 Host + Group Service      :p1s4, after p1s3, 14d
+    Sprint 5 SSH Proxy Service         :p1s5, after p1s4, 14d
+    Sprint 6 Flutter Client Skeleton   :p1s6, after p1s5, 14d
+
+    section Phase 2 — Core Features
+    Month 4 Terminal Emulator          :p2m4, after p1s6, 30d
+    Month 5 SFTP File Manager          :p2m5, after p2m4, 30d
+    Month 6 Port Fwd/Snippets/Keychain :p2m6, after p2m5, 30d
+    Month 7 Workspaces + Collab MVP + SSH Playground :p2m7, after p2m6, 30d
+
+    section Phase 3 — Enterprise
+    Month 8 PKI/CA + RBAC + Break-Glass + JIT   :crit, p3m8, after p2m7, 30d
+    Month 9 Recording/Audit/Compliance + Collab GA :crit, p3m9, after p3m8, 30d
+    Month 10 SSO/SAML/SCIM/Team Mgmt   :p3m10, after p3m9, 30d
+
+    section Phase 4 — AI & Advanced
+    Month 11 AI Features               :p4m11, after p3m10, 30d
+    Month 12 Container Bridge/Infra Map/Config Diff :p4m12, after p4m11, 30d
+
+    section Phase 5 — GA Release
+    Security Audit + Pentest           :crit, p5sec, after p4m12, 21d
+    Performance Hardening              :p5perf, after p4m12, 14d
+    Support Runbook + App Store Submit :p5ops, after p5perf, 14d
+    GA Launch Milestone                :milestone, p5ga, after p5ops, 0d
+```
+
+```mermaid
+graph TD
+    P1[Phase 1: Foundation<br/>Auth, Vault, Host/Group, SSH Proxy, Flutter skeleton] --> P2M4[Month 4: Terminal Emulator]
+    P2M4 --> P2M5[Month 5: SFTP]
+    P2M5 --> P2M6[Month 6: Port Fwd, Snippets, Keychain]
+    P2M6 --> P2M7[Month 7: Workspaces + Collaboration MVP + SSH Playground]
+    P2M7 --> P3M8[Month 8: PKI/CA + RBAC + Break-Glass + JIT]
+    P3M8 --> P3M9[Month 9: Session Recording + Compliance + Collaboration GA + Collaborative Debugging]
+    P3M9 --> P3M10[Month 10: SSO/SAML + SCIM + Team Mgmt]
+    P3M10 --> P4M11[Month 11: AI Features]
+    P4M11 --> P4M12[Month 12: Container Bridge + Infra Map + Config Diff]
+    P4M12 --> P5[Phase 5: Security Audit + Pentest + Perf Hardening + Support Runbook + GA]
+
+    P2M7 -. "Collaboration MVP hardened by" .-> P3M9
+    P3M8 -. "Certificates required by" .-> P3M9
+    P3M8 -. "RBAC required by" .-> P3M10
+    P4M12 -. "Multi-host fan-out required by Config Diff" .-> P4M12BulkOps[Bulk Operations engine, §1.16.14]
+
+    classDef security fill:#7a1f1f,stroke:#f5a3a3,color:#fff;
+    class P3M8,P5 security;
+```
+
+The dependency graph makes explicit two constraints enforced throughout §2.2–§2.4: (1) Terminal Multiplayer cannot reach its full §1.7 spec (RBAC, recording, voice) until the Session Recording Service exists, so it ships as an MVP in Month 7 and is hardened in Month 9; (2) Break-Glass and JIT Access cannot ship before the SSH Certificate Authority and Advanced RBAC engine exist, so both land in Month 8 rather than earlier.
 
 ---
 ## 3. Complete Use Case Specifications

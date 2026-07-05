@@ -20,6 +20,7 @@
 8. [Platform-Specific Features](#8-platform-specific-features)
 9. [Testing Strategy](#9-testing-strategy)
 10. [Accessibility](#10-accessibility)
+11. [Auto-Update Mechanism](#11-auto-update-mechanism)
 
 ---
 
@@ -1090,7 +1091,12 @@ class TerminalDisconnected extends TerminalState {
 }
 class TerminalError extends TerminalState {
   final String message;
-  TerminalError({required this.message});
+  // Categorized cause — see §3.7 Connection Error Taxonomy. `message` remains
+  // for backward-compatible plain-text rendering; new call sites MUST also
+  // populate `connectionError` so `_TerminalErrorView` can render the
+  // per-category action pair from the §3.7 table instead of a bare string.
+  final ConnectionError? connectionError;
+  TerminalError({required this.message, this.connectionError});
 }
 ```
 
@@ -1479,6 +1485,214 @@ class CollaborationParticipant {
 enum CollaborationMode { view, control, pair }
 enum CollaborationRole { owner, editor, viewer }
 ```
+
+**BLoC — Events and States**
+
+The collaboration entities above are domain-layer only; the presentation layer is driven by
+`CollaborationBloc`, structured like every other feature module (`AuthBloc`, §1.7):
+
+```dart
+// features/collaboration/presentation/bloc/collaboration_event.dart
+abstract class CollaborationEvent {}
+
+class CollaborationSessionStarted extends CollaborationEvent {
+  final String terminalSessionId;
+  final CollaborationMode mode;
+  CollaborationSessionStarted({required this.terminalSessionId, required this.mode});
+}
+class CollaborationJoinRequested extends CollaborationEvent {
+  final String shareCode;
+  CollaborationJoinRequested({required this.shareCode});
+}
+class CollaborationParticipantJoined extends CollaborationEvent {
+  final CollaborationParticipant participant;
+  CollaborationParticipantJoined({required this.participant});
+}
+class CollaborationParticipantLeft extends CollaborationEvent {
+  final String userId;
+  CollaborationParticipantLeft({required this.userId});
+}
+class CollaborationCursorMoved extends CollaborationEvent {
+  final String userId;
+  final CursorPosition position;
+  CollaborationCursorMoved({required this.userId, required this.position});
+}
+class CollaborationControlRequested extends CollaborationEvent {
+  final String requestingUserId;
+  CollaborationControlRequested({required this.requestingUserId});
+}
+class CollaborationControlGranted extends CollaborationEvent {
+  final String userId;
+  CollaborationControlGranted({required this.userId});
+}
+class CollaborationControlRevoked extends CollaborationEvent {
+  final String userId;
+  final String reason; // 'owner-override' | 'idle-timeout' | 'left-session'
+  CollaborationControlRevoked({required this.userId, required this.reason});
+}
+class CollaborationParticipantKicked extends CollaborationEvent {
+  final String userId;
+  CollaborationParticipantKicked({required this.userId});
+}
+class CollaborationChannelDisconnected extends CollaborationEvent {
+  final String? reason;
+  CollaborationChannelDisconnected({this.reason});
+}
+class CollaborationSessionEnded extends CollaborationEvent {}
+
+// features/collaboration/presentation/bloc/collaboration_state.dart
+abstract class CollaborationState {}
+class CollaborationInactive extends CollaborationState {}
+class CollaborationConnecting extends CollaborationState {}
+class CollaborationActive extends CollaborationState {
+  final CollaborationSession session;
+  final String? controllingUserId; // null when mode == view (no floor holder)
+  final Map<String, CursorPosition> remoteCursors;
+  CollaborationActive({
+    required this.session,
+    required this.controllingUserId,
+    this.remoteCursors = const {},
+  });
+}
+class CollaborationDisconnected extends CollaborationState {
+  final String? reason;
+  final bool canReconnect;
+  CollaborationDisconnected({this.reason, this.canReconnect = true});
+}
+```
+
+**Transport — WebSocket Channel**
+
+The collaboration channel is a dedicated WebSocket connection, separate from the terminal's own
+SSH data path, established against `HelixConfig.wsBaseUrl` (Appendix C) at
+`wss://<wsBaseUrl>/v1/collaboration/{terminalSessionId}`:
+
+```dart
+// features/collaboration/data/services/collaboration_transport.dart
+@injectable
+class CollaborationTransport {
+  final AuthTokenProvider _tokenProvider; // supplies the EdDSA-signed access JWT (see §5, doc 05)
+  WebSocketChannel? _channel;
+  Timer? _heartbeatTimer;
+
+  Future<void> connect(String terminalSessionId) async {
+    final jwt = await _tokenProvider.currentAccessToken(); // EdDSA (Ed25519), CD-7
+    _channel = WebSocketChannel.connect(
+      Uri.parse('wss://${Env.wsBaseUrl}/v1/collaboration/$terminalSessionId'),
+      protocols: ['helix.collab.v1'],
+    );
+    // First frame on every collaboration socket is the auth handshake —
+    // the gateway validates the JWT signature + RBAC scope before admitting
+    // any subsequent frame onto the session's participant roster.
+    _send(CollabFrame.auth(jwt: jwt));
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _send(CollabFrame.heartbeat());
+    });
+    _channel!.stream.listen(_onFrame, onDone: _onDisconnected, onError: _onError);
+  }
+
+  void _send(CollabFrame frame) => _channel?.sink.add(frame.toBinary());
+
+  Future<void> disconnect() async {
+    _heartbeatTimer?.cancel();
+    await _channel?.sink.close(status.normalClosure);
+  }
+}
+```
+
+Frame format is a compact binary envelope (1-byte frame type + MessagePack-encoded payload) to
+keep cursor/presence chatter cheap on constrained mobile uplinks:
+
+| Frame type | Direction | Payload | Cadence |
+|---|---|---|---|
+| `auth` | client→server | JWT bearer | once, first frame |
+| `heartbeat` | client→server | — | every 5s |
+| `presence` | client→server | `{cursorRow, cursorCol, ts}` | debounced 50ms, max 20/s |
+| `keystroke` | client→server (controller only) | raw SSH input bytes | per keypress |
+| `output` | server→client (fan-out) | raw SSH output bytes | per PTY write |
+| `roster` | server→client | full participant list | on join/leave |
+| `control_request` / `control_grant` / `control_revoke` | bidirectional | `{userId, reason?}` | on demand |
+| `error` | server→client | `{code, message}` | on protocol violation |
+
+The server is the authoritative fan-out point: `keystroke` frames from the current controller are
+forwarded to the underlying SSH session (§3) and the resulting `output` is broadcast to every
+connected participant, so all viewers see byte-identical terminal output regardless of who is
+typing.
+
+**Presence**
+
+- Each participant publishes a `presence` frame (cursor row/column + monotonic timestamp) at most
+  every 50ms, coalescing rapid cursor moves client-side before sending (`Timer` debounce, not
+  per-frame).
+- A participant with no `heartbeat` for 15s (3 missed 5s beats) is marked `isActive = false` and
+  greyed out in `ParticipantRow` (§6.14); after 30s with no heartbeat the server evicts the
+  participant and emits `roster` with the entry removed.
+- `CollaborationCursorMoved` updates `CollaborationActive.remoteCursors`, rendered by
+  `CursorOverlay` (§6.14) — one colored caret + username label per active participant, keyed by
+  `cursorColor` assigned at join time (round-robin from a 8-color palette, collision-avoided
+  against currently-seated participants).
+
+**Control-Contention Arbitration**
+
+Exactly one participant holds the "floor" (may send `keystroke` frames) at any moment in
+`control` mode; `pair` mode relaxes this to at most two concurrent floor-holders (owner + one
+invited co-driver) with server-side keystroke interleaving preserved in receipt order (last-writer
+per PTY byte position — acceptable because a human co-driving session is not editing the same
+buffer position concurrently the way a text CRDT would need to reconcile). `view` mode never
+grants a floor; all non-owner participants are read-only.
+
+Arbitration state machine (owner is always eligible to reclaim the floor unconditionally):
+
+1. **Idle** — only the owner holds the floor (default on session start).
+2. An `editor`-role participant sends `CollaborationControlRequested`.
+3. The current floor-holder (usually the owner) sees a non-blocking in-terminal toast
+   ("`<name>` requests control") with Grant / Deny actions; **no auto-grant** — an unanswered
+   request expires after 20s and the requester is notified `control_revoke(reason:
+   'request-timed-out')`.
+4. On Grant, the server emits `control_grant` to the new holder and `control_revoke` to the prior
+   holder (reason `'transferred'`); exactly one `keystroke`-eligible participant exists at all
+   times in `control` mode.
+5. **Owner override** — the owner may at any time emit `CollaborationControlRevoked` against the
+   current non-owner holder (reason `'owner-override'`), reclaiming the floor immediately without
+   the requestee's consent — this is the deadlock-breaker for an unresponsive or disruptive
+   co-driver.
+6. **Idle-timeout reclaim** — a non-owner floor-holder who sends no `keystroke` for 120s has the
+   floor silently reclaimed by the owner (reason `'idle-timeout'`) so the session is never
+   stranded on a disconnected/idle holder.
+7. Floor-holder disconnect (`CollaborationChannelDisconnected`) always reclaims the floor to the
+   owner (reason `'left-session'`), never leaves the session floor-less.
+
+This mirrors the read/write-lock discipline used for the vault's zero-knowledge sync (§4.3) at a
+conceptual level — "exactly one writer, arbitrated, never silently dual-write" — but is a distinct
+mechanism: collaboration floor arbitration is a live human-turn-taking protocol over a WebSocket,
+whereas §4.3's `crdtVectorClock` strategy resolves offline/concurrent SQLite edits. They MUST NOT
+be conflated; a collaboration session emits no vector clocks and vault sync never grants a
+"floor."
+
+**Channel Encryption**
+
+- Transport is always `wss://` (TLS 1.3), matching every other client↔gateway connection.
+- Because a shared terminal session routinely carries the same operational content a solo SSH
+  session would (command output that may include secrets pasted by the remote host), the
+  collaboration channel additionally supports an **optional** application-layer E2E encryption
+  mode (`CollaborationSession.isReadOnly == false` sessions created with `e2eEncrypted: true`):
+  each participant's client performs an X25519 ECDH key exchange over the already-authenticated
+  `auth` frame to derive a per-session symmetric key, and `keystroke`/`output` frame payloads are
+  then encrypted with ChaCha20-Poly1305 before being sent — the collaboration relay forwards
+  opaque ciphertext and cannot read session content even though it is the fan-out point. This is
+  **not** the CD-10 zero-knowledge vault guarantee (that clause is scoped to vault secrets only);
+  it is a defense-in-depth option for collaboration sessions that may traverse operationally
+  sensitive terminal output, and it is OFF by default (plain-TLS is the default, matching every
+  other realtime feature) because it disables server-side session recording/audit for that
+  session — enabling it MUST surface an explicit "this session will not be recorded for audit" UI
+  warning to the owner before start.
+
+**Cross-doc note:** `09_performance_analysis.md` does not yet carry a collaboration-specific
+latency-budget or SLO entry (tracked as an open cross-doc gap in
+`docs/research/mvp/REMEDIATION_REGISTER.md` §4 "Real-time collaboration"). Until that lands, the
+authoritative client-observable target is §7.8 below (presence ≤ 100ms, keystroke fan-out ≤
+150ms p95) — doc 09's eventual collaboration SLO row MUST reconcile against these client-side
+numbers rather than introduce a divergent target.
 
 ### 1.17 Feature Module: `ai_autocomplete`
 
@@ -3134,6 +3348,110 @@ class SftpService {
 }
 ```
 
+### 3.7 Connection Error Taxonomy
+
+`TerminalError(message)` (§1.10) was, until this revision, the single generic terminal-level
+failure state — every connect/auth/network/protocol failure rendered the same way, with no
+per-cause user guidance. This section replaces that with a closed, categorized error taxonomy
+shared by `TerminalBloc`, `SshConnectionService` (§3.1), and `ConnectivityService` (§4.4), so a
+failure mode determines both the message shown and the recovery action offered — never a single
+opaque string.
+
+```dart
+// core/error/connection_error.dart
+enum ConnectionErrorCategory {
+  authFailed,        // credentials/key/MFA rejected by the remote host
+  hostUnreachable,   // TCP connect timeout / DNS failure / no route
+  hostKeyMismatch,   // known_hosts fingerprint changed — possible MITM
+  hostKeyUnknown,    // first-time connection, fingerprint unverified
+  certificateExpired,// SSH certificate (short-lived cert auth) past validity
+  timeout,           // TCP connected, protocol handshake did not complete
+  networkChanged,    // client-side connectivity dropped mid-session
+  serverRejected,    // server-side policy denial (RBAC scope, org suspended, rate limit)
+  protocolError,     // malformed SSH/SFTP frame, unsupported cipher/kex
+  vaultLocked,       // credential fetch blocked — vault requires unlock (§5.1)
+  unknown,           // uncategorized — always paired with the raw underlying message
+}
+
+class ConnectionError {
+  final ConnectionErrorCategory category;
+  final String rawMessage;      // underlying exception text, for logs/support only
+  final bool isRetryable;
+  final bool requiresUserAction;
+
+  const ConnectionError({
+    required this.category,
+    required this.rawMessage,
+    required this.isRetryable,
+    required this.requiresUserAction,
+  });
+
+  factory ConnectionError.classify(Object error) {
+    if (error is SSHAuthFailError) {
+      return const ConnectionError(
+        category: ConnectionErrorCategory.authFailed,
+        rawMessage: 'SSH authentication rejected',
+        isRetryable: true,
+        requiresUserAction: true,
+      );
+    }
+    if (error is SocketException) {
+      return ConnectionError(
+        category: ConnectionErrorCategory.hostUnreachable,
+        rawMessage: error.message,
+        isRetryable: true,
+        requiresUserAction: false,
+      );
+    }
+    if (error is TimeoutException) {
+      return const ConnectionError(
+        category: ConnectionErrorCategory.timeout,
+        rawMessage: 'Connection attempt timed out',
+        isRetryable: true,
+        requiresUserAction: false,
+      );
+    }
+    if (error is HostKeyMismatchException) {
+      return const ConnectionError(
+        category: ConnectionErrorCategory.hostKeyMismatch,
+        rawMessage: 'Host key fingerprint changed since last connection',
+        isRetryable: false,
+        requiresUserAction: true,
+      );
+    }
+    // ... remaining categories map from their respective dartssh2 /
+    // ApiClient / VaultRepository exception types via the same pattern.
+    return ConnectionError(
+      category: ConnectionErrorCategory.unknown,
+      rawMessage: error.toString(),
+      isRetryable: true,
+      requiresUserAction: false,
+    );
+  }
+}
+```
+
+**Per-category user-facing treatment** (rendered by `_TerminalErrorView`, §2.2, replacing the
+single generic message):
+
+| Category | User-facing message | Primary action | Secondary action |
+|---|---|---|---|
+| `authFailed` | "Sign-in was rejected by `<host>`. Check your key, password, or MFA code." | Edit credentials | Retry |
+| `hostUnreachable` | "Can't reach `<host>`. Check the address, port, and your network connection." | Retry | Edit host |
+| `hostKeyMismatch` | "This host's identity changed since your last connection. This can indicate a security problem." | View fingerprint diff | Cancel (never auto-trust) |
+| `hostKeyUnknown` | "First connection to `<host>`. Verify the fingerprint below before trusting it." | Trust & connect | Cancel |
+| `certificateExpired` | "Your SSH certificate for `<host>` has expired." | Request new certificate | Cancel |
+| `timeout` | "`<host>` did not respond in time." | Retry | Edit host |
+| `networkChanged` | "Connection lost — network changed." | Auto-reconnect (silent, §3.4) | Manual retry |
+| `serverRejected` | "`<host>` is not accessible with your current permissions." | Contact admin | Dismiss |
+| `protocolError` | "Unexpected response from `<host>`. This may indicate an incompatible SSH configuration." | Retry | Report issue |
+| `vaultLocked` | "Unlock your vault to retrieve credentials for `<host>`." | Unlock vault | Cancel |
+| `unknown` | "Something went wrong connecting to `<host>`." | Retry | Report issue (attaches `rawMessage`) |
+
+`hostKeyMismatch` is never auto-dismissable and never offers a one-tap "trust anyway" — it always
+routes through the fingerprint-diff view (reusing `_showMitmWarning`, §3.1) requiring explicit
+confirmation, consistent with the MITM-defense posture already specified for `_verifyHostKey`.
+
 ---
 
 <a id="4-offline-mode"></a>
@@ -3276,6 +3594,7 @@ class ConflictResolver {
   }) async {
     final toApplyLocally = <T>[];
     final toPushToRemote = <T>[];
+    final pendingManualMerges = <ConflictDetected<T>>[];
     int conflictsResolved = 0;
 
     final remoteMap = {for (final r in remoteChanges) r.remoteId: r};
@@ -3320,7 +3639,12 @@ class ConflictResolver {
           toPushToRemote.add(local);
           break;
         case ConflictStrategy.manualMerge:
-          // Emit conflict event for user resolution via UI
+          // Neither side is auto-applied. Record a ConflictDetected entry
+          // carrying both the local and remote record; SyncManager reads
+          // ResolvedChanges.manualMerges and routes each one to
+          // ConflictResolutionBloc, which drives the user to the Conflict
+          // Resolution screen (§6.16) rather than resolving it here.
+          pendingManualMerges.add(ConflictDetected<T>(local: local, remote: remote));
           break;
         case ConflictStrategy.crdtVectorClock:
           // Vault data only. Compare per-device vector clocks (not wall-clock
@@ -3336,7 +3660,11 @@ class ConflictResolver {
               toApplyLocally.add(remote);
               break;
             case VectorClockOrder.concurrent:
-              // Do not pick a winner — surface both encrypted versions.
+              // Do not pick a winner — surface both encrypted versions via
+              // the same manual-merge queue `manualMerge` uses above, so
+              // ConflictResolutionBloc (§6.16) has one intake path for both
+              // non-secret and vault conflicts.
+              pendingManualMerges.add(ConflictDetected<T>(local: local, remote: remote));
               break;
           }
           break;
@@ -3347,6 +3675,7 @@ class ConflictResolver {
       toApplyLocally: toApplyLocally,
       toPushToRemote: toPushToRemote,
       conflictsResolved: conflictsResolved,
+      manualMerges: pendingManualMerges,
     );
   }
 }
@@ -4360,6 +4689,54 @@ class _SplitHorizontalState extends State<_SplitHorizontal> {
 - Tab → insert into terminal buffer without executing
 - Esc → dismiss
 
+### 6.16 Screen: Conflict Resolution
+
+**Purpose:** Give the user an explicit path to resolve a sync conflict that
+`ConflictStrategy.manualMerge` (§4.3) or a `crdtVectorClock` concurrent result flagged instead of
+silently picking a side. This is the screen the bare `// Emit conflict event for user resolution
+via UI` comment in the conflict resolver (§4.3) previously had no counterpart for.
+
+**Trigger:** `ConflictResolutionBloc` receives one or more `ConflictDetected<T>` entries from
+`ResolvedChanges.manualMerges` (§4.3) after a sync pass completes; a non-blocking banner
+("`N` sync conflicts need your attention") appears on the Host List (§6.5) / Snippet Library
+(§6.10) depending on entity type, and opens this screen on tap. Conflicts are never auto-resolved
+by a timeout — they persist in a local `pending_conflicts` table until the user acts.
+
+**Layout:** Full-screen (mobile) / centered modal, max-width 720px (desktop), side-by-side diff.
+
+**Components:**
+- `ConflictQueueHeader` — "Conflict 2 of 5", Skip / Resolve All Remaining (bulk "keep local" or
+  "keep remote" for low-stakes entities only — never offered for vault items)
+- `ConflictDiffView` — two columns, **Your version** (left) vs. **Their version** (right); for
+  non-secret entities (hosts, snippets, port-forwarding rules) renders a field-level diff
+  highlighting changed values; for vault items (`crdtVectorClock` concurrent case) renders only
+  metadata (label, last-modified device, timestamp) — the encrypted payload is never decrypted
+  for comparison inside this screen, consistent with CD-10 zero-knowledge posture; the user must
+  open each version individually (via the vault unlock flow, §5.1) to inspect content before
+  choosing.
+- `ConflictResolutionActions` — **Keep mine**, **Keep theirs**, **Keep both** (available only when
+  the entity type supports duplication, e.g. snippets — renamed with a `(2)` suffix), and, for
+  field-level-diffable entities, **Merge fields** (per-field radio choice, then a synthesized
+  merged record is pushed as a new local edit)
+- `ConflictMetaRow` — device/session that made each edit (from `sync_etag` / vector-clock device
+  id), timestamp, entity type badge
+
+**State Variations:**
+- `loading` — fetching the queue
+- `active` — diff shown, actions enabled
+- `resolving` — spinner on the chosen action while the resolution is pushed
+- `empty` — "No conflicts remaining" confirmation, auto-dismiss after 1.5s
+- `error` — resolution push failed (network); the conflict remains queued, retry offered
+
+**Interaction:**
+- Choosing an action calls `ConflictResolutionBloc.add(ConflictResolved(id, resolution))`, which
+  removes the entry from `pending_conflicts`, applies the choice via `SyncManager`, and advances
+  to the next queued conflict (or `empty` state).
+- `Keep both` for vault items is intentionally unavailable — vault conflicts always resolve to
+  either "keep mine" / "keep theirs" / defer (leave queued); silently duplicating a vault item
+  every time two devices race would leak information about edit frequency and is out of scope for
+  this increment.
+
 ---
 
 <a id="7-performance-targets"></a>
@@ -4579,6 +4956,68 @@ class VirtualizedHostList extends StatelessWidget {
   }
 }
 ```
+
+### 7.6 Per-Platform Startup & Performance Targets
+
+§7.1's <1.5s cold-start target is stated only for mid-range Android; every one of the six release
+platforms (§8) has a materially different startup profile (native AOT binary vs. CanvasKit/WASM
+parse-and-JIT-warm on Web) and therefore needs its own target rather than inheriting the Android
+number by omission.
+
+| Platform | Cold start (target) | Cold start (maximum) | Warm start / resume | Notes |
+|---|---|---|---|---|
+| Android (mid-range, Snapdragon 700-series, 4GB RAM) | < 1.5s | 2.5s | < 400ms | §7.1 baseline; AOT release build |
+| iOS (A14 or newer) | < 1.2s | 2.0s | < 350ms | AOT release build; faster single-core boost than mid-range Android |
+| macOS (Apple Silicon) | < 0.8s | 1.5s | < 250ms | Native ARM64 desktop build, no WASM overhead |
+| macOS (Intel, min-spec) | < 1.2s | 2.0s | < 350ms | Rosetta-free native x86_64 build |
+| Windows (min-spec: 4-core, 8GB RAM) | < 1.3s | 2.2s | < 350ms | Native x86_64 desktop build |
+| Linux (min-spec: 4-core, 8GB RAM) | < 1.3s | 2.2s | < 350ms | GTK embedder; parity with Windows target |
+| Web (WASM, first visit, uncached) | < 3.5s TTI | 5.0s TTI | < 1.0s (cached SW) | Dominated by CanvasKit WASM parse/instantiate; matches the ~3.5s TTI figure cross-referenced from `09_performance_analysis.md` §10.6 — this is the one platform where the client's own target is bound by that doc's browser-engine measurement rather than an independent client-side figure |
+| Web (WASM, repeat visit, service-worker cached) | < 1.2s TTI | 2.0s TTI | < 1.0s | Service worker (§8.6) serves `main.dart.js`/CanvasKit from cache, skipping network fetch |
+
+**Measurement:** every non-Web platform reuses `StartupTracer` (§7.1) with the same milestone set
+(`main()`, `di_init`, `first_frame`, `host_list_render`); Web additionally records
+`canvaskit_wasm_instantiate` as a distinct milestone so WASM parse cost is never conflated with
+Dart-side initialization when triaging a regression.
+
+### 7.7 Cross-Platform Feature Parity Matrix
+
+Not every capability is available on every platform — sandboxing, browser API surface, and
+hardware presence all constrain which features apply where. This matrix is the authoritative
+per-platform capability reference (Full / Partial / Unavailable), the same three-state vocabulary
+already used by the Offline Capability table (§4.1):
+
+| Feature | Android | iOS/iPadOS | macOS | Windows | Linux | Web (WASM) |
+|---|---|---|---|---|---|---|
+| SSH / SFTP core | Full | Full | Full | Full | Full | Full |
+| SSH agent forwarding | Full | Partial (no system ssh-agent inside app sandbox; in-app agent only) | Full | Full | Full | Unavailable (no raw TCP/agent socket in-browser) |
+| FIDO2 hardware security key (§5.7) | Full (USB-C/NFC) | Full (NFC/Lightning security keys) | Full (USB) | Full (USB) | Full (USB) | Partial (WebAuthn only; platform authenticator, no raw CTAP2 USB/NFC path) |
+| Biometric unlock (§5.3) | Full (BiometricPrompt) | Full (Face ID/Touch ID) | Full (Touch ID, supported Macs) | Full (Windows Hello, supported hardware) | Unavailable (no standard biometric API) | Unavailable |
+| Background SSH/SFTP execution (§8.7) | Full (foreground service) | Partial (bounded BGTaskScheduler window + VoIP push wake, not indefinite) | Full (no OS-imposed background suspension for a running desktop app) | Full | Full | Unavailable (browser tab suspension is not overridable) |
+| Real-time collaboration (§1.16) | Full | Full | Full | Full | Full | Full |
+| Native accessibility (VoiceOver/TalkBack/NVDA/Orca, §10.2) | Full | Full | Full | Full (NVDA/JAWS via Windows UIA) | Partial (Orca coverage narrower than Windows/macOS screen readers for custom-rendered terminal glyphs) | Partial (ARIA-only; no native screen-reader bridge) |
+| Material You dynamic theming (§8.5) | Full | Unavailable (not an OS concept on iOS) | Unavailable | Unavailable | Unavailable | Unavailable |
+| Handoff / iPad Stage Manager multi-window (§8.4) | Unavailable | Full | N/A (native multi-window is default) | N/A | N/A | Unavailable |
+| Auto-update (§11) | App-store managed (Play Store) or sideload channel | App-store managed (App Store) — in-app update channel logic is store-gated | Full (in-app updater + notarized) | Full (in-app updater + code-signed) | Full (in-app updater + package-manager channel) | N/A (always latest on load; §11.5) |
+| Screen capture protection (§5.4) | Full (`FLAG_SECURE`) | Full (screenshot/recording detection) | Partial (no OS-level screenshot block; recording-detection only) | Partial (no OS-level screenshot block; recording-detection only) | Partial (compositor-dependent; best-effort) | Unavailable (browser cannot block OS-level screen capture) |
+
+### 7.8 Real-Time Collaboration Latency Budget
+
+Client-observable targets for the collaboration transport defined in §1.16, filling the gap noted
+there (no matching entry yet exists in `09_performance_analysis.md`):
+
+| Interaction | Target (p50) | Target (p95) | Measurement point |
+|---|---|---|---|
+| Presence (cursor move → remote render) | 60ms | 100ms | `presence` frame send → `CollaborationCursorMoved` state applied on a remote client |
+| Keystroke fan-out (controller keypress → all viewers see output) | 80ms | 150ms | controller `keystroke` frame send → `output` frame rendered on farthest-connected viewer |
+| Control-request round trip (request → owner sees toast) | 100ms | 200ms | `CollaborationControlRequested` send → toast rendered on owner's client |
+| Control-grant round trip (grant tap → requester can type) | 100ms | 200ms | Grant tap → `control_grant` applied, `CollaborationActive.controllingUserId` updated |
+| Join (share code entry → first frame of shared terminal visible) | 600ms | 1.2s | `CollaborationJoinRequested` → first `output` frame rendered |
+| Heartbeat-timeout eviction (participant silent → roster update) | — | 30s (fixed, §1.16) | last `heartbeat` received → `roster` frame removing the entry |
+
+These are client round-trip budgets (network + server fan-out + render), not pure client-side
+render costs — they compose with, but are not identical to, the terminal-render frame budget in
+§7.2 (which governs local-session paint cost only, before any network hop).
 
 ---
 
@@ -5077,6 +5516,137 @@ class WebFileSystemAccess {
   }
 }
 ```
+
+### 8.7 Mobile Background Execution for SSH/SFTP Sessions
+
+Neither §8.4 (iOS) nor §8.5 (Android) previously specified what happens to an active SSH/SFTP
+session when the app is backgrounded. Both mobile OSes suspend or kill a backgrounded socket
+within seconds unless the app declares the platform's specific background-execution mechanism —
+this section is that mechanism, for both platforms, plus the shared client-side keepalive/reconnect
+contract they hand back to.
+
+**iOS / iPadOS — `BGTaskScheduler` + VoIP Push**
+
+iOS gives a backgrounded app only ~30s of guaranteed execution before suspension unless the app
+holds a recognized background mode. HelixTerminator declares two:
+
+```xml
+<!-- ios/Runner/Info.plist -->
+<key>UIBackgroundModes</key>
+<array>
+  <string>voip</string>
+  <string>processing</string>
+  <string>fetch</string>
+</array>
+```
+
+```dart
+// platform/ios/background_session_service.dart
+class IosBackgroundSessionService {
+  static const _channel = MethodChannel('io.helixterminator.client/background');
+
+  /// Called when the app enters background with ≥1 active SSH/SFTP session.
+  /// Registers a BGProcessingTask (long, deferred, best-effort — used to
+  /// flush buffered session output to local storage before the OS may
+  /// suspend) AND holds a PushKit VoIP registration alive, which is the
+  /// only iOS mechanism that reliably wakes a suspended app on an external
+  /// signal without the App Store review restrictions that apply to
+  /// non-VoIP "keep alive" background execution.
+  static Future<void> onEnterBackground(List<String> activeSessionIds) async {
+    await _channel.invokeMethod('scheduleBackgroundProcessing', {
+      'taskId': 'io.helixterminator.client.session-flush',
+      'sessionIds': activeSessionIds,
+    });
+  }
+
+  /// The server-side SSH proxy (see doc 01) holds the session open and,
+  /// on new output arriving while the client is backgrounded, sends a
+  /// silent VoIP push. iOS wakes the app in the background (VoIP pushes are
+  /// exempt from the standard background-refresh throttling) and the app
+  /// re-attaches its WebSocket/SSH multiplex without user interaction.
+  static Future<void> onVoipPushReceived(String sessionId) async {
+    await getIt<SshConnectionPool>().reattach(sessionId);
+    await getIt<SyncManager>().performFullSync();
+  }
+}
+```
+
+**Honest boundary:** this is a *bridging* mechanism, not indefinite background execution — iOS
+does not grant an app an unbounded background socket the way Android's foreground service does.
+An SSH session backgrounded for an extended period (industry-observed practical ceiling: minutes,
+not hours, and entirely at the OS's discretion) will still be reaped by iOS; the VoIP-push
+reattach path exists to make *resumption* fast and silent, not to guarantee the TCP socket itself
+survived. Sessions the server proxy considers stale past its own idle timeout are already covered
+by the reconnect logic in §3.4.
+
+**Android — Foreground Service**
+
+Android requires a foreground service (with a persistent, user-visible notification — Android
+cannot hide this) to keep a process alive indefinitely while backgrounded:
+
+```kotlin
+// android/app/src/main/kotlin/.../SshForegroundService.kt
+class SshForegroundService : Service() {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val notification = NotificationCompat.Builder(this, "ssh_sessions") // §8.5 channel
+            .setContentTitle("HelixTerminator")
+            .setContentText("$activeSessionCount active SSH session(s)")
+            .setSmallIcon(R.drawable.ic_terminal)
+            .setOngoing(true)
+            .build()
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        // Notify the Dart side so SshConnectionPool can mark all sessions
+        // as backgrounded-without-service and begin the §3.4 reconnect path
+        // on next foreground resume rather than assuming they are alive.
+        methodChannel?.invokeMethod("onForegroundServiceDestroyed")
+        super.onDestroy()
+    }
+}
+```
+
+```dart
+// platform/android/background_session_service.dart
+class AndroidBackgroundSessionService {
+  static const _channel = MethodChannel('io.helixterminator.client/background');
+
+  static Future<void> onEnterBackground(List<String> activeSessionIds) async {
+    if (activeSessionIds.isEmpty) return; // no service needed with zero active sessions
+    await _channel.invokeMethod('startForegroundService', {
+      'activeSessionCount': activeSessionIds.length,
+    });
+  }
+
+  static Future<void> onEnterForeground() async {
+    await _channel.invokeMethod('stopForegroundServiceIfIdle');
+  }
+}
+```
+
+The service starts only when ≥1 SSH/SFTP session is active at background time and stops itself the
+moment the app returns to foreground with no active sessions — it is never started speculatively,
+keeping the persistent-notification surface area minimal and honest about what is actually
+running.
+
+**Shared Session-Keepalive + Reconnect Contract**
+
+Both platforms hand control back to the same client-side logic once the app is foregrounded again
+(or, for Android, at any point while the foreground service is alive):
+
+- SSH keep-alive interval (§7.4) continues uninterrupted on Android (process never suspended); on
+  iOS it is best-effort while a BGProcessingTask window is granted and otherwise paused, relying on
+  the VoIP-push reattach path above to recover the session rather than a continuous keep-alive.
+- On foreground resume, `ConnectivityService._onNetworkRestored()` (§4.4) unconditionally triggers
+  `SshConnectionPool.reconnectAll()` and `SyncManager.performFullSync()` regardless of which
+  platform mechanism kept (or failed to keep) the session alive — the reconnect path is the single
+  source of truth for "is this session still good," never an assumption based on which background
+  mode was used.
+- SFTP transfers in progress at background time are checkpointed (byte offset persisted to the
+  local SQLite `transfer_progress` table, §4.5) so a resumed transfer continues from its last
+  acknowledged chunk rather than restarting.
 
 ---
 
@@ -6496,6 +7066,116 @@ class AnimationConfig {
           : const Duration(milliseconds: 530);
 }
 ```
+
+---
+
+<a id="11-auto-update-mechanism"></a>
+
+## 11. Auto-Update Mechanism
+
+No client-side update mechanism was previously specified for any of the six release platforms.
+This section defines release channels, staged rollout, per-platform code-signing/notarization,
+the forced-security-patch path, and rollback — the full lifecycle an installed client goes
+through from "new build published" to "running on every user's device."
+
+### 11.1 Release Channels
+
+Two channels, both fed from the same CI pipeline (doc 03) at different promotion gates:
+
+| Channel | Audience | Promotion trigger | Typical cadence |
+|---|---|---|---|
+| `stable` | All users (default) | Manual promotion from `beta` after ≥ 72h with no `P0`/`P1` regression reported against it | Every 2–4 weeks |
+| `beta` | Opt-in users (Settings → Advanced → "Join beta channel") | Automatic on every merge to `release/*` that passes the full CI gate (doc 03) | Every 3–7 days |
+
+The channel is a client-persisted preference (`HelixConfig` field, Appendix C) checked by the
+update-check request (`GET /v1/client/manifest?channel=stable&platform=android&version=1.4.2`);
+switching from `beta` to `stable` mid-cycle never downgrades an already-installed beta build —
+the user is offered the next `stable` build that supersedes their current version once it ships.
+
+### 11.2 Staged Rollout
+
+Every `stable`-channel release ships to a percentage of the eligible install base at a time, not
+all at once, so a defect surfaces against a bounded blast radius before full exposure:
+
+| Stage | % of stable install base | Minimum soak time before next stage | Auto-halt condition |
+|---|---|---|---|
+| Canary | 1% | 4h | Crash-free-session rate < 99.5% (Crashlytics, §11.4.47) |
+| Early | 10% | 12h | Crash-free-session rate < 99.7%, or any new `P0` issue opened |
+| Broad | 50% | 24h | Crash-free-session rate < 99.8% |
+| Full | 100% | — | — |
+
+Rollout percentage is server-controlled (the manifest endpoint returns "update available" to a
+deterministic, stable hash-bucketed subset of `installId`s, not a per-request random roll — so a
+given device's inclusion/exclusion is consistent across repeated checks within a stage) and is
+independent of the app-store-level staged-rollout controls Google Play / App Store separately
+offer (§11.3) — for store-distributed platforms, the store's own staged rollout and this
+server-side gate compose (an update is only offered at all once BOTH the store rollout and this
+percentage admit the requesting device).
+
+Any auto-halt condition immediately freezes the rollout percentage (no further devices admitted to
+the new version) and pages the on-call rotation (doc 04); resuming requires an explicit human
+decision, never an automatic retry.
+
+### 11.3 Per-Platform Distribution, Code-Signing, and Notarization
+
+| Platform | Distribution path | Signing / notarization | Update transport |
+|---|---|---|---|
+| Android | Google Play (primary) + direct-APK sideload channel (signed, checksummed) | App signed with Play App Signing key (Google-held) for Play builds; a separate release keystore (org-held, HSM-backed, rotated per §5 key-management policy) signs the sideload APK | Play Store's own update mechanism for Play installs; in-app manifest-check + download + `PackageInstaller` session API for sideload installs |
+| iOS / iPadOS | Apple App Store only (no sideloading in scope) | Apple-issued distribution certificate + provisioning profile; App Store notarization/review is Apple's own gate, not ours | App Store's own update mechanism exclusively — the in-app manifest-check still runs (to drive the "forced security update" UI in §11.4) but iOS builds can never self-install; the check can only deep-link to the App Store update page |
+| macOS | Direct download (primary) + Mac App Store (secondary, store-gated like iOS) | Direct-download builds: Apple Developer ID signing + `notarytool` notarization + stapled ticket (required for Gatekeeper to allow launch without a manual override); Mac App Store builds: Apple's own signing/sandboxing | In-app updater downloads the notarized `.dmg`/`.zip`, verifies the stapled notarization ticket before mounting, then hands off to the OS installer flow |
+| Windows | Direct download (primary) + Microsoft Store (secondary) | Direct-download builds: EV code-signing certificate (Authenticode), timestamped so signatures remain valid after cert expiry; MSIX package for Store builds | In-app updater downloads the signed installer/MSIX delta, verifies the Authenticode signature chain before executing |
+| Linux | Direct `.deb`/`.rpm`/AppImage download + optional distro package-manager channel (best-effort, community-maintained) | Packages signed with a GPG release key published at a well-known URL (`https://helixterminator.io/release.gpg`); package-manager repos (`apt`/`dnf`) verify against that key at install/upgrade time | AppImage/direct builds: in-app updater verifies the GPG signature over the downloaded artifact before replacing the running binary; package-manager installs: the OS's own package manager handles the update, in-app updater only surfaces "update available via your package manager" |
+| Web (WASM) | Served directly from `helixterminator.io` | TLS-only (§7.1); no binary signing applies to a served-not-installed artifact | No update mechanism needed — every page load fetches the current deployed build (service-worker cache, §8.6, is invalidated by content-hashed asset filenames on every deploy, so a stale cached build is never served past one reload) |
+
+### 11.4 Forced Security-Patch Path
+
+A release manifest entry MAY be marked `severity: security-critical`. This bypasses the normal
+staged-rollout percentage gate (§11.2) — a security-critical patch is offered to 100% of eligible
+devices on the FIRST manifest check after publish, on every platform, subject only to each
+platform's own distribution mechanics (§11.3):
+
+- **Android (sideload) / macOS / Windows / Linux (direct-download):** the in-app updater shows a
+  non-dismissible "Critical security update required" screen once the current session's active
+  work is safely at a pausable point (never interrupts an in-flight SSH keystroke or SFTP
+  transfer mid-byte — it waits for the next idle point, checked every 30s) and blocks continued
+  use of network-facing features (SSH connect, SFTP, collaboration) until the update installs;
+  local-only features (viewing cached host list, editing snippets offline) remain available so
+  the block is not a full app lockout.
+- **Android (Play) / iOS / macOS (App Store):** the same non-dismissible screen deep-links to the
+  store's update page (the client cannot self-install on these paths); the network-facing feature
+  block is still enforced client-side while the store update has not yet been applied.
+- **Web:** the next page load already serves the patched build (§11.3); no separate forced-update
+  UI is needed, but an already-open tab with a stale in-memory build receives a `manifest`
+  WebSocket push (piggybacking the collaboration channel's transport, §1.16, on a
+  reserved system topic) prompting an immediate reload for any session with network-facing
+  features active.
+
+A `security-critical` manifest entry MUST cite a tracked vulnerability/incident record (per this
+project's governance) so a forced update is never issued without an auditable justification.
+
+### 11.5 Rollback
+
+If a rollout stage's auto-halt condition fires (§11.2), or a `stable` release is manually
+identified as regressed after full rollout, the manifest endpoint is updated to advertise the
+**previous** `stable` version as the current target for any device already on the regressed
+version — this is a manifest-side rollback (steering devices back), not an uninstall/reinstall:
+
+- Devices that have not yet updated past the last-known-good version simply never receive the
+  regressed manifest entry (the rollout was halted before reaching them, or the endpoint change
+  landed before their next check).
+- Devices already on the regressed version receive a normal (non-forced, unless the regression is
+  itself security-critical) update offer back to the last-known-good version on their next
+  manifest check.
+- Local data (SQLite schema, secure-storage vault) is designed forward-compatible-then-back-
+  compatible across one version step (a `drift` migration MUST provide a `down()` path for the
+  immediately-preceding schema version, not only `up()`) specifically so a rollback never corrupts
+  or strands locally-cached data.
+- Store-distributed platforms (iOS App Store, Android Play, macOS App Store) cannot be
+  server-side rolled back the way direct-download platforms can — Apple/Google review a new
+  build submission even for a revert; on these paths the client-side network-feature block
+  (§11.4's mechanism, reused here) is the interim mitigation while a reverting build clears store
+  review, and the incident is tracked exactly as any other release-blocking regression (per this
+  project's governance).
 
 ---
 

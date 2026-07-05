@@ -1757,22 +1757,117 @@ device) - [ ] Auth flow fully functional end-to-end against dev cluster
 <hr />
 <h3 id="phase-2-core-features-months-47">2.2 Phase 2: Core Features
 (Months 4–7)</h3>
-<blockquote>
-<p>DEFERRED (next increment): Phases 2-5 need entry/exit criteria, DoD,
-owners, estimates, risk register. Unlike Phase 1’s Sprints 1-6, the
-Month-by-Month deliverable lists below (Phases 2-5) do not yet carry
-per-phase Acceptance Criteria, Test Requirements, or a Definition of
-Done checklist, nor named owners/effort estimates, nor a project risk
-register (likelihood/impact/mitigation/owner), nor scheduling for
-several fully-specified features (e.g. SSH Playground, Config Diff,
-Collaborative Debugging, Terminal Multiplayer, Break-Glass, JIT Access)
-that currently have no Phase/Sprint/Month home. This gap is tracked
-honestly here rather than bluffed; authoring it is out of scope for this
-increment.</p>
-</blockquote>
 <p><strong>Phase Goal:</strong> Deliver a fully functional SSH client
 with terminal emulator, SFTP, port forwarding, snippets, keychain, and
 workspaces — sufficient for individual developer daily use.</p>
+<p><strong>Entry Criteria</strong> (must all hold before Phase 2 work
+starts): - [ ] Phase 1 Definition of Done satisfied for Sprints 1–6
+(Auth, Vault, Host/Group, SSH Proxy, Flutter skeleton all deployed to
+dev cluster). - [ ] SSH Proxy Service passes the
+1,000-concurrent-session load test from Sprint 5 with no resource leak
+after 10 minutes. - [ ] Flutter client builds without warnings on all 5
+target platforms (iOS, Android, macOS, Windows, Linux). - [ ] Design
+system tokens (colors, typography, spacing) frozen and published per
+<code>06_ux_design_system</code>.</p>
+<p><strong>Exit Criteria</strong> (must all hold before Phase 3 starts):
+- [ ] Terminal emulator passes vttest and the Section 5.7 rendering SLOs
+(60fps scroll, &lt;16ms keystroke latency) on all 5 platforms. - [ ]
+SFTP, port forwarding, snippets, keychain, and workspaces are usable
+end-to-end by an individual developer with no server-side enterprise
+dependency. - [ ] Terminal Multiplayer MVP (session sharing + observer
+mode) and SSH Playground are functional in the dev environment
+(hardening deferred to Phase 3 per the schedule below). - [ ] Phase 2
+Definition of Done (§2.2.6) is 100% checked with captured evidence for
+every item. - [ ] Zero open Critical/blocking defects against any Phase
+2 deliverable in the workable-items tracker.</p>
+<p><strong>Owners &amp; Effort Estimates (Phase 2, in person-weeks, one
+person-week = one engineer-week of focused capacity):</strong></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Month</th>
+<th>Epic</th>
+<th>Owner (role)</th>
+<th>Effort (person-weeks)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>Terminal emulator (Dart/Impeller)</td>
+<td>Client Platform Lead + 2× Client Engineer</td>
+<td>10</td>
+</tr>
+<tr>
+<td>4</td>
+<td>SSH key auth + multi-hop jump chains (client)</td>
+<td>Client Engineer (SSH focus)</td>
+<td>3</td>
+</tr>
+<tr>
+<td>5</td>
+<td>SFTP file manager + bidirectional sync engine</td>
+<td>Client Engineer (Storage focus) + 1× Client Engineer</td>
+<td>7</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Port forwarding UI + tunnel manager</td>
+<td>Client Engineer</td>
+<td>3</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Snippets editor/execution/library</td>
+<td>Client Engineer + Backend Engineer (Snippet Service)</td>
+<td>5</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Keychain (key gen/import/deploy, vault passphrase storage)</td>
+<td>Security Engineer + Client Engineer</td>
+<td>4</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Workspaces save/restore + templates</td>
+<td>Client Engineer</td>
+<td>3</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Terminal Multiplayer MVP (session sharing, observer mode)</td>
+<td>Backend Engineer (Realtime) + Client Engineer</td>
+<td>6</td>
+</tr>
+<tr>
+<td>7</td>
+<td>SSH Playground (ephemeral sandbox containers)</td>
+<td>Backend Engineer (Platform)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>7</td>
+<td>AI autocomplete integration, Mosh support, offline mode, perf
+pass</td>
+<td>Client Platform Lead + 2× Client Engineer</td>
+<td>8</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>Phase 2 total</strong></td>
+<td>—</td>
+<td><strong>53 person-weeks</strong> (≈ 4–5 engineers sustained across 4
+months)</td>
+</tr>
+</tbody>
+</table>
 <h4 id="month-4-terminal-emulator-core-ssh-ux">Month 4 — Terminal
 Emulator &amp; Core SSH UX</h4>
 <p><strong>Deliverables:</strong> - Full
@@ -1786,12 +1881,27 @@ to 10 hops) - Host connection screen with quick-connect bar - Workspace
 tabs: open multiple SSH sessions in a tiled layout - Connection history
 per host - SSH agent integration (interact with <code>ssh-agent</code> /
 macOS Keychain agent)</p>
-<p><strong>Phase 2 Acceptance Criteria (Terminal):</strong> - Terminal
-renders 100,000 lines of <code>cat /dev/urandom | xxd</code> without UI
-jank (&lt; 1 dropped frame at 60fps) - All 256 color codes render
-correctly (verified against reference screenshot) - Terminal passes
-vttest suite (automated) - Keystroke latency from keydown to SSH server
-receives input: &lt; 16ms on LAN (measured via instrumentation)</p>
+<p><strong>Acceptance Criteria:</strong> - Terminal renders 100,000
+lines of <code>cat /dev/urandom | xxd</code> without UI jank (&lt; 1
+dropped frame at 60fps) - All 256 color codes render correctly (verified
+against reference screenshot) - Terminal passes vttest suite (automated)
+- Keystroke latency from keydown to SSH server receives input: &lt; 16ms
+on LAN (measured via instrumentation) - Given a 10-hop jump chain
+configuration, When a developer connects, Then the session establishes
+within the Section 5.3 SSH connection SLO with per-hop auth failures
+surfaced individually</p>
+<p><strong>Test Requirements:</strong> - Automated vttest suite run on
+every PR touching the terminal-rendering package - Golden-frame
+regression tests for the 256-color palette and font-rendering across all
+5 platforms - Load test: 100,000-line scrollback buffer scroll
+benchmark, frame-time histogram captured</p>
+<p><strong>Definition of Done:</strong> - [ ] Terminal emulator package
+published with vttest pass recorded in
+<code>docs/performance/month4.md</code> - [ ] Multi-hop jump chain
+tested against a real 3-hop Docker Compose topology - [ ] Owner: Client
+Platform Lead; effort tracked against the 13 person-week Month 4
+estimate above</p>
+<hr />
 <h4 id="month-5-sftp-file-manager">Month 5 — SFTP File Manager</h4>
 <p><strong>Deliverables:</strong> - SFTP file browser (directory tree +
 file list, dual-pane optional) - Upload and download with progress UI -
@@ -1800,6 +1910,26 @@ Drag-and-drop from OS file manager - Resume interrupted transfers
 (chmod/chown) - Bookmarks / favorites - Transfer queue manager -
 Bidirectional sync (core engine, basic conflict resolution) - Multi-hop
 SFTP (through jump chain)</p>
+<p><strong>Acceptance Criteria:</strong> - Given a 100GB file transfer
+interrupted at 50%, When the connection recovers, Then the transfer
+resumes from the last acknowledged byte range without re-transferring
+completed bytes - Given two devices editing the same synced file, When
+both are online again, Then the conflict-resolution UI (EC-VAULT-style
+manual-merge pattern, §4) surfaces the conflict rather than silently
+overwriting either version - File browser lists a 10,000-entry remote
+directory within 2 seconds (p95)</p>
+<p><strong>Test Requirements:</strong> - Integration tests against a
+real SFTP server (OpenSSH <code>sftp-server</code>) covering
+upload/download/resume/permissions - Chaos test: kill the network
+mid-transfer at 10 different byte offsets, verify resume correctness via
+checksum - Bidirectional sync conflict-injection test suite (concurrent
+edit on both sides, verify no silent data loss)</p>
+<p><strong>Definition of Done:</strong> - [ ] SFTP file manager
+functional on all 5 platforms against a real SFTP server - [ ]
+Resume-after-interruption verified with checksum-level integrity proof -
+[ ] Owner: Client Engineer (Storage focus); effort tracked against the 7
+person-week Month 5 estimate above</p>
+<hr />
 <h4 id="month-6-port-forwarding-snippets-keychain">Month 6 — Port
 Forwarding, Snippets, Keychain</h4>
 <p><strong>Deliverables:</strong> - Port forwarding UI (local, remote,
@@ -1810,8 +1940,42 @@ form, dry run, live output) - Snippet library browser (200+ curated
 snippets) - Keychain: key generation (RSA 4096, Ed25519), import
 existing keys - Key deployment to host via <code>ssh-copy-id</code>
 equivalent - Passphrase-protected key storage in vault</p>
-<h4 id="month-7-workspaces-polish-platform-consistency">Month 7 —
-Workspaces, Polish, Platform Consistency</h4>
+<p><strong>Acceptance Criteria:</strong> - Given a dynamic SOCKS5 tunnel
+configured on a laptop that sleeps/wakes, When the laptop wakes, Then
+the tunnel auto-restarts within 10 seconds of network availability -
+Given a snippet with a required typed parameter left blank, When the
+user attempts to execute it, Then client-side validation blocks
+execution with a field-level error (no round-trip to the server needed)
+- Generated Ed25519 keypairs are never transmitted in plaintext; the
+private key is encrypted client-side before touching the vault sync
+channel (zero-knowledge posture per CD-10)</p>
+<p><strong>Test Requirements:</strong> - Tunnel-drop chaos test: kill
+the underlying TCP connection 50 times in a row, verify auto-restart
+succeeds every time with no port-leak - Snippet parameter-validation
+unit tests covering all 4 typed-parameter kinds (int, string, enum,
+secret) - Security test: verify no plaintext private-key bytes appear in
+any client log, crash report, or network capture during key
+generation/import</p>
+<p><strong>Definition of Done:</strong> - [ ] Port forwarding, snippets,
+and keychain functional end-to-end on all 5 platforms - [ ]
+Zero-knowledge key-generation claim independently verified by a Security
+Engineer with a network-capture review - [ ] Owner: Client Engineer +
+Security Engineer; effort tracked against the 12 person-week Month 6
+estimate above</p>
+<hr />
+<h4
+id="month-7-workspaces-collaboration-mvp-ssh-playground-polish">Month 7
+— Workspaces, Collaboration MVP, SSH Playground, Polish</h4>
+<blockquote>
+<p>Schedules the previously-orphaned <strong>Terminal Multiplayer
+(Collaborative Terminal, §1.7)</strong> and <strong>SSH Playground
+(§1.16.13)</strong> features. Terminal Multiplayer ships here as an MVP
+(session sharing + observer mode only); the full RBAC-per-participant,
+session-recording, and voice-channel spec is hardened in Phase 3 Month 9
+once the Session Recording Service exists (§2.3, Month 9) — recording
+and per-participant RBAC cannot be delivered before that dependency
+lands.</p>
+</blockquote>
 <p><strong>Deliverables:</strong> - Full workspace save/restore (layout,
 host assignments, active tunnels) - Workspace templates (share with
 team) - AI autocomplete integration (GPT-4o cloud, HelixLLM local stub)
@@ -1819,15 +1983,248 @@ team) - AI autocomplete integration (GPT-4o cloud, HelixLLM local stub)
 management UI - Settings deep-dive: SSH connection options, terminal
 preferences, notification preferences - Offline mode: all vault data
 accessible offline, sessions reconnect automatically - Performance
-profiling pass: profile Flutter UI and fix any jank in hot paths</p>
+profiling pass: profile Flutter UI and fix any jank in hot paths -
+<strong>Terminal Multiplayer MVP</strong> (§1.7): session-sharing link
+(invite + QR code), observer mode (read-only, unlimited observers),
+owner/editor/observer participant roles, live text chat overlay,
+permission promotion/demotion mid-session. Session recording, WebRTC
+voice, and admin-enforced Compliance Mode recording are explicitly
+deferred to Month 9. - <strong>SSH Playground</strong> (§1.16.13):
+ephemeral sandboxed container provisioning (Alpine/Ubuntu, user choice),
+guided scenarios (“Set up a web server”, “Configure SSH keys”, “Write
+your first shell script”), 2h-inactivity / 24h-absolute
+auto-termination, filesystem snapshot between sessions</p>
+<p><strong>Acceptance Criteria:</strong> - Given a workspace with 4
+saved sessions and 2 active tunnels, When the developer restores it on a
+new device, Then all sessions reconnect and tunnels re-establish within
+10 seconds - Given a Terminal Multiplayer session with 1 owner and 3
+observers, When the owner types a command, Then all 3 observers see the
+output within 200ms (p95) over a LAN - Given an SSH Playground session
+left inactive for 2 hours, When the inactivity threshold is reached,
+Then the container is terminated and the filesystem snapshot is
+preserved for the next session - App cold-start time remains &lt; 2
+seconds on a mid-range device after the Month 7 feature additions
+(regression guard against Sprint 6’s baseline)</p>
+<p><strong>Test Requirements:</strong> - End-to-end workspace restore
+test across a simulated device-swap scenario - Terminal Multiplayer load
+test: 1 owner + 20 concurrent observers, verify no dropped frames and no
+output desync - SSH Playground container-lifecycle test: provision →
+guided scenario completion → inactivity timeout → snapshot → resume,
+verified via automated container-state assertions - Full regression pass
+of Sprints 1–6 + Months 4–6 test suites (Phase 2 exit gate)</p>
+<p><strong>Definition of Done:</strong> - [ ] Workspaces, Terminal
+Multiplayer MVP, and SSH Playground deployed to the dev cluster and
+demoed end-to-end - [ ] Terminal Multiplayer MVP explicitly documented
+as MVP-scope (recording/voice/RBAC deferred to Month 9) in the release
+notes so support and sales do not over-promise - [ ] Owner: Client
+Platform Lead (workspaces/polish) + Backend Engineer/Realtime
+(collaboration) + Backend Engineer/Platform (playground); effort tracked
+against the 21 person-week Month 7 estimate above - [ ] Phase 2 Exit
+Criteria (above) all checked before Phase 3 kickoff</p>
+<h4 id="phase-2-definition-of-done-program-level">2.2.6 Phase 2
+Definition of Done (Program-Level)</h4>
+<ul class="task-list">
+<li><label><input type="checkbox" />All four Month DoD checklists
+(Months 4–7) above are 100% checked with captured evidence (test logs,
+demo recordings, performance reports under
+<code>docs/performance/</code>).</label></li>
+<li><label><input type="checkbox" />No Critical or High severity defect
+remains open against any Phase 2 feature.</label></li>
+<li><label><input type="checkbox" />Phase 2 Exit KPIs (below) are
+measured on the dev/staging cluster and meet target.</label></li>
+<li><label><input type="checkbox" />Code review gate (Constitution
+§11.4.125/§11.4.134) has returned a clean GO for the full Phase 2
+batch.</label></li>
+</ul>
+<h4 id="phase-2-exit-kpis">2.2.7 Phase 2 Exit KPIs</h4>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Target</th>
+<th>Measurement source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Terminal render frame drop rate</td>
+<td>&lt; 1 dropped frame per 100,000 lines at 60fps</td>
+<td>Automated vttest + frame-time instrumentation (Month 4 DoD)</td>
+</tr>
+<tr>
+<td>SSH connection establishment (LAN, single hop)</td>
+<td>p95 &lt; 500ms</td>
+<td>Section 5.3 SSH Connection Performance benchmark</td>
+</tr>
+<tr>
+<td>SFTP resume-after-interruption success rate</td>
+<td>100% (checksum-verified)</td>
+<td>Month 5 chaos-test suite</td>
+</tr>
+<tr>
+<td>Terminal Multiplayer observer fan-out latency</td>
+<td>p95 &lt; 200ms for 20 concurrent observers</td>
+<td>Month 7 collaboration load test</td>
+</tr>
+<tr>
+<td>SSH Playground container provision time</td>
+<td>&lt; 5 seconds cold-start</td>
+<td>Month 7 container-lifecycle test</td>
+</tr>
+<tr>
+<td>Individual-developer daily-use readiness</td>
+<td>100% of Phase 2 features usable with zero enterprise-tier
+dependency</td>
+<td>Phase 2 Exit Criteria checklist</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h3 id="phase-3-enterprise-months-810">2.3 Phase 3: Enterprise (Months
 8–10)</h3>
 <p><strong>Phase Goal:</strong> Deliver the enterprise feature set
 required for team sales: PKI/CA, RBAC, audit logging, compliance,
 session recording, SSO/SAML, and SCIM provisioning.</p>
-<h4 id="month-8-pkica-advanced-rbac">Month 8 — PKI/CA + Advanced
-RBAC</h4>
+<p><strong>Entry Criteria</strong> (must all hold before Phase 3 work
+starts): - [ ] Phase 2 Exit Criteria (§2.2) all satisfied and demoed. -
+[ ] Terminal Multiplayer MVP (session sharing + observer mode, Month 7)
+is stable in the dev cluster with zero open Critical defects. - [ ]
+Vault Service supports item-level secret storage sufficient to hold CA
+private-key references and break-glass approval-group configuration. - [
+] Security Engineer capacity allocated for the full Phase 3 duration
+(PKI, RBAC, break-glass/JIT, compliance are all security-critical).</p>
+<p><strong>Exit Criteria</strong> (must all hold before Phase 4 starts):
+- [ ] SSH CA issues and revokes certificates end-to-end, with
+FIDO2-backed enrollment functional. - [ ] Session recording, Compliance
+Mode, and the immutable audit log are all functional and mutually
+consistent (a Compliance Mode session cannot terminate before its
+recording upload completes). - [ ] Break-Glass and JIT Access both
+function end-to-end against a real CA-issued short-lived certificate. -
+[ ] Terminal Multiplayer is hardened to its full §1.7 spec
+(per-participant RBAC, recording, WebRTC voice, Compliance Mode
+integration) and Collaborative Debugging (§1.16.6) is functional. - [ ]
+SSO/SAML and SCIM provisioning both verified against at least 2 real
+IdPs (Okta + one of Azure AD/Google Workspace/JumpCloud). - [ ] Phase 3
+Exit KPIs (§2.3.7) measured and within target; Phase 3 Definition of
+Done (§2.3.6) 100% checked.</p>
+<p><strong>Owners &amp; Effort Estimates (Phase 3, in
+person-weeks):</strong></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Month</th>
+<th>Epic</th>
+<th>Owner (role)</th>
+<th>Effort (person-weeks)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8</td>
+<td>SSH Certificate Authority service</td>
+<td>Security Engineer + Backend Engineer (PKI focus)</td>
+<td>8</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Advanced RBAC engine (resource-based + ABAC)</td>
+<td>Backend Engineer (Access Control)</td>
+<td>6</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Break-Glass Emergency Access</td>
+<td>Security Engineer + Backend Engineer (Access Control)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Just-in-Time (JIT) Access</td>
+<td>Backend Engineer (Access Control) + Backend Engineer (PKI
+focus)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>8</td>
+<td>FIDO2 hardware key enrollment</td>
+<td>Security Engineer</td>
+<td>3</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Session recording service (capture, AsciiCast v2, replay
+player)</td>
+<td>Backend Engineer (Realtime) + Client Engineer</td>
+<td>8</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Compliance Mode enforcement</td>
+<td>Security Engineer + Backend Engineer (Realtime)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Immutable audit log service</td>
+<td>Backend Engineer (Data)</td>
+<td>5</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Terminal Multiplayer full hardening (RBAC, recording, voice,
+compliance)</td>
+<td>Backend Engineer (Realtime) + Client Engineer</td>
+<td>7</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Collaborative Debugging</td>
+<td>Client Engineer + Backend Engineer (Realtime)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>10</td>
+<td>SAML 2.0 SSO + SCIM 2.0 provisioning</td>
+<td>Backend Engineer (IdM) + Security Engineer</td>
+<td>7</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Team management UI + billing/seat integration</td>
+<td>Client Engineer + Backend Engineer (IdM)</td>
+<td>5</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>Phase 3 total</strong></td>
+<td>—</td>
+<td><strong>65 person-weeks</strong> (≈ 5–6 engineers sustained across 3
+months)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="month-8-pkica-advanced-rbac-break-glass-jit-access">Month 8 —
+PKI/CA + Advanced RBAC + Break-Glass + JIT Access</h4>
+<blockquote>
+<p>Schedules the previously-orphaned <strong>Break-Glass Emergency
+Access (§1.16.8)</strong> and <strong>Just-in-Time (JIT) Access
+(§1.16.9)</strong> features. Both are scheduled here — not earlier —
+because both require the SSH Certificate Authority and Advanced RBAC
+engine delivered in this same month as a hard dependency: JIT-issued
+certificates “encode the escalated principal” (§1.16.9) and both flows
+evaluate against the RBAC policy engine built this month.</p>
+</blockquote>
 <p><strong>Deliverables:</strong> - SSH Certificate Authority service
 (<code>/services/pki</code>) - CA key generation (Ed25519, stored in HSM
 or encrypted KMS) - Certificate issuance API: accepts public key +
@@ -1839,10 +2236,58 @@ group &gt; host &gt; session - Permission inheritance with override -
 Role assignment audit (who assigned which role to whom) - Principle of
 least privilege enforcement (deny by default) - ABAC extension:
 attribute-based conditions (e.g., “allow access only from VPN IP range”)
-- FIDO2 hardware key enrollment and SSH authentication via
-sk-ed25519</p>
-<h4 id="month-9-session-recording-audit-compliance">Month 9 — Session
-Recording, Audit, Compliance</h4>
+- FIDO2 hardware key enrollment and SSH authentication via sk-ed25519 -
+<strong>Break-Glass Emergency Access</strong> (§1.16.8): break-glass
+request submission with mandatory justification; dual-approval workflow
+(on-call manager + security officer, both required) via push
+notification; configurable access window (default 1 hour); mandatory
+session recording during break-glass access; automatic expiry;
+post-incident review task auto-created in HelixTrack; fully immutable
+audit trail of the entire flow - <strong>Just-in-Time (JIT)
+Access</strong> (§1.16.9): JIT request submission with mandatory ticket
+reference; policy engine evaluation (time-of-day, approver tier, host
+sensitivity); certificate issuance scoped to exactly the requested
+window via the CA service above; 5-minute pre-expiry warning to active
+sessions; automatic session termination at window close</p>
+<p><strong>Acceptance Criteria:</strong> - Given a valid CSR and an
+RBAC-approved principal, When a certificate is requested, Then a
+short-lived certificate is issued and auto-renews client-side 15 minutes
+before expiry with zero session interruption - Given a break-glass
+request with only one of the two required approvals, When the requester
+attempts to connect, Then access is denied until both approvals are
+recorded - Given a JIT-access window that expires while a session is
+active, When the window closes, Then the session receives a 5-minute
+warning and is then forcibly terminated regardless of in-flight commands
+- Given a revoked certificate, When a connection is attempted with it,
+Then the SSH Proxy rejects it via CRL/OCSP check within the
+connection-timeout SLO</p>
+<p><strong>Test Requirements:</strong> - Integration tests against a
+real HSM-backed (or PKCS#11-emulated) CA covering issuance, renewal, and
+revocation - Security test: attempt to bypass dual-approval on
+break-glass via API-level race condition (concurrent approval
+submission) - Chaos test: kill the JIT policy engine mid-evaluation,
+verify fail-closed (deny by default) behavior - End-to-end test: full
+break-glass flow from request → dual approval → session → auto-expiry →
+HelixTrack review task creation</p>
+<p><strong>Definition of Done:</strong> - [ ] CA, RBAC, Break-Glass, and
+JIT Access all deployed to the dev cluster and demoed end-to-end against
+a real host - [ ] Fail-closed behavior independently verified by a
+Security Engineer for both Break-Glass and JIT under induced-failure
+conditions - [ ] Owner: Security Engineer + Backend Engineer (PKI/Access
+Control); effort tracked against the 25 person-week Month 8 estimate
+above</p>
+<hr />
+<h4
+id="month-9-session-recording-audit-compliance-collaboration-hardening">Month
+9 — Session Recording, Audit, Compliance, Collaboration Hardening</h4>
+<blockquote>
+<p>Hardens <strong>Terminal Multiplayer (§1.7)</strong> to its full spec
+and schedules the previously-orphaned <strong>Collaborative Debugging
+(§1.16.6)</strong> feature. Both depend on the Session Recording Service
+delivered in this same month — recording, WebRTC voice, and
+per-participant RBAC could not be delivered in Phase 2 because the
+recording infrastructure did not yet exist.</p>
+</blockquote>
 <p><strong>Deliverables:</strong> - Session recording service
 (<code>/services/recording</code>) - Real-time TTY stream capture (UNIX
 pipe to recording process inside proxy) - AsciiCast v2 format storage +
@@ -1858,27 +2303,251 @@ append-only table (PostgreSQL with row-level security) - Kafka consumer
 aggregating events from all services into audit log - Audit log export:
 CSV, JSON, SIEM-compatible CEF/LEEF formats - Audit log search:
 full-text + faceted filtering (user, host, event type, time range) -
-Alert rules on audit events (configurable via admin UI)</p>
+Alert rules on audit events (configurable via admin UI) -
+<strong>Terminal Multiplayer — full hardening</strong> (§1.7): full
+owner/editor/observer RBAC (promoted from the Month 7 MVP’s link-based
+sharing), session recording via the pipeline above, optional WebRTC
+voice channel (DTLS/SRTP), pointer sharing (color-coded cursors),
+Compliance Mode integration (admin-enforced mandatory recording for
+groups), time-limited session invitations - <strong>Collaborative
+Debugging</strong> (§1.16.6): shared environment-variables panel, shared
+watch expressions, shared annotatable notes, “mark as evidence” capture
+into a shared incident timeline, Markdown incident-report export</p>
+<p><strong>Acceptance Criteria:</strong> - Given Compliance Mode enabled
+on a host group, When a user attempts to disable session recording, Then
+the UI control is unavailable and the server rejects any API-level
+disable attempt - Given a Terminal Multiplayer session with Compliance
+Mode active, When the session ends, Then session termination is blocked
+until the recording upload to object storage completes and its
+HMAC-SHA256 hash chain is verified - Given a Collaborative Debugging
+session where a participant marks 3 pieces of output as evidence, When
+the session ends, Then the exported Markdown incident report contains
+all 3 evidence items in chronological order with participant attribution
+- Audit log search over 1,000,000 events returns faceted results within
+1 second (p95)</p>
+<p><strong>Test Requirements:</strong> - Integration test: full
+Compliance Mode session lifecycle (start → mandatory recording →
+real-time streaming → end blocked until upload → hash-chain
+verification) - Load test: Terminal Multiplayer with 20 concurrent
+observers + active WebRTC voice channel, measure CPU/bandwidth per
+participant - Security test: attempt to disable recording via direct API
+call while Compliance Mode is active (must be rejected server-side, not
+just client-side) - Contract test: Audit service consumes every Kafka
+event topic emitted by every other Phase 1–3 service (no silent
+gaps)</p>
+<p><strong>Definition of Done:</strong> - [ ] Session recording,
+Compliance Mode, audit log, Terminal Multiplayer hardening, and
+Collaborative Debugging deployed to the dev cluster - [ ] Compliance
+Mode’s “cannot be disabled” guarantee independently verified server-side
+by a Security Engineer (not just a client-side UI check) - [ ] Owner:
+Backend Engineer (Realtime) + Security Engineer + Backend Engineer
+(Data); effort tracked against the 28 person-week Month 9 estimate
+above</p>
+<hr />
 <h4 id="month-10-ssosaml-scim-team-management">Month 10 — SSO/SAML,
 SCIM, Team Management</h4>
 <p><strong>Deliverables:</strong> - SAML 2.0 SP-initiated SSO - IdP
-configuration UI (Okta, Azure AD, Google Workspace templates) - JIT
-provisioning: create user account on first SSO login - Attribute
-mapping: map SAML attributes to HelixTerminator roles and groups - SSO
-enforcement: admin can require SSO for all org members - SCIM 2.0
-provisioning - User create/update/deactivate via SCIM API - Group sync:
-SCIM groups mapped to HelixTerminator groups - Tested with Okta, Azure
-AD, JumpCloud - Team management UI - Invite by email, invite via SSO
-domain claim - Bulk user operations (assign role, remove from org,
-export user list) - Org-level settings: password policy, MFA
-enforcement, session timeout - Billing and seat management integration
-(with Stripe)</p>
+configuration UI (Okta, Azure AD, Google Workspace templates) - JIT user
+provisioning: create user account on first SSO login
+(SAML-attribute-driven provisioning — distinct from the §1.16.9 JIT
+Access-escalation feature delivered in Month 8) - Attribute mapping: map
+SAML attributes to HelixTerminator roles and groups - SSO enforcement:
+admin can require SSO for all org members - SCIM 2.0 provisioning - User
+create/update/deactivate via SCIM API - Group sync: SCIM groups mapped
+to HelixTerminator groups - Tested with Okta, Azure AD, JumpCloud - Team
+management UI - Invite by email, invite via SSO domain claim - Bulk user
+operations (assign role, remove from org, export user list) - Org-level
+settings: password policy, MFA enforcement, session timeout - Billing
+and seat management integration (with Stripe)</p>
+<p><strong>Acceptance Criteria:</strong> - Given a SAML assertion from
+Okta for a first-time user, When the user logs in, Then a
+HelixTerminator account is JIT-provisioned with roles mapped from the
+SAML attributes within 2 seconds - Given a SCIM deactivation request
+from Azure AD, When the request is processed, Then the user’s active
+sessions are terminated and their access revoked within 30 seconds -
+Given an org with SSO enforcement enabled, When a member attempts
+password-based login, Then the attempt is rejected with a redirect to
+the configured IdP</p>
+<p><strong>Test Requirements:</strong> - End-to-end SSO tests against
+real Okta, Azure AD, and Google Workspace test tenants - SCIM
+conformance test suite run against Okta, Azure AD, and JumpCloud SCIM
+connectors - Security test: verify SAML assertion signature validation
+rejects a tampered/replayed assertion</p>
+<p><strong>Definition of Done:</strong> - [ ] SSO/SAML and SCIM
+functional against at least 2 real IdPs with recorded evidence (per
+§11.4.83 QA transcript requirements) - [ ] Team management UI functional
+including Stripe billing/seat integration in a sandboxed billing account
+- [ ] Owner: Backend Engineer (IdM) + Client Engineer; effort tracked
+against the 12 person-week Month 10 estimate above - [ ] Phase 3 Exit
+Criteria (above) all checked before Phase 4 kickoff</p>
+<h4 id="phase-3-definition-of-done-program-level">2.3.6 Phase 3
+Definition of Done (Program-Level)</h4>
+<ul class="task-list">
+<li><label><input type="checkbox" />All three Month DoD checklists
+(Months 8–10) above are 100% checked with captured
+evidence.</label></li>
+<li><label><input type="checkbox" />No Critical or High severity defect
+remains open against any Phase 3 feature, with particular scrutiny on
+Break-Glass, JIT, and Compliance Mode fail-closed behavior.</label></li>
+<li><label><input type="checkbox" />Phase 3 Exit KPIs (below) are
+measured on the staging cluster and meet target.</label></li>
+<li><label><input type="checkbox" />External or internal security review
+of PKI/CA, RBAC, Break-Glass, and JIT completed with all Critical/High
+findings resolved (feeds the Phase 5 external audit — this is an interim
+internal pass, not the final Cure53-class review).</label></li>
+</ul>
+<h4 id="phase-3-exit-kpis">2.3.7 Phase 3 Exit KPIs</h4>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Target</th>
+<th>Measurement source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Certificate issuance latency</td>
+<td>p95 &lt; 250ms</td>
+<td>Month 8 CA integration test</td>
+</tr>
+<tr>
+<td>Break-glass dual-approval enforcement</td>
+<td>100% — zero single-approval bypasses across 50 fuzz-test
+attempts</td>
+<td>Month 8 security test suite</td>
+</tr>
+<tr>
+<td>JIT window-expiry termination accuracy</td>
+<td>100% of sessions terminated within 60s of window close</td>
+<td>Month 8 end-to-end test</td>
+</tr>
+<tr>
+<td>Compliance Mode recording-disable bypass rate</td>
+<td>0% — zero successful client or API-level disable attempts</td>
+<td>Month 9 security test</td>
+</tr>
+<tr>
+<td>Terminal Multiplayer full-spec observer fan-out (with voice)</td>
+<td>p95 &lt; 300ms with WebRTC voice active, 20 observers</td>
+<td>Month 9 load test</td>
+</tr>
+<tr>
+<td>SSO/SCIM real-IdP conformance</td>
+<td>100% pass against Okta + 1 additional IdP</td>
+<td>Month 10 SSO/SCIM test suite</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h3 id="phase-4-ai-advanced-features-months-1112">2.4 Phase 4: AI &amp;
 Advanced Features (Months 11–12)</h3>
 <p><strong>Phase Goal:</strong> Deliver the AI-powered features and the
 advanced platform capabilities that differentiate HelixTerminator from
 any other SSH client.</p>
+<p><strong>Entry Criteria</strong> (must all hold before Phase 4 work
+starts): - [ ] Phase 3 Exit Criteria (§2.3) all satisfied and demoed,
+including SSO/SCIM against 2 real IdPs. - [ ] AI provider accounts/keys
+provisioned for GPT-4o, Claude 3.5 Haiku, and the HelixLLM 8B
+local-inference stub, each with a cost budget and rate-limit ceiling
+agreed with Finance/Platform. - [ ] Bulk Operations engine (concurrent
+multi-host SSH dispatch, §1.16.14) is available in at least a beta form
+— Config Diff (Month 12) depends on multi-host connection fan-out.</p>
+<p><strong>Exit Criteria</strong> (must all hold before Phase 5 starts):
+- [ ] All 5 AI features (Autocomplete, Explainer, Error Diagnosis,
+Snippet Generator, Security Guard) function against both a cloud model
+and the local HelixLLM stub, with privacy mode verified to emit zero
+telemetry. - [ ] Container Terminal Bridge, Infrastructure Map,
+HelixTrack Integration, Performance Dashboard, Automated Health Checks,
+and Config Diff are all functional end-to-end. - [ ] Phase 4 Exit KPIs
+(§2.4.6) measured and within target; Phase 4 Definition of Done (§2.4.5)
+100% checked.</p>
+<p><strong>Owners &amp; Effort Estimates (Phase 4, in
+person-weeks):</strong></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Month</th>
+<th>Epic</th>
+<th>Owner (role)</th>
+<th>Effort (person-weeks)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>11</td>
+<td>AI Autocomplete (production, multi-model routing)</td>
+<td>AI/ML Engineer + Client Engineer</td>
+<td>7</td>
+</tr>
+<tr>
+<td>11</td>
+<td>AI Command Explainer + Error Diagnosis</td>
+<td>AI/ML Engineer</td>
+<td>4</td>
+</tr>
+<tr>
+<td>11</td>
+<td>AI Snippet Generator + Security Guard</td>
+<td>AI/ML Engineer + Backend Engineer (Snippet Service)</td>
+<td>5</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Container Terminal Bridge (Docker/K8s/ECS)</td>
+<td>Backend Engineer (Platform)</td>
+<td>6</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Infrastructure Map (MVP)</td>
+<td>Client Engineer + Backend Engineer (Data)</td>
+<td>6</td>
+</tr>
+<tr>
+<td>12</td>
+<td>HelixTrack Integration</td>
+<td>Backend Engineer (Integrations)</td>
+<td>3</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Performance Dashboard + HelixAgent</td>
+<td>Backend Engineer (Platform) + Client Engineer</td>
+<td>6</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Automated Health Checks</td>
+<td>Backend Engineer (Platform)</td>
+<td>3</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Config Diff</td>
+<td>Client Engineer + Backend Engineer (Platform)</td>
+<td>4</td>
+</tr>
+<tr>
+<td>—</td>
+<td><strong>Phase 4 total</strong></td>
+<td>—</td>
+<td><strong>44 person-weeks</strong> (≈ 4 engineers sustained across 2
+months)</td>
+</tr>
+</tbody>
+</table>
 <h4 id="month-11-ai-features">Month 11 — AI Features</h4>
 <p><strong>Deliverables:</strong> - AI Autocomplete (production): -
 Real-time command suggestions as user types (&lt; 50ms suggestion
@@ -1897,9 +2566,46 @@ reviews, edits, and saves to library - AI Security Guard: - Pattern
 match + AI analysis of commands before execution - Warns on:
 <code>rm -rf /*</code>, <code>chmod 777 /etc</code>, arbitrary curl |
 bash, etc. - Configurable sensitivity levels</p>
+<p><strong>Acceptance Criteria:</strong> - Given a partially-typed
+command, When the user pauses typing for 100ms, Then an autocomplete
+suggestion appears within 50ms (p95) from the routed model - Given
+Privacy Mode enabled, When any AI feature is invoked, Then zero bytes of
+command content leave the device (verified via network capture) and only
+the local HelixLLM 8B model is used - Given a command that matches an AI
+Security Guard danger pattern (e.g. <code>rm -rf /*</code>), When the
+user attempts to execute it, Then a blocking confirmation dialog appears
+explaining the specific risk before execution proceeds - Given a
+non-zero exit status with AI Error Diagnosis enabled, When the analysis
+completes, Then a “Run this fix” suggestion is offered only after
+explicit user review — no remediation command executes automatically</p>
+<p><strong>Test Requirements:</strong> - Network-capture test proving
+zero telemetry egress in Privacy Mode across all 5 AI features -
+Adversarial test suite for AI Security Guard: 50+ known-dangerous
+command patterns, verify 100% detection with zero false-negatives on the
+curated set - Latency benchmark for autocomplete suggestion round-trip
+across all 3 routed models (cloud primary, cloud fast, local) -
+Multi-shell compatibility test (bash/zsh/fish/PowerShell/Python
+one-liners/AWK/sed) for AI Command Explainer</p>
+<p><strong>Definition of Done:</strong> - [ ] All 5 AI features deployed
+to the dev cluster and functional against both cloud and local model
+backends - [ ] Privacy Mode zero-telemetry claim independently verified
+by a Security Engineer with a network-capture review - [ ] Owner: AI/ML
+Engineer; effort tracked against the 16 person-week Month 11 estimate
+above</p>
+<hr />
 <h4
-id="month-12-container-bridge-infrastructure-map-helixtrack-integration">Month
-12 — Container Bridge, Infrastructure Map, HelixTrack Integration</h4>
+id="month-12-container-bridge-infrastructure-map-helixtrack-integration-config-diff">Month
+12 — Container Bridge, Infrastructure Map, HelixTrack Integration,
+Config Diff</h4>
+<blockquote>
+<p>Schedules the previously-orphaned <strong>Config Diff
+(§1.16.15)</strong> feature. Config Diff is scheduled here — alongside
+Infrastructure Map and the Container Bridge — because it depends on the
+same multi-host, concurrent-connection fan-out infrastructure (Bulk
+Operations engine, §1.16.14) that this month’s other admin/ops tooling
+shares, and because it is lower-risk/lower-priority than the Phase 3
+security-critical features that took precedence in Months 8–10.</p>
+</blockquote>
 <p><strong>Deliverables:</strong> - Container Terminal Bridge: - Docker
 socket integration (unix socket or TCP) - Kubernetes API integration
 (kubeconfig or in-cluster) - AWS ECS via SSM Session Manager - Container
@@ -1916,13 +2622,203 @@ configuration - Real-time metrics stream via gRPC streaming - Fleet
 overview grid with sparklines and sortable metrics - Alerting rules
 configuration - Automated Health Checks: - Scheduler UI (cron expression
 with plain-English preview) - Alert channels: in-app, email, Slack,
-PagerDuty - Health check history and trend chart</p>
+PagerDuty - Health check history and trend chart - <strong>Config
+Diff</strong> (§1.16.15): connect to a selected host set, read a target
+file (e.g. <code>/etc/ssh/sshd_config</code>,
+<code>/etc/nginx/nginx.conf</code>), render a multi-host diff against a
+baseline (first host, nominated “golden” host, or a committed Git config
+file); line-by-line diff with hosts as columns; one-click remediation
+pushing the baseline to deviating hosts as a previewed, confirmed
+snippet execution</p>
+<p><strong>Acceptance Criteria:</strong> - Given a container exec
+session through the bridge, When the session runs, Then it is recorded
+through the same pipeline and subject to the same Compliance Mode policy
+as an SSH session - Given a 50-host Config Diff run against
+<code>/etc/ssh/sshd_config</code>, When the diff completes, Then every
+host is classified as matching-baseline or deviating, with the specific
+deviating lines highlighted per host - Given a Config Diff remediation
+action, When the operator confirms it, Then the baseline is pushed only
+to the explicitly-selected deviating hosts with a preview shown before
+execution (no silent mass-write) - Infrastructure Map renders a 500-host
+topology within 3 seconds and supports click-to-connect from any
+node</p>
+<p><strong>Test Requirements:</strong> - Integration test: Container
+Terminal Bridge exec session against real Docker, Kubernetes (kind
+cluster), and AWS ECS (via SSM) backends - Config Diff correctness test:
+seed 20 hosts with known, deliberately-varied config content, verify the
+diff engine reports the exact expected deviation set - Load test:
+Infrastructure Map with 1,000 simulated hosts, measure render +
+interaction latency - HelixTrack webhook integration test against Jira,
+GitHub Issues, Linear, and ServiceNow sandbox instances</p>
+<p><strong>Definition of Done:</strong> - [ ] Container Bridge,
+Infrastructure Map, HelixTrack Integration, Performance Dashboard,
+Automated Health Checks, and Config Diff all deployed to the dev cluster
+and demoed end-to-end - [ ] Config Diff remediation action independently
+verified to require explicit confirmation before any multi-host write
+(no accidental mass-config-push path exists) - [ ] Owner: Backend
+Engineer (Platform) + Client Engineer + Backend Engineer (Integrations);
+effort tracked against the 28 person-week Month 12 estimate above - [ ]
+Phase 4 Exit Criteria (above) all checked before Phase 5 kickoff</p>
+<h4 id="phase-4-definition-of-done-program-level">2.4.5 Phase 4
+Definition of Done (Program-Level)</h4>
+<ul class="task-list">
+<li><label><input type="checkbox" />Both Month DoD checklists (Months
+11–12) above are 100% checked with captured evidence.</label></li>
+<li><label><input type="checkbox" />No Critical or High severity defect
+remains open against any Phase 4 feature.</label></li>
+<li><label><input type="checkbox" />Phase 4 Exit KPIs (below) are
+measured on the staging cluster and meet target.</label></li>
+<li><label><input type="checkbox" />AI feature cost telemetry
+(per-request token cost, monthly projection) reviewed against the
+Finance/Platform budget agreed at Phase 4 entry.</label></li>
+</ul>
+<h4 id="phase-4-exit-kpis">2.4.6 Phase 4 Exit KPIs</h4>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Target</th>
+<th>Measurement source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI Autocomplete suggestion latency</td>
+<td>p95 &lt; 50ms</td>
+<td>Month 11 latency benchmark</td>
+</tr>
+<tr>
+<td>Privacy Mode telemetry egress</td>
+<td>0 bytes of command content</td>
+<td>Month 11 network-capture test</td>
+</tr>
+<tr>
+<td>AI Security Guard danger-pattern detection</td>
+<td>100% on the curated 50+ pattern set, 0 false-negatives</td>
+<td>Month 11 adversarial test suite</td>
+</tr>
+<tr>
+<td>Container Terminal Bridge session-recording parity</td>
+<td>100% of container sessions recorded identically to SSH sessions</td>
+<td>Month 12 integration test</td>
+</tr>
+<tr>
+<td>Config Diff deviation-detection accuracy</td>
+<td>100% match against seeded known-deviation test set</td>
+<td>Month 12 correctness test</td>
+</tr>
+<tr>
+<td>Infrastructure Map render latency (1,000 hosts)</td>
+<td>&lt; 3 seconds</td>
+<td>Month 12 load test</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h3 id="phase-5-ga-release-month-13">2.5 Phase 5: GA Release (Month
 13)</h3>
 <p><strong>Phase Goal:</strong> Achieve production readiness. All
 features hardened, security audited, penetration tested, and
 documentation complete.</p>
+<p><strong>Entry Criteria</strong> (must all hold before Phase 5 work
+starts): - [ ] Phase 4 Exit Criteria (§2.4) all satisfied and demoed. -
+[ ] Every feature scheduled in Phases 1–4 (including the
+previously-orphaned Terminal Multiplayer, Break-Glass, JIT, SSH
+Playground, Config Diff, and Collaborative Debugging) is functional in
+the staging environment with zero open Critical defects. - [ ] External
+security-audit vendor (Cure53 or equivalent) contracted and scheduled
+with a start date inside Month 13. - [ ] Support/on-call rotation
+staffed and trained on the product ahead of the Self-Hosted Support
+Runbook go-live (below).</p>
+<p><strong>Exit Criteria (= GA readiness gate — must all hold before
+public GA announcement):</strong> - [ ] External security audit
+complete; all Critical and High findings resolved, Medium findings
+triaged with a tracked remediation date. - [ ] Penetration test complete
+with no unresolved Critical/High finding. - [ ] Performance hardening
+targets (100,000 concurrent SSH sessions, 1M req/s API gateway, 100,000
+events/s Kafka) all verified on a staging cluster sized to match the
+production topology. - [ ] Documentation set (user guide, admin guide,
+API reference, architecture reference, security whitepaper, self-hosted
+deployment guide) complete and cross-linked from the README doc-link
+section (Constitution §11.4.57). - [ ] Self-hosted Kubernetes packaging
+installs cleanly via the one-command Helm install on a clean cluster,
+verified by an operator who did not author the chart. - [ ] App store
+submissions accepted (or in active, non-blocking review) on all 5
+platforms’ stores. - [ ] Self-Hosted Support Runbook (§2.5.6) live,
+staffed, and its first 24h-P0 drill completed with a measured
+time-to-acknowledge and time-to-mitigate within the SLA target. - [ ]
+Beta → GA migration executed on a rehearsal environment with zero data
+loss.</p>
+<p><strong>Owners &amp; Effort Estimates (Phase 5, in
+person-weeks):</strong></p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Epic</th>
+<th>Owner (role)</th>
+<th>Effort (person-weeks)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>External security audit coordination + remediation</td>
+<td>Security Engineer + on-call rotation across all backend
+engineers</td>
+<td>6 (coordination) + remediation capacity reserved</td>
+</tr>
+<tr>
+<td>Penetration testing coordination + remediation</td>
+<td>Security Engineer</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Performance hardening (load/throughput verification)</td>
+<td>Backend Platform Lead + 2× Backend Engineer</td>
+<td>6</td>
+</tr>
+<tr>
+<td>Documentation set</td>
+<td>Technical Writer + one engineer per domain (reviewers)</td>
+<td>6</td>
+</tr>
+<tr>
+<td>Self-hosted Kubernetes packaging</td>
+<td>DevOps/SRE Engineer</td>
+<td>5</td>
+</tr>
+<tr>
+<td>App store submissions (5 platforms)</td>
+<td>Client Platform Lead</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Self-Hosted Support Runbook + on-call readiness</td>
+<td>Support Lead + DevOps/SRE Engineer</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Beta → GA migration</td>
+<td>Backend Engineer (Data) + Support Lead</td>
+<td>3</td>
+</tr>
+<tr>
+<td>— <strong>Phase 5 total</strong></td>
+<td>—</td>
+<td><strong>36 person-weeks</strong> (≈ 8–9 people partially allocated
+across a single intensive month)</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Deliverables:</strong> 1. <strong>Security Audit:</strong> -
 Full codebase review by external security firm (Cure53 or equivalent) -
 Threat modeling document updated (STRIDE methodology) - All critical and
@@ -1952,7 +2848,457 @@ Windows MSIX installer + Microsoft Store - Linux: Snap, Flatpak,
 AppImage, Debian/Ubuntu .deb, RPM 7. <strong>Beta → GA
 Migration:</strong> - Beta user data migration plan - Feature flag
 cleanup (all shipped flags removed) - Pricing tier enforcement - Support
-portal integration (Intercom)</p>
+portal integration (Intercom) 8. <strong>Self-Hosted Support
+Runbook</strong> (operationalizes the §6.6 SLA — “Enterprise
+(Self-Hosted): Hotfix within 24h for P0 bugs”): - On-call rotation of at
+least 2 engineers per shift, 24/7/365 coverage for P0 self-hosted
+incidents, published rotation schedule - Severity taxonomy: P0
+(production down / data-loss risk / security breach — 24h hotfix SLA),
+P1 (major feature broken, no workaround — 5 business-day SLA), P2 (minor
+feature degraded, workaround exists — best-effort), P3
+(cosmetic/documentation) - Intake channels: support portal (Intercom)
+ticket auto-tagged <code>self-hosted</code>, dedicated
+PagerDuty-equivalent escalation path, customer-provided diagnostic
+bundle (<code>helix-support-bundle</code> CLI collecting
+logs/config/version with secrets redacted per §11.4.10) - Runbook steps:
+(1) acknowledge within 1 hour of a P0 report — measured and reported to
+the customer; (2) triage against the last-known-good release tag
+(Constitution §11.4.114 regression-isolation discipline) within 4 hours;
+(3) root-cause + candidate fix within 16 hours; (4) hotfix released as a
+patch release (project-prefixed per Constitution §11.4.151) + hotfix
+Helm chart bump within the 24h window; (5) post-incident report
+delivered to the customer within 48 hours - Escalation matrix: on-call
+engineer → Backend Platform Lead → VP Engineering, with each tier’s
+maximum response-time budget documented - Runbook rehearsal: a synthetic
+P0 drilled at least once per quarter with time-to-acknowledge and
+time-to-mitigate measured and published internally - Runbook lives at
+<code>docs/support/SELF_HOSTED_SUPPORT_RUNBOOK.md</code>, kept in sync
+with the §6.6 SLA table under Constitution §11.4.45
+integration-status-doc discipline</p>
+<p><strong>Acceptance Criteria:</strong> - Given a P0 self-hosted
+incident reported through the support portal, When the on-call engineer
+receives it, Then acknowledgement is sent to the customer within 1 hour
+and a hotfix (or documented workaround) is delivered within 24 hours -
+Given the Helm chart’s one-command install run on a clean Kubernetes
+cluster by an operator who did not author it, When installation
+completes, Then all services report healthy within 10 minutes with zero
+manual intervention - Given the external security audit’s Critical/High
+findings, When remediation is claimed complete, Then each finding is
+independently re-verified by the auditor (or an equivalent internal
+reviewer) before being marked resolved - Given the
+100,000-concurrent-SSH-session load test, When it runs for 30 minutes
+sustained, Then no proxy pod OOMs, no session drops beyond a documented
+acceptable rate, and p99 latency stays within the Section 5.3 SSH
+performance targets</p>
+<p><strong>Test Requirements:</strong> - Full penetration test executed
+by the external security firm against the staging environment configured
+identically to production - Chaos-drill of the Self-Hosted Support
+Runbook: inject a synthetic P0 (e.g., simulated vault-service outage)
+and time the full acknowledge → triage → fix → release cycle -
+Clean-room Helm install test performed by an operator outside the
+packaging team, on infrastructure they did not pre-configure - Full
+regression pass of every prior phase’s test suite (Phases 1–4) as the
+final pre-GA gate</p>
+<p><strong>Definition of Done:</strong> - [ ] All 8 Phase 5 deliverables
+above complete with captured evidence - [ ] Self-Hosted Support Runbook
+rehearsed at least once with a documented time-to-acknowledge and
+time-to-mitigate within SLA - [ ] GA Exit Criteria (above) 100%
+satisfied - [ ] Owner: Security Engineer (audit/pentest) + DevOps/SRE
+Engineer (packaging/runbook) + Client Platform Lead (app stores) +
+Support Lead (runbook/migration); effort tracked against the 36
+person-week Phase 5 estimate above</p>
+<h4 id="self-hosted-support-runbook-summary-table">2.5.6 Self-Hosted
+Support Runbook — Summary Table</h4>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>Severity</th>
+<th>Definition</th>
+<th>Acknowledge SLA</th>
+<th>Fix/Mitigation SLA</th>
+<th>Escalation path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P0</td>
+<td>Production down, data-loss risk, or active security breach</td>
+<td>1 hour</td>
+<td>24 hours (hotfix or documented workaround)</td>
+<td>On-call → Backend Platform Lead → VP Engineering</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Major feature broken, no workaround</td>
+<td>4 hours</td>
+<td>5 business days</td>
+<td>On-call → Backend Platform Lead</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>Minor feature degraded, workaround exists</td>
+<td>1 business day</td>
+<td>Best-effort, next scheduled patch</td>
+<td>On-call</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>Cosmetic or documentation defect</td>
+<td>3 business days</td>
+<td>Next scheduled minor/major release</td>
+<td>Support Lead backlog</td>
+</tr>
+</tbody>
+</table>
+<h4 id="phase-5-exit-kpis-ga-readiness-gate">2.5.7 Phase 5 Exit KPIs (GA
+Readiness Gate)</h4>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Target</th>
+<th>Measurement source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>External audit Critical/High findings open at GA</td>
+<td>0</td>
+<td>Security audit close-out report</td>
+</tr>
+<tr>
+<td>Penetration test unresolved Critical/High findings</td>
+<td>0</td>
+<td>Penetration test close-out report</td>
+</tr>
+<tr>
+<td>Sustained concurrent SSH sessions</td>
+<td>100,000 with p99 within Section 5.3 targets</td>
+<td>Performance hardening load test</td>
+</tr>
+<tr>
+<td>API gateway throughput</td>
+<td>1,000,000 requests/second</td>
+<td>Performance hardening load test</td>
+</tr>
+<tr>
+<td>Clean-room Helm install success rate</td>
+<td>100% (zero manual intervention)</td>
+<td>Clean-room install test</td>
+</tr>
+<tr>
+<td>Self-Hosted Support Runbook P0 drill time-to-acknowledge</td>
+<td>&lt; 1 hour</td>
+<td>Runbook rehearsal drill</td>
+</tr>
+<tr>
+<td>Self-Hosted Support Runbook P0 drill time-to-mitigate</td>
+<td>&lt; 24 hours</td>
+<td>Runbook rehearsal drill</td>
+</tr>
+<tr>
+<td>Beta → GA data migration data-loss incidents</td>
+<td>0</td>
+<td>Migration rehearsal report</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="program-level-risk-register">2.6 Program-Level Risk
+Register</h3>
+<p>Top delivery, security, and scaling risks across the full 13-month
+roadmap. Likelihood and Impact are each rated Low/Medium/High; a risk
+with both High is a program-level escalation item reviewed at every
+Phase Entry/Exit gate (§2.2–§2.5).</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Mitigation</th>
+<th>Owner (role)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td>Terminal rendering performance SLOs (60fps, &lt;16ms keystroke
+latency) are not met on lower-end mobile/Linux hardware, forcing
+late-stage rework of the Flutter Impeller rendering path.</td>
+<td>Medium</td>
+<td>High</td>
+<td>Front-load the Month 4 performance instrumentation and vttest suite;
+run the Month 4 acceptance criteria against a deliberately low-spec
+device matrix, not just reference hardware; reserve 2 buffer weeks in
+the Month 7 “polish” allocation.</td>
+<td>Client Platform Lead</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>PKI/CA + Break-Glass + JIT Access (Month 8) is the
+highest-blast-radius security surface in the roadmap; a flaw in
+fail-closed behavior could grant unauthorized production access.</td>
+<td>Low</td>
+<td>High</td>
+<td>Dedicated Security Engineer allocation for the full Month 8;
+mandatory adversarial/chaos testing (race-condition and induced-failure
+tests, §2.3 Month 8 Test Requirements) before Month 8 Definition of
+Done; independent internal security review ahead of the Phase 5 external
+audit.</td>
+<td>Security Engineer</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>Real-time collaboration (Terminal Multiplayer, Collaborative
+Debugging) requires WebRTC + recording + RBAC to compose correctly;
+cross-feature interaction bugs (e.g., recording missing frames during a
+permission promotion) are historically undertested.</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Explicit cross-feature interaction test in Month 9 Test Requirements
+(Compliance Mode + Terminal Multiplayer lifecycle test); Constitution
+§11.4.92 multi-pass change evaluation applied to every
+collaboration-touching commit.</td>
+<td>Backend Engineer (Realtime)</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>AI feature cost (multi-model routing across GPT-4o / Claude 3.5
+Haiku / HelixLLM) scales unpredictably with usage, risking a Month 11+
+budget overrun or a forced feature-quality downgrade.</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Per-request token-cost telemetry from day one of Month 11; Phase 4
+Definition of Done requires a cost review against the Finance/Platform
+budget; local HelixLLM 8B inference available as a cost-ceiling
+fallback.</td>
+<td>AI/ML Engineer</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>100,000-concurrent-SSH-session and 1,000,000 req/s API gateway
+performance targets (Phase 5) are discovered to be unachievable on the
+reference infrastructure only during the final Month 13 load test, with
+no runway left to redesign.</td>
+<td>Low</td>
+<td>High</td>
+<td>Run an early Month 9 or Month 10 smoke-scale load test (10% of the
+Phase 5 target) against the same infrastructure topology to surface
+architectural bottlenecks 2-3 months before the Phase 5 gate, not at
+it.</td>
+<td>Backend Platform Lead</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>External security audit (Cure53 or equivalent, Month 13) surfaces
+Critical findings late, with insufficient time in the single-month Phase
+5 window to remediate and re-verify before GA.</td>
+<td>Medium</td>
+<td>High</td>
+<td>Schedule the external audit’s kickoff for the first week of Month 13
+(not mid-month); run an internal security review (Month 8-10 features)
+ahead of time so the external audit finds fewer net-new Critical issues;
+reserve explicit remediation capacity across all backend engineers in
+the Phase 5 owner/effort table (§2.5).</td>
+<td>Security Engineer</td>
+</tr>
+<tr>
+<td>R7</td>
+<td>Cross-platform parity (iOS/Android/macOS/Windows/Linux) drifts as
+Phases 2-4 features ship, with one or more platforms silently lagging
+behind by GA (Constitution §11.4.81 cross-platform-parity mandate).</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Every Month’s Definition of Done requires explicit “on all 5
+platforms” verification (not just the primary development platform);
+Phase 2/3/4 Exit Criteria include an explicit parity check before phase
+advancement.</td>
+<td>Client Platform Lead</td>
+</tr>
+<tr>
+<td>R8</td>
+<td>SSO/SCIM (Month 10) integration is validated against sandbox IdP
+tenants only; real customer IdP configurations (custom attribute
+mappings, non-standard claims) surface integration failures
+post-GA.</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Recruit at least one design-partner enterprise customer during Phase
+3 to validate SSO/SCIM against their real (non-sandbox) IdP
+configuration before the Month 10 Definition of Done is signed off.</td>
+<td>Backend Engineer (IdM)</td>
+</tr>
+<tr>
+<td>R9</td>
+<td>Self-Hosted Support Runbook’s 24h-P0 SLA is contractually promised
+(§6.6) before the on-call rotation has been operationally rehearsed,
+risking a missed SLA on the first real customer incident.</td>
+<td>Low</td>
+<td>High</td>
+<td>Mandatory quarterly-cadence runbook drill starting in Phase 5 (§2.5
+Deliverable 8); GA Exit Criteria explicitly require at least one
+completed drill with a measured, in-SLA
+time-to-acknowledge/time-to-mitigate before public GA announcement.</td>
+<td>Support Lead</td>
+</tr>
+<tr>
+<td>R10</td>
+<td>Orphaned-feature scheduling introduced in this remediation (Terminal
+Multiplayer, Break-Glass, JIT, SSH Playground, Config Diff,
+Collaborative Debugging) increases Phase 2-4 person-week totals beyond
+originally-assumed team capacity, silently compressing other
+deliverables.</td>
+<td>Medium</td>
+<td>Medium</td>
+<td>Program-Level Owner/Effort Rollup (§2.7) is reviewed against actual
+staffed headcount at every phase Entry Criteria gate; a capacity
+shortfall triggers an explicit scope/schedule renegotiation rather than
+silent feature-cutting.</td>
+<td>Backend Platform Lead</td>
+</tr>
+</tbody>
+</table>
+<h3 id="program-level-owner-effort-rollup-phases-25">2.7 Program-Level
+Owner &amp; Effort Rollup (Phases 2–5)</h3>
+<p>Aggregated from the per-phase Owner &amp; Effort Estimate tables in
+§2.2, §2.3, §2.4, and §2.5. Figures are person-weeks of focused
+engineering capacity; a “sustained” team size assumes full-time
+allocation across the phase’s full duration.</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Duration</th>
+<th>Total effort (person-weeks)</th>
+<th>Implied sustained team size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 2 — Core Features</td>
+<td>Months 4–7 (4 months ≈ 17 weeks)</td>
+<td>53</td>
+<td>≈ 3–4 engineers</td>
+</tr>
+<tr>
+<td>Phase 3 — Enterprise</td>
+<td>Months 8–10 (3 months ≈ 13 weeks)</td>
+<td>65</td>
+<td>≈ 5 engineers</td>
+</tr>
+<tr>
+<td>Phase 4 — AI &amp; Advanced Features</td>
+<td>Months 11–12 (2 months ≈ 9 weeks)</td>
+<td>44</td>
+<td>≈ 5 engineers</td>
+</tr>
+<tr>
+<td>Phase 5 — GA Release</td>
+<td>Month 13 (1 month ≈ 4 weeks)</td>
+<td>36</td>
+<td>≈ 9 people, partially allocated</td>
+</tr>
+<tr>
+<td><strong>Total (Phases 2–5)</strong></td>
+<td><strong>10 months</strong></td>
+<td><strong>198 person-weeks</strong></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>This rollup excludes Phase 1 (Sprints 1–6, already fully specified
+with its own owner/effort discipline in §2.1) and is the input to the
+Phase Entry Criteria capacity check in Risk R10 above.</p>
+<h3 id="roadmap-gantt-dependency-diagram">2.8 Roadmap Gantt &amp;
+Dependency Diagram</h3>
+<pre class="mermaid"><code>gantt
+    title HelixTerminator Roadmap — Phases 1-5 (Months 1-13)
+    dateFormat  YYYY-MM-DD
+    axisFormat  M%m
+    excludes    weekends
+
+    section Phase 1 — Foundation
+    Sprint 1 Monorepo/CI/CD/Infra      :p1s1, 2026-08-01, 14d
+    Sprint 2 Auth + User Service       :p1s2, after p1s1, 14d
+    Sprint 3 Vault Service             :p1s3, after p1s2, 14d
+    Sprint 4 Host + Group Service      :p1s4, after p1s3, 14d
+    Sprint 5 SSH Proxy Service         :p1s5, after p1s4, 14d
+    Sprint 6 Flutter Client Skeleton   :p1s6, after p1s5, 14d
+
+    section Phase 2 — Core Features
+    Month 4 Terminal Emulator          :p2m4, after p1s6, 30d
+    Month 5 SFTP File Manager          :p2m5, after p2m4, 30d
+    Month 6 Port Fwd/Snippets/Keychain :p2m6, after p2m5, 30d
+    Month 7 Workspaces + Collab MVP + SSH Playground :p2m7, after p2m6, 30d
+
+    section Phase 3 — Enterprise
+    Month 8 PKI/CA + RBAC + Break-Glass + JIT   :crit, p3m8, after p2m7, 30d
+    Month 9 Recording/Audit/Compliance + Collab GA :crit, p3m9, after p3m8, 30d
+    Month 10 SSO/SAML/SCIM/Team Mgmt   :p3m10, after p3m9, 30d
+
+    section Phase 4 — AI &amp; Advanced
+    Month 11 AI Features               :p4m11, after p3m10, 30d
+    Month 12 Container Bridge/Infra Map/Config Diff :p4m12, after p4m11, 30d
+
+    section Phase 5 — GA Release
+    Security Audit + Pentest           :crit, p5sec, after p4m12, 21d
+    Performance Hardening              :p5perf, after p4m12, 14d
+    Support Runbook + App Store Submit :p5ops, after p5perf, 14d
+    GA Launch Milestone                :milestone, p5ga, after p5ops, 0d</code></pre>
+<pre class="mermaid"><code>graph TD
+    P1[Phase 1: Foundation&lt;br/&gt;Auth, Vault, Host/Group, SSH Proxy, Flutter skeleton] --&gt; P2M4[Month 4: Terminal Emulator]
+    P2M4 --&gt; P2M5[Month 5: SFTP]
+    P2M5 --&gt; P2M6[Month 6: Port Fwd, Snippets, Keychain]
+    P2M6 --&gt; P2M7[Month 7: Workspaces + Collaboration MVP + SSH Playground]
+    P2M7 --&gt; P3M8[Month 8: PKI/CA + RBAC + Break-Glass + JIT]
+    P3M8 --&gt; P3M9[Month 9: Session Recording + Compliance + Collaboration GA + Collaborative Debugging]
+    P3M9 --&gt; P3M10[Month 10: SSO/SAML + SCIM + Team Mgmt]
+    P3M10 --&gt; P4M11[Month 11: AI Features]
+    P4M11 --&gt; P4M12[Month 12: Container Bridge + Infra Map + Config Diff]
+    P4M12 --&gt; P5[Phase 5: Security Audit + Pentest + Perf Hardening + Support Runbook + GA]
+
+    P2M7 -. &quot;Collaboration MVP hardened by&quot; .-&gt; P3M9
+    P3M8 -. &quot;Certificates required by&quot; .-&gt; P3M9
+    P3M8 -. &quot;RBAC required by&quot; .-&gt; P3M10
+    P4M12 -. &quot;Multi-host fan-out required by Config Diff&quot; .-&gt; P4M12BulkOps[Bulk Operations engine, §1.16.14]
+
+    classDef security fill:#7a1f1f,stroke:#f5a3a3,color:#fff;
+    class P3M8,P5 security;</code></pre>
+<p>The dependency graph makes explicit two constraints enforced
+throughout §2.2–§2.4: (1) Terminal Multiplayer cannot reach its full
+§1.7 spec (RBAC, recording, voice) until the Session Recording Service
+exists, so it ships as an MVP in Month 7 and is hardened in Month 9; (2)
+Break-Glass and JIT Access cannot ship before the SSH Certificate
+Authority and Advanced RBAC engine exist, so both land in Month 8 rather
+than earlier.</p>
 <table style="width:6%;">
 <colgroup>
 <col style="width: 5%" />
@@ -3793,18 +5139,18 @@ unambiguous how compliance is assessed.</td>
 </tbody>
 </table>
 <p><strong>Load Test Setup (k6):</strong></p>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> options <span class="op">=</span> {</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stages</span><span class="op">:</span> [</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    { <span class="dt">duration</span><span class="op">:</span> <span class="st">&#39;5m&#39;</span><span class="op">,</span> <span class="dt">target</span><span class="op">:</span> <span class="dv">10000</span> }<span class="op">,</span>   <span class="co">// ramp to 10,000 VUs</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    { <span class="dt">duration</span><span class="op">:</span> <span class="st">&#39;30m&#39;</span><span class="op">,</span> <span class="dt">target</span><span class="op">:</span> <span class="dv">100000</span> }<span class="op">,</span> <span class="co">// hold at 100,000 VUs</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    { <span class="dt">duration</span><span class="op">:</span> <span class="st">&#39;5m&#39;</span><span class="op">,</span> <span class="dt">target</span><span class="op">:</span> <span class="dv">0</span> }<span class="op">,</span>       <span class="co">// ramp down</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  ]<span class="op">,</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">thresholds</span><span class="op">:</span> {</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">http_req_duration</span><span class="op">:</span> [<span class="st">&#39;p(95)&lt;50&#39;</span><span class="op">,</span> <span class="st">&#39;p(99)&lt;200&#39;</span>]<span class="op">,</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">http_req_failed</span><span class="op">:</span> [<span class="st">&#39;rate&lt;0.001&#39;</span>]<span class="op">,</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> options <span class="op">=</span> {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stages</span><span class="op">:</span> [</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    { <span class="dt">duration</span><span class="op">:</span> <span class="st">&#39;5m&#39;</span><span class="op">,</span> <span class="dt">target</span><span class="op">:</span> <span class="dv">10000</span> }<span class="op">,</span>   <span class="co">// ramp to 10,000 VUs</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    { <span class="dt">duration</span><span class="op">:</span> <span class="st">&#39;30m&#39;</span><span class="op">,</span> <span class="dt">target</span><span class="op">:</span> <span class="dv">100000</span> }<span class="op">,</span> <span class="co">// hold at 100,000 VUs</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    { <span class="dt">duration</span><span class="op">:</span> <span class="st">&#39;5m&#39;</span><span class="op">,</span> <span class="dt">target</span><span class="op">:</span> <span class="dv">0</span> }<span class="op">,</span>       <span class="co">// ramp down</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  ]<span class="op">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">thresholds</span><span class="op">:</span> {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">http_req_duration</span><span class="op">:</span> [<span class="st">&#39;p(95)&lt;50&#39;</span><span class="op">,</span> <span class="st">&#39;p(99)&lt;200&#39;</span>]<span class="op">,</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">http_req_failed</span><span class="op">:</span> [<span class="st">&#39;rate&lt;0.001&#39;</span>]<span class="op">,</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
 <hr />
 <h3 id="ssh-connection-performance">5.3 SSH Connection Performance</h3>
 <table>
@@ -4375,21 +5721,21 @@ min → primary, 15 min → secondary, 30 min → manager</td>
 Metrics</h3>
 <p>These metrics drive product decisions and SLA enforcement.</p>
 <h4 id="active-ssh-sessions">Active SSH Sessions</h4>
-<div class="sourceCode" id="cb3"><pre
-class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prometheus recording rule</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">record</span><span class="kw">:</span><span class="at"> helix:ssh_sessions:active</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">expr</span><span class="kw">:</span><span class="at"> sum(ssh_proxy_active_sessions_total) by (region, instance_type)</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Alert: Unexpected drop in active sessions (might indicate proxy crash)</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SSHSessionsUnexpectedDrop</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    (helix:ssh_sessions:active offset 5m) - helix:ssh_sessions:active &gt; 1000</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    AND helix:ssh_sessions:active &lt; 100</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Active SSH sessions dropped by &gt;1000 in 5 minutes&quot;</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runbook</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://runbooks.helixterminator.io/ssh-session-drop&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prometheus recording rule</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">record</span><span class="kw">:</span><span class="at"> helix:ssh_sessions:active</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">expr</span><span class="kw">:</span><span class="at"> sum(ssh_proxy_active_sessions_total) by (region, instance_type)</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Alert: Unexpected drop in active sessions (might indicate proxy crash)</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SSHSessionsUnexpectedDrop</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    (helix:ssh_sessions:active offset 5m) - helix:ssh_sessions:active &gt; 1000</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    AND helix:ssh_sessions:active &lt; 100</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Active SSH sessions dropped by &gt;1000 in 5 minutes&quot;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runbook</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://runbooks.helixterminator.io/ssh-session-drop&quot;</span></span></code></pre></div>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -4447,15 +5793,15 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb3-1"><a href="
 <hr />
 <h4 id="new-host-connections-per-hour">New Host Connections Per
 Hour</h4>
-<div class="sourceCode" id="cb4"><pre
-class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> NewConnectionsAnomaly</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    rate(ssh_proxy_connection_attempts_total[1h]) &gt; </span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    (avg_over_time(ssh_proxy_connection_attempts_total[7d]) * 3)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 10m</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> info</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Unusually high rate of new host connections&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> NewConnectionsAnomaly</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    rate(ssh_proxy_connection_attempts_total[1h]) &gt; </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    (avg_over_time(ssh_proxy_connection_attempts_total[7d]) * 3)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 10m</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> info</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Unusually high rate of new host connections&quot;</span></span></code></pre></div>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -4494,22 +5840,22 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="
 </table>
 <hr />
 <h4 id="vault-sync-failures">Vault Sync Failures</h4>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> VaultSyncFailureRate</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    rate(vault_sync_failures_total[5m]) / rate(vault_sync_attempts_total[5m]) &gt; 0.001</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Vault sync failure rate exceeded 0.1%&quot;</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> VaultSyncFailureRateCritical</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    rate(vault_sync_failures_total[5m]) / rate(vault_sync_attempts_total[5m]) &gt; 0.01</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 1m</span></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Vault sync failure rate exceeded 1% — data integrity risk&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> VaultSyncFailureRate</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    rate(vault_sync_failures_total[5m]) / rate(vault_sync_attempts_total[5m]) &gt; 0.001</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Vault sync failure rate exceeded 0.1%&quot;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> VaultSyncFailureRateCritical</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    rate(vault_sync_failures_total[5m]) / rate(vault_sync_attempts_total[5m]) &gt; 0.01</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 1m</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Vault sync failure rate exceeded 1% — data integrity risk&quot;</span></span></code></pre></div>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -4566,30 +5912,30 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb5-1"><a href="
 </table>
 <hr />
 <h4 id="authentication-failures">Authentication Failures</h4>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> AuthFailureRateHigh</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    rate(auth_login_failures_total[5m]) / rate(auth_login_attempts_total[5m]) &gt; 0.05</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 5m</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Authentication failure rate &gt; 5% — possible credential stuffing attack&quot;</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> AuthFailureRateCritical</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    rate(auth_login_failures_total[5m]) / rate(auth_login_attempts_total[5m]) &gt; 0.20</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Authentication failure rate &gt; 20% — likely under attack&quot;</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> AccountLockoutSpike</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    rate(auth_account_lockouts_total[5m]) &gt; 10</span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;More than 10 account lockouts per minute&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> AuthFailureRateHigh</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    rate(auth_login_failures_total[5m]) / rate(auth_login_attempts_total[5m]) &gt; 0.05</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 5m</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Authentication failure rate &gt; 5% — possible credential stuffing attack&quot;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> AuthFailureRateCritical</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    rate(auth_login_failures_total[5m]) / rate(auth_login_attempts_total[5m]) &gt; 0.20</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Authentication failure rate &gt; 20% — likely under attack&quot;</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> AccountLockoutSpike</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    rate(auth_account_lockouts_total[5m]) &gt; 10</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;More than 10 account lockouts per minute&quot;</span></span></code></pre></div>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -4652,26 +5998,26 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb6-1"><a href="
 </table>
 <hr />
 <h4 id="session-recording-failures">Session Recording Failures</h4>
-<div class="sourceCode" id="cb7"><pre
-class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is the most critical alert — any recording failure in compliance mode</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SessionRecordingFailedComplianceMode</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    sum(session_recording_failures_total{compliance_mode=&quot;true&quot;}) &gt; 0</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 0m</span><span class="co">  # Fire immediately</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;SESSION RECORDING FAILED IN COMPLIANCE MODE — IMMEDIATE ACTION REQUIRED&quot;</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ $labels.host }} session {{ $labels.session_id }} failed to record&quot;</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">pagerduty_severity</span><span class="kw">:</span><span class="at"> critical</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runbook</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://runbooks.helixterminator.io/recording-failure-compliance&quot;</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SessionRecordingUploadLag</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    session_recording_upload_lag_seconds &gt; 300</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 5m</span></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Session recording upload lag &gt; 5 minutes&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is the most critical alert — any recording failure in compliance mode</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SessionRecordingFailedComplianceMode</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    sum(session_recording_failures_total{compliance_mode=&quot;true&quot;}) &gt; 0</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 0m</span><span class="co">  # Fire immediately</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;SESSION RECORDING FAILED IN COMPLIANCE MODE — IMMEDIATE ACTION REQUIRED&quot;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">description</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;{{ $labels.host }} session {{ $labels.session_id }} failed to record&quot;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">pagerduty_severity</span><span class="kw">:</span><span class="at"> critical</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">runbook</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;https://runbooks.helixterminator.io/recording-failure-compliance&quot;</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SessionRecordingUploadLag</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    session_recording_upload_lag_seconds &gt; 300</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 5m</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;Session recording upload lag &gt; 5 minutes&quot;</span></span></code></pre></div>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -4728,36 +6074,36 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb7-1"><a href="
 </table>
 <hr />
 <h4 id="api-error-rate">API Error Rate</h4>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> APIErrorRateHigh</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m])) </span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    / sum(rate(http_requests_total[5m])) &gt; 0.005</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">labels</span><span class="kw">:</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">team</span><span class="kw">:</span><span class="at"> backend</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;API error rate &gt; 0.5%&quot;</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> APIErrorRateCritical</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m])) </span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    / sum(rate(http_requests_total[5m])) &gt; 0.05</span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 1m</span></span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;API error rate &gt; 5% — service degraded&quot;</span></span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> APILatencyDegradation</span></span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    histogram_quantile(0.95, </span>
-<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>      sum(rate(http_request_duration_seconds_bucket[5m])) by (le)</span>
-<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    ) &gt; 0.1</span>
-<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
-<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
-<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;API p95 latency &gt; 100ms&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> APIErrorRateHigh</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m])) </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    / sum(rate(http_requests_total[5m])) &gt; 0.005</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">labels</span><span class="kw">:</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">team</span><span class="kw">:</span><span class="at"> backend</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;API error rate &gt; 0.5%&quot;</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> APIErrorRateCritical</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m])) </span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    / sum(rate(http_requests_total[5m])) &gt; 0.05</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 1m</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;API error rate &gt; 5% — service degraded&quot;</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> APILatencyDegradation</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    histogram_quantile(0.95, </span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>      sum(rate(http_request_duration_seconds_bucket[5m])) by (le)</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    ) &gt; 0.1</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;API p95 latency &gt; 100ms&quot;</span></span></code></pre></div>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -4820,24 +6166,24 @@ class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb8-1"><a href="
 </table>
 <hr />
 <h4 id="ssh-connection-success-rate">SSH Connection Success Rate</h4>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SSHConnectionSuccessRateLow</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    sum(rate(ssh_proxy_connection_success_total[5m])) </span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    / sum(rate(ssh_proxy_connection_attempts_total[5m])) &lt; 0.99</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 5m</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;SSH connection success rate &lt; 99%&quot;</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SSHConnectionSuccessRateCritical</span></span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    sum(rate(ssh_proxy_connection_success_total[5m])) </span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    / sum(rate(ssh_proxy_connection_attempts_total[5m])) &lt; 0.95</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;SSH connection success rate &lt; 95% — service severely degraded&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SSHConnectionSuccessRateLow</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    sum(rate(ssh_proxy_connection_success_total[5m])) </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    / sum(rate(ssh_proxy_connection_attempts_total[5m])) &lt; 0.99</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 5m</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P2</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;SSH connection success rate &lt; 99%&quot;</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="at">    </span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">alert</span><span class="kw">:</span><span class="at"> SSHConnectionSuccessRateCritical</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="fu">  expr</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    sum(rate(ssh_proxy_connection_success_total[5m])) </span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    / sum(rate(ssh_proxy_connection_attempts_total[5m])) &lt; 0.95</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">for</span><span class="kw">:</span><span class="at"> 2m</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">severity</span><span class="kw">:</span><span class="at"> P1</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">annotations</span><span class="kw">:</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;SSH connection success rate &lt; 95% — service severely degraded&quot;</span></span></code></pre></div>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -5565,26 +6911,26 @@ access grants outside the code review process.</p>
 <p><strong>How It Works:</strong> 1. HelixTerminator introduces an
 “Access as Code” format: a YAML file (<code>.helix/access.yaml</code>)
 that defines who has access to what:</p>
-<div class="sourceCode" id="cb12"><pre
-class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .helix/access.yaml</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;1&quot;</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">environments</span><span class="kw">:</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">production</span><span class="kw">:</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">hosts</span><span class="kw">:</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">group</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;production-app-servers&quot;</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">principals</span><span class="kw">:</span><span class="at"> </span></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">team</span><span class="kw">:</span><span class="at"> sre-team</span></span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">access_level</span><span class="kw">:</span><span class="at"> editor</span></span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">jit_required</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">team</span><span class="kw">:</span><span class="at"> backend-developers  </span></span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">access_level</span><span class="kw">:</span><span class="at"> editor</span></span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">jit_required</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">max_window</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;4h&quot;</span></span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">requires_approval</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">certificate_policy</span><span class="kw">:</span></span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">validity</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;8h&quot;</span></span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">require_mfa</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">require_vpn</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .helix/access.yaml</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;1&quot;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">environments</span><span class="kw">:</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">production</span><span class="kw">:</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">hosts</span><span class="kw">:</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">group</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;production-app-servers&quot;</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">principals</span><span class="kw">:</span><span class="at"> </span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">team</span><span class="kw">:</span><span class="at"> sre-team</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">access_level</span><span class="kw">:</span><span class="at"> editor</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">jit_required</span><span class="kw">:</span><span class="at"> </span><span class="ch">false</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="at">          </span><span class="kw">-</span><span class="at"> </span><span class="fu">team</span><span class="kw">:</span><span class="at"> backend-developers  </span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">access_level</span><span class="kw">:</span><span class="at"> editor</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">jit_required</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">max_window</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;4h&quot;</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="at">            </span><span class="fu">requires_approval</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">certificate_policy</span><span class="kw">:</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">validity</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;8h&quot;</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">require_mfa</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">require_vpn</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span></code></pre></div>
 <ol start="2" type="1">
 <li>This file is stored in a Git repository (company’s
 <code>infrastructure-policies</code> repo)</li>

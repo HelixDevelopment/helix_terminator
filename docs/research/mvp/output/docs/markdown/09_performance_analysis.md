@@ -67,6 +67,7 @@ All latency SLOs are measured at the **service egress point** (not client-percei
 | `config-service` | ≤2 ms | ≤5 ms | ≤10 ms | 100,000 req/s | 99.99% |
 | `search-service` | ≤10 ms | ≤40 ms | ≤100 ms | 10,000 req/s | 99.9% |
 | `sync-service` | ≤5 ms | ≤15 ms | ≤40 ms | 50,000 req/s | 99.9% |
+| `collab-service` | ≤2 ms (keystroke/output fan-out) | ≤10 ms | ≤30 ms | 5,000 concurrent participants/pod (bulkhead) | 99.9% |
 | `websocket-gateway` | ≤500 µs (frame) | ≤2 ms | ≤5 ms | 200,000 concurrent conns | 99.95% |
 | `key-distribution` | ≤5 ms | ≤20 ms | ≤60 ms | 10,000 req/s | 99.99% |
 | `mfa-service` | ≤20 ms | ≤80 ms | ≤200 ms | 5,000 req/s | 99.99% |
@@ -89,6 +90,69 @@ Burn rate 1× = exhausted in 30 days
 Burn rate 14.4× = exhausted in 2 days (5-minute window alert threshold)
 Burn rate 6× = exhausted in 5 days (1-hour window alert threshold)
 ```
+
+### 1.2.1 Real-Time Collaboration Performance Model (Collaboration Service)
+
+> **Status: ASPIRATIONAL — planned target model, not yet load-tested.** The `collab-service` row added to §1.2/§1.4 above and the figures below are a performance BUDGET derived from this document's own §2.4 WebSocket-frame cost model and §2.2 CRDT-merge cost model (both already measured/estimated elsewhere in this doc), not a result from an executed collaboration load test. No collaboration scenario exists yet in §13's k6 suite; §13.6 below extends the stress-to-ceiling plan to cover it. This closes the gap identified against doc `01_core_architecture.md` §3.14 (Collaboration Service, `helixterm.io/services/collab`, port `:8099`) and its Class-B row in the resilience table (bulkhead: 5,000 concurrent participants/pod, 15 s timeout, no retry on the presence/CRDT stream — client resyncs instead).
+
+Prior to this section, none of the 25 services in §1.2/§1.4 modeled collaboration; this is the missing collaboration SLO slice.
+
+**Terminology note:** the collaboration service (doc 01 §3.14) uses role vocabulary `observer / co-pilot / owner`; the Flutter client (doc `02_client_specification.md` §1.16) uses `CollaborationRole { owner, editor, viewer }` and `CollaborationMode { view, control, pair }`. Reconciling that vocabulary is a separate cross-document item (tracked in `REMEDIATION_REGISTER.md` §4, "Real-time collaboration"). This performance model keys off **`mode`** (`view` / `control` / `pair`) because that is what determines whether a participant's operations require CRDT merge, independent of which role vocabulary eventually wins.
+
+**Presence, keystroke, and chat broadcast latency (server-side processing only — excludes client↔gateway network RTT, modeled separately in §2.4):**
+
+| Broadcast class | p50 | p95 | p99 | Notes |
+|---|---|---|---|---|
+| Presence (`participant_joined`/`role_changed`/cursor position) | ≤5 ms | ≤20 ms | ≤50 ms | Coalesced; cursor-position updates throttled to ≤10 Hz/participant to bound fan-out cost at scale |
+| Keystroke / terminal-output broadcast (`view`/`control`/`pair`) | ≤2 ms | ≤10 ms | ≤30 ms | Well inside the "sub-100ms propagation latency" product claim (doc 01 §1, tenet 3) |
+| Chat message broadcast | ≤5 ms | ≤15 ms | ≤40 ms | Lower-priority queue than terminal-buffer frames; never blocks keystroke fan-out |
+
+**Max concurrent collaborators (planned design ceilings, not yet load-validated):**
+
+| Mode | Per-session cap (planned) | CRDT merge required? | Per-pod aggregate |
+|---|---|---|---|
+| `control` / `pair` (bidirectional edit) | ≤10 participants | Yes — full vector-clock merge (below) | Shares the 5,000-participants/pod bulkhead (§1.2 `collab-service` row) |
+| `view` (read + cursor + chat, no local edits) | ≤25 participants | Yes — read-side merge only (no local ops to reconcile against) | Shares the same bulkhead |
+| Broadcast / observer (training/demo, doc 01 §3.14) | ≤1,000 observers/session (target ceiling) | No — pure fan-out; observers never mutate the buffer | Shares the same bulkhead |
+
+**Fan-out cost model** — cost of broadcasting one terminal-buffer delta frame to a session with *P* active participants, reusing this document's own §2.4 WebSocket-frame cost constants:
+
+```
+encode_cost      = 40 µs   (VT100/ANSI delta encode, §2.4 Step 1)
+redis_pubsub_hop = 50 µs   (PUBLISH → per-subscriber deliver, in-memory Redis pub/sub, doc 01 §3.14 "Cache")
+per_subscriber   = 100 µs  (WS frame write, §2.4 Step 7)
+
+Aggregate CPU cost (serial)  = encode_cost + P × (redis_pubsub_hop + per_subscriber)
+Wall-clock cost (parallel)   = encode_cost + redis_pubsub_hop + per_subscriber
+                                (assuming goroutine-per-subscriber fan-out; the aggregate
+                                 CPU figure is a pod-sizing/throughput input, NOT the
+                                 latency any single participant experiences)
+
+P = 10    (control/pair cap):    aggregate CPU ≈ 1.5 ms   | wall-clock ≈ 190 µs
+P = 25    (view cap):             aggregate CPU ≈ 3.7 ms   | wall-clock ≈ 190 µs
+P = 1,000 (broadcast ceiling):    aggregate CPU ≈ 150 ms  | wall-clock ≈ 190 µs (ONLY if fully parallelized)
+```
+
+> **Danger zone (planned mitigation, not yet implemented):** at `P = 1,000`, 150 ms of aggregate per-frame CPU cost will saturate a pod's goroutine scheduler under sustained typing (a hot session emits frames every 10–50 ms) unless fan-out is batched — coalescing N frames into one `PUBLISH` per debounce window. This is a design requirement flagged here, not yet built; treat broadcast-mode-at-1,000-observers as **UNVALIDATED** until the stress-to-ceiling plan (§13.6) exercises it.
+
+**CRDT vector-clock merge cost model** for the collaborative terminal buffer (doc 01 §3.14, "CRDT-based terminal buffer sync"), reusing the same vector-clock merge shape already defined for vault sync in §2.2 above:
+
+```
+merge_cost(P) ≈ P × log2(P) × per_entry_compare
+per_entry_compare ≈ 150 ns   (illustrative shape only, from §13.2's
+                              BenchmarkCRDTMerge100Ops-16: ~15,000 ns / 100 ops
+                              ≈ 150 ns/op — that benchmark is itself DEFERRED/
+                              illustrative per the §13 status note, not a measured run)
+
+P = 10    (control/pair cap):    merge_cost ≈ 10   × 3.32 × 150 ns ≈  5.0 µs/operation
+P = 25    (view cap):             merge_cost ≈ 25   × 4.64 × 150 ns ≈ 17.4 µs/operation
+P = 1,000 (broadcast ceiling):    merge_cost ≈ 1,000 × 9.97 × 150 ns ≈  1.5 ms/operation
+                                   (not applicable in practice — broadcast/observer
+                                    mode never merges; observers are read-only
+                                    fan-out targets only, per the table above)
+```
+
+**Control-handoff arbitration:** when two `control`/`pair` participants race to write the same buffer region, resolution is an O(1) tie-break performed *after* the O(P log P) merge above — the higher-priority vector-clock entry wins (owner outranks co-pilot; ties broken by join order), the losing operation is rejected and re-queued against the merged state. This mirrors the last-write-wins resolution already defined for vault items (§2.2, Step 5) and is likewise **not yet implemented** — it is the design this performance budget assumes.
 
 ### 1.3 Latency Budget Breakdown
 
@@ -147,6 +211,7 @@ Slack to p99 budget:               0.5 ms
 | `api-gateway` | 500,000 | 1,200,000 | 50,000 | 200,000 / 200,000 |
 | `ssh-proxy` | N/A | N/A | 100,000 sessions | 100,000 / 100,000 |
 | `websocket-gateway` | N/A | N/A | 200,000 persistent | 200,000 / 200,000 |
+| `collab-service` | N/A | N/A | 5,000 concurrent participants/pod (bulkhead) | 10,000 / 10,000 (participant-event audit stream) |
 | `auth-service` | 100,000 | 300,000 | 10,000 | 50,000 / 50,000 |
 | `rbac-service` | 1,000,000 | 3,000,000 | 20,000 | — |
 | `vault-service` | 50,000 | 150,000 | 5,000 | 20,000 / 5,000 |
@@ -155,31 +220,21 @@ Slack to p99 budget:               0.5 ms
 
 ### 1.5 Performance Testing Pyramid
 
-```
-                    ┌─────────────────────┐
-                    │   Chaos Engineering  │  ← 1× per release cycle
-                    │  (LitmusChaos/Gremlin)│    Kill pods, partition network
-                    └──────────┬──────────┘
-                   ┌───────────┴───────────┐
-                   │     Soak Testing       │  ← Weekly, 24-hour runs
-                   │  (k6, sustained load)  │    Detect memory leaks, GC drift
-                   └──────────┬────────────┘
-                  ┌────────────┴────────────┐
-                  │     Stress Testing       │  ← Per PR (high-risk changes)
-                  │ (k6, 150% → 300% load)  │    Find break points
-                  └──────────┬─────────────┘
-                 ┌────────────┴─────────────┐
-                 │      Load Testing         │  ← Per release candidate
-                 │  (k6, 100% target load)   │    Validate SLOs at target scale
-                 └──────────┬──────────────┘
-                ┌────────────┴──────────────┐
-                │   Integration Benchmarks   │  ← Per PR (automated CI)
-                │  (Go bench, DB round-trip) │    Detect regressions ≥ 5%
-                └──────────┬───────────────┘
-               ┌────────────┴───────────────┐
-               │    Unit Micro-Benchmarks    │  ← Every commit (automated)
-               │  (func BenchmarkXxx in Go)  │    Critical-path functions
-               └─────────────────────────────┘
+```mermaid
+flowchart TD
+    A["Unit Micro-Benchmarks<br/>(func BenchmarkXxx in Go)<br/>Every commit (automated) — critical-path functions"]
+    B["Integration Benchmarks<br/>(Go bench, DB round-trip)<br/>Per PR (automated CI) — detect regressions ≥ 5%"]
+    C["Load Testing<br/>(k6, 100% target load)<br/>Per release candidate — validate SLOs at target scale"]
+    D["Stress Testing<br/>(k6, 150% → 300% load)<br/>Per PR (high-risk changes) — find break points"]
+    E["Soak Testing<br/>(k6, sustained load)<br/>Weekly, 24-hour runs — detect memory leaks, GC drift"]
+    F["Chaos Engineering<br/>(LitmusChaos/Gremlin)<br/>1× per release cycle — kill pods, partition network"]
+
+    A --> B --> C --> D --> E --> F
+
+    classDef enforced fill:#1b4332,stroke:#2d6a4f,color:#d8f3dc;
+    classDef planned fill:#5c1a1a,stroke:#9d2727,color:#ffe5e5;
+    class A,B enforced
+    class C,D,E,F planned
 ```
 
 > **Status:** Unit Micro-Benchmarks and Integration Benchmarks run in CI today (per-commit/per-PR, automated). **Load, Stress, Soak, and Chaos Engineering are the *planned* cadence** — no executed run of any of these four tiers has produced reported results in this document; §13 is a test plan, not a results report (see §13 status note). In particular, the "150% → 300% load" stress range shown above is a target ceiling: the only stress data available (§7.5) tops out at 150,000 sessions against the 100,000-session target — i.e. 150%, not 300% — and no soak-test leak data or chaos-engineering MTTR/blast-radius findings are reported anywhere in this document.
@@ -482,6 +537,27 @@ TOTAL API GATEWAY PATH: ~4–8 ms (within 8 ms p95 budget)
 ```
 
 ### 2.4 WebSocket Terminal Critical Path
+
+Sequence overview (single-viewer path; the multi-participant fan-out variant of Step 7 is modeled in §1.2.1's collaboration cost model above):
+
+```mermaid
+sequenceDiagram
+    participant U as Flutter Client
+    participant WG as WebSocket Gateway
+    participant SP as SSH Proxy
+    participant RH as Remote Host
+
+    U->>WG: Keystroke frame (~0.1 ms encode)
+    Note over U,WG: Network transit 0.5–50 ms (DC-dependent)
+    WG->>SP: Route to session goroutine (~0.2 ms)
+    SP->>RH: TCP write to SSH channel (~0.3 ms)
+    RH-->>SP: Shell output (1–100 ms, network+CPU dependent)
+    SP-->>WG: io.Copy to WS pipe (~0.2 ms)
+    WG-->>U: WS frame (~0.3 ms)
+    Note over U,WG: Network transit back 0.5–50 ms
+```
+
+Detailed per-stage breakdown:
 
 ```
 User keypress in Flutter terminal [0 ms]
@@ -2834,38 +2910,13 @@ ORDER BY 1;
 
 HelixTerminator uses a three-tier cache hierarchy:
 
-```
-Request
-  │
-  ▼
-┌─────────────────────────────────────────┐
-│  L1: In-Process Cache (per pod)          │
-│  ristretto + sync.Map                   │
-│  Latency: 0.1–1 µs  Size: 256 MB       │
-│  TTL: 30s–5min  Eviction: LFU           │
-└─────────────────┬───────────────────────┘
-                  │ L1 miss
-                  ▼
-┌─────────────────────────────────────────┐
-│  L2: Redis Cluster                       │
-│  6 nodes, 3 primary + 3 replica         │
-│  Latency: 0.3–1 ms  Size: 256 GB       │
-│  TTL: 5min–24h   Eviction: allkeys-lru  │
-└─────────────────┬───────────────────────┘
-                  │ L2 miss
-                  ▼
-┌─────────────────────────────────────────┐
-│  L3: CDN (CloudFront)                    │
-│  For static assets + cacheable API resp │
-│  Latency: 1–5 ms (edge)                 │
-│  TTL: 1h–7d     Invalidation: by tag    │
-└─────────────────┬───────────────────────┘
-                  │ All miss
-                  ▼
-┌─────────────────────────────────────────┐
-│  Origin: PostgreSQL / Source of Truth    │
-│  Latency: 1–10 ms                        │
-└─────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Req(["Request"]) --> L1
+    L1["<b>L1: In-Process Cache (per pod)</b><br/>ristretto + sync.Map<br/>Latency: 0.1–1 µs · Size: 256 MB<br/>TTL: 30s–5min · Eviction: LFU"] -- "L1 miss" --> L2
+    L2["<b>L2: Redis Cluster</b><br/>6 nodes, 3 primary + 3 replica<br/>Latency: 0.3–1 ms · Size: 256 GB<br/>TTL: 5min–24h · Eviction: allkeys-lru"] -- "L2 miss" --> L3
+    L3["<b>L3: CDN (CloudFront)</b><br/>Static assets + cacheable API responses<br/>Latency: 1–5 ms (edge)<br/>TTL: 1h–7d · Invalidation: by tag"] -- "All miss" --> Origin
+    Origin["<b>Origin: PostgreSQL / Source of Truth</b><br/>Latency: 1–10 ms"]
 ```
 
 ### 6.2 L1 In-Process Cache (ristretto)
@@ -5903,6 +5954,86 @@ Example — API Gateway at 100,000 req/s peak:
 | Redis | Up to 16 vCPU cluster node | Redis Cluster for hot keys | Horizontal (cluster) for > 100k ops/s |
 | Kafka broker | Disk I/O bound: NVMe SSD needed | Add brokers for partition leadership | Horizontal after NVMe |
 
+### 13.6 Stress-to-Ceiling Test Plan (150% → 300% Load) — PLANNED
+
+> **Status: PLANNED, not yet executed.** This extends the only real stress data point in the document — the `ssh-proxy` concurrent-session table in §7.5, which tops out at 150,000 sessions (150% of the 100,000-session target) — up to the 300% ceiling named in the §1.5 Testing Pyramid. No run of this plan has produced results; the numbers below are the *methodology and hypothesis*, not a measured outcome.
+
+**Target under test:** `ssh-proxy` concurrent-session ceiling (primary SLO: 100,000 concurrent sessions, §1.2/§1.4).
+
+**Load ramp:** a k6 `ramping-vus`-style executor (same tooling as §13.1) extends the existing §7.5 data point in fixed steps, holding each step for a soak dwell (15 min) so the system reaches steady state before the next ramp — not merely transiting through it:
+
+| Step | Target concurrent sessions | % of 100k target | Dwell |
+|---|---|---|---|
+| 1 (already measured, §7.5) | 100,000 | 100% | — |
+| 2 (already measured, §7.5) | 150,000 | 150% | — |
+| 3 (planned) | 200,000 | 200% | 15 min |
+| 4 (planned) | 250,000 | 250% | 15 min |
+| 5 (planned) | 300,000 | 300% | 15 min |
+
+**Fault axis:** pure load, no fault injection (fault injection is the chaos plan, §13.8) — the goal is to find where the system organically degrades under load alone.
+
+**Break criteria (any ONE trips ⇒ ceiling found, ramp stops immediately):**
+- Frame-forward p99 exceeds 3× the ≤15 ms SLO (i.e. > 45 ms) sustained for 2 consecutive minutes.
+- Error rate (`http_req_failed` / SSH handshake failures) exceeds 1%.
+- The goroutine-leak (§3.1) or FD-exhaustion (§3.2) alerting rule fires.
+- Any pod is OOMKilled or restarts.
+- The TCP listen-backlog-drop alert (§3.3) is sustained > 0 for 1 minute.
+
+**Expected behavior (hypothesis — to be confirmed, not asserted as fact):** extrapolating the §7.5 trend (p50 grows from 0.9 ms → 2.1 ms, a +133% increase, for a +50% load step from 100k → 150k sessions) suggests continued latency growth through 200,000 sessions, with a probable inflection point beyond that where the FD/goroutine ceilings sized in §3.1–§3.2 (500,000 FDs for 100k sessions × 5 FDs/session + headroom) start to bind. This is a prediction from curve extrapolation, not a measured result — the whole point of this plan is to replace the prediction with data.
+
+**Pass/fail threshold for the §1.5 "300% load" claim:** the system must sustain 300,000 concurrent sessions for ≥ 15 minutes with p99 ≤ 45 ms and error rate ≤ 1% for the 300% figure to be considered validated. If the ceiling is found below 300,000 sessions, that measured ceiling — not 300% — becomes the documented stress ceiling, and §1.5 + §7.5 MUST be updated with the real number (per this Constitution's no-guessing / rock-solid-proof discipline — a target ceiling is not evidence of an achieved ceiling).
+
+**Provenance requirement:** any executed run MUST record commit SHA, environment (pod spec, node type, k6 version), timestamp, and the full k6 summary JSON, attached alongside this section, before the "PLANNED" label may be removed.
+
+### 13.7 Soak Test Plan (24-Hour, Planned)
+
+> **Status: PLANNED, not yet executed.** No soak-test leak data exists anywhere in this document today (per the §1.5 pyramid status note). This section defines methodology only.
+
+**Target:** detect memory leaks (goroutine leaks §3.1, connection-pool leaks §3.5, GC drift) under sustained realistic load, per the Testing Pyramid's "Soak Testing … Weekly, 24-hour runs" tier (§1.5).
+
+**Methodology:** 24 hours continuous load, sustained at 100% of target throughput for the three highest-traffic services — `api-gateway` (500,000 req/s), `ssh-proxy` (100,000 concurrent sessions), `websocket-gateway` (200,000 concurrent conns) — run concurrently against a staging environment sized identically to production (Appendix B resource profiles).
+
+**Sampling cadence:** every 5 minutes, capture per pod: RSS memory, goroutine count (§3.1 metric), FD count (§3.2 metric), GC pause p99 (`go_gc_duration_seconds`), connection-pool idle/in-use/total (§3.5 metrics), Kafka consumer lag (§2.5).
+
+**Leak-detection criterion:** any monotonic upward trend in RSS, goroutine count, or FD count that does NOT plateau within the first 2 hours (steady-state warm-up) is a leak candidate. Mechanical trigger: a per-metric linear regression over hourly buckets with a positive slope at 95% confidence over the last 20 hours of the run (this avoids false positives from the normal GC sawtooth pattern).
+
+**Pass thresholds (all must hold, hours 2–24):**
+1. RSS growth ≤ 5% (allows minor heap-fragmentation growth, rejects true leaks).
+2. Goroutine count within ±5% of the hour-2 baseline at hour 24.
+3. FD count within ±5% of the hour-2 baseline at hour 24.
+4. GC pause p99 does not increase by > 20% from hour 2 to hour 24 (rules out GC-drift under heap growth).
+5. Zero pod restarts / OOMKills during the window.
+
+**Fail handling:** any pass-threshold breach stops the soak run (test-interrupt-on-discovery discipline), captures a heap profile (`pprof/heap`) at the point of divergence, and root-causes via the flamegraph methodology (§13.3) before re-running.
+
+**Cadence once implemented:** weekly, per the §1.5 pyramid; results appended to this section with dated provenance (commit, environment, timestamp) — until an executed run exists, this remains a plan.
+
+### 13.8 Chaos Engineering Test Plan — PLANNED
+
+> **Status: PLANNED, not yet executed.** No chaos run has produced MTTR or blast-radius data anywhere in this document. This plan is written against the *target* resilience architecture — it exercises mechanisms (circuit breakers §4.1, backpressure §4.5, bulkheads §4.7, timeouts §4.8) that this document's own gap analysis (§4) shows are largely **not yet implemented**. Running the network-partition scenarios below today is expected to surface cascading failures rather than contained ones; that is itself the intended finding, not a failure of the plan.
+
+**Tooling:** LitmusChaos or Gremlin, per the §1.5 pyramid's Chaos Engineering tier.
+
+**Fault-injection matrix:**
+
+| Fault | Target | Blast radius (planned) | Expected/measured signal |
+|---|---|---|---|
+| Pod kill (SIGKILL) | 1 `ssh-proxy` pod | Sessions on that pod only (bypasses the graceful `Drainer`, §3.1, by design — this is a hard kill) | Client reconnect within client-side session-timeout policy; no cross-pod session loss |
+| Pod kill (SIGKILL) | 1 PostgreSQL read replica | Read traffic routed to that replica only | Failover to remaining replicas within the replication-lag SLO (doc `04`'s DR runbook) |
+| Network partition | `ssh-proxy` ⇄ `vault-service` | All `ssh-proxy` pods lose `vault-service` reachability | Circuit breaker (once §4.1 lands) trips; new-credential SSH connects fail fast instead of hanging for the 30 s handshake timeout |
+| Network partition | `api-gateway` ⇄ Redis | Rate-limit/session cache unreachable | Fail-open vs fail-closed behavior for rate limiting must be an explicit, tested decision — not yet decided anywhere in this document |
+| Latency injection (+200 ms) | `api-gateway` ⇄ `auth-service` | All authenticated API calls | The §1.3 latency budget should be visibly consumed — this validates the budget model reflects reality, not just arithmetic |
+| Kafka broker kill | 1 of N brokers | Producers/consumers on affected partitions | ISR failover; consumer-lag spike bounded and recovers (§2.5, §3.8) |
+| CPU/memory pressure (`stress-ng`) | 1 `vault-service` pod | Requests routed to that pod | HPA scale-out triggers before user-facing latency SLO breach |
+
+**MTTR target (planned, to be measured):** recovery to steady-state SLO compliance within 5 minutes of fault injection for single-pod/single-broker faults; within 15 minutes for the network-partition scenarios (these require the §4 circuit-breaker/retry-budget mechanisms to exist first).
+
+**Blast-radius acceptance criterion:** no fault above may propagate beyond its declared "Blast radius (planned)" column. A run that finds cross-blast-radius impact IS the finding, and MUST drive a bulkhead/circuit-breaker fix (§4.1/§4.7) — never a redefinition of "acceptable blast radius" to match what was observed.
+
+**Cadence once implemented:** 1× per release cycle per the §1.5 pyramid, immediately before a release candidate is promoted; results (MTTR, blast radius observed, findings) appended here with dated provenance.
+
+**Honest dependency on §4:** several rows above are expected to fail as *cascading* rather than *contained* if run against today's implementation, because §4 shows circuit breakers, backpressure, and bulkheads are largely absent on these same call paths. Running chaos tests before those land is still valuable — it turns the §4 gap analysis from a static-review claim into an empirically reproduced one — but "PASS" is not the expected near-term outcome for the partition-based scenarios in this matrix.
+
 ---
 
 ## 14. Performance Improvement Roadmap
@@ -6193,6 +6324,7 @@ the producer.
 | ssh-proxy | 99.95% | < 5ms | < 50ms | < 200ms | < 0.05% |
 | vault-service | 99.99% | < 15ms | < 100ms | < 500ms | < 0.01% |
 | sync-service | 99.9% | < 200ms | < 1s | < 2s | < 0.1% |
+| collab-service | 99.9% | < 2ms | < 10ms | < 30ms | < 0.5% |
 | audit-service | 99.9% | < 5ms (async) | < 50ms | < 200ms | < 0.1% |
 | notification-service | 99.5% | < 500ms | < 2s | < 5s | < 0.5% |
 | billing-service | 99.9% | < 100ms | < 500ms | < 2s | < 0.1% |
