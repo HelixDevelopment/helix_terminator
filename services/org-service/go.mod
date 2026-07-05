@@ -3,8 +3,8 @@ module github.com/helixdevelopment/org-service
 go 1.22
 
 require (
-	github.com/gin-gonic/gin v1.9.1
+	github.com/gin-gonic/gin v1.10.0
+	github.com/google/uuid v1.6.0
+	github.com/jackc/pgx/v5 v5.7.2
 	github.com/stretchr/testify v1.9.0
 )
-
-// TODO: pin additional dependencies (logger, tracer, config, DB driver)
