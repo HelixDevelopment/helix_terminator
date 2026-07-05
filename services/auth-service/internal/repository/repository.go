@@ -2,27 +2,267 @@ package repository
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/helixdevelopment/auth-service/internal/model"
 )
 
-// Repository defines the persistence interface.
-// TODO: add methods for domain entities.
-type Repository interface {
-	Ping(ctx context.Context) error
+// Repository handles database operations for auth service
+type Repository struct {
+	pool *pgxpool.Pool
 }
 
-// PostgresRepository implements Repository using PostgreSQL.
-type PostgresRepository struct {
-	// TODO: inject *sql.DB or *pgxpool.Pool
+// New creates a new repository
+func New(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
 }
 
-// NewPostgresRepository creates a new PostgresRepository.
-func NewPostgresRepository() *PostgresRepository {
-	return &PostgresRepository{}
+// CreateUser creates a new user
+func (r *Repository) CreateUser(ctx context.Context, user *model.User) error {
+	query := `
+		INSERT INTO users (id, email, password_hash, display_name, role, mfa_enabled, mfa_method, mfa_secret, email_verified, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`
+	_, err := r.pool.Exec(ctx, query,
+		user.ID, user.Email, user.PasswordHash, user.DisplayName, user.Role,
+		user.MFAEnabled, user.MFAMethod, user.MFASecret, user.EmailVerified,
+		user.CreatedAt, user.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+	return nil
 }
 
-// Ping verifies connectivity.
-func (r *PostgresRepository) Ping(ctx context.Context) error {
-	// TODO: implement real ping
-	return errors.New("not implemented")
+// GetUserByEmail retrieves a user by email
+func (r *Repository) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	query := `
+		SELECT id, email, password_hash, display_name, role, mfa_enabled, mfa_method, mfa_secret,
+		       email_verified, failed_login_attempts, locked_until, created_at, updated_at, deleted_at
+		FROM users
+		WHERE email = $1 AND deleted_at IS NULL
+	`
+	row := r.pool.QueryRow(ctx, query, email)
+
+	user := &model.User{}
+	err := row.Scan(
+		&user.ID, &user.Email, &user.PasswordHash, &user.DisplayName, &user.Role,
+		&user.MFAEnabled, &user.MFAMethod, &user.MFASecret,
+		&user.EmailVerified, &user.FailedLogins, &user.LockedUntil,
+		&user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	return user, nil
+}
+
+// GetUserByID retrieves a user by ID
+func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
+	query := `
+		SELECT id, email, password_hash, display_name, role, mfa_enabled, mfa_method, mfa_secret,
+		       email_verified, failed_login_attempts, locked_until, created_at, updated_at, deleted_at
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+	row := r.pool.QueryRow(ctx, query, id)
+
+	user := &model.User{}
+	err := row.Scan(
+		&user.ID, &user.Email, &user.PasswordHash, &user.DisplayName, &user.Role,
+		&user.MFAEnabled, &user.MFAMethod, &user.MFASecret,
+		&user.EmailVerified, &user.FailedLogins, &user.LockedUntil,
+		&user.CreatedAt, &user.UpdatedAt, &user.DeletedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	return user, nil
+}
+
+// UpdateUser updates a user
+func (r *Repository) UpdateUser(ctx context.Context, user *model.User) error {
+	query := `
+		UPDATE users
+		SET display_name = $2, role = $3, mfa_enabled = $4, mfa_method = $5, mfa_secret = $6,
+		    email_verified = $7, failed_login_attempts = $8, locked_until = $9, updated_at = $10
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+	_, err := r.pool.Exec(ctx, query,
+		user.ID, user.DisplayName, user.Role, user.MFAEnabled, user.MFAMethod, user.MFASecret,
+		user.EmailVerified, user.FailedLogins, user.LockedUntil, time.Now().UTC(),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+	return nil
+}
+
+// IncrementFailedLogins increments the failed login count for a user
+func (r *Repository) IncrementFailedLogins(ctx context.Context, userID uuid.UUID) error {
+	query := `
+		UPDATE users
+		SET failed_login_attempts = failed_login_attempts + 1,
+		    locked_until = CASE WHEN failed_login_attempts >= 4 THEN $2 ELSE locked_until END,
+		    updated_at = $3
+		WHERE id = $1
+	`
+	lockUntil := time.Now().UTC().Add(15 * time.Minute)
+	_, err := r.pool.Exec(ctx, query, userID, lockUntil, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("failed to increment failed logins: %w", err)
+	}
+	return nil
+}
+
+// ResetFailedLogins resets the failed login count
+func (r *Repository) ResetFailedLogins(ctx context.Context, userID uuid.UUID) error {
+	query := `
+		UPDATE users
+		SET failed_login_attempts = 0, locked_until = NULL, updated_at = $2
+		WHERE id = $1
+	`
+	_, err := r.pool.Exec(ctx, query, userID, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("failed to reset failed logins: %w", err)
+	}
+	return nil
+}
+
+// CreateSession creates a new session
+func (r *Repository) CreateSession(ctx context.Context, session *model.Session) error {
+	query := `
+		INSERT INTO user_sessions (id, user_id, device_id, device_name, device_type, ip_address, user_agent,
+		                          access_token_hash, refresh_token_hash, expires_at, last_active_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`
+	_, err := r.pool.Exec(ctx, query,
+		session.ID, session.UserID, session.DeviceID, session.DeviceName, session.DeviceType,
+		session.IPAddress, session.UserAgent, session.AccessTokenHash, session.RefreshTokenHash,
+		session.ExpiresAt, session.LastActiveAt, session.CreatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create session: %w", err)
+	}
+	return nil
+}
+
+// GetSessionByTokenHash retrieves a session by access token hash
+func (r *Repository) GetSessionByTokenHash(ctx context.Context, tokenHash string) (*model.Session, error) {
+	query := `
+		SELECT id, user_id, device_id, device_name, device_type, ip_address, user_agent,
+		       access_token_hash, refresh_token_hash, expires_at, last_active_at, revoked_at, created_at
+		FROM user_sessions
+		WHERE access_token_hash = $1 AND revoked_at IS NULL
+	`
+	row := r.pool.QueryRow(ctx, query, tokenHash)
+
+	session := &model.Session{}
+	err := row.Scan(
+		&session.ID, &session.UserID, &session.DeviceID, &session.DeviceName, &session.DeviceType,
+		&session.IPAddress, &session.UserAgent, &session.AccessTokenHash, &session.RefreshTokenHash,
+		&session.ExpiresAt, &session.LastActiveAt, &session.RevokedAt, &session.CreatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("session not found")
+		}
+		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+	return session, nil
+}
+
+// RevokeSession revokes a session
+func (r *Repository) RevokeSession(ctx context.Context, sessionID uuid.UUID) error {
+	query := `
+		UPDATE user_sessions
+		SET revoked_at = $2
+		WHERE id = $1
+	`
+	_, err := r.pool.Exec(ctx, query, sessionID, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("failed to revoke session: %w", err)
+	}
+	return nil
+}
+
+// RevokeAllUserSessions revokes all sessions for a user
+func (r *Repository) RevokeAllUserSessions(ctx context.Context, userID uuid.UUID) error {
+	query := `
+		UPDATE user_sessions
+		SET revoked_at = $2
+		WHERE user_id = $1 AND revoked_at IS NULL
+	`
+	_, err := r.pool.Exec(ctx, query, userID, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("failed to revoke all sessions: %w", err)
+	}
+	return nil
+}
+
+// ListActiveSessions lists all active sessions for a user
+func (r *Repository) ListActiveSessions(ctx context.Context, userID uuid.UUID) ([]*model.Session, error) {
+	query := `
+		SELECT id, user_id, device_id, device_name, device_type, ip_address, user_agent,
+		       expires_at, last_active_at, created_at
+		FROM user_sessions
+		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > $2
+		ORDER BY created_at DESC
+	`
+	rows, err := r.pool.Query(ctx, query, userID, time.Now().UTC())
+	if err != nil {
+		return nil, fmt.Errorf("failed to list sessions: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []*model.Session
+	for rows.Next() {
+		session := &model.Session{}
+		err := rows.Scan(
+			&session.ID, &session.UserID, &session.DeviceID, &session.DeviceName, &session.DeviceType,
+			&session.IPAddress, &session.UserAgent, &session.ExpiresAt, &session.LastActiveAt, &session.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan session: %w", err)
+		}
+		sessions = append(sessions, session)
+	}
+
+	return sessions, nil
+}
+
+// UpdateSessionActivity updates the last active timestamp
+func (r *Repository) UpdateSessionActivity(ctx context.Context, sessionID uuid.UUID) error {
+	query := `
+		UPDATE user_sessions
+		SET last_active_at = $2
+		WHERE id = $1
+	`
+	_, err := r.pool.Exec(ctx, query, sessionID, time.Now().UTC())
+	if err != nil {
+		return fmt.Errorf("failed to update session activity: %w", err)
+	}
+	return nil
+}
+
+// EmailExists checks if an email is already registered
+func (r *Repository) EmailExists(ctx context.Context, email string) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM users WHERE email = $1 AND deleted_at IS NULL)`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, email).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check email: %w", err)
+	}
+	return exists, nil
 }
