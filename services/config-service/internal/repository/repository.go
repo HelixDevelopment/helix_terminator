@@ -176,11 +176,11 @@ func (r *Repository) ListConfigs(ctx context.Context, scope string, scopeID *uui
 
 // UpdateConfig updates a config by ID with the given fields.
 func (r *Repository) UpdateConfig(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error {
-	if err := r.checkPool(); err != nil {
-		return err
-	}
 	if len(updates) == 0 {
 		return fmt.Errorf("no updates provided")
+	}
+	if err := r.checkPool(); err != nil {
+		return err
 	}
 
 	setParts := []string{}

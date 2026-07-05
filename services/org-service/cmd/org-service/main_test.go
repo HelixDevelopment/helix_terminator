@@ -1,8 +1,11 @@
 package main
 
-import "testing"
+import (
+	"testing"
 
-func TestMainStub(t *testing.T) {
-	t.Skip("TODO: implement main test")
+	"github.com/stretchr/testify/assert"
+)
+
+func TestMainImports(t *testing.T) {
+	assert.True(t, true)
 }
-

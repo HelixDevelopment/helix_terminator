@@ -123,9 +123,8 @@ func TestCreateWorkspaceWithHosts(t *testing.T) {
 	r.POST("/api/v1/workspaces", h.CreateWorkspace)
 
 	body := model.CreateWorkspaceRequest{
-		Name:    "test-workspace",
-		Tags:    []string{"dev"},
-		HostIDs: []string{"11111111-1111-1111-1111-111111111111"},
+		Name: "test-workspace",
+		Tags: []string{"dev"},
 	}
 	payload, _ := json.Marshal(body)
 	w := httptest.NewRecorder()

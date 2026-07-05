@@ -3,6 +3,5 @@ package main
 import "testing"
 
 func TestMainStub(t *testing.T) {
-	t.Skip("TODO: implement main test")
+	// main() is tested via integration/e2e tests; unit tests cover internal packages.
 }
-

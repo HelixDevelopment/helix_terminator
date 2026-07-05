@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/helixdevelopment/config-service/internal/handler"
 	"github.com/helixdevelopment/config-service/internal/model"
+	"github.com/helixdevelopment/config-service/internal/repository"
 )
 
 func setupTestRouter() *gin.Engine {
@@ -98,7 +99,9 @@ func TestCreateConfigValidation_MissingScopeID(t *testing.T) {
 
 func TestCreateConfigValidation_GlobalNoScopeID(t *testing.T) {
 	r := setupTestRouter()
-	h := handler.New(nil)
+	// Use a mock repo that returns DB error instead of nil to avoid nil panic
+	repo := repository.New(nil)
+	h := handler.New(repo)
 	r.POST("/api/v1/configs", h.CreateConfig)
 
 	body := model.CreateConfigRequest{
