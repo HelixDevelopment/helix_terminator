@@ -1,17 +1,666 @@
-# Default values for helixterm.
-# TODO: define values for each subchart
-replicaCount: 1
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
 
-image:
-  repository: helixterminator
-  tag: latest
-  pullPolicy: IfNotPresent
+postgresql:
+  enabled: true
+  auth:
+    username: helixadmin
+    database: helixterminator
+    existingSecret: helix-postgres-secret
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  readReplicas:
+    replicaCount: 2
 
-service:
-  type: ClusterIP
-  port: 8080
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    existingSecret: helix-redis-secret
+    existingSecretPasswordKey: redis-password
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
 
-ingress:
-  enabled: false
+kafka:
+  enabled: true
+  replicaCount: 3
+  auth:
+    enabled: true
+    existingSecret: helix-kafka-secret
+  persistence:
+    enabled: true
+    size: 50Gi
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
 
-resources: {}
+ingress-nginx:
+  enabled: true
+  controller:
+    replicaCount: 2
+    service:
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    config:
+      ssl-protocols: "TLSv1.2 TLSv1.3"
+      ssl-ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+      hsts: "true"
+      hsts-max-age: "31536000"
+      hsts-include-subdomains: "true"
+
+# Global service defaults
+gateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/gateway-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    hosts:
+      - host: api.helixterminator.io
+        paths:
+          - path: /
+            pathType: Prefix
+  env:
+    - name: PORT
+      value: "8080"
+    - name: LOG_LEVEL
+      value: "info"
+
+auth:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/auth-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  env:
+    - name: PORT
+      value: "8080"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: helix-postgres-secret
+          key: database-url
+
+user:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/user-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+vault:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/vault-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+host:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/host-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+sshproxy:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/ssh-proxy-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+terminal:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/terminal-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+keychain:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/keychain-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+workspace:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/workspace-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+config:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/config-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+pki:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/pki-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+billing:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/billing-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+org:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/org-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+notification:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/notification-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+audit:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/audit-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+health:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/health-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+ai:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/ai-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+collaboration:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/collaboration-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+containerbridge:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/container-bridge-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+helixtrackbridge:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/helixtrack-bridge-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+portforward:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/port-forward-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+sftp:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/sftp-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+recording:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/recording-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+snippet:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/snippet-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+analytics:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: helixterminator/analytics-service
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+
+# Pod Disruption Budgets
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Pod Security Context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container Security Context
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+# Network Policy
+networkPolicy:
+  enabled: true
