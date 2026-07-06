@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../models/notification.dart' as models;
 import 'api_client.dart';
 

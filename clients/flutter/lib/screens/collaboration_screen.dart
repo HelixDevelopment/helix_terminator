@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/collaboration_bloc.dart';
-import '../services/collaboration_service.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/error_widget.dart' as helix_error;
