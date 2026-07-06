@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-rules
+  namespace: helixterminator
+data:
+  falco_rules.local.yaml: |
+    - rule: Terminal Shell in Container
+      desc: Detect shell execution inside containers (potential container escape)
+      condition: spawned_process and container and shell_procs
+      output: "Terminal shell in container (user=%user.name container=%container.name shell=%proc.name)"
+      priority: WARNING
+
+    - rule: Unauthorized Database Access
+      desc: Detect unauthorized database connection attempts
+      condition: spawned_process and (proc.name in (psql, mysql, redis-cli)) and not (proc.args contains "healthz")
+      output: "Database client executed (user=%user.name command=%proc.cmdline)"
+      priority: NOTICE
+
+    - rule: Sensitive File Access
+      desc: Detect access to sensitive files
+      condition: open_read and (fd.name contains "/etc/shadow" or fd.name contains "/etc/passwd" or fd.name contains ".ssh/")
+      output: "Sensitive file accessed (user=%user.name file=%fd.name)"
+      priority: WARNING
+
+    - rule: Outbound Connection from Sensitive Service
+      desc: Detect unexpected outbound connections from sensitive services
+      condition: outbound and (container.name in (auth-service, vault-service, pki-service)) and not (fd.sip in (127.0.0.1, 10.0.0.0/8))
+      output: "Outbound connection from sensitive service (container=%container.name dest=%fd.sip)"
+      priority: CRITICAL
+
+    - rule: Privilege Escalation
+      desc: Detect privilege escalation attempts
+      condition: spawned_process and (proc.name in (sudo, su, pkexec, setuid))
+      output: "Privilege escalation attempt (user=%user.name command=%proc.cmdline)"
+      priority: CRITICAL
+
+    - rule: Kubernetes Secret Access
+      desc: Detect access to Kubernetes secrets
+      condition: open_read and (fd.name contains "/var/run/secrets/kubernetes.io/serviceaccount")
+      output: "Kubernetes secret accessed (user=%user.name file=%fd.name)"
+      priority: WARNING
+
+    - rule: Crypto Mining Detection
+      desc: Detect crypto mining processes
+      condition: spawned_process and (proc.name in (xmrig, minerd, stratum, cpuminer))
+      output: "Crypto mining process detected (user=%user.name command=%proc.cmdline)"
+      priority: CRITICAL
+
+    - rule: Write to /etc
+      desc: Detect writes to /etc directory
+      condition: write_etc_common
+      output: "File written to /etc (user=%user.name command=%proc.cmdline file=%fd.name)"
+      priority: WARNING
+
+    - rule: SSH Connection from Container
+      desc: Detect SSH connections initiated from containers
+      condition: outbound and (fd.sport=22) and container
+      output: "SSH connection from container (container=%container.name dest=%fd.sip)"
+      priority: NOTICE
+
+    - rule: Modification of SSH Configuration
+      desc: Detect modifications to SSH configuration files
+      condition: modify and (fd.name contains "/etc/ssh/")
+      output: "SSH config modified (user=%user.name file=%fd.name)"
+      priority: WARNING
