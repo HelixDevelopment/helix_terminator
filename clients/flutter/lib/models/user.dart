@@ -13,5 +13,23 @@ class User {
     required this.createdAt,
   });
 
-  // TODO: add fromJson, toJson
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      name: json['name'] as String,
+      avatarUrl: json['avatar_url'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'name': name,
+      'avatar_url': avatarUrl,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
 }
