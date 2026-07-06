@@ -1,8 +1,13 @@
 package main
 
-import "testing"
+import (
+	"testing"
 
-func TestMainStub(t *testing.T) {
-	t.Skip("TODO: implement main test")
+	"github.com/stretchr/testify/assert"
+)
+
+func TestParseEndpoints_Empty(t *testing.T) {
+	result := parseEndpoints("")
+	assert.NotNil(t, result)
+	assert.Empty(t, result)
 }
-

@@ -1,10 +1,15 @@
-package repository_test
+package repository
 
 import (
-	testing
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestRepositoryStub(t *testing.T) {
-	t.Skip("TODO: implement repository tests")
+func TestNew(t *testing.T) {
+	r := New(nil)
+	assert.NotNil(t, r)
+	err := r.checkPool()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database not connected")
 }
-

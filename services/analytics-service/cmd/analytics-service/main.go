@@ -1,23 +1,42 @@
 package main
 
 import (
-	"log"
+	"context"
+	"fmt"
 	"os"
+	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/helixdevelopment/analytics-service/internal/handler"
+	"github.com/helixdevelopment/analytics-service/internal/repository"
 	"github.com/helixdevelopment/analytics-service/internal/server"
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgres://postgres:postgres@localhost:5432/analytics?sslmode=disable"
 	}
 
-	// TODO: initialize config, logger, DB, tracer
-	srv := server.New()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	log.Printf("analytics-service starting on port %s", port)
-	if err := srv.Run(":" + port); err != nil {
-		log.Fatalf("server failed: %v", err)
+	pool, err := pgxpool.New(ctx, dbURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
+	defer pool.Close()
+
+	repo := repository.New(pool)
+	h := handler.New(repo)
+	srv := server.New(h)
+
+	return srv.Run()
 }

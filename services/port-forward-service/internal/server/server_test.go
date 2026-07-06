@@ -1,10 +1,16 @@
-package server_test
+package server
 
 import (
-	testing
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/helixdevelopment/port-forward-service/internal/handler"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestServerStub(t *testing.T) {
-	t.Skip("TODO: implement server tests")
+func TestNewServer(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := handler.New(nil)
+	s := New(h)
+	assert.NotNil(t, s)
 }
-

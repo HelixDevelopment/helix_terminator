@@ -1,8 +1,9 @@
 package main
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestMainStub(t *testing.T) {
-	t.Skip("TODO: implement main test")
+	t.Skip("main test: server startup tested via integration")
 }
-

@@ -6,6 +6,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// SessionStatus constants
+const (
+	SessionStatusActive = "active"
+	SessionStatusEnded  = "ended"
+)
+
 // CollaborationSession represents a shared collaboration session
 type CollaborationSession struct {
 	ID          uuid.UUID `json:"id" db:"id"`

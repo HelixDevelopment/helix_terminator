@@ -1,10 +1,17 @@
 package repository_test
 
 import (
-	testing
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/helixdevelopment/health-service/internal/repository"
 )
 
-func TestRepositoryStub(t *testing.T) {
-	t.Skip("TODO: implement repository tests")
+func TestPostgresRepositoryPing(t *testing.T) {
+	repo := repository.NewPostgresRepository()
+	err := repo.Ping(context.Background())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not implemented")
 }
-

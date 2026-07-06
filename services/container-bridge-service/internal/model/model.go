@@ -6,52 +6,59 @@ import (
 	"github.com/google/uuid"
 )
 
+// ContainerBridgeStatus constants
+const (
+	ContainerBridgeStatusActive   = "active"
+	ContainerBridgeStatusInactive = "inactive"
+	ContainerBridgeStatusError    = "error"
+)
+
 // ContainerBridge represents a container bridge connection
 type ContainerBridge struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	UserID      uuid.UUID `json:"userId" db:"user_id"`
-	OrgID       *uuid.UUID `json:"orgId,omitempty" db:"org_id"`
-	Name        string    `json:"name" db:"name"`
-	HostID      uuid.UUID `json:"hostId" db:"host_id"`
-	ContainerID string    `json:"containerId" db:"container_id"`
-	Image       string    `json:"image" db:"image"`
-	Status      string    `json:"status" db:"status"`
-	Ports       map[string]interface{} `json:"ports,omitempty" db:"ports"`
-	Env         map[string]interface{} `json:"env,omitempty" db:"env"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
-	DeletedAt   *time.Time `json:"deletedAt,omitempty" db:"deleted_at"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	HostID      uuid.UUID  `json:"hostId" db:"host_id"`
+	ContainerID string     `json:"containerId" db:"container_id"`
+	Name        string     `json:"name" db:"name"`
+	Image       string     `json:"image" db:"image"`
+	Status      string     `json:"status" db:"status"`
+	Ports       []string   `json:"ports" db:"ports"`
+	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // CreateContainerBridgeRequest represents a request to create a bridge
 type CreateContainerBridgeRequest struct {
-	Name        string                 `json:"name" binding:"required,max=255"`
-	HostID      string                 `json:"hostId" binding:"required,uuid"`
-	ContainerID string                 `json:"containerId" binding:"required"`
-	Image       string                 `json:"image" binding:"required"`
-	Ports       map[string]interface{} `json:"ports,omitempty"`
-	Env         map[string]interface{} `json:"env,omitempty"`
+	HostID      string   `json:"hostId" binding:"required,uuid"`
+	ContainerID string   `json:"containerId" binding:"required,max=255"`
+	Name        string   `json:"name" binding:"required,max=255"`
+	Image       string   `json:"image" binding:"required,max=255"`
+	Ports       []string `json:"ports"`
+}
+
+// UpdateContainerBridgeRequest represents a request to update a bridge
+type UpdateContainerBridgeRequest struct {
+	Name   string   `json:"name" binding:"max=255"`
+	Image  string   `json:"image" binding:"max=255"`
+	Status string   `json:"status" binding:"oneof=active inactive error"`
+	Ports  []string `json:"ports"`
 }
 
 // ContainerBridgeResponse is the API response
 type ContainerBridgeResponse struct {
-	ID          uuid.UUID              `json:"id"`
-	UserID      uuid.UUID              `json:"userId"`
-	OrgID       *uuid.UUID             `json:"orgId,omitempty"`
-	Name        string                 `json:"name"`
-	HostID      uuid.UUID              `json:"hostId"`
-	ContainerID string                 `json:"containerId"`
-	Image       string                 `json:"image"`
-	Status      string                 `json:"status"`
-	Ports       map[string]interface{} `json:"ports,omitempty"`
-	Env         map[string]interface{} `json:"env,omitempty"`
-	CreatedAt   time.Time              `json:"createdAt"`
+	ID          uuid.UUID `json:"id"`
+	HostID      uuid.UUID `json:"hostId"`
+	ContainerID string    `json:"containerId"`
+	Name        string    `json:"name"`
+	Image       string    `json:"image"`
+	Status      string    `json:"status"`
+	Ports       []string  `json:"ports"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // ListContainerBridgesResponse is the API response for listing
 type ListContainerBridgesResponse struct {
 	Items  []*ContainerBridgeResponse `json:"items"`
-	Total  int                       `json:"total"`
-	Limit  int                       `json:"limit"`
-	Offset int                       `json:"offset"`
+	Total  int                        `json:"total"`
+	Limit  int                        `json:"limit"`
+	Offset int                        `json:"offset"`
 }
