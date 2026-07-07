@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/helixdevelopment/user-service/internal/repository"
 	"github.com/helixdevelopment/user-service/internal/server"
+	"github.com/helixdevelopment/user-service/migrations"
 )
 
 func main() {
@@ -20,6 +21,16 @@ func main() {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		databaseURL = "postgres://postgres:postgres@localhost:5432/helixterminator?sslmode=disable"
+	}
+
+	// Apply pending schema migrations before opening the steady-state pool.
+	// user-service already fails fast on DB connectivity trouble (see the
+	// Ping check below), so a migration failure (including a dirty schema
+	// state) is fatal here too - never serve against an unmigrated schema.
+	if version, err := migrations.Run(databaseURL, log.Default()); err != nil {
+		log.Fatalf("failed to apply database migrations: %v", err)
+	} else {
+		log.Printf("database migrations applied - schema version %d", version)
 	}
 
 	// Initialize database connection

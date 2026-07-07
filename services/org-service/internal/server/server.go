@@ -13,6 +13,7 @@ import (
 
 	"github.com/helixdevelopment/org-service/internal/handler"
 	"github.com/helixdevelopment/org-service/internal/repository"
+	"github.com/helixdevelopment/org-service/migrations"
 )
 
 // Logger interface for logging.
@@ -49,11 +50,22 @@ func New(logger Logger) (*Server, error) {
 	var repo *repository.Repository
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL != "" {
-		pool, err := pgxpool.New(context.Background(), dbURL)
-		if err != nil {
-			logger.Printf("warning: failed to connect to database: %v", err)
+		// Apply pending schema migrations before opening the steady-state
+		// pool. A migration failure (including a dirty schema state) MUST
+		// NOT be served against, so on failure we deliberately skip pool
+		// creation and fall through to in-memory mode below, matching this
+		// service's existing degrade-gracefully-on-DB-trouble behaviour.
+		if version, merr := migrations.Run(dbURL, logger); merr != nil {
+			logger.Printf("warning: failed to apply database migrations: %v", merr)
 		} else {
-			repo = repository.New(pool)
+			logger.Printf("database migrations applied - schema version %d", version)
+
+			pool, err := pgxpool.New(context.Background(), dbURL)
+			if err != nil {
+				logger.Printf("warning: failed to connect to database: %v", err)
+			} else {
+				repo = repository.New(pool)
+			}
 		}
 	}
 
