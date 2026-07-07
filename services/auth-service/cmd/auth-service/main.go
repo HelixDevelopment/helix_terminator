@@ -20,8 +20,15 @@ func main() {
 
 	logger := log.New(os.Stdout, "[auth] ", log.LstdFlags|log.Lshortfile)
 
-	// Load or generate Ed25519 signing key
-	// TODO: load from KMS or mounted secret in production
+	// JWT Ed25519 signing key: loaded from the JWT_PRIVATE_KEY env var
+	// (mounted Kubernetes Secret in production - see
+	// infrastructure/kubernetes/base/services/auth-service/deployment.yaml
+	// and docs/guides/JWT_KEY_PROVISIONING.md), with a loudly-logged
+	// ephemeral fallback for dev/test only. See
+	// internal/server.loadJWTManager for the full fail-closed/fallback
+	// contract. KMS-backed signing is real future hardening, tracked as
+	// an explicit operator decision (§11.4.101/§11.4.112) - not
+	// implemented here.
 	srv, err := server.New(logger)
 	if err != nil {
 		logger.Fatalf("failed to create server: %v", err)
@@ -31,7 +38,7 @@ func main() {
 		Addr:         ":" + port,
 		Handler:      srv.Router(),
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 

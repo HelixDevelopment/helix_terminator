@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -125,6 +126,84 @@ func NewJWTManagerWithKey(privateKey ed25519.PrivateKey) *JWTManager {
 		privateKey: privateKey,
 		publicKey:  privateKey.Public().(ed25519.PublicKey),
 	}
+}
+
+// NewJWTManagerFromKey builds a JWTManager whose Ed25519 signing key is
+// decoded from privateKeyB64 - the base64 (standard encoding, via
+// encoding/base64 StdEncoding, NOT RawStdEncoding/URL-safe) representation
+// of exactly ed25519.PrivateKeySize (64) raw bytes. This is the SAME
+// encoding convention gateway-service and billing-service already use to
+// decode JWT_PUBLIC_KEY (services/gateway-service/internal/server/
+// server.go, services/billing-service/internal/server/server.go), so a
+// single JWT_PRIVATE_KEY / JWT_PUBLIC_KEY pair generated together decodes
+// identically everywhere.
+//
+// This is the production/persisted-key path: unlike NewJWTManager (which
+// generates a fresh, ephemeral, process-local key every call), the key
+// here is supplied by the caller - typically read once from the
+// JWT_PRIVATE_KEY environment variable, itself sourced from a mounted
+// Kubernetes Secret (see infrastructure/kubernetes/base/services/
+// auth-service/deployment.yaml and docs/guides/JWT_KEY_PROVISIONING.md).
+// Because the SAME key material is used across process restarts and
+// across every auth-service replica, a token this manager issues
+// validates identically after a restart and against any other service
+// that independently loads the paired public key - closing the
+// cross-service/cross-restart validation gap NewJWTManager cannot close
+// by itself.
+//
+// If publicKeyB64 is non-empty, it is decoded the same way and MUST
+// byte-for-byte match the public key derived from privateKeyB64. A
+// provisioned key pair whose distributed public half cannot verify its
+// own private half's signatures is a fail-closed configuration error,
+// not a warning: every gateway-service/billing-service instance
+// validating against that mismatched JWT_PUBLIC_KEY would reject every
+// real token this manager ever issues, silently re-creating the exact
+// production outage this function exists to prevent.
+func NewJWTManagerFromKey(privateKeyB64, publicKeyB64 string) (*JWTManager, error) {
+	rawPriv, err := base64.StdEncoding.DecodeString(privateKeyB64)
+	if err != nil {
+		return nil, fmt.Errorf("JWT_PRIVATE_KEY is not valid base64: %w", err)
+	}
+	if len(rawPriv) != ed25519.PrivateKeySize {
+		return nil, fmt.Errorf(
+			"JWT_PRIVATE_KEY has invalid size: expected %d raw bytes (base64-decoded), got %d",
+			ed25519.PrivateKeySize, len(rawPriv),
+		)
+	}
+	privateKey := ed25519.PrivateKey(rawPriv)
+	derivedPublicKey := privateKey.Public().(ed25519.PublicKey)
+
+	if publicKeyB64 != "" {
+		rawPub, err := base64.StdEncoding.DecodeString(publicKeyB64)
+		if err != nil {
+			return nil, fmt.Errorf("JWT_PUBLIC_KEY is not valid base64: %w", err)
+		}
+		if len(rawPub) != ed25519.PublicKeySize {
+			return nil, fmt.Errorf(
+				"JWT_PUBLIC_KEY has invalid size: expected %d raw bytes (base64-decoded), got %d",
+				ed25519.PublicKeySize, len(rawPub),
+			)
+		}
+		if !bytes.Equal(rawPub, derivedPublicKey) {
+			return nil, fmt.Errorf(
+				"JWT_PUBLIC_KEY does not match the public key derived from JWT_PRIVATE_KEY - " +
+					"the provisioned key pair is internally inconsistent",
+			)
+		}
+	}
+
+	return &JWTManager{
+		privateKey: privateKey,
+		publicKey:  derivedPublicKey,
+	}, nil
+}
+
+// PublicKey returns this manager's Ed25519 public key - the value an
+// independent verifier (gateway-service, billing-service, or a test
+// simulating either) needs to validate tokens this manager signs
+// without ever holding the private key.
+func (m *JWTManager) PublicKey() ed25519.PublicKey {
+	return m.publicKey
 }
 
 // Claims represents custom JWT claims

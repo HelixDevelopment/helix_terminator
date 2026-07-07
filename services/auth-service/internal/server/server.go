@@ -16,6 +16,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Environment variable names for JWT signing-key provisioning. See
+// loadJWTManager and docs/guides/JWT_KEY_PROVISIONING.md.
+const (
+	envJWTPrivateKey = "JWT_PRIVATE_KEY"
+	envJWTPublicKey  = "JWT_PUBLIC_KEY"
+	envEnvironment   = "ENVIRONMENT"
+)
+
 // Logger interface for logging
 type Logger interface {
 	Printf(format string, v ...interface{})
@@ -46,8 +54,11 @@ func New(logger Logger) (*Server, error) {
 		logger = &defaultLogger{}
 	}
 
-	// Initialize JWT manager with Ed25519
-	jwtManager, err := crypto.NewJWTManager()
+	// Initialize JWT manager with Ed25519 - see loadJWTManager for the
+	// persisted-key-vs-ephemeral-fallback decision (T15 production
+	// blocker: a per-process ephemeral key can never validate across
+	// service restarts or against gateway-service/billing-service).
+	jwtManager, err := loadJWTManager(logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create JWT manager: %w", err)
 	}
@@ -152,6 +163,72 @@ func New(logger Logger) (*Server, error) {
 	}
 
 	return s, nil
+}
+
+// loadJWTManager resolves this process's Ed25519 JWT signing key.
+//
+// Production path (real deployment): JWT_PRIVATE_KEY (base64 standard-
+// encoded, exactly ed25519.PrivateKeySize=64 raw bytes - see
+// crypto.NewJWTManagerFromKey) is read from the environment. In
+// Kubernetes this is sourced from the helix-jwt-keys Secret (see
+// infrastructure/kubernetes/base/services/auth-service/deployment.yaml
+// and docs/guides/JWT_KEY_PROVISIONING.md for how the operator creates
+// it). Because the SAME persisted key is used across process restarts
+// and every auth-service replica, tokens this process issues validate
+// identically after a restart AND against gateway-service/billing-
+// service, which independently verify with the paired JWT_PUBLIC_KEY
+// (services/gateway-service/internal/server/server.go, services/
+// billing-service/internal/server/server.go). If JWT_PUBLIC_KEY is ALSO
+// present, NewJWTManagerFromKey requires it to byte-for-byte match the
+// public key derived from JWT_PRIVATE_KEY - a mismatched pair is a
+// fail-closed configuration error, never silently accepted.
+//
+// Fail-closed guard: when ENVIRONMENT=production (case-insensitive) and
+// JWT_PRIVATE_KEY is absent, this returns a hard, descriptive error
+// instead of silently falling back to an ephemeral key - a production
+// deployment missing its signing-key Secret must refuse to start, not
+// silently mint tokens nobody else can ever validate (the exact T15
+// production-blocker this function exists to close).
+//
+// Dev/test fallback: when JWT_PRIVATE_KEY is absent and ENVIRONMENT is
+// not "production", this GENERATES a fresh ephemeral Ed25519 key
+// (crypto.NewJWTManager) and logs a loud, unmistakable warning. This is
+// intentionally the path today's test suite and any ad-hoc `go run`
+// invocation without a provisioned secret takes - see
+// docs/guides/JWT_KEY_PROVISIONING.md. Tokens issued this way validate
+// ONLY within this single process and ONLY until the next restart; this
+// is NEVER acceptable for a real, multi-instance, cross-service
+// deployment, which is why it is clearly logged and gated off in
+// ENVIRONMENT=production.
+func loadJWTManager(logger Logger) (*crypto.JWTManager, error) {
+	privKeyB64 := os.Getenv(envJWTPrivateKey)
+	pubKeyB64 := os.Getenv(envJWTPublicKey)
+
+	if privKeyB64 != "" {
+		mgr, err := crypto.NewJWTManagerFromKey(privKeyB64, pubKeyB64)
+		if err != nil {
+			return nil, fmt.Errorf("%s is set but invalid: %w", envJWTPrivateKey, err)
+		}
+		logger.Printf("JWT signing key loaded from %s (persisted, cross-service-verifiable)", envJWTPrivateKey)
+		return mgr, nil
+	}
+
+	if strings.EqualFold(os.Getenv(envEnvironment), "production") {
+		return nil, fmt.Errorf(
+			"%s is not set and %s=production: refusing to start with a fabricated ephemeral JWT signing "+
+				"key that no other service replica or restart could ever validate against; provision a "+
+				"persisted Ed25519 private key first (see docs/guides/JWT_KEY_PROVISIONING.md)",
+			envJWTPrivateKey, envEnvironment,
+		)
+	}
+
+	logger.Printf(
+		"WARNING: ephemeral JWT key - %s not set, generating a NEW Ed25519 key pair for THIS PROCESS ONLY; "+
+			"tokens issued now will NOT validate across service restarts or against gateway-service/"+
+			"billing-service. Set %s (and %s) for a real deployment - see docs/guides/JWT_KEY_PROVISIONING.md",
+		envJWTPrivateKey, envJWTPrivateKey, envJWTPublicKey,
+	)
+	return crypto.NewJWTManager()
 }
 
 // Router exposes the underlying engine for testing
