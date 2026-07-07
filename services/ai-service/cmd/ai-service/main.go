@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/helixdevelopment/ai-service/internal/llmclient"
 	"github.com/helixdevelopment/ai-service/internal/repository"
 	"github.com/helixdevelopment/ai-service/internal/server"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // defaultLocalLLMBaseURL / defaultLocalLLMModel are the fallback values applied when

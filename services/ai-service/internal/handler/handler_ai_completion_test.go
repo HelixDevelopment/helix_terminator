@@ -62,14 +62,14 @@ const errNotFound = sentinelErr("AI request not found")
 // returns a pre-configured result — proving CreateRequest genuinely invokes the real
 // completion contract with the caller's prompt, rather than fabricating a response.
 type fakeLLM struct {
-	called      bool
-	gotModel    string
-	gotMaxTok   int
-	gotTemp     float64
-	gotPrompt   string
-	content     string
-	tokensUsed  int
-	err         error
+	called     bool
+	gotModel   string
+	gotMaxTok  int
+	gotTemp    float64
+	gotPrompt  string
+	content    string
+	tokensUsed int
+	err        error
 }
 
 func (f *fakeLLM) Complete(ctx context.Context, model string, maxTokens int, temperature float64, prompt string) (string, int, error) {

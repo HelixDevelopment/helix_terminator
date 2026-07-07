@@ -44,7 +44,12 @@ func New(repo Repository, llm LLMClient) *Handler {
 	return &Handler{repo: repo, llm: llm}
 }
 
-// CreateRequest handles AI request creation
+// CreateRequest handles AI request creation. It SYNCHRONOUSLY calls the configured
+// local LLM provider (h.llm) BEFORE persisting — closing the fabricated-"pending"
+// PASS-bluff (§11.4/§11.4.108) where the API accepted a request, wrote a placeholder
+// row, and never produced any real completion. Status always lands on a real
+// terminal value: "completed" when the provider returns a completion, "failed" when
+// the provider errors (or is unconfigured) — "pending" is never written.
 func (h *Handler) CreateRequest(c *gin.Context) {
 	var req model.CreateAIRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -66,9 +71,25 @@ func (h *Handler) CreateRequest(c *gin.Context) {
 		Model:       req.Model,
 		MaxTokens:   req.MaxTokens,
 		Temperature: req.Temperature,
-		Status:      "pending",
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
+	}
+
+	if h.llm == nil {
+		// No LLM client configured — an honest failure, never a silent fabricated
+		// "pending"/"completed". Production wiring (cmd/ai-service/main.go) always
+		// injects a real client; a nil llm only reaches here in a misconfigured
+		// deployment or a test that intentionally exercises this path.
+		aiReq.Status = "failed"
+	} else {
+		content, tokensUsed, err := h.llm.Complete(c.Request.Context(), req.Model, req.MaxTokens, req.Temperature, req.Prompt)
+		if err != nil {
+			aiReq.Status = "failed"
+		} else {
+			aiReq.Response = content
+			aiReq.TokensUsed = tokensUsed
+			aiReq.Status = "completed"
+		}
 	}
 
 	if err := h.repo.CreateRequest(c.Request.Context(), aiReq); err != nil {

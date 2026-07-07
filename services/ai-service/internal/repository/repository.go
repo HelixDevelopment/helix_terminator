@@ -35,16 +35,21 @@ func (r *Repository) Ping(ctx context.Context) error {
 	return r.pool.Ping(ctx)
 }
 
-// CreateRequest creates a new AI request
+// CreateRequest creates a new AI request. The caller (handler.CreateRequest) resolves
+// the real LLM completion SYNCHRONOUSLY before calling this method, so req.Response /
+// req.TokensUsed / req.Status already carry the real terminal outcome ("completed" or
+// "failed") — this INSERT persists them in the same round trip rather than writing a
+// placeholder row and updating it later (§11.4.108: no code path ever persists the
+// fabricated "pending" this method used to write unconditionally).
 func (r *Repository) CreateRequest(ctx context.Context, req *model.AIRequest) error {
 	if err := r.checkPool(); err != nil {
 		return err
 	}
 	query := `
-		INSERT INTO ai_requests (id, user_id, org_id, prompt, context, model, max_tokens, temperature, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+		INSERT INTO ai_requests (id, user_id, org_id, prompt, context, model, max_tokens, temperature, status, response, tokens_used, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
 	`
-	_, err := r.pool.Exec(ctx, query, req.ID, req.UserID, req.OrgID, req.Prompt, req.Context, req.Model, req.MaxTokens, req.Temperature, req.Status)
+	_, err := r.pool.Exec(ctx, query, req.ID, req.UserID, req.OrgID, req.Prompt, req.Context, req.Model, req.MaxTokens, req.Temperature, req.Status, req.Response, req.TokensUsed)
 	if err != nil {
 		return fmt.Errorf("failed to create AI request: %w", err)
 	}
