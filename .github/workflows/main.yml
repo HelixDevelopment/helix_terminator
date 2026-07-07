@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: Constitution Inheritance Check
@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 60
     needs: pre-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -80,7 +80,7 @@ jobs:
           - container-bridge-service
           - helixtrack-bridge-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -139,7 +139,7 @@ jobs:
         ports:
           - 6379:6379
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -191,7 +191,7 @@ jobs:
         ports:
           - 6379:6379
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -220,7 +220,7 @@ jobs:
     timeout-minutes: 60
     needs: unit-tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -246,7 +246,7 @@ jobs:
     timeout-minutes: 60
     needs: test-bank-integration
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -273,7 +273,7 @@ jobs:
     needs: [docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -296,7 +296,7 @@ jobs:
     needs: [docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -316,7 +316,7 @@ jobs:
     timeout-minutes: 30
     needs: pre-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -336,7 +336,7 @@ jobs:
     timeout-minutes: 30
     needs: pre-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -356,7 +356,7 @@ jobs:
     timeout-minutes: 60
     needs: unit-tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -399,7 +399,7 @@ jobs:
         ports:
           - 6379:6379
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -422,7 +422,7 @@ jobs:
     timeout-minutes: 60
     needs: pre-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Trivy vulnerability scan (filesystem)
         uses: aquasecurity/trivy-action@master
         with:
@@ -488,7 +488,7 @@ jobs:
           - container-bridge-service
           - helixtrack-bridge-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Container Registry
@@ -515,7 +515,7 @@ jobs:
     timeout-minutes: 60
     needs: pre-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -538,7 +538,7 @@ jobs:
     timeout-minutes: 60
     needs: pre-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.0"
@@ -555,7 +555,7 @@ jobs:
     timeout-minutes: 60
     needs: pre-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: azure/setup-helm@v4
         with:
           version: '3.15.0'
@@ -571,7 +571,7 @@ jobs:
     needs: [docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run k6 performance tests
         uses: grafana/k6-action@v0.3.1
         with:
@@ -591,7 +591,7 @@ jobs:
     needs: [docker-build]
     if: github.event_name == 'schedule'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
@@ -641,7 +641,7 @@ jobs:
           - container-bridge-service
           - helixtrack-bridge-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
       - name: Login to Container Registry
@@ -670,7 +670,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
@@ -695,7 +695,7 @@ jobs:
     timeout-minutes: 60
     needs: deploy-staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run smoke tests
         run: |
           curl -sf https://api.staging.helixterminator.io/healthz || exit 1
@@ -717,7 +717,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
@@ -746,7 +746,7 @@ jobs:
     needs: [unit-tests, test-bank-integration, test-bank-e2e, test-bank-contract, test-bank-security, test-bank-performance, test-bank-chaos, test-bank-accessibility, test-bank-compatibility]
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
