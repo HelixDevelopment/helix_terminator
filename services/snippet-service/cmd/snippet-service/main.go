@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/helixdevelopment/snippet-service/internal/handler"
 	"github.com/helixdevelopment/snippet-service/internal/repository"
 	"github.com/helixdevelopment/snippet-service/internal/server"
+	"github.com/helixdevelopment/snippet-service/migrations"
 )
 
 func main() {
@@ -25,10 +27,30 @@ func run() error {
 		dbURL = "postgres://postgres:postgres@localhost:5432/snippet?sslmode=disable"
 	}
 
+	// Apply pending schema migrations before opening the steady-state pool.
+	// snippet-service already fails fast on DB connectivity trouble (see
+	// pgxpool.New below), so a migration failure (including a dirty schema
+	// state) is fatal here too - never serve against an unmigrated schema.
+	version, merr := migrations.Run(dbURL, log.Default())
+	if merr != nil {
+		return fmt.Errorf("failed to apply database migrations: %w", merr)
+	}
+	log.Printf("database migrations applied - schema version %d", version)
+
+	// Use the same schema-scoped connection URL the migrator applied
+	// (search_path=migrations.Schema) so the steady-state pool's
+	// unqualified "snippets" queries resolve against the schema
+	// migrations.Run just migrated, not the shared database's default
+	// "public" schema (schema-per-service, GAP-01).
+	poolURL, perr := migrations.ConnectionURL(dbURL)
+	if perr != nil {
+		return fmt.Errorf("failed to build schema-scoped connection URL: %w", perr)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, dbURL)
+	pool, err := pgxpool.New(ctx, poolURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
