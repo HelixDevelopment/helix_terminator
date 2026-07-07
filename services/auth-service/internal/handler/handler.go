@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 
 	"github.com/helixdevelopment/auth-service/internal/crypto"
@@ -19,17 +20,19 @@ import (
 
 // Handler holds auth service handlers
 type Handler struct {
-	repo       *repository.Repository
-	hasher     *crypto.PasswordHasher
-	jwtManager *crypto.JWTManager
+	repo          *repository.Repository
+	hasher        *crypto.PasswordHasher
+	jwtManager    *crypto.JWTManager
+	mfaChallenges *mfaChallengeStore
 }
 
 // New returns a new Handler with dependencies
 func New(repo *repository.Repository, jwtManager *crypto.JWTManager) *Handler {
 	return &Handler{
-		repo:       repo,
-		hasher:     crypto.NewPasswordHasher(),
-		jwtManager: jwtManager,
+		repo:          repo,
+		hasher:        crypto.NewPasswordHasher(),
+		jwtManager:    jwtManager,
+		mfaChallenges: newMFAChallengeStore(),
 	}
 }
 
@@ -171,7 +174,11 @@ func (h *Handler) Login(c *gin.Context) {
 
 	// Check if MFA is required
 	if user.MFAEnabled {
-		challengeID := uuid.New().String()
+		// The challenge binds this specific user to the challengeId
+		// returned below, so the unauthenticated POST /mfa/verify call
+		// that completes login can resolve the right user WITHOUT a
+		// bearer token (none exists yet at this point in the flow).
+		challengeID := h.mfaChallenges.create(user.ID)
 		methods := []string{"totp"}
 		if user.MFAMethod == "fido2" {
 			methods = []string{"fido2"}
@@ -236,15 +243,19 @@ func (h *Handler) VerifyMFA(c *gin.Context) {
 		return
 	}
 
-	// Get user from context or challenge
-	userIDStr, _ := c.Get("userID")
-	if userIDStr == nil || userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
-		return
-	}
-	userID, err := uuid.Parse(userIDStr.(string))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user"})
+	// Resolve the user from the login-issued MFA challenge, NOT from
+	// the request context. This route is deliberately reachable with no
+	// bearer token (see server.New): Login() withholds real tokens for
+	// an MFA-enabled user until this call succeeds, so a
+	// c.Get("userID")-style lookup here can never be populated - that
+	// was the root-cause bug (same context-userID class as the
+	// pre-fix /logout bug), and moving this route behind the
+	// auth-required middleware would "fix" it by making MFA-enabled
+	// login permanently impossible instead. The challengeId is the
+	// correct identity binding for this step of the flow.
+	userID, ok := h.mfaChallenges.lookup(req.ChallengeID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired MFA challenge"})
 		return
 	}
 
@@ -259,16 +270,26 @@ func (h *Handler) VerifyMFA(c *gin.Context) {
 		return
 	}
 
+	// Algorithm MUST match what SetupMFA generated the key with
+	// (otp.AlgorithmSHA1 = 0). The literal "1" this used to read here
+	// is otp.AlgorithmSHA256, not SHA1 despite its stale comment - a
+	// second genuine, pre-existing defect (alongside the MFASecret
+	// encoding bug fixed in SetupMFA) that made a correct TOTP code
+	// from a real authenticator app fail validation.
 	valid, err := totp.ValidateCustom(req.Code, user.MFASecret, time.Now().UTC(), totp.ValidateOpts{
 		Period:    30,
 		Skew:      1,
 		Digits:    6,
-		Algorithm: 1, // SHA1
+		Algorithm: otp.AlgorithmSHA1,
 	})
 	if err != nil || !valid {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid MFA code"})
 		return
 	}
+
+	// Single-use: this challenge has now been redeemed for a token
+	// pair and must not be replayable.
+	h.mfaChallenges.consume(req.ChallengeID)
 
 	// Generate tokens after successful MFA
 	sessionID := uuid.New().String()
@@ -335,10 +356,26 @@ func (h *Handler) SetupMFA(c *gin.Context) {
 		return
 	}
 
-	// Generate cryptographically random TOTP secret
-	secret, err := generateRandomTOTPSecret()
+	// Generate cryptographically random TOTP seed material.
+	seed, err := generateRandomTOTPSecret()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate TOTP secret"})
+		return
+	}
+
+	// Derive the actual TOTP key (QR code + otpauth:// URI) from that
+	// seed. key.Secret() - NOT the raw seed above - is the base32-
+	// encoded value the URI/QR code embeds and that a real
+	// authenticator app (Google Authenticator, Authy, etc.) will
+	// actually use to compute codes.
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "HelixTerminator",
+		AccountName: user.Email,
+		Secret:      []byte(seed),
+		Algorithm:   otp.AlgorithmSHA1,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate TOTP key"})
 		return
 	}
 
@@ -349,23 +386,19 @@ func (h *Handler) SetupMFA(c *gin.Context) {
 		return
 	}
 
-	// Save secret to user (in production, this would be a separate setup flow with verification)
-	user.MFASecret = secret
+	// Persist key.Secret() (the base32 QR-code secret), not the raw
+	// pre-encoding seed: user.MFASecret MUST match what the user's
+	// authenticator app is actually using, or VerifyMFA's
+	// totp.ValidateCustom call can never validate a real code (it
+	// requires a base32 secret, and the raw seed is not one) - this was
+	// a genuine, separate, pre-existing production defect this fix
+	// closes (§11.4.102/§11.4.108), discovered while proving the
+	// context-userID fix with a real end-to-end MFA test.
+	user.MFASecret = key.Secret()
 	user.MFAEnabled = true
 	user.MFAMethod = "totp"
 	if err := h.repo.UpdateUser(c.Request.Context(), user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save MFA setup"})
-		return
-	}
-
-	// Generate QR code URI
-	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "HelixTerminator",
-		AccountName: user.Email,
-		Secret:      []byte(secret),
-	})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate TOTP key"})
 		return
 	}
 

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/pquerna/otp/totp"
 
 	"github.com/helixdevelopment/auth-service/internal/crypto"
 	"github.com/helixdevelopment/auth-service/internal/model"
@@ -354,6 +355,187 @@ func TestSecurityTokenRejectionBattery_Integration(t *testing.T) {
 			t.Fatalf("GET /me with a token replayed after /logout status = %d, want 401; body=%v", status, body)
 		}
 	})
+}
+
+// TestMFASetupAndVerify_Integration is the T9 regression proof. It
+// drives the real, unauthenticated /login -> MFA-challenge -> real
+// /mfa/verify completion journey against a real PostgreSQL instance,
+// proving three things that were all broken before this fix:
+//  1. POST /mfa/setup is unreachable without a valid bearer token (it
+//     now lives in the auth-required route group, same class of fix as
+//     /logout) and, when called authenticated, resolves the CALLING
+//     user (not an unset context value) and durably persists MFA state.
+//  2. POST /mfa/verify - which is intentionally NOT behind the
+//     auth-required group, since a caller completing MFA-gated login
+//     has no bearer token yet - no longer unconditionally 401s
+//     ("authentication required" from an always-nil context lookup).
+//     It resolves the right user from the login-issued challengeId and
+//     accepts a REAL code computed the exact way a real authenticator
+//     app would compute it from the secret /mfa/setup returned - this
+//     also proves the two crypto defects (raw-seed-instead-of-base32
+//     MFASecret; SHA256-mislabeled-as-SHA1 Algorithm) that would have
+//     made any real code fail validation are fixed too.
+//  3. A challenge is single-use: replaying it after a successful
+//     verification is rejected, and an unknown challenge is rejected
+//     without ever panicking.
+func TestMFASetupAndVerify_Integration(t *testing.T) {
+	ts, dbURL := newTestServer(t)
+	client := ts.Client()
+
+	email := fmt.Sprintf("mfa-%d@example.com", time.Now().UnixNano())
+	password := "a-genuinely-long-mfa-password-654"
+
+	// 0. Register, establishing the account and an initial bearer token.
+	status, body := postJSON(t, client, ts.URL+"/register", model.RegisterRequest{
+		Email:       email,
+		Password:    password,
+		DisplayName: "MFA Test User",
+	}, "")
+	if status != http.StatusCreated {
+		t.Fatalf("setup: POST /register status = %d, want 201; body=%v", status, body)
+	}
+	registerAccessToken, _ := body["accessToken"].(string)
+	userObj, _ := body["user"].(map[string]interface{})
+	registeredUserID, _ := userObj["id"].(string)
+	if registerAccessToken == "" || registeredUserID == "" {
+		t.Fatalf("setup: POST /register did not return a usable access token/user id: %v", body)
+	}
+
+	// 1. POST /mfa/setup with NO bearer token must be rejected - proves
+	// the route is genuinely behind the auth-required group now (the
+	// pre-fix bug was the exact opposite: it was reachable without auth
+	// but its handler then 401'd on an unset context value; the
+	// user-visible symptom is the same 401, but this asserts the FIX's
+	// mechanism, not just the old broken symptom).
+	status, body = postJSON(t, client, ts.URL+"/mfa/setup", model.MFASetupRequest{Method: "totp"}, "")
+	if status != http.StatusUnauthorized {
+		t.Fatalf("POST /mfa/setup with no bearer token status = %d, want 401; body=%v", status, body)
+	}
+
+	// 2. POST /mfa/setup, authenticated, must succeed and resolve the
+	// CALLING user (this is the T9 fix under test).
+	status, body = postJSON(t, client, ts.URL+"/mfa/setup", model.MFASetupRequest{Method: "totp"}, registerAccessToken)
+	if status != http.StatusOK {
+		t.Fatalf("POST /mfa/setup with a valid bearer token status = %d, want 200; body=%v", status, body)
+	}
+	secret, _ := body["secret"].(string)
+	qrCode, _ := body["qrCode"].(string)
+	recoveryCodesRaw, _ := body["recoveryCodes"].([]interface{})
+	if secret == "" || qrCode == "" || len(recoveryCodesRaw) != 10 {
+		t.Fatalf("POST /mfa/setup did not return a real secret/QR/10 recovery codes: %v", body)
+	}
+
+	// Real DB-state assertion (independent raw-SQL cross-check, same
+	// pattern as assertPasswordHashedInDB): the persisted mfa_secret
+	// column equals EXACTLY the secret returned to the client - not
+	// some other pre-encoding representation a real authenticator app
+	// could never derive a matching code from.
+	func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		conn, err := pgx.Connect(ctx, dbURL)
+		if err != nil {
+			t.Fatalf("pgx.Connect for independent DB-state assertion failed: %v", err)
+		}
+		defer conn.Close(ctx)
+
+		var mfaEnabled bool
+		var mfaSecret, mfaMethod string
+		err = conn.QueryRow(ctx, `SELECT mfa_enabled, mfa_secret, mfa_method FROM users WHERE email = $1`, email).
+			Scan(&mfaEnabled, &mfaSecret, &mfaMethod)
+		if err != nil {
+			t.Fatalf("raw SQL SELECT mfa_enabled/mfa_secret/mfa_method for %q failed: %v", email, err)
+		}
+		if !mfaEnabled {
+			t.Fatal("users.mfa_enabled is false after POST /mfa/setup - setup did not persist")
+		}
+		if mfaMethod != "totp" {
+			t.Fatalf("users.mfa_method = %q, want %q", mfaMethod, "totp")
+		}
+		if mfaSecret != secret {
+			t.Fatalf("users.mfa_secret (%q) != the secret returned to the client (%q) - a real authenticator app "+
+				"seeded from the client-returned secret could never produce a code the server accepts", mfaSecret, secret)
+		}
+	}()
+
+	// 3. Log in again now that MFA is enabled: must NOT return tokens,
+	// must return an MFA challenge instead.
+	status, body = postJSON(t, client, ts.URL+"/login", model.LoginRequest{Email: email, Password: password}, "")
+	if status != http.StatusOK {
+		t.Fatalf("POST /login (MFA-enabled account) status = %d, want 200; body=%v", status, body)
+	}
+	if mfaRequired, _ := body["mfaRequired"].(bool); !mfaRequired {
+		t.Fatalf("POST /login for an MFA-enabled account did not set mfaRequired=true: %v", body)
+	}
+	if tok, _ := body["accessToken"].(string); tok != "" {
+		t.Fatalf("POST /login for an MFA-enabled account issued a real access token before MFA verification: %v", body)
+	}
+	challengeID, _ := body["challengeId"].(string)
+	if challengeID == "" {
+		t.Fatalf("POST /login for an MFA-enabled account did not return a challengeId: %v", body)
+	}
+
+	// 4. Compute a REAL TOTP code exactly the way a real authenticator
+	// app would: from the secret handed back by /mfa/setup.
+	code, err := totp.GenerateCode(secret, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("totp.GenerateCode(secret, now) failed - the secret returned by /mfa/setup is not a valid base32 TOTP secret: %v", err)
+	}
+
+	// 5. POST /mfa/verify with NO bearer token (none exists at this
+	// point in the flow) must succeed - this is the core T9 proof: the
+	// pre-fix handler unconditionally 401'd here via an unset context
+	// value regardless of how correct the challenge/code were.
+	status, body = postJSON(t, client, ts.URL+"/mfa/verify", model.MFAVerifyRequest{
+		ChallengeID: challengeID,
+		Code:        code,
+		Method:      "totp",
+	}, "")
+	if status != http.StatusOK {
+		t.Fatalf("POST /mfa/verify with a real challenge+code and NO bearer token status = %d, want 200; body=%v", status, body)
+	}
+	mfaAccessToken, _ := body["accessToken"].(string)
+	mfaRefreshToken, _ := body["refreshToken"].(string)
+	if mfaAccessToken == "" || mfaRefreshToken == "" {
+		t.Fatalf("POST /mfa/verify did not return real access/refresh tokens: %v", body)
+	}
+
+	// 6. The token /mfa/verify issued must resolve the SAME user that
+	// registered and set up MFA - proves the challenge->user binding is
+	// correct, not merely "some" token.
+	status, body = doJSON(t, client, http.MethodGet, ts.URL+"/me", nil, mfaAccessToken)
+	if status != http.StatusOK {
+		t.Fatalf("GET /me with the MFA-issued token status = %d, want 200; body=%v", status, body)
+	}
+	if body["userId"] != registeredUserID {
+		t.Fatalf("GET /me with the MFA-issued token resolved userId=%v, want the registered user %q", body["userId"], registeredUserID)
+	}
+
+	// 7. The challenge is single-use: replaying it (even with a freshly
+	// computed, still-valid code) must now be rejected, never panic.
+	replayCode, err := totp.GenerateCode(secret, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("totp.GenerateCode for replay case failed: %v", err)
+	}
+	status, body = postJSON(t, client, ts.URL+"/mfa/verify", model.MFAVerifyRequest{
+		ChallengeID: challengeID,
+		Code:        replayCode,
+		Method:      "totp",
+	}, "")
+	if status != http.StatusUnauthorized {
+		t.Fatalf("POST /mfa/verify replaying an already-consumed challengeId status = %d, want 401; body=%v", status, body)
+	}
+
+	// 8. An entirely unknown challengeId must be rejected cleanly (no
+	// panic, no 500, no fallback to some other user).
+	status, body = postJSON(t, client, ts.URL+"/mfa/verify", model.MFAVerifyRequest{
+		ChallengeID: "00000000-0000-0000-0000-000000000000",
+		Code:        "123456",
+		Method:      "totp",
+	}, "")
+	if status != http.StatusUnauthorized {
+		t.Fatalf("POST /mfa/verify with an unknown challengeId status = %d, want 401; body=%v", status, body)
+	}
 }
 
 // tamperSegment flips the first byte of a JWT segment to a different

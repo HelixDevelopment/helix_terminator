@@ -104,23 +104,35 @@ func New(logger Logger) (*Server, error) {
 	r.GET("/healthz/ready", h.ReadinessCheck)
 	r.GET("/healthz", h.HealthCheck)
 
-	// Auth routes (no auth required)
+	// Auth routes (no auth required). /mfa/verify deliberately stays
+	// here even though its handler needs a specific userID: Login()
+	// withholds real tokens for an MFA-enabled user until MFA
+	// verification succeeds, so the caller completing login has no
+	// bearer token to present yet. VerifyMFA resolves the user from the
+	// request's challengeId (bound to a user at /login time) rather
+	// than from an authenticated-request context value - see
+	// internal/handler/mfa_challenge.go.
 	r.POST("/register", h.Register)
 	r.POST("/login", h.Login)
 	r.POST("/mfa/verify", h.VerifyMFA)
-	r.POST("/mfa/setup", h.SetupMFA)
 	r.POST("/refresh", h.RefreshToken)
 	r.POST("/validate", h.ValidateToken)
 
 	// Authenticated routes - require a valid, non-revoked bearer access
-	// token. /logout lives here (not in the "no auth required" block
-	// above) because its handler resolves the session(s) to revoke from
-	// the authenticated userID the middleware sets on the context; a
-	// logout call with no bearer token has no user to log out.
+	// token. /logout and /mfa/setup live here (not in the "no auth
+	// required" block above) because their handlers resolve the acting
+	// user from the authenticated userID the middleware sets on the
+	// context: a logout call has no session to revoke, and an MFA-setup
+	// call has no account to enable MFA for, without an authenticated
+	// caller. Registering either outside this group means "userID" is
+	// never set on the context, so the handler's userID lookup silently
+	// resolves to nothing and every call fails - the bug both routes
+	// had before this fix.
 	auth := r.Group("/")
 	auth.Use(s.jwtValidationMiddleware())
 	{
 		auth.POST("/logout", h.Logout)
+		auth.POST("/mfa/setup", h.SetupMFA)
 		// TODO: add authenticated routes (profile, sessions, etc.)
 		auth.GET("/me", func(c *gin.Context) {
 			userID, _ := c.Get("userID")
