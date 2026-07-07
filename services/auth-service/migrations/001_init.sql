@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     permissions TEXT[] NOT NULL DEFAULT '{}',
     org_id UUID,
     mfa_secret VARCHAR(255),
+    mfa_method VARCHAR(50) NOT NULL DEFAULT '',
     mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     mfa_verified_at TIMESTAMPTZ,
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
@@ -27,16 +28,22 @@ CREATE INDEX idx_users_deleted_at ON users(deleted_at) WHERE deleted_at IS NULL;
 CREATE TABLE IF NOT EXISTS user_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    device_id VARCHAR(255) NOT NULL DEFAULT '',
+    device_name VARCHAR(255) NOT NULL DEFAULT '',
+    device_type VARCHAR(50) NOT NULL DEFAULT '',
+    access_token_hash VARCHAR(255) NOT NULL,
     refresh_token_hash VARCHAR(255) NOT NULL,
     ip_address INET,
     user_agent TEXT,
     expires_at TIMESTAMPTZ NOT NULL,
+    last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
+CREATE INDEX idx_user_sessions_access_token_hash ON user_sessions(access_token_hash);
 CREATE INDEX idx_user_sessions_refresh_token_hash ON user_sessions(refresh_token_hash);
 CREATE INDEX idx_user_sessions_expires_at ON user_sessions(expires_at);
 
