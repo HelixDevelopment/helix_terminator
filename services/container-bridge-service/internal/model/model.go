@@ -15,15 +15,15 @@ const (
 
 // ContainerBridge represents a container bridge connection
 type ContainerBridge struct {
-	ID          uuid.UUID  `json:"id" db:"id"`
-	HostID      uuid.UUID  `json:"hostId" db:"host_id"`
-	ContainerID string     `json:"containerId" db:"container_id"`
-	Name        string     `json:"name" db:"name"`
-	Image       string     `json:"image" db:"image"`
-	Status      string     `json:"status" db:"status"`
-	Ports       []string   `json:"ports" db:"ports"`
-	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	HostID      uuid.UUID `json:"hostId" db:"host_id"`
+	ContainerID string    `json:"containerId" db:"container_id"`
+	Name        string    `json:"name" db:"name"`
+	Image       string    `json:"image" db:"image"`
+	Status      string    `json:"status" db:"status"`
+	Ports       []string  `json:"ports" db:"ports"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
 }
 
 // CreateContainerBridgeRequest represents a request to create a bridge

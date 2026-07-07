@@ -93,7 +93,7 @@ type fakeBackend struct {
 
 	statusFunc func(id string) (*ctrruntime.ContainerStatus, error)
 
-	runFromImageFunc func(name, image string, ports []string, cmd ...string) (string, error)
+	runFromImageFunc  func(name, image string, ports []string, cmd ...string) (string, error)
 	runFromImageCalls []struct {
 		name, image string
 		ports       []string

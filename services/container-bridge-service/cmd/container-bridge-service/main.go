@@ -6,11 +6,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/helixdevelopment/container-bridge-service/internal/containerrt"
 	"github.com/helixdevelopment/container-bridge-service/internal/handler"
 	"github.com/helixdevelopment/container-bridge-service/internal/repository"
 	"github.com/helixdevelopment/container-bridge-service/internal/server"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
