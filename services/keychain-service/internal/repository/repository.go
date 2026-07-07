@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -173,7 +174,10 @@ func (r *Repository) ListItems(ctx context.Context, userID, orgID uuid.UUID, ite
 	return items, total, rows.Err()
 }
 
-// UpdateItem updates a keychain item
+// UpdateItem updates a keychain item. The SQL SET-clause column names are
+// resolved exclusively via buildUpdateQuery's static allow-list (T13,
+// §11.4 SQL-injection-shaped hardening) — see buildUpdateQuery for the
+// full rationale.
 func (r *Repository) UpdateItem(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error {
 	if err := r.checkPool(); err != nil {
 		return err
@@ -181,12 +185,81 @@ func (r *Repository) UpdateItem(ctx context.Context, id uuid.UUID, updates map[s
 	if len(updates) == 0 {
 		return nil
 	}
+	query, args, err := buildUpdateQuery(updates, id)
+	if err != nil {
+		return err
+	}
+	result, err := r.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("keychain item not found")
+	}
+	return nil
+}
+
+// buildUpdateQuery builds the parameterized UPDATE statement for
+// UpdateItem. It is split out from UpdateItem so the SQL-shape logic is
+// unit-testable without a live database connection (T13).
+//
+// SECURITY (T13, §11.4 SQL-injection-shaped hardening): earlier revisions
+// of this function took the caller-supplied map key and interpolated it
+// DIRECTLY into the SET clause via fmt.Sprintf("%s = $%d", key, argIdx) —
+// i.e. the SQL COLUMN NAME came straight from a Go map key with zero
+// validation. Investigation (§11.4.102) established as FACT that the
+// only current caller, Handler.UpdateItem, builds that map using four
+// hardcoded Go string literals ("name", "public_key", "metadata",
+// "tags") — never a client-supplied field name — so the defect was NOT
+// exploitable through any exported HTTP or gRPC entry point at the time
+// of this fix (the gRPC service in api/proto/keychain-service.proto
+// defines no RPCs beyond HealthCheck). It was nonetheless a LATENT
+// SQL-shape defect: Repository.UpdateItem is an exported method that
+// accepts a raw map[string]interface{}, and any future caller that ever
+// forwarded a client-controlled field name into that map (a generic
+// PATCH endpoint, an admin tool, a new gRPC RPC) would have turned it
+// into a live SQL-injection primitive with no code-level defense.
+//
+// The fix: column names are now resolved ONLY through the static,
+// hardcoded allowedUpdateColumns table below — never through the
+// caller's map key directly — so a column name can NEVER be
+// attacker-influenced regardless of what the caller passes in. Any key
+// not present in the allow-list is REJECTED with an error (fail-closed,
+// §11.4.6) rather than silently dropped or passed through. Values remain
+// fully parameterized ($1, $2, ...) exactly as before.
+//
+// T10 preservation: allowedUpdateColumns deliberately EXCLUDES
+// "private_key" and "passphrase" — the two columns CreateItem/
+// GetItemByID encrypt/decrypt at rest (T10). UpdateItem itself performs
+// no encryption, so — before this fix, exactly as after — it must never
+// be able to write those columns; the allow-list now makes that a
+// structural guarantee instead of a caller-discipline convention: any
+// future caller attempting to set "private_key" or "passphrase" via
+// UpdateItem is rejected outright, rather than silently writing
+// plaintext into an encrypted-at-rest column.
+func buildUpdateQuery(updates map[string]interface{}, id uuid.UUID) (string, []interface{}, error) {
+	if len(updates) == 0 {
+		return "", nil, nil
+	}
+
+	// Deterministic key order (map iteration order is randomized in Go)
+	// so the generated query string is stable and testable.
+	keys := make([]string, 0, len(updates))
+	for key := range updates {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
 	var setClauses []string
 	var args []interface{}
 	argIdx := 1
-	for key, value := range updates {
-		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", key, argIdx))
-		args = append(args, value)
+	for _, key := range keys {
+		column, ok := allowedUpdateColumns[key]
+		if !ok {
+			return "", nil, fmt.Errorf("invalid update field %q: not in allow-list", key)
+		}
+		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", column, argIdx))
+		args = append(args, updates[key])
 		argIdx++
 	}
 	setClauses = append(setClauses, fmt.Sprintf("updated_at = $%d", argIdx))
@@ -196,14 +269,24 @@ func (r *Repository) UpdateItem(ctx context.Context, id uuid.UUID, updates map[s
 
 	query := fmt.Sprintf("UPDATE keychain_items SET %s WHERE id = $%d AND deleted_at IS NULL",
 		joinSetClauses(setClauses), argIdx)
-	result, err := r.pool.Exec(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-	if result.RowsAffected() == 0 {
-		return fmt.Errorf("keychain item not found")
-	}
-	return nil
+	return query, args, nil
+}
+
+// allowedUpdateColumns is the CLOSED, static allow-list mapping every
+// logical field name UpdateItem accepts to its exact, hardcoded SQL
+// column name (T13). This is the ONLY source of column names
+// buildUpdateQuery ever emits into a SET clause — caller-supplied map
+// keys are used purely as lookup keys into this table, never
+// interpolated into SQL themselves. Deliberately EXCLUDED: "private_key"
+// and "passphrase" (T10 encrypted-at-rest secret columns — see
+// buildUpdateQuery's doc comment) and every identity/system-managed
+// column (id, user_id, org_id, type, fingerprint, created_at,
+// updated_at, deleted_at) which UpdateItem was never meant to touch.
+var allowedUpdateColumns = map[string]string{
+	"name":       "name",
+	"public_key": "public_key",
+	"metadata":   "metadata",
+	"tags":       "tags",
 }
 
 func joinSetClauses(clauses []string) string {
