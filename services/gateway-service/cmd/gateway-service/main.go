@@ -52,5 +52,9 @@ func main() {
 		logger.Fatalf("server forced to shutdown: %v", err)
 	}
 
+	// Stop the background upstream health-check prober (T8-8) so its
+	// goroutine does not leak past process shutdown.
+	srv.Stop()
+
 	logger.Println("server exited gracefully")
 }

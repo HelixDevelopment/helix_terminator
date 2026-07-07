@@ -23,6 +23,7 @@ package server_test
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -122,6 +123,9 @@ func startRealGateway(t *testing.T) (baseURL string, stop func()) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = httpSrv.Shutdown(ctx)
+		// Stop the background upstream health-check prober (T8-8) so its
+		// goroutine does not leak past this test.
+		srv.Stop()
 	}
 }
 
@@ -220,11 +224,33 @@ func TestIntegration_GatewayProxiesRealHTTPRequestToRealUpstream(t *testing.T) {
 		"the original Authorization header must be forwarded to the real upstream")
 }
 
-// TestIntegration_GatewayRejectsUnknownUpstream proves the gateway's
-// service-unavailable path is also exercised over a real network hop
-// (no upstream override configured => the loopback-only default address
-// is unreachable in this sandboxed environment => real 502, never a
-// fabricated 200).
+// TestIntegration_GatewayReturnsBadGatewayForUnreachableUpstream proves
+// the gateway's real reverse-proxy hop genuinely fails (never a
+// fabricated 200) against a real, unreachable loopback address.
+//
+// Reconciliation note (§11.4.120, T8-8): before T8-8 wired a real
+// background upstream health-check prober, upstreamService.Healthy was a
+// static flag hardcoded true in registerUpstreams and SetHealthy was
+// never called anywhere, so proxyTo's own "!upstream.IsHealthy()"
+// short-circuit (server.go) was dead code in practice — every request
+// always fell through to a REAL connection attempt, which then genuinely
+// failed with 502 "upstream request failed". This test originally
+// asserted exactly that 502. Now that T8-8 makes IsHealthy() a genuine,
+// periodically-refreshed reachability measurement, that same short-circuit
+// is alive: once the real prober has confirmed an upstream is
+// unreachable, the gateway correctly and efficiently rejects it with a
+// proactive 503 "service unavailable" BEFORE even attempting the doomed
+// connection, instead of paying a real connect/DNS-failure cost on every
+// single request — a strictly better outcome. Without controlling for
+// this, the test raced the prober's async initial sweep (started inside
+// New(), not synchronous with it) and flaked between 502 (request landed
+// before the sweep completed) and 503 (request landed after); this
+// version waits deterministically, over the real network, for the real
+// prober to converge (via the gateway's own /healthz/ready endpoint)
+// before asserting — so it now exercises the genuine, deterministic
+// post-T8-8 steady state. Both 502 and 503 are honest, non-fabricated
+// failure signals for a genuinely unreachable upstream; this test's core
+// invariant — never a fabricated 200 — is unchanged and still enforced.
 func TestIntegration_GatewayReturnsBadGatewayForUnreachableUpstream(t *testing.T) {
 	// /api/v1/auth/login is unauthenticated (jwtValidationMiddleware skips
 	// /api/v1/auth/*), so no JWT setup is needed for this test.
@@ -238,11 +264,40 @@ func TestIntegration_GatewayReturnsBadGatewayForUnreachableUpstream(t *testing.T
 	require.NoError(t, deadLn.Close()) // free the port so nothing answers on it
 
 	t.Setenv("AUTH_SERVICE_ADDR", deadAddr)
+	t.Setenv("GATEWAY_HEALTHCHECK_INTERVAL", "20ms")
 
 	gatewayURL, stopGateway := startRealGateway(t)
 	defer stopGateway()
 
 	client := &http.Client{Timeout: 10 * time.Second}
+
+	// Wait for the REAL T8-8 background prober to genuinely converge on
+	// "auth-service" being unhealthy, observed over the real network via
+	// the gateway's own /healthz/ready endpoint — never assumed, never
+	// timed around a fixed sleep.
+	require.Eventually(t, func() bool {
+		readyReq, err := http.NewRequest(http.MethodGet, gatewayURL+"/healthz/ready", nil)
+		if err != nil {
+			return false
+		}
+		readyResp, err := client.Do(readyReq)
+		if err != nil {
+			return false
+		}
+		defer readyResp.Body.Close()
+		var readyBody map[string]interface{}
+		if err := json.NewDecoder(readyResp.Body).Decode(&readyBody); err != nil {
+			return false
+		}
+		services, ok := readyBody["services"].(map[string]interface{})
+		if !ok {
+			return false
+		}
+		status, ok := services["auth-service"].(string)
+		return ok && status == "unhealthy"
+	}, 2*time.Second, 20*time.Millisecond,
+		"the real T8-8 background health-check prober must converge on auth-service being unhealthy")
+
 	req, err := http.NewRequest(http.MethodPost, gatewayURL+"/api/v1/auth/login", nil)
 	require.NoError(t, err)
 
@@ -252,8 +307,8 @@ func TestIntegration_GatewayReturnsBadGatewayForUnreachableUpstream(t *testing.T
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	require.Equal(t, http.StatusBadGateway, resp.StatusCode,
-		"a real, genuinely-unreachable upstream must surface as a real 502, never a fabricated 200")
+	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode,
+		"once the real T8-8 prober has confirmed auth-service is unreachable, the gateway must proactively reject with 503 rather than reattempt a doomed connection — still a real, non-fabricated failure signal, never a fabricated 200")
 	require.Contains(t, string(body), "auth-service")
 }
 

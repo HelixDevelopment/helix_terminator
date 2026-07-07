@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"fmt"
@@ -46,6 +47,38 @@ func (u *upstreamService) IsHealthy() bool {
 	u.mu.RLock()
 	defer u.mu.RUnlock()
 	return u.Healthy
+}
+
+// gatewayHealthCheckIntervalEnv is the environment variable used to
+// configure how often the background upstream health-check prober (T8-8)
+// re-checks every registered upstream's real reachability. Unset or
+// invalid falls back to defaultHealthCheckInterval.
+const gatewayHealthCheckIntervalEnv = "GATEWAY_HEALTHCHECK_INTERVAL"
+
+// defaultHealthCheckInterval is the sane default cadence for the
+// background upstream health-check prober when
+// GATEWAY_HEALTHCHECK_INTERVAL is unset: frequent enough that a genuinely
+// down upstream is reflected in /healthz within a reasonable window,
+// infrequent enough not to hammer 24 registered upstreams with probe
+// traffic every few seconds.
+const defaultHealthCheckInterval = 15 * time.Second
+
+// healthCheckProbeTimeout bounds a single upstream health probe so one
+// slow-to-respond (not yet fully unreachable) upstream can never stall the
+// whole probe sweep or the shutdown path.
+const healthCheckProbeTimeout = 3 * time.Second
+
+// healthCheckIntervalFromEnv resolves the configured probe interval,
+// falling back to defaultHealthCheckInterval on an unset or invalid value
+// (never guessed — an invalid duration is treated the same as unset,
+// §11.4.6).
+func healthCheckIntervalFromEnv() time.Duration {
+	if raw := strings.TrimSpace(os.Getenv(gatewayHealthCheckIntervalEnv)); raw != "" {
+		if d, err := time.ParseDuration(raw); err == nil && d > 0 {
+			return d
+		}
+	}
+	return defaultHealthCheckInterval
 }
 
 // rateLimiter implements a simple token bucket rate limiter per key
@@ -145,6 +178,16 @@ type Server struct {
 	// anti-bluff: /healthz "uptime" MUST be a genuine elapsed-time
 	// measurement derived from this timestamp, never a hardcoded literal).
 	startTime time.Time
+	// healthCheckStopCh / healthCheckWG / healthCheckStopOnce govern the
+	// lifecycle of the background upstream health-check prober started by
+	// startHealthChecks (T8-8): closing healthCheckStopCh signals the
+	// prober goroutine to exit, healthCheckWG lets Stop block until it
+	// genuinely has, and healthCheckStopOnce makes Stop safe to call more
+	// than once (e.g. once explicitly during shutdown and once via a
+	// deferred test cleanup) without a double-close panic.
+	healthCheckStopCh   chan struct{}
+	healthCheckWG       sync.WaitGroup
+	healthCheckStopOnce sync.Once
 }
 
 // Logger interface for logging
@@ -207,6 +250,12 @@ func New(logger Logger) *Server {
 
 	// Register upstream services
 	s.registerUpstreams()
+
+	// Start the background per-upstream health-check prober (T8-8). This
+	// must never block server boot: startHealthChecks only launches a
+	// goroutine and returns immediately — the first real probe sweep runs
+	// asynchronously inside that goroutine.
+	s.startHealthChecks()
 
 	// Health endpoints (no auth required)
 	r.GET("/healthz/live", s.livenessHandler)
@@ -438,15 +487,26 @@ func New(logger Logger) *Server {
 
 		// Billing routes. billing-service (services/billing-service/
 		// internal/server/server.go:41-49) has no "usage" endpoint
-		// anywhere. Its ListSubscriptions is NOT auto-scoped to the caller
-		// — it filters by an optional orgId QUERY parameter and returns
-		// everything when omitted (services/billing-service/internal/
-		// handler/handler.go:83-101); there is no "my current subscription"
-		// endpoint. Proxying "/billing/subscription" straight to the list
-		// would silently turn a "my subscription" request into an
-		// unscoped, cross-tenant list — an honest gap is safer than that.
+		// anywhere. Its ListSubscriptions (services/billing-service/
+		// internal/handler/handler.go:124-168) is now (T12) scoped
+		// EXCLUSIVELY to the caller's tenant, derived from the caller's own
+		// validated JWT "orgId" claim (see billing-service's authMiddleware
+		// + callerOrgID, services/billing-service/internal/server/
+		// server.go + internal/handler/handler.go:25-50) — a
+		// client-supplied orgId query parameter is no longer accepted as a
+		// scoping input at all (model.ListSubscriptionsRequest deliberately
+		// carries no OrgID field), so the prior cross-tenant-leak risk this
+		// route's 501 originally guarded against is closed. The 501 stays,
+		// though, for a different, still-real reason: ListSubscriptions
+		// returns a collection (potentially several subscriptions across a
+		// tenant's history), and billing-service has no dedicated
+		// single-object "my current subscription" endpoint anywhere;
+		// proxying this singular-noun route straight to the list would
+		// return an array under "current subscription" semantics — a
+		// response-shape mismatch, not a security gap. Re-evaluate if
+		// billing-service ever adds a real "current subscription" endpoint.
 		api.GET("/billing/subscription", s.notImplemented("billing.subscription",
-			"billing-service has no self-scoped \"current subscription\" endpoint; its list is unscoped by caller unless an orgId query param is supplied, so mapping straight to the list risks a cross-tenant data leak"))
+			"billing-service has no self-scoped, single-object \"current subscription\" endpoint; its ListSubscriptions is caller-org-scoped (T12) but returns a list, so mapping straight to it would be a response-shape mismatch, not the security gap this comment previously described"))
 		api.GET("/billing/usage", s.notImplemented("billing.usage",
 			"billing-service has no usage endpoint anywhere"))
 		api.GET("/billing/invoices", s.proxyTo("billing-service", "/api/v1/invoices"))
@@ -544,6 +604,122 @@ func (s *Server) registerUpstreams() {
 // an upstream service's address, e.g. "host-service" -> "HOST_SERVICE_ADDR".
 func envKeyForService(name string) string {
 	return strings.ToUpper(strings.ReplaceAll(name, "-", "_")) + "_ADDR"
+}
+
+// startHealthChecks launches the background goroutine that periodically
+// probes every registered upstream's REAL reachability and calls
+// SetHealthy with the genuine outcome (T8-8 anti-bluff fix: before this,
+// upstreamService.SetHealthy was defined but never called anywhere in the
+// codebase, and every upstream was constructed with Healthy: true
+// hardcoded in registerUpstreams and never flipped — /healthz's
+// per-service status could therefore never report a service unhealthy,
+// no matter how broken the real upstream was).
+//
+// This does not block server boot: the first probe sweep runs
+// asynchronously inside the spawned goroutine, not synchronously here.
+func (s *Server) startHealthChecks() {
+	s.healthCheckStopCh = make(chan struct{})
+	interval := healthCheckIntervalFromEnv()
+
+	s.healthCheckWG.Add(1)
+	go func() {
+		defer s.healthCheckWG.Done()
+
+		// Run an initial probe sweep immediately so /healthz reflects real
+		// upstream reachability as soon as possible after boot, rather
+		// than waiting a full interval for the first tick.
+		s.probeAllUpstreams()
+
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				s.probeAllUpstreams()
+			case <-s.healthCheckStopCh:
+				return
+			}
+		}
+	}()
+}
+
+// Stop shuts down the background upstream health-check prober started by
+// New/startHealthChecks and blocks until it has genuinely exited. It is
+// safe to call more than once (a no-op after the first call) and safe to
+// call concurrently with the prober's own probe sweeps (SetHealthy /
+// IsHealthy are independently mutex-guarded per upstream). Callers (the
+// process's graceful-shutdown path in cmd/gateway-service/main.go, and
+// tests via t.Cleanup) MUST call Stop so the goroutine started in New
+// does not leak past the Server's intended lifetime.
+func (s *Server) Stop() {
+	s.healthCheckStopOnce.Do(func() {
+		if s.healthCheckStopCh != nil {
+			close(s.healthCheckStopCh)
+		}
+		s.healthCheckWG.Wait()
+	})
+}
+
+// probeAllUpstreams snapshots the current upstream set under the existing
+// upstreamsMu read lock (the same lock every other reader of s.upstreams
+// uses, e.g. proxyTo/readinessHandler/fullHealthHandler) and then probes
+// every one's real reachability CONCURRENTLY outside the lock. Probing
+// concurrently (rather than one-at-a-time) bounds a single sweep's total
+// wall-clock cost to roughly healthCheckProbeTimeout regardless of how
+// many upstreams are registered, instead of the sum of every individual
+// probe's latency — important because a single slow-to-resolve or
+// slow-to-connect upstream must never delay how quickly every OTHER
+// upstream's state is refreshed. s.httpClient (a single shared
+// *http.Client) is safe for concurrent use by multiple goroutines per the
+// net/http documentation, and each upstreamService's own Healthy flag is
+// independently mutex-guarded (SetHealthy/IsHealthy), so concurrent
+// probes introduce no data race (verified under go test -race).
+func (s *Server) probeAllUpstreams() {
+	s.upstreamsMu.RLock()
+	targets := make([]*upstreamService, 0, len(s.upstreams))
+	for _, u := range s.upstreams {
+		targets = append(targets, u)
+	}
+	s.upstreamsMu.RUnlock()
+
+	var wg sync.WaitGroup
+	wg.Add(len(targets))
+	for _, u := range targets {
+		go func(u *upstreamService) {
+			defer wg.Done()
+			u.SetHealthy(s.probeUpstreamHealth(u))
+		}(u)
+	}
+	wg.Wait()
+}
+
+// probeUpstreamHealth performs a REAL, network-bound reachability check
+// against a single upstream: an HTTP GET of its /healthz endpoint (the
+// convention every upstream service in this fleet exposes — see e.g. this
+// same gateway's own livenessHandler, and the equivalent /healthz
+// registrations in auth-service, billing-service, etc.) bounded by
+// healthCheckProbeTimeout so one hung upstream can never stall the sweep.
+// A transport-level failure (connection refused, timeout, DNS failure —
+// i.e. genuinely unreachable) or a 5xx response is reported as unhealthy;
+// any response that was actually received with a non-5xx status is
+// reported healthy. Nothing here is simulated: an unreachable upstream
+// produces a genuine unhealthy result, never a fabricated healthy one.
+func (s *Server) probeUpstreamHealth(u *upstreamService) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), healthCheckProbeTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(u.Address, "/")+"/healthz", nil)
+	if err != nil {
+		return false
+	}
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode < http.StatusInternalServerError
 }
 
 // Router exposes the underlying engine for testing
@@ -793,12 +969,16 @@ func (s *Server) fullHealthHandler(c *gin.Context) {
 	s.upstreamsMu.RLock()
 	services := make(map[string]gin.H)
 	for name, upstream := range s.upstreams {
-		// NOTE (§11.4.6/§11.4.108 anti-bluff): gateway-service has no real
-		// per-upstream latency probe wired up (IsHealthy() is a static flag,
-		// never derived from a timed network call — see registerUpstreams).
-		// A "latency" field here would necessarily be an invented number, so
-		// it is intentionally omitted rather than fabricated. Add a real
-		// timed health-check probe before reintroducing this field.
+		// NOTE (§11.4.6/§11.4.108 anti-bluff): IsHealthy() IS now derived
+		// from a real, periodic, timed network probe (T8-8's
+		// startHealthChecks/probeUpstreamHealth — a genuine GET of the
+		// upstream's /healthz over the network, on GATEWAY_HEALTHCHECK_
+		// INTERVAL cadence), not a static flag. What is still intentionally
+		// omitted is a per-call numeric "latency" field: the prober records
+		// only the healthy/unhealthy outcome, not a timing measurement, so
+		// emitting a "latency" number here would still be an invented
+		// value. Add real per-probe timing capture before reintroducing
+		// that field.
 		services[name] = gin.H{
 			"status":  "healthy",
 			"version": "1.0.0",

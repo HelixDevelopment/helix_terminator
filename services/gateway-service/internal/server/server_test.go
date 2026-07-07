@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -92,8 +93,16 @@ func init() {
 	}
 }
 
-func setupTestServer() *server.Server {
-	return server.New(&testLogger{})
+// setupTestServer builds a gateway Server for a test/benchmark and
+// registers cleanup that stops its background upstream health-check
+// prober (T8-8) so the goroutine started in server.New does not leak
+// past the calling test/benchmark's lifetime. testing.TB accepts both
+// *testing.T and *testing.B.
+func setupTestServer(tb testing.TB) *server.Server {
+	tb.Helper()
+	s := server.New(&testLogger{})
+	tb.Cleanup(s.Stop)
+	return s
 }
 
 func generateTestToken() string {
@@ -117,7 +126,7 @@ func generateTestToken() string {
 }
 
 func TestLivenessEndpoint(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/healthz/live", nil)
 
@@ -129,7 +138,7 @@ func TestLivenessEndpoint(t *testing.T) {
 }
 
 func TestReadinessEndpoint(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/healthz/ready", nil)
 
@@ -141,7 +150,7 @@ func TestReadinessEndpoint(t *testing.T) {
 }
 
 func TestFullHealthEndpoint(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/healthz", nil)
 
@@ -161,7 +170,7 @@ func TestFullHealthEndpoint(t *testing.T) {
 // calls separated by real elapsed wall-clock time — a hardcoded constant can
 // never satisfy either property.
 func TestFullHealthEndpointRealUptime(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	time.Sleep(5 * time.Millisecond)
 
 	uptime1 := fetchHealthzUptime(t, s)
@@ -195,7 +204,7 @@ func fetchHealthzUptime(t *testing.T, s *server.Server) float64 {
 // real per-upstream latency probe wired up, the honest fix is to NOT emit
 // the field at all rather than fabricate a number.
 func TestFullHealthEndpointNoFabricatedLatency(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/healthz", nil)
 	s.Router().ServeHTTP(w, req)
@@ -216,8 +225,76 @@ func TestFullHealthEndpointNoFabricatedLatency(t *testing.T) {
 	}
 }
 
+// TestUnreachableUpstreamFlipsUnhealthy is the §11.4.43/§11.4.115
+// RED-then-GREEN regression guard for T8-8: gateway-service previously
+// defined upstreamService.SetHealthy but NEVER called it anywhere in the
+// codebase, and constructed every upstream with Healthy: true hardcoded
+// in registerUpstreams and never flipped — /healthz's and /healthz/ready's
+// per-service status could therefore NEVER report a service unhealthy no
+// matter how broken the real upstream was (fabricated telemetry,
+// §11.4/§11.4.108 anti-bluff violation). This test points one registered
+// upstream at a real loopback TCP port that is opened and then immediately
+// closed (so nothing answers on it — a genuinely unreachable address, not
+// a simulated failure), configures a fast probe cadence via
+// GATEWAY_HEALTHCHECK_INTERVAL, and asserts the background health-check
+// prober (T8-8) genuinely calls SetHealthy(false) for it: observed via
+// both /healthz/ready (StatusServiceUnavailable, per-service "unhealthy")
+// and /healthz (per-service "status":"unhealthy") within a bounded wait.
+// Against the pre-fix code (no prober; Healthy hardcoded true forever)
+// this condition would never become true inside the wait window — this is
+// a real RED-then-GREEN proof of the fix, not a synthetic assertion.
+func TestUnreachableUpstreamFlipsUnhealthy(t *testing.T) {
+	deadLn, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	deadAddr := "http://" + deadLn.Addr().String()
+	require.NoError(t, deadLn.Close()) // free the port; nothing answers on it now
+
+	t.Setenv(upstreamEnvKey("auth-service"), deadAddr)
+	t.Setenv("GATEWAY_HEALTHCHECK_INTERVAL", "20ms")
+
+	s := setupTestServer(t)
+
+	require.Eventually(t, func() bool {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, "/healthz/ready", nil)
+		s.Router().ServeHTTP(w, req)
+
+		if w.Code != http.StatusServiceUnavailable {
+			return false
+		}
+
+		var body map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			return false
+		}
+		services, ok := body["services"].(map[string]interface{})
+		if !ok {
+			return false
+		}
+		status, ok := services["auth-service"].(string)
+		return ok && status == "unhealthy"
+	}, 2*time.Second, 20*time.Millisecond,
+		"background health-check prober (T8-8) must flip a genuinely unreachable upstream to unhealthy in /healthz/ready within the bounded wait")
+
+	// Cross-check the same real outcome is reflected in the full /healthz
+	// per-service status too (fullHealthHandler reads the same IsHealthy()
+	// this prober writes via SetHealthy).
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/healthz", nil)
+	s.Router().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	services, ok := body["services"].(map[string]interface{})
+	require.True(t, ok)
+	authSvc, ok := services["auth-service"].(map[string]interface{})
+	require.True(t, ok, "auth-service entry must be present in /healthz")
+	assert.Equal(t, "unhealthy", authSvc["status"], "/healthz must also reflect the real probe outcome for the unreachable upstream")
+}
+
 func TestMetricsEndpoint(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/metrics", nil)
 
@@ -229,7 +306,7 @@ func TestMetricsEndpoint(t *testing.T) {
 
 func TestCORSMiddleware(t *testing.T) {
 	t.Setenv("CORS_ALLOWED_ORIGINS", "https://app.helixterminator.io")
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodOptions, "/api/v1/hosts", nil)
 	req.Header.Set("Origin", "https://app.helixterminator.io")
@@ -244,7 +321,7 @@ func TestCORSMiddleware(t *testing.T) {
 
 func TestCORSMiddleware_UnknownOrigin(t *testing.T) {
 	t.Setenv("CORS_ALLOWED_ORIGINS", "https://app.helixterminator.io")
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodOptions, "/api/v1/hosts", nil)
 	req.Header.Set("Origin", "https://evil.com")
@@ -258,7 +335,7 @@ func TestCORSMiddleware_UnknownOrigin(t *testing.T) {
 }
 
 func TestRequestIDMiddleware(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/healthz/live", nil)
 	req.Header.Set("X-Request-ID", "test-request-123")
@@ -270,7 +347,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 }
 
 func TestRequestIDMiddleware_GeneratesID(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/healthz/live", nil)
 
@@ -282,7 +359,7 @@ func TestRequestIDMiddleware_GeneratesID(t *testing.T) {
 
 func TestJWTValidationMiddleware_MissingToken(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
 
@@ -294,7 +371,7 @@ func TestJWTValidationMiddleware_MissingToken(t *testing.T) {
 
 func TestJWTValidationMiddleware_InvalidFormat(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
 	req.Header.Set("Authorization", "invalid-token")
@@ -307,7 +384,7 @@ func TestJWTValidationMiddleware_InvalidFormat(t *testing.T) {
 
 func TestJWTValidationMiddleware_EmptyToken(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
 	req.Header.Set("Authorization", "Bearer ")
@@ -320,7 +397,7 @@ func TestJWTValidationMiddleware_EmptyToken(t *testing.T) {
 
 func TestJWTValidationMiddleware_PassesWithToken(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
 	req.Header.Set("Authorization", "Bearer "+generateTestToken())
@@ -334,7 +411,7 @@ func TestJWTValidationMiddleware_PassesWithToken(t *testing.T) {
 
 func TestJWTValidationMiddleware_InvalidToken(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
 	req.Header.Set("Authorization", "Bearer invalid-token")
@@ -346,7 +423,7 @@ func TestJWTValidationMiddleware_InvalidToken(t *testing.T) {
 }
 
 func TestAuthRoutes_NoTokenRequired(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/register", nil)
 
@@ -357,7 +434,7 @@ func TestAuthRoutes_NoTokenRequired(t *testing.T) {
 }
 
 func TestRateLimitMiddleware(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 
 	// Make requests until rate limit kicks in
 	// Note: In real scenario, this would need many requests
@@ -372,7 +449,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 
 func TestProxyToUpstream(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
 	req.Header.Set("Authorization", "Bearer "+generateTestToken())
@@ -386,7 +463,7 @@ func TestProxyToUpstream(t *testing.T) {
 
 func TestProxyToUnknownService(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/vaults", nil)
 	req.Header.Set("Authorization", "Bearer "+generateTestToken())
@@ -398,7 +475,7 @@ func TestProxyToUnknownService(t *testing.T) {
 }
 
 func TestTerminalWebSocket_NotImplemented(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ws/terminal/123", nil)
 
@@ -409,7 +486,7 @@ func TestTerminalWebSocket_NotImplemented(t *testing.T) {
 }
 
 func TestSSO_NotImplemented(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/auth/sso/google", nil)
 
@@ -420,7 +497,7 @@ func TestSSO_NotImplemented(t *testing.T) {
 }
 
 func TestLoggingMiddleware(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/healthz/live", nil)
 
@@ -433,7 +510,7 @@ func TestLoggingMiddleware(t *testing.T) {
 }
 
 func TestServer_RouterExposure(t *testing.T) {
-	s := setupTestServer()
+	s := setupTestServer(t)
 	router := s.Router()
 	require.NotNil(t, router)
 	assert.Implements(t, (*http.Handler)(nil), router)
@@ -441,7 +518,7 @@ func TestServer_RouterExposure(t *testing.T) {
 
 func TestAllUpstreamServicesRegistered(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 
 	// Test a few key upstream services are routable. NOTE (T8-1 route-table
 	// realignment): "/api/v1/users/me" and "/api/v1/billing/subscription"
@@ -511,7 +588,7 @@ func TestAllUpstreamServicesRegistered(t *testing.T) {
 // a source-text grep.
 func TestCorrectedRoutes_ReachRealUpstreamPath(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 
 	type routeCase struct {
 		name         string
@@ -689,7 +766,7 @@ func TestCorrectedRoutes_OldPathWouldHaveMissed(t *testing.T) {
 // notImplemented short-circuits before any proxyTo call.
 func TestHonestGapRoutes_Return501NotImplemented(t *testing.T) {
 	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
-	s := setupTestServer()
+	s := setupTestServer(t)
 
 	cases := []struct {
 		name        string
@@ -744,7 +821,7 @@ func TestHonestGapRoutes_Return501NotImplemented(t *testing.T) {
 }
 
 func BenchmarkHealthEndpoint(b *testing.B) {
-	s := setupTestServer()
+	s := setupTestServer(b)
 	req, _ := http.NewRequest(http.MethodGet, "/healthz/live", nil)
 
 	b.ResetTimer()
