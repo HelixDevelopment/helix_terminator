@@ -57,12 +57,23 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 		return
 	}
 
-	orgID, _ := uuid.Parse(req.OrgID)
+	// T14: the subscription's org is derived EXCLUSIVELY from the
+	// authenticated caller's identity, never from client-supplied input —
+	// previously this endpoint trusted a client-supplied "orgId" body
+	// field verbatim (uuid.Parse(req.OrgID)), letting any caller create a
+	// subscription attributed to an ARBITRARY org, including another
+	// tenant's.
+	callerOrg, ok := callerOrgID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid caller identity"})
+		return
+	}
+
 	planID, _ := uuid.Parse(req.PlanID)
 
 	sub := &model.Subscription{
 		ID:        uuid.New(),
-		OrgID:     orgID,
+		OrgID:     callerOrg,
 		PlanID:    planID,
 		Status:    "active",
 		StartedAt: time.Now().UTC(),
@@ -175,9 +186,42 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 		return
 	}
 
+	callerOrg, ok := callerOrgID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid caller identity"})
+		return
+	}
+
 	var req model.UpdateSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// T14: fetch-then-compare BEFORE mutating, mirroring T12's
+	// GetSubscription no-existence-oracle treatment — a subscription that
+	// exists but belongs to a DIFFERENT tenant returns the SAME
+	// "subscription not found" response as a genuinely-missing id. This
+	// runs even when the update body carries no changed fields, closing
+	// an oracle an empty-body PUT would otherwise open (an empty update
+	// is a repository no-op that would otherwise skip any ownership
+	// check and let the post-update re-fetch below hand back another
+	// tenant's current subscription state).
+	existing, err := h.repo.GetSubscriptionByID(c.Request.Context(), id)
+	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "subscription not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "subscription not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get subscription"})
+		return
+	}
+	if existing.OrgID != callerOrg {
+		c.JSON(http.StatusNotFound, gin.H{"error": "subscription not found"})
 		return
 	}
 
@@ -190,7 +234,11 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 		updates["status"] = *req.Status
 	}
 
-	if err := h.repo.UpdateSubscription(c.Request.Context(), id, updates); err != nil {
+	// T14: the mutation itself is ALSO scoped to the caller's own org —
+	// defense in depth on top of the fetch-then-compare check above, so a
+	// TOCTOU window between the check and the write can never let a
+	// mutation land against another tenant's row.
+	if err := h.repo.UpdateSubscription(c.Request.Context(), id, callerOrg, updates); err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 			return
@@ -219,7 +267,38 @@ func (h *Handler) CancelSubscription(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.CancelSubscription(c.Request.Context(), id); err != nil {
+	callerOrg, ok := callerOrgID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid caller identity"})
+		return
+	}
+
+	// T14: fetch-then-compare BEFORE mutating — same no-existence-oracle
+	// treatment as UpdateSubscription/GetSubscription (T12): a
+	// subscription that exists but belongs to a DIFFERENT tenant returns
+	// the SAME "subscription not found" response as a genuinely-missing
+	// id.
+	existing, err := h.repo.GetSubscriptionByID(c.Request.Context(), id)
+	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
+		if err.Error() == "subscription not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "subscription not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get subscription"})
+		return
+	}
+	if existing.OrgID != callerOrg {
+		c.JSON(http.StatusNotFound, gin.H{"error": "subscription not found"})
+		return
+	}
+
+	// T14: the mutation itself is ALSO scoped to the caller's own org —
+	// defense in depth on top of the fetch-then-compare check above.
+	if err := h.repo.CancelSubscription(c.Request.Context(), id, callerOrg); err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 			return

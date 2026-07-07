@@ -60,9 +60,15 @@ type UsageRecord struct {
 	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
 }
 
-// CreateSubscriptionRequest represents a request to create a subscription
+// CreateSubscriptionRequest represents a request to create a subscription.
+// Deliberately has NO OrgID field (T14): the subscription's org comes
+// exclusively from the caller's authenticated identity (see
+// internal/handler.callerOrgID), never from client-supplied input — a
+// client-controlled org field is exactly how a caller could previously
+// create a subscription attributed to an ARBITRARY org, including
+// another tenant's (the same cross-tenant IDOR root cause T12 closed
+// for the read endpoints, left open here until T14).
 type CreateSubscriptionRequest struct {
-	OrgID  string `json:"orgId" binding:"required,uuid"`
 	PlanID string `json:"planId" binding:"required,uuid"`
 }
 

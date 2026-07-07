@@ -127,8 +127,16 @@ func (r *Repository) ListSubscriptions(ctx context.Context, orgID uuid.UUID, sta
 	return subs, total, rows.Err()
 }
 
-// UpdateSubscription updates a subscription
-func (r *Repository) UpdateSubscription(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error {
+// UpdateSubscription updates a subscription, scoped to the owning org
+// (T14). The WHERE clause filters on BOTH id AND org_id so a caller can
+// never mutate another tenant's subscription — even if the caller's own
+// ownership check at the handler layer were ever bypassed or raced, the
+// UPDATE itself cannot touch a row belonging to a different org. A
+// mismatch (row exists but belongs to a different org, or the row does
+// not exist at all) produces the identical zero-rows-affected outcome,
+// so the caller (internal/handler) can return the same "subscription
+// not found" response either way — no existence oracle.
+func (r *Repository) UpdateSubscription(ctx context.Context, id, orgID uuid.UUID, updates map[string]interface{}) error {
 	if err := r.checkPool(); err != nil {
 		return err
 	}
@@ -147,8 +155,12 @@ func (r *Repository) UpdateSubscription(ctx context.Context, id uuid.UUID, updat
 	args = append(args, time.Now().UTC())
 	argIdx++
 	args = append(args, id)
+	idIdx := argIdx
+	argIdx++
+	args = append(args, orgID)
+	orgIdx := argIdx
 
-	query := fmt.Sprintf("UPDATE subscriptions SET %s WHERE id = $%d", joinSetClauses(setClauses), argIdx)
+	query := fmt.Sprintf("UPDATE subscriptions SET %s WHERE id = $%d AND org_id = $%d", joinSetClauses(setClauses), idIdx, orgIdx)
 	result, err := r.pool.Exec(ctx, query, args...)
 	if err != nil {
 		return err
@@ -159,13 +171,14 @@ func (r *Repository) UpdateSubscription(ctx context.Context, id uuid.UUID, updat
 	return nil
 }
 
-// CancelSubscription cancels a subscription
-func (r *Repository) CancelSubscription(ctx context.Context, id uuid.UUID) error {
+// CancelSubscription cancels a subscription, scoped to the owning org
+// (T14) — same org_id-scoped WHERE clause rationale as UpdateSubscription.
+func (r *Repository) CancelSubscription(ctx context.Context, id, orgID uuid.UUID) error {
 	if err := r.checkPool(); err != nil {
 		return err
 	}
-	query := "UPDATE subscriptions SET status = 'canceled', canceled_at = NOW(), updated_at = NOW() WHERE id = $1"
-	result, err := r.pool.Exec(ctx, query, id)
+	query := "UPDATE subscriptions SET status = 'canceled', canceled_at = NOW(), updated_at = NOW() WHERE id = $1 AND org_id = $2"
+	result, err := r.pool.Exec(ctx, query, id, orgID)
 	if err != nil {
 		return err
 	}

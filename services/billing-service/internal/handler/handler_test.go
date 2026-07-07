@@ -59,7 +59,6 @@ func TestCreateSubscriptionValidation(t *testing.T) {
 	r.POST("/api/v1/subscriptions", h.CreateSubscription)
 
 	body := model.CreateSubscriptionRequest{
-		OrgID:  "not-a-uuid",
 		PlanID: "not-a-uuid",
 	}
 	b, _ := json.Marshal(body)
