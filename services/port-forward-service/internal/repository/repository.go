@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/port-forward-service/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/helixdevelopment/port-forward-service/internal/model"
 )
 
 // Repository handles port-forward data access
@@ -41,10 +41,13 @@ func (r *Repository) CreateForward(ctx context.Context, forward *model.PortForwa
 		return err
 	}
 	query := `
-		INSERT INTO port_forwards (id, host_id, local_port, remote_port, remote_host, protocol, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+		INSERT INTO port_forwards (id, host_id, forward_type, local_port, remote_port, remote_host, protocol, bind_address, ssh_host, ssh_port, ssh_username, auth_type, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
 	`
-	_, err := r.pool.Exec(ctx, query, forward.ID, forward.HostID, forward.LocalPort, forward.RemotePort, forward.RemoteHost, forward.Protocol, forward.Status)
+	_, err := r.pool.Exec(ctx, query,
+		forward.ID, forward.HostID, forward.ForwardType, forward.LocalPort, forward.RemotePort, forward.RemoteHost,
+		forward.Protocol, forward.BindAddress, forward.SSHHost, forward.SSHPort, forward.SSHUsername, forward.AuthType, forward.Status,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create forward: %w", err)
 	}
@@ -57,12 +60,14 @@ func (r *Repository) GetForwardByID(ctx context.Context, id uuid.UUID) (*model.P
 		return nil, err
 	}
 	query := `
-		SELECT id, host_id, local_port, remote_port, remote_host, protocol, status, created_at, updated_at, deleted_at
+		SELECT id, host_id, forward_type, local_port, remote_port, remote_host, protocol, bind_address, ssh_host, ssh_port, ssh_username, auth_type, status, created_at, updated_at, deleted_at
 		FROM port_forwards WHERE id = $1 AND deleted_at IS NULL
 	`
 	var forward model.PortForward
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&forward.ID, &forward.HostID, &forward.LocalPort, &forward.RemotePort, &forward.RemoteHost, &forward.Protocol, &forward.Status, &forward.CreatedAt, &forward.UpdatedAt, &forward.DeletedAt,
+		&forward.ID, &forward.HostID, &forward.ForwardType, &forward.LocalPort, &forward.RemotePort, &forward.RemoteHost,
+		&forward.Protocol, &forward.BindAddress, &forward.SSHHost, &forward.SSHPort, &forward.SSHUsername, &forward.AuthType,
+		&forward.Status, &forward.CreatedAt, &forward.UpdatedAt, &forward.DeletedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -95,7 +100,7 @@ func (r *Repository) ListForwards(ctx context.Context, hostID uuid.UUID, limit, 
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, host_id, local_port, remote_port, remote_host, protocol, status, created_at, updated_at
+		SELECT id, host_id, forward_type, local_port, remote_port, remote_host, protocol, bind_address, ssh_host, ssh_port, ssh_username, auth_type, status, created_at, updated_at
 		FROM port_forwards WHERE %s
 		ORDER BY created_at DESC
 		LIMIT $%d OFFSET $%d
@@ -112,7 +117,9 @@ func (r *Repository) ListForwards(ctx context.Context, hostID uuid.UUID, limit, 
 	for rows.Next() {
 		var forward model.PortForward
 		if err := rows.Scan(
-			&forward.ID, &forward.HostID, &forward.LocalPort, &forward.RemotePort, &forward.RemoteHost, &forward.Protocol, &forward.Status, &forward.CreatedAt, &forward.UpdatedAt,
+			&forward.ID, &forward.HostID, &forward.ForwardType, &forward.LocalPort, &forward.RemotePort, &forward.RemoteHost,
+			&forward.Protocol, &forward.BindAddress, &forward.SSHHost, &forward.SSHPort, &forward.SSHUsername, &forward.AuthType,
+			&forward.Status, &forward.CreatedAt, &forward.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -121,7 +128,8 @@ func (r *Repository) ListForwards(ctx context.Context, hostID uuid.UUID, limit, 
 	return forwards, total, rows.Err()
 }
 
-// UpdateForward updates a forward
+// UpdateForward updates a forward's editable metadata (not the real tunnel
+// lifecycle status — use UpdateStatus for that).
 func (r *Repository) UpdateForward(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error {
 	if err := r.checkPool(); err != nil {
 		return err
@@ -130,6 +138,24 @@ func (r *Repository) UpdateForward(ctx context.Context, id uuid.UUID, updates ma
 	_, err := r.pool.Exec(ctx, query, id, updates["local_port"], updates["remote_port"], updates["remote_host"], updates["protocol"], updates["status"])
 	if err != nil {
 		return fmt.Errorf("failed to update forward: %w", err)
+	}
+	return nil
+}
+
+// UpdateStatus sets a forward's status to reflect REAL tunnel state (pending
+// / active / stopped / error). It never touches the forward's other
+// metadata columns.
+func (r *Repository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	if err := r.checkPool(); err != nil {
+		return err
+	}
+	query := "UPDATE port_forwards SET status = $2, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL"
+	result, err := r.pool.Exec(ctx, query, id, status)
+	if err != nil {
+		return fmt.Errorf("failed to update forward status: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("forward not found")
 	}
 	return nil
 }

@@ -38,6 +38,9 @@ func New(h *handler.Handler) *Server {
 		api.GET("/forwards/:id", h.GetForward)
 		api.PUT("/forwards/:id", h.UpdateForward)
 		api.DELETE("/forwards/:id", h.DeleteForward)
+		api.POST("/forwards/:id/start", h.StartForward)
+		api.POST("/forwards/:id/stop", h.StopForward)
+		api.GET("/forwards/:id/metrics", h.GetForwardMetrics)
 	}
 
 	port := os.Getenv("PORT")

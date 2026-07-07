@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/helixdevelopment/port-forward-service/internal/handler"
 	"github.com/helixdevelopment/port-forward-service/internal/repository"
 	"github.com/helixdevelopment/port-forward-service/internal/server"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
