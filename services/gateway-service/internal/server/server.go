@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -138,6 +139,7 @@ type Server struct {
 	breakers        map[string]*circuitBreaker
 	breakersMu      sync.RWMutex
 	jwtPublicKey    ed25519.PublicKey
+	httpClient      *http.Client
 }
 
 // Logger interface for logging
@@ -173,6 +175,7 @@ func New(logger Logger) *Server {
 		ipLimiter:       newRateLimiter(time.Minute),
 		endpointLimiter: newRateLimiter(time.Minute),
 		breakers:        make(map[string]*circuitBreaker),
+		httpClient:      &http.Client{Timeout: 15 * time.Second},
 	}
 
 	// Load JWT public key from environment
@@ -370,12 +373,27 @@ func (s *Server) registerUpstreams() {
 	}
 
 	for _, svc := range services {
+		addr := svc.address
+		// Allow per-service upstream address override via environment
+		// variable (e.g. HOST_SERVICE_ADDR=http://127.0.0.1:41123) so the
+		// gateway can be pointed at a real upstream instance — used both
+		// for real deployments (service discovery / config injection)
+		// and for integration tests that spin up a real loopback upstream.
+		if override := strings.TrimSpace(os.Getenv(envKeyForService(svc.name))); override != "" {
+			addr = override
+		}
 		s.upstreams[svc.name] = &upstreamService{
 			Name:    svc.name,
-			Address: svc.address,
+			Address: addr,
 			Healthy: true,
 		}
 	}
+}
+
+// envKeyForService derives the environment variable name used to override
+// an upstream service's address, e.g. "host-service" -> "HOST_SERVICE_ADDR".
+func envKeyForService(name string) string {
+	return strings.ToUpper(strings.ReplaceAll(name, "-", "_")) + "_ADDR"
 }
 
 // Router exposes the underlying engine for testing
@@ -584,7 +602,7 @@ func (s *Server) validateToken(tokenString string) (*Claims, error) {
 
 func (s *Server) livenessHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"status": "ok",
+		"status":    "ok",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	})
 }
@@ -672,7 +690,39 @@ func (s *Server) ssoCallbackHandler(c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "SSO callback not yet implemented"})
 }
 
-// proxyTo returns a handler that proxies requests to an upstream service
+// hopByHopHeaders are per-connection headers that MUST NOT be forwarded
+// verbatim across a proxy hop (RFC 7230 §6.1).
+var hopByHopHeaders = []string{
+	"Connection", "Keep-Alive", "Proxy-Authenticate", "Proxy-Authorization",
+	"Te", "Trailer", "Transfer-Encoding", "Upgrade",
+}
+
+// resolvePathParams substitutes gin route params (":name") in the given
+// upstream path template with their real values from the current request,
+// e.g. "/hosts/:hostId" + c.Param("hostId")=="h-1" -> "/hosts/h-1".
+func resolvePathParams(template string, c *gin.Context) string {
+	if !strings.Contains(template, ":") {
+		return template
+	}
+	segments := strings.Split(template, "/")
+	for i, seg := range segments {
+		if strings.HasPrefix(seg, ":") {
+			if val := c.Param(seg[1:]); val != "" {
+				segments[i] = val
+			}
+		}
+	}
+	return strings.Join(segments, "/")
+}
+
+// proxyTo returns a handler that performs a REAL reverse-proxy hop to the
+// named upstream service over the network: it builds a new outbound HTTP
+// request against the upstream's configured address, forwards method,
+// headers, query string and body, executes it over a real TCP connection
+// via s.httpClient, and streams the upstream's real status/headers/body
+// back to the original caller. Nothing here is simulated — an unreachable
+// or misbehaving upstream surfaces as a genuine 502, never a fabricated
+// 200.
 func (s *Server) proxyTo(serviceName, path string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		s.upstreamsMu.RLock()
@@ -687,12 +737,50 @@ func (s *Server) proxyTo(serviceName, path string) gin.HandlerFunc {
 			return
 		}
 
-		// TODO: implement actual HTTP proxy to upstream service
-		// For now, return a stub response indicating the route is wired
-		c.JSON(http.StatusOK, gin.H{
-			"message":    "request routed to " + serviceName,
-			"path":       path,
-			"request_id": c.GetString("requestID"),
-		})
+		targetPath := resolvePathParams(path, c)
+		targetURL := strings.TrimRight(upstream.Address, "/") + targetPath
+		if rawQuery := c.Request.URL.RawQuery; rawQuery != "" {
+			targetURL += "?" + rawQuery
+		}
+
+		proxyReq, err := http.NewRequestWithContext(c.Request.Context(), c.Request.Method, targetURL, c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{
+				"error":   "failed to build upstream request",
+				"service": serviceName,
+			})
+			return
+		}
+
+		proxyReq.Header = c.Request.Header.Clone()
+		for _, h := range hopByHopHeaders {
+			proxyReq.Header.Del(h)
+		}
+		proxyReq.ContentLength = c.Request.ContentLength
+		proxyReq.Header.Set("X-Forwarded-For", c.ClientIP())
+		proxyReq.Header.Set("X-Forwarded-Host", c.Request.Host)
+		proxyReq.Header.Set("X-Gateway-Upstream", serviceName)
+		proxyReq.Header.Set("X-Request-ID", c.GetString("requestID"))
+
+		resp, err := s.httpClient.Do(proxyReq)
+		if err != nil {
+			s.logger.Printf("gateway: upstream request to %s (%s) failed: %v", serviceName, targetURL, err)
+			c.JSON(http.StatusBadGateway, gin.H{
+				"error":   "upstream request failed",
+				"service": serviceName,
+			})
+			return
+		}
+		defer resp.Body.Close()
+
+		for k, vv := range resp.Header {
+			for _, v := range vv {
+				c.Writer.Header().Add(k, v)
+			}
+		}
+		c.Writer.WriteHeader(resp.StatusCode)
+		if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+			s.logger.Printf("gateway: failed streaming upstream response from %s: %v", serviceName, err)
+		}
 	}
 }
