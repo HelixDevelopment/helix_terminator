@@ -35,13 +35,13 @@ func (r *Repository) CreateNotification(ctx context.Context, notification *model
 		return err
 	}
 	query := `
-		INSERT INTO notifications (id, user_id, org_id, type, title, message, data, channel, status, read_at, sent_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO notifications (id, user_id, org_id, type, title, message, data, channel, target, status, read_at, sent_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	_, err := r.pool.Exec(ctx, query,
 		notification.ID, notification.UserID, notification.OrgID, notification.Type,
 		notification.Title, notification.Message, notification.Data, notification.Channel,
-		notification.Status, notification.ReadAt, notification.SentAt,
+		notification.Target, notification.Status, notification.ReadAt, notification.SentAt,
 		notification.CreatedAt, notification.UpdatedAt,
 	)
 	if err != nil {
@@ -56,19 +56,23 @@ func (r *Repository) GetNotificationByID(ctx context.Context, id uuid.UUID) (*mo
 		return nil, err
 	}
 	query := `
-		SELECT id, user_id, org_id, type, title, message, data, channel, status, read_at, sent_at, created_at, updated_at
+		SELECT id, user_id, org_id, type, title, message, data, channel, target, status, read_at, sent_at, created_at, updated_at
 		FROM notifications
 		WHERE id = $1
 	`
 	row := r.pool.QueryRow(ctx, query, id)
 
 	notification := &model.Notification{}
+	var target *string
 	err := row.Scan(
 		&notification.ID, &notification.UserID, &notification.OrgID, &notification.Type,
 		&notification.Title, &notification.Message, &notification.Data, &notification.Channel,
-		&notification.Status, &notification.ReadAt, &notification.SentAt,
+		&target, &notification.Status, &notification.ReadAt, &notification.SentAt,
 		&notification.CreatedAt, &notification.UpdatedAt,
 	)
+	if target != nil {
+		notification.Target = *target
+	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("notification not found")
@@ -113,7 +117,7 @@ func (r *Repository) ListNotifications(ctx context.Context, userID uuid.UUID, or
 
 	// Build list query
 	listQuery := `
-		SELECT id, user_id, org_id, type, title, message, data, channel, status, read_at, sent_at, created_at, updated_at
+		SELECT id, user_id, org_id, type, title, message, data, channel, target, status, read_at, sent_at, created_at, updated_at
 		FROM notifications
 		WHERE user_id = $1`
 	listArgs := []interface{}{userID}
@@ -147,14 +151,18 @@ func (r *Repository) ListNotifications(ctx context.Context, userID uuid.UUID, or
 	var notifications []*model.Notification
 	for rows.Next() {
 		notification := &model.Notification{}
+		var target *string
 		err := rows.Scan(
 			&notification.ID, &notification.UserID, &notification.OrgID, &notification.Type,
 			&notification.Title, &notification.Message, &notification.Data, &notification.Channel,
-			&notification.Status, &notification.ReadAt, &notification.SentAt,
+			&target, &notification.Status, &notification.ReadAt, &notification.SentAt,
 			&notification.CreatedAt, &notification.UpdatedAt,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan notification: %w", err)
+		}
+		if target != nil {
+			notification.Target = *target
 		}
 		notifications = append(notifications, notification)
 	}

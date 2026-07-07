@@ -34,6 +34,22 @@ user, audit
 - `GET` `/api/v1/notifications/digests` — Get digest settings
 - `PUT` `/api/v1/notifications/digests` — Update digest settings
 
+## Delivery Channels
+
+`POST /api/v1/notifications` accepts `channel: email|in_app|push|webhook` and,
+for `email`/`webhook`, a required `target` field (recipient email address, or
+destination URL respectively). The persisted `status` reflects the REAL
+delivery outcome — it is never left permanently `pending`:
+
+| Channel | Delivery mechanism | Requires | Success status | Failure status |
+|---|---|---|---|---|
+| `email` | Real SMTP send (`net/smtp`) to `target` | `SMTP_HOST` configured | `sent` | `failed` |
+| `webhook` | Real outbound `http.Client` POST to `target` | none (any reachable http(s) URL) | `delivered` | `failed` |
+| `push` | Not yet implemented — FCM/APNs credentials are not configured in this environment | operator-supplied `FCM_SERVER_KEY` / `APNS_*` (not yet wired) | — | `pending_provider_unconfigured` (honest, never fabricated) |
+| `in_app` | No external transport; status is caller-supplied (default `pending`) | — | — | — |
+
+See `internal/delivery/` for the SMTP and webhook clients.
+
 ## Health Checks
 
 - `GET /healthz` — Health check (200 = healthy)
@@ -62,6 +78,11 @@ go test -v -race -cover ./...
 | `LOG_LEVEL` | No | info | Log level (debug/info/warn/error) |
 | `KAFKA_BROKERS` | No | — | Kafka bootstrap servers |
 | `REDIS_URL` | No | — | Redis connection string |
+| `SMTP_HOST` | No | — | SMTP server host; email delivery is honestly reported as `failed` when unset |
+| `SMTP_PORT` | No | 25 | SMTP server port |
+| `SMTP_FROM` | No | notifications@localhost | Envelope/header From address |
+| `SMTP_USERNAME` | No | — | SMTP AUTH username (PLAIN auth used only when set) |
+| `SMTP_PASSWORD` | No | — | SMTP AUTH password — never hardcode, never commit |
 
 ---
 

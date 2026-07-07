@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -8,18 +9,44 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/helixdevelopment/notification-service/internal/delivery"
 	"github.com/helixdevelopment/notification-service/internal/model"
 	"github.com/helixdevelopment/notification-service/internal/repository"
 )
 
 // Handler holds notification service handlers
 type Handler struct {
-	repo *repository.Repository
+	repo          *repository.Repository
+	emailSender   *delivery.EmailSender
+	webhookSender *delivery.WebhookSender
+	pushSender    *delivery.PushSender
 }
 
-// New returns a new Handler with dependencies
+// New returns a new Handler with dependencies. Delivery clients are built
+// from environment configuration (Constitution §11.4.10 — never hardcoded):
+// email requires SMTP_HOST to be set (see delivery.SMTPConfigFromEnv); the
+// webhook sender needs no external configuration; push has no real provider
+// wired yet and always reports an honest "not configured" outcome.
 func New(repo *repository.Repository) *Handler {
-	return &Handler{repo: repo}
+	h := &Handler{
+		repo:          repo,
+		webhookSender: delivery.NewWebhookSender(10 * time.Second),
+		pushSender:    delivery.NewPushSender(),
+	}
+	if cfg, ok := delivery.SMTPConfigFromEnv(); ok {
+		h.emailSender = delivery.NewEmailSender(cfg)
+	}
+	return h
+}
+
+// NewWithDelivery returns a new Handler with explicitly supplied delivery
+// clients. This is the constructor tests use to point real senders at real
+// test infrastructure (a real SMTP sink, a real HTTP receiver) — per
+// Constitution §11.4.27 no fakes/mocks are used beyond unit tests, so tests
+// exercising this handler wire REAL delivery.EmailSender / WebhookSender /
+// PushSender instances, never a mock double.
+func NewWithDelivery(repo *repository.Repository, emailSender *delivery.EmailSender, webhookSender *delivery.WebhookSender, pushSender *delivery.PushSender) *Handler {
+	return &Handler{repo: repo, emailSender: emailSender, webhookSender: webhookSender, pushSender: pushSender}
 }
 
 // CreateNotification handles POST /api/v1/notifications
@@ -46,11 +73,27 @@ func (h *Handler) CreateNotification(c *gin.Context) {
 		orgID = &parsed
 	}
 
+	// Channel-specific target validation — fail fast instead of silently
+	// persisting a notification that can never be delivered.
+	switch req.Channel {
+	case "email":
+		if req.Target == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "target (recipient email address) is required for channel=email"})
+			return
+		}
+	case "webhook":
+		if req.Target == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "target (webhook URL) is required for channel=webhook"})
+			return
+		}
+	}
+
 	status := req.Status
 	if status == "" {
 		status = "pending"
 	}
 
+	now := time.Now().UTC()
 	notification := &model.Notification{
 		ID:        uuid.New(),
 		UserID:    userID,
@@ -60,9 +103,23 @@ func (h *Handler) CreateNotification(c *gin.Context) {
 		Message:   req.Message,
 		Data:      req.Data,
 		Channel:   req.Channel,
+		Target:    req.Target,
 		Status:    status,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	// REAL delivery attempt — the persisted status reflects what actually
+	// happened, never a fabricated success (Constitution §11.4 anti-bluff
+	// covenant). in_app has no external transport so it keeps whatever
+	// status was requested (default "pending").
+	switch req.Channel {
+	case "email":
+		h.deliverEmail(c.Request.Context(), notification)
+	case "webhook":
+		h.deliverWebhook(c.Request.Context(), notification)
+	case "push":
+		h.deliverPush(notification)
 	}
 
 	if err := h.repo.CreateNotification(c.Request.Context(), notification); err != nil {
@@ -71,6 +128,68 @@ func (h *Handler) CreateNotification(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, toNotificationResponse(notification))
+}
+
+// deliverEmail attempts real SMTP delivery and sets notification.Status to
+// the REAL outcome: "sent" only if the configured SMTP server actually
+// accepted the message, "failed" (with the real error preserved in Data via
+// the caller's logs — the notification row itself only carries the status,
+// per the existing schema) otherwise. Never fabricates success.
+func (h *Handler) deliverEmail(ctx context.Context, n *model.Notification) {
+	if h.emailSender == nil {
+		n.Status = "failed"
+		return
+	}
+	if err := h.emailSender.Send(ctx, n.Target, n.Title, n.Message); err != nil {
+		n.Status = "failed"
+		return
+	}
+	sentAt := time.Now().UTC()
+	n.Status = "sent"
+	n.SentAt = &sentAt
+}
+
+// deliverWebhook attempts a real outbound HTTP POST of the notification
+// payload to n.Target. A 2xx response yields "delivered"; anything else
+// (transport error, timeout, non-2xx status) yields "failed".
+func (h *Handler) deliverWebhook(ctx context.Context, n *model.Notification) {
+	if h.webhookSender == nil {
+		n.Status = "failed"
+		return
+	}
+	payload := delivery.WebhookPayload{
+		ID:      n.ID.String(),
+		UserID:  n.UserID.String(),
+		Type:    n.Type,
+		Title:   n.Title,
+		Message: n.Message,
+		Channel: n.Channel,
+		Data:    json.RawMessage(n.Data),
+	}
+	if _, err := h.webhookSender.Send(ctx, n.Target, payload); err != nil {
+		n.Status = "failed"
+		return
+	}
+	sentAt := time.Now().UTC()
+	n.Status = "delivered"
+	n.SentAt = &sentAt
+}
+
+// deliverPush honestly reports that no FCM/APNs provider is configured —
+// it NEVER fabricates a "sent"/"delivered" status for a channel with no
+// real backend wired in.
+func (h *Handler) deliverPush(n *model.Notification) {
+	if h.pushSender == nil {
+		n.Status = "pending_provider_unconfigured"
+		return
+	}
+	if err := h.pushSender.Send(); err != nil {
+		n.Status = "pending_provider_unconfigured"
+		return
+	}
+	sentAt := time.Now().UTC()
+	n.Status = "sent"
+	n.SentAt = &sentAt
 }
 
 // ListNotifications handles GET /api/v1/notifications

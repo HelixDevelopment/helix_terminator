@@ -9,29 +9,33 @@ import (
 
 // Notification represents a notification sent to a user
 type Notification struct {
-	ID        uuid.UUID       `json:"id" db:"id"`
-	UserID    uuid.UUID       `json:"userId" db:"user_id"`
-	OrgID     *uuid.UUID      `json:"orgId,omitempty" db:"org_id"`
-	Type      string          `json:"type" db:"type"`
-	Title     string          `json:"title" db:"title"`
-	Message   string          `json:"message" db:"message"`
-	Data      []byte          `json:"data,omitempty" db:"data"`
-	Channel   string          `json:"channel" db:"channel"`
-	Status    string          `json:"status" db:"status"`
-	ReadAt    *time.Time      `json:"readAt,omitempty" db:"read_at"`
-	SentAt    *time.Time      `json:"sentAt,omitempty" db:"sent_at"`
-	CreatedAt time.Time       `json:"createdAt" db:"created_at"`
-	UpdatedAt time.Time       `json:"updatedAt" db:"updated_at"`
+	ID      uuid.UUID  `json:"id" db:"id"`
+	UserID  uuid.UUID  `json:"userId" db:"user_id"`
+	OrgID   *uuid.UUID `json:"orgId,omitempty" db:"org_id"`
+	Type    string     `json:"type" db:"type"`
+	Title   string     `json:"title" db:"title"`
+	Message string     `json:"message" db:"message"`
+	Data    []byte     `json:"data,omitempty" db:"data"`
+	Channel string     `json:"channel" db:"channel"`
+	// Target is the delivery destination: recipient email address for
+	// channel=email, destination URL for channel=webhook. Unused for
+	// in_app/push.
+	Target    string     `json:"target,omitempty" db:"target"`
+	Status    string     `json:"status" db:"status"`
+	ReadAt    *time.Time `json:"readAt,omitempty" db:"read_at"`
+	SentAt    *time.Time `json:"sentAt,omitempty" db:"sent_at"`
+	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // NotificationPreference represents a user's notification preferences for a channel
 type NotificationPreference struct {
-	UserID    uuid.UUID  `json:"userId" db:"user_id"`
-	Channel   string     `json:"channel" db:"channel"`
-	Enabled   bool       `json:"enabled" db:"enabled"`
-	Types     []string   `json:"types" db:"types"`
-	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt time.Time  `json:"updatedAt" db:"updated_at"`
+	UserID    uuid.UUID `json:"userId" db:"user_id"`
+	Channel   string    `json:"channel" db:"channel"`
+	Enabled   bool      `json:"enabled" db:"enabled"`
+	Types     []string  `json:"types" db:"types"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 }
 
 // CreateNotificationRequest represents a request to create a notification
@@ -44,16 +48,22 @@ type CreateNotificationRequest struct {
 	Data    json.RawMessage `json:"data,omitempty"`
 	Channel string          `json:"channel" binding:"required,oneof=email in_app push webhook"`
 	Status  string          `json:"status" binding:"omitempty,oneof=pending sent delivered failed"`
+	// Target is the delivery destination, required for channel=email
+	// (recipient email address) and channel=webhook (destination URL).
+	// Ignored for in_app/push. The server always overwrites the persisted
+	// status with the REAL delivery outcome for email/webhook/push — any
+	// client-supplied Status above is honored only for in_app.
+	Target string `json:"target,omitempty" binding:"omitempty,max=1000"`
 }
 
 // ListNotificationsRequest represents query parameters for listing notifications
 type ListNotificationsRequest struct {
-	UserID string `form:"user_id" binding:"required,uuid"`
-	OrgID  string `form:"org_id" binding:"omitempty,uuid"`
-	Status string `form:"status" binding:"omitempty,oneof=pending sent delivered failed"`
+	UserID  string `form:"user_id" binding:"required,uuid"`
+	OrgID   string `form:"org_id" binding:"omitempty,uuid"`
+	Status  string `form:"status" binding:"omitempty,oneof=pending sent delivered failed pending_provider_unconfigured"`
 	Channel string `form:"channel" binding:"omitempty,oneof=email in_app push webhook"`
-	Limit  int    `form:"limit,default=20" binding:"omitempty,min=1,max=100"`
-	Offset int    `form:"offset,default=0" binding:"omitempty,min=0"`
+	Limit   int    `form:"limit,default=20" binding:"omitempty,min=1,max=100"`
+	Offset  int    `form:"offset,default=0" binding:"omitempty,min=0"`
 }
 
 // MarkReadRequest represents a request to mark a notification as read
@@ -79,6 +89,7 @@ type NotificationResponse struct {
 	Message   string          `json:"message"`
 	Data      json.RawMessage `json:"data,omitempty"`
 	Channel   string          `json:"channel"`
+	Target    string          `json:"target,omitempty"`
 	Status    string          `json:"status"`
 	ReadAt    *time.Time      `json:"readAt,omitempty"`
 	SentAt    *time.Time      `json:"sentAt,omitempty"`
@@ -88,10 +99,10 @@ type NotificationResponse struct {
 
 // PreferenceResponse represents a notification preference in API responses
 type PreferenceResponse struct {
-	UserID    uuid.UUID  `json:"userId"`
-	Channel   string     `json:"channel"`
-	Enabled   bool       `json:"enabled"`
-	Types     []string   `json:"types"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt time.Time  `json:"updatedAt"`
+	UserID    uuid.UUID `json:"userId"`
+	Channel   string    `json:"channel"`
+	Enabled   bool      `json:"enabled"`
+	Types     []string  `json:"types"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
