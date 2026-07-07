@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -53,6 +54,62 @@ func TestToPGX5DSN_PreservesExplicitMigrationsTable(t *testing.T) {
 	}
 	if strings.Contains(got, migrationsTable) {
 		t.Errorf("toPGX5DSN overwrote caller-supplied x-migrations-table with the default, got %q", got)
+	}
+}
+
+func TestToPGX5DSN_ScopesSearchPathToServiceSchema(t *testing.T) {
+	got, err := toPGX5DSN("postgres://u:p@host/db")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(got, "search_path="+Schema) {
+		t.Errorf("toPGX5DSN(%q) = %q, want search_path=%s (schema-per-service)", "postgres://u:p@host/db", got, Schema)
+	}
+}
+
+func TestConnectionURL_ScopesSearchPathAndPreservesScheme(t *testing.T) {
+	got, err := ConnectionURL("postgres://u:p@host/db?sslmode=disable")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.HasPrefix(got, "postgres://") {
+		t.Errorf("ConnectionURL(%q) = %q, want unchanged postgres:// scheme", "postgres://u:p@host/db", got)
+	}
+	if !strings.Contains(got, "search_path="+Schema) {
+		t.Errorf("ConnectionURL(%q) = %q, want search_path=%s", "postgres://u:p@host/db", got, Schema)
+	}
+	if !strings.Contains(got, "sslmode=disable") {
+		t.Errorf("ConnectionURL(%q) = %q, dropped an existing query parameter", "postgres://u:p@host/db", got)
+	}
+}
+
+func TestConnectionURL_PreservesExplicitSearchPath(t *testing.T) {
+	got, err := ConnectionURL("postgres://u:p@host/db?search_path=custom_schema")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(got, "search_path=custom_schema") {
+		t.Errorf("ConnectionURL did not preserve caller-supplied search_path, got %q", got)
+	}
+}
+
+func TestConnectionURL_IdempotentOnAlreadyScopedURL(t *testing.T) {
+	first, err := ConnectionURL("postgres://u:p@host/db")
+	if err != nil {
+		t.Fatalf("unexpected error on first call: %v", err)
+	}
+	second, err := ConnectionURL(first)
+	if err != nil {
+		t.Fatalf("unexpected error on second call: %v", err)
+	}
+	if first != second {
+		t.Errorf("ConnectionURL not idempotent: first=%q second=%q", first, second)
+	}
+}
+
+func TestEnsureSchema_EmptyDatabaseURL(t *testing.T) {
+	if err := EnsureSchema(context.Background(), ""); err == nil {
+		t.Fatal("EnsureSchema(ctx, \"\") = nil error, want error for empty DATABASE_URL")
 	}
 }
 

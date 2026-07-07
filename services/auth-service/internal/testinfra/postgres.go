@@ -38,7 +38,12 @@ func (l *pgLogger) Printf(format string, v ...interface{}) {
 // accept connections, applies every pending auth-service migration
 // against it via the real migrations.Run runner (the same runner
 // server.New invokes at process startup), and returns a ready-to-use
-// DATABASE_URL.
+// DATABASE_URL scoped to auth-service's dedicated schema
+// (migrations.Schema) via migrations.ConnectionURL - the same
+// schema-scoped URL server.New builds for its own steady-state pool,
+// so callers that connect directly (pgxpool.New(ctx, dbURL)) see the
+// same "users" table server.New's repository sees, not the shared
+// database's "public" schema (schema-per-service, GAP-01).
 //
 // The container is torn down automatically via t.Cleanup. When podman
 // is not available on PATH, the call SKIPs with an honest reason
@@ -104,7 +109,11 @@ func StartPostgres(t *testing.T) string {
 		version, runErr = migrations.Run(dbURL, &pgLogger{t: t})
 		if runErr == nil {
 			t.Logf("real auth-service migrations applied to %s at schema version %d (attempt %d)", name, version, attempt)
-			return dbURL
+			poolURL, perr := migrations.ConnectionURL(dbURL)
+			if perr != nil {
+				t.Fatalf("migrations.ConnectionURL failed: %v", perr)
+			}
+			return poolURL
 		}
 		t.Logf("migrations.Run attempt %d/5 against %s failed (likely the postgres image's known temp-server-then-restart startup race): %v", attempt, name, runErr)
 		time.Sleep(time.Duration(attempt) * time.Second)

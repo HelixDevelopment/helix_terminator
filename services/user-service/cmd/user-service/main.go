@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/helixdevelopment/user-service/internal/repository"
 	"github.com/helixdevelopment/user-service/internal/server"
 	"github.com/helixdevelopment/user-service/migrations"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -33,10 +33,20 @@ func main() {
 		log.Printf("database migrations applied - schema version %d", version)
 	}
 
+	// Use the same schema-scoped connection URL the migrator applied
+	// (search_path=migrations.Schema) so the steady-state pool's
+	// unqualified "users" queries resolve against the schema
+	// migrations.Run just migrated, not the shared database's default
+	// "public" schema (schema-per-service, GAP-01).
+	poolURL, err := migrations.ConnectionURL(databaseURL)
+	if err != nil {
+		log.Fatalf("failed to build schema-scoped connection URL: %v", err)
+	}
+
 	// Initialize database connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	pool, err := pgxpool.New(ctx, databaseURL)
+	pool, err := pgxpool.New(ctx, poolURL)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}

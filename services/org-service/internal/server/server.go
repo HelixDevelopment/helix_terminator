@@ -60,11 +60,22 @@ func New(logger Logger) (*Server, error) {
 		} else {
 			logger.Printf("database migrations applied - schema version %d", version)
 
-			pool, err := pgxpool.New(context.Background(), dbURL)
-			if err != nil {
-				logger.Printf("warning: failed to connect to database: %v", err)
+			// Use the same schema-scoped connection URL the migrator
+			// applied (search_path=migrations.Schema) so the
+			// steady-state pool's unqualified queries resolve
+			// against the schema migrations.Run just migrated, not
+			// the shared database's default "public" schema
+			// (schema-per-service, GAP-01).
+			poolURL, perr := migrations.ConnectionURL(dbURL)
+			if perr != nil {
+				logger.Printf("warning: failed to build schema-scoped connection URL: %v", perr)
 			} else {
-				repo = repository.New(pool)
+				pool, err := pgxpool.New(context.Background(), poolURL)
+				if err != nil {
+					logger.Printf("warning: failed to connect to database: %v", err)
+				} else {
+					repo = repository.New(pool)
+				}
 			}
 		}
 	}
