@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../bloc/auth_bloc.dart';
 import 'login_screen.dart';
 
 class SsoScreen extends StatelessWidget {

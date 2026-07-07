@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/ai_bloc.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_indicator.dart';
-import '../widgets/error_widget.dart' as helix_error;
 
 class AiAssistantScreen extends StatefulWidget {
   const AiAssistantScreen({super.key});

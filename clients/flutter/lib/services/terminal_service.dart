@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-
 /// Callback type for terminal messages received from the WebSocket.
 typedef TerminalMessageCallback = void Function(String message);
 
@@ -81,7 +79,7 @@ class TerminalService {
   /// Stream of incoming terminal messages.
   Stream<String> get messageStream => _messageController.stream;
 
-  void dispose() async {
+  Future<void> dispose() async {
     await disconnect();
     await _messageController.close();
   }

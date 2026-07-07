@@ -58,7 +58,6 @@ class _HostCreateScreenState extends State<HostCreateScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEditing = widget.host != null;
-    final isDesktop = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
       appBar: AppBar(

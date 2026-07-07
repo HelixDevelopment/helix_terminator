@@ -6,7 +6,7 @@ class DragTargetScale extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DragTarget<String>(
-      onAccept: (data) {},
+      onAcceptWithDetails: (details) {},
       builder: (context, candidateData, rejectedData) {
         return Container(
           width: 100,

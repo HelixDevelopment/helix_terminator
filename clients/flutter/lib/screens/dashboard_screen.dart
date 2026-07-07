@@ -256,7 +256,9 @@ class _DashboardBodyState extends State<_DashboardBody> {
           icon: Icons.terminal,
           label: 'Open Terminal',
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const TerminalScreen()),
+            // No specific host is selected from this generic quick action;
+            // send the user to pick one, mirroring "Quick Connect" below.
+            MaterialPageRoute(builder: (_) => const HostListScreen()),
           ),
         ),
         _QuickActionChip(
@@ -283,7 +285,7 @@ class _DashboardBodyState extends State<_DashboardBody> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const TerminalScreen()),
+                  MaterialPageRoute(builder: (_) => TerminalScreen(hostId: host.id, hostName: host.name)),
                 );
               },
             ),

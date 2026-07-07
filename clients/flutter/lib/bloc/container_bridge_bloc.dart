@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'api_client.dart';
+import '../services/api_client.dart';
 
 // Events
 abstract class ContainerBridgeEvent {}

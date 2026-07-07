@@ -217,7 +217,7 @@ class _SnippetDetailScreenState extends State<SnippetDetailScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        FilledButton.tonal.icon(
+                        FilledButton.tonalIcon(
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: state.snippet.content));
                             ScaffoldMessenger.of(context).showSnackBar(

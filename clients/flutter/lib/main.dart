@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'design_system/design_system.dart';
+import 'package:design_system/design_system.dart';
 import 'bloc/ai_bloc.dart';
 import 'bloc/app_bloc.dart';
 import 'bloc/audit_bloc.dart';
@@ -92,9 +92,9 @@ class HelixTerminatorApp extends StatelessWidget {
           BlocProvider(create: (context) => OrgBloc(service: context.read<OrgService>())),
           BlocProvider(create: (context) => UserBloc(service: context.read<UserService>())),
           BlocProvider(create: (_) => SettingsBloc()),
-          BlocProvider(create: (context) => HostBloc(service: context.read<HostService>())),
-          BlocProvider(create: (context) => VaultBloc(service: context.read<VaultService>())),
-          BlocProvider(create: (context) => WorkspaceBloc(service: context.read<WorkspaceService>())),
+          BlocProvider(create: (context) => HostBloc(hostService: context.read<HostService>())),
+          BlocProvider(create: (context) => VaultBloc(vaultService: context.read<VaultService>())),
+          BlocProvider(create: (context) => WorkspaceBloc(workspaceService: context.read<WorkspaceService>())),
           BlocProvider(create: (context) => TerminalBloc()),
           BlocProvider(create: (context) => ContainerBridgeBloc(apiClient: context.read<ApiClient>())),
         ],

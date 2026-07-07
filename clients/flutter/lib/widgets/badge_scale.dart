@@ -10,7 +10,7 @@ class BadgeScale extends StatelessWidget {
       children: [
         Badge(child: const Icon(Icons.mail)),
         Badge(label: const Text('3'), child: const Icon(Icons.notifications)),
-        const Badge.large(child: Icon(Icons.shopping_cart)),
+        const Badge(child: Icon(Icons.shopping_cart)),
       ],
     );
   }

@@ -11,7 +11,7 @@ class ChipScale extends StatelessWidget {
         Chip(label: const Text('Chip')),
         const InputChip(label: Text('Input')),
         const ChoiceChip(label: Text('Choice'), selected: true),
-        const FilterChip(label: Text('Filter'), selected: false),
+        FilterChip(label: const Text('Filter'), selected: false, onSelected: (_) {}),
         const ActionChip(label: Text('Action')),
       ],
     );

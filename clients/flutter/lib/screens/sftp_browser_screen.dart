@@ -5,7 +5,6 @@ import '../widgets/empty_state.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/error_widget.dart' as helix_error;
 import '../widgets/breadcrumb_nav.dart';
-import '../widgets/file_icon.dart';
 import '../widgets/file_size_label.dart';
 
 class SftpBrowserScreen extends StatefulWidget {

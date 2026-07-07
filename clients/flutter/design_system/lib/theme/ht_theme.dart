@@ -295,7 +295,7 @@ class HTTheme {
         ),
         dataTextStyle: textTheme.bodyMedium,
       ),
-      tabBarTheme: TabBarThemeData(
+      tabBarTheme: TabBarTheme(
         labelColor: t.brandPrimary,
         unselectedLabelColor: isDark ? t.textSecondary : t.textSecondaryLight,
         indicatorColor: t.brandPrimary,

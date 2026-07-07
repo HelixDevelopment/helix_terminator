@@ -1,0 +1,17 @@
+name: design_system
+description: HelixTerminator design system — tokens, theme, and reusable components.
+
+publish_to: 'none'
+
+version: 0.1.0
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: '>=3.24.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

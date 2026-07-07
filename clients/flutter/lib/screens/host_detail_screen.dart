@@ -230,7 +230,7 @@ class _InfoTab extends StatelessWidget {
                         label: 'Connect',
                         color: theme.colorScheme.primary,
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => TerminalScreen(hostId: widget.hostId, hostName: _host!.name)),
+                          MaterialPageRoute(builder: (_) => TerminalScreen(hostId: host.id, hostName: host.name)),
                         ),
                       ),
                     ),
@@ -273,7 +273,7 @@ class _InfoTab extends StatelessWidget {
                       label: 'Connect to Host',
                       color: theme.colorScheme.primary,
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => TerminalScreen(hostId: widget.hostId, hostName: _host!.name)),
+                        MaterialPageRoute(builder: (_) => TerminalScreen(hostId: host.id, hostName: host.name)),
                       ),
                     ),
                     const SizedBox(height: 12),
