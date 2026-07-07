@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/helixdevelopment/audit-service/internal/handler"
 	"github.com/helixdevelopment/audit-service/internal/repository"
+	"github.com/helixdevelopment/audit-service/migrations"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -48,11 +49,33 @@ func New(logger Logger) (*Server, error) {
 	var repo *repository.Repository
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL != "" {
-		pool, err := pgxpool.New(context.Background(), dbURL)
-		if err != nil {
-			logger.Printf("warning: failed to connect to database: %v", err)
+		// Apply pending schema migrations before opening the steady-state
+		// pool. A migration failure (including a dirty schema state) MUST
+		// NOT be served against, so on failure we deliberately skip pool
+		// creation and fall through to in-memory mode below, matching this
+		// service's existing degrade-gracefully-on-DB-trouble behaviour.
+		if version, merr := migrations.Run(dbURL, logger); merr != nil {
+			logger.Printf("warning: failed to apply database migrations: %v", merr)
 		} else {
-			repo = repository.New(pool)
+			logger.Printf("database migrations applied - schema version %d", version)
+
+			// Use the same schema-scoped connection URL the migrator
+			// applied (search_path=migrations.Schema) so the
+			// steady-state pool's unqualified "audit_logs" queries
+			// resolve against the schema migrations.Run just migrated,
+			// not the shared database's default "public" schema
+			// (schema-per-service, GAP-01).
+			poolURL, perr := migrations.ConnectionURL(dbURL)
+			if perr != nil {
+				logger.Printf("warning: failed to build schema-scoped connection URL: %v", perr)
+			} else {
+				pool, err := pgxpool.New(context.Background(), poolURL)
+				if err != nil {
+					logger.Printf("warning: failed to connect to database: %v", err)
+				} else {
+					repo = repository.New(pool)
+				}
+			}
 		}
 	}
 
