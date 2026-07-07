@@ -318,3 +318,16 @@ func (r *Repository) EmailExists(ctx context.Context, email string) (bool, error
 	}
 	return exists, nil
 }
+
+// Ping verifies the underlying database connection pool is genuinely
+// reachable. It is the real DB-liveness check ReadinessCheck relies on
+// (T8-6) - a pool that is closed, exhausted, or connected to a
+// crashed/unreachable PostgreSQL instance returns a non-nil error here,
+// which is what makes readiness reporting honest instead of a
+// fabricated "ready:true" regardless of DB state.
+func (r *Repository) Ping(ctx context.Context) error {
+	if r == nil || r.pool == nil {
+		return fmt.Errorf("repository has no database pool configured")
+	}
+	return r.pool.Ping(ctx)
+}

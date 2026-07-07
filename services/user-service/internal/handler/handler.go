@@ -39,12 +39,12 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	}
 
 	user := &model.User{
-		ID:          uuid.New().String(),
-		Email:       req.Email,
-		DisplayName: req.DisplayName,
-		Role:        req.Role,
-		Permissions: req.Permissions,
-		OrgID:       req.OrgID,
+		ID:            uuid.New().String(),
+		Email:         req.Email,
+		DisplayName:   req.DisplayName,
+		Role:          req.Role,
+		Permissions:   req.Permissions,
+		OrgID:         req.OrgID,
 		EmailVerified: false,
 	}
 
@@ -266,8 +266,34 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "healthy", "service": "user-service", "timestamp": time.Now().UTC()})
 }
 
-// ReadinessCheck returns service readiness status
+// ReadinessCheck returns service readiness status. Unlike HealthCheck
+// (liveness - "is the process up"), readiness reports whether the
+// service can genuinely serve traffic, which for user-service means a
+// reachable database. Reports 503 + status:not_ready the moment the
+// database is unreachable, closing the T8-6 bluff where this handler
+// previously returned an unconditional "status":"ready" without ever
+// checking the DB (a crashed-DB service still reported ready,
+// defeating orchestrator/k8s health gating on this security-critical
+// service).
 func (h *Handler) ReadinessCheck(c *gin.Context) {
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  "not_ready",
+			"service": "user-service",
+			"reason":  "database repository not configured",
+		})
+		return
+	}
+
+	if err := h.repo.Ping(c.Request.Context()); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  "not_ready",
+			"service": "user-service",
+			"reason":  "database unreachable: " + err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": "ready", "service": "user-service"})
 }
 

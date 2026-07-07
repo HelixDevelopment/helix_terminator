@@ -564,9 +564,37 @@ func (h *Handler) HealthCheck(c *gin.Context) {
 	})
 }
 
-// ReadinessCheck returns readiness status
+// ReadinessCheck returns readiness status. Unlike HealthCheck
+// (liveness - "is the process up"), readiness reports whether the
+// service can genuinely serve traffic, which for auth-service means a
+// reachable database: an auth service that cannot check credentials
+// or sessions against its database is not ready, even though its
+// process is alive. Reports 503 + ready:false the moment the database
+// is unreachable, closing the T8-6 bluff where this handler previously
+// returned an unconditional ready:true without ever checking the DB
+// (a crashed-DB service still reported ready, defeating
+// orchestrator/k8s health gating on this security-critical service).
 func (h *Handler) ReadinessCheck(c *gin.Context) {
-	// TODO: check database connectivity
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"ready":     false,
+			"service":   "auth-service",
+			"reason":    "database repository not configured",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		})
+		return
+	}
+
+	if err := h.repo.Ping(c.Request.Context()); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"ready":     false,
+			"service":   "auth-service",
+			"reason":    "database unreachable: " + err.Error(),
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"ready":     true,
 		"service":   "auth-service",

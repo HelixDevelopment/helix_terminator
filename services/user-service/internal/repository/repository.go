@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/user-service/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/helixdevelopment/user-service/internal/model"
 )
 
 // Repository handles user data access
@@ -236,4 +236,17 @@ func (r *Repository) GetProfile(ctx context.Context, userID string) (*model.User
 		return nil, err
 	}
 	return &profile, nil
+}
+
+// Ping verifies the underlying database connection pool is genuinely
+// reachable. It is the real DB-liveness check ReadinessCheck relies on
+// (T8-6) - a pool that is closed, exhausted, or connected to a
+// crashed/unreachable PostgreSQL instance returns a non-nil error here,
+// which is what makes readiness reporting honest instead of a
+// fabricated "status":"ready" regardless of DB state.
+func (r *Repository) Ping(ctx context.Context) error {
+	if r == nil || r.pool == nil {
+		return fmt.Errorf("repository has no database pool configured")
+	}
+	return r.pool.Ping(ctx)
 }
