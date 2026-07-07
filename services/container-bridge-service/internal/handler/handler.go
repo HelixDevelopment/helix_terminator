@@ -63,7 +63,7 @@ func (h *Handler) CreateBridge(c *gin.Context) {
 		return
 	}
 
-	containerID, status, err := h.bringUp(ctx, req.ContainerID, req.Image, req.Ports)
+	containerID, status, err := h.bringUp(ctx, req.ContainerID, req.Image, req.Ports, req.Command...)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
@@ -95,7 +95,7 @@ func (h *Handler) CreateBridge(c *gin.Context) {
 // started if not already running. Otherwise a brand-new container is run
 // from image, named containerID (the client-supplied logical name).
 func (h *Handler) bringUp(
-	ctx context.Context, containerID, image string, ports []string,
+	ctx context.Context, containerID, image string, ports []string, cmd ...string,
 ) (string, string, error) {
 	if containerID != "" {
 		if st, err := h.backend.Status(ctx, containerID); err == nil {
@@ -122,19 +122,25 @@ func (h *Handler) bringUp(
 	if name == "" {
 		name = "bridge-" + uuid.New().String()
 	}
-	newID, err := h.backend.RunFromImage(ctx, name, image, ports)
-	if err != nil {
+	// RunFromImage's returned runtime-assigned hash ID is intentionally
+	// DISCARDED here: `name` is the identifier this bridge is tracked under
+	// (both here and in the attach branch above), and podman/docker resolve
+	// a container by name just as well as by ID, so every subsequent
+	// operation (Status/Stop/Remove) stays consistent with what the client
+	// supplied as ContainerID. Returning the hash instead would silently
+	// break that round-trip — caught by the real-Podman integration test.
+	if _, err := h.backend.RunFromImage(ctx, name, image, ports, cmd...); err != nil {
 		return "", "", fmt.Errorf("create container from image %s: %w", image, err)
 	}
-	st, err := h.backend.Status(ctx, newID)
+	st, err := h.backend.Status(ctx, name)
 	if err != nil {
-		return "", "", fmt.Errorf("status after create %s: %w", newID, err)
+		return "", "", fmt.Errorf("status after create %s: %w", name, err)
 	}
 	if st.State != ctrruntime.StateRunning {
 		return "", "", fmt.Errorf(
-			"container %s did not reach running state (state=%s)", newID, st.State)
+			"container %s did not reach running state (state=%s)", name, st.State)
 	}
-	return newID, containerrt.StatusFromState(st.State), nil
+	return name, containerrt.StatusFromState(st.State), nil
 }
 
 // reconcile overwrites bridge.Status (in the response only) with the REAL

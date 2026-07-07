@@ -33,6 +33,12 @@ type CreateContainerBridgeRequest struct {
 	Name        string   `json:"name" binding:"required,max=255"`
 	Image       string   `json:"image" binding:"required,max=255"`
 	Ports       []string `json:"ports"`
+	// Command optionally overrides the container's entrypoint command when
+	// creating a NEW container from Image (ignored when attaching to an
+	// existing ContainerID). Most real application images (nginx, redis,
+	// postgres, ...) need no override; minimal images (e.g. busybox) whose
+	// default command does not stay running require one.
+	Command []string `json:"command,omitempty"`
 }
 
 // UpdateContainerBridgeRequest represents a request to update a bridge

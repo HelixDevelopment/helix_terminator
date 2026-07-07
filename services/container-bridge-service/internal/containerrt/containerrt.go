@@ -35,7 +35,11 @@ type Backend interface {
 	// RunFromImage creates and starts a brand-new container named `name` from
 	// `image`, publishing `ports` (each already in CLI "host:container"
 	// syntax, e.g. "8080:80"), and returns the runtime-assigned container ID.
-	RunFromImage(ctx context.Context, name, image string, ports []string) (string, error)
+	// cmd is an OPTIONAL trailing command+args override (e.g. for a minimal
+	// image like busybox whose default entrypoint does not stay running);
+	// most real application images (nginx, redis, postgres, ...) need no
+	// override — omit cmd entirely.
+	RunFromImage(ctx context.Context, name, image string, ports []string, cmd ...string) (string, error)
 }
 
 // cliBackend wraps a pkg/runtime.ContainerRuntime and adds RunFromImage via
@@ -63,7 +67,7 @@ func runBinary(name string) (string, bool) {
 // RunFromImage implements Backend by shelling out to the detected runtime's
 // CLI, mirroring digital.vasic.containers/pkg/brokertest.StartNATS.
 func (b *cliBackend) RunFromImage(
-	ctx context.Context, name, image string, ports []string,
+	ctx context.Context, name, image string, ports []string, cmd ...string,
 ) (string, error) {
 	args := []string{"run", "-d", "--name", name}
 	for _, p := range ports {
@@ -74,6 +78,7 @@ func (b *cliBackend) RunFromImage(
 		args = append(args, "-p", p)
 	}
 	args = append(args, image)
+	args = append(args, cmd...)
 
 	out, err := exec.CommandContext(ctx, b.binary, args...).CombinedOutput()
 	if err != nil {

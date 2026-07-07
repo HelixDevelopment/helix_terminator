@@ -42,7 +42,7 @@ func TestCreateBridge_DoesNotFabricateActiveStatus_WhenContainerNeverComesUp(t *
 		// the CLI layer (some runtimes report success even for a container
 		// that immediately crashes) but the runtime's own Status call —
 		// the REAL source of truth — reports it is NOT running.
-		runFromImageFunc: func(name, image string, ports []string) (string, error) {
+		runFromImageFunc: func(name, image string, ports []string, cmd ...string) (string, error) {
 			return "deadbeef0001", nil
 		},
 		statusFunc: func(id string) (*ctrruntime.ContainerStatus, error) {

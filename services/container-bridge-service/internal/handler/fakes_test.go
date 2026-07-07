@@ -93,7 +93,7 @@ type fakeBackend struct {
 
 	statusFunc func(id string) (*ctrruntime.ContainerStatus, error)
 
-	runFromImageFunc func(name, image string, ports []string) (string, error)
+	runFromImageFunc func(name, image string, ports []string, cmd ...string) (string, error)
 	runFromImageCalls []struct {
 		name, image string
 		ports       []string
@@ -145,7 +145,7 @@ func (f *fakeBackend) Logs(_ context.Context, _ string, _ ...ctrruntime.LogOptio
 }
 
 func (f *fakeBackend) RunFromImage(
-	_ context.Context, name, image string, ports []string,
+	_ context.Context, name, image string, ports []string, cmd ...string,
 ) (string, error) {
 	f.runFromImageCalls = append(f.runFromImageCalls, struct {
 		name, image string
@@ -154,7 +154,7 @@ func (f *fakeBackend) RunFromImage(
 	if f.runFromImageFunc == nil {
 		return "", fmt.Errorf("fakeBackend: RunFromImage not configured")
 	}
-	return f.runFromImageFunc(name, image, ports)
+	return f.runFromImageFunc(name, image, ports, cmd...)
 }
 
 var _ containerrt.Backend = (*fakeBackend)(nil)
