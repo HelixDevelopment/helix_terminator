@@ -1,30 +1,92 @@
-name: helix-terminator
-version: 0.1.0
-services:
-  - gateway-service
-  - auth-service
-  - user-service
-  - vault-service
-  - host-service
-  - ssh-proxy-service
-  - terminal-service
-  - sftp-service
-  - port-forward-service
-  - snippet-service
-  - keychain-service
-  - workspace-service
-  - collaboration-service
-  - notification-service
-  - audit-service
-  - analytics-service
-  - ai-service
-  - recording-service
-  - pki-service
-  - org-service
-  - billing-service
-  - config-service
-  - health-service
-  - container-bridge-service
-  - helixtrack-bridge-service
+# helix-deps.yaml — helix_terminator Submodule-Dependency Manifest
+# Project: helix-terminator
+#
+# Per HelixConstitution §11.4.31 (Submodule-Dependency-Manifest Mandate). This
+# is the PARENT-project manifest. It REPLACES the prior scaffold stub (a
+# name/version/services list from MVP-scaffold commit c9909c2, consumed by no
+# tooling; the service roster is authoritative in go.work — §11.4.77 — and the
+# stub's non-schema shape was flagged as CD-11 in
+# docs/research/mvp/REMEDIATION_REGISTER.md "one helix-deps.yaml, delete the
+# conflicting ones"). Each listed owned-org submodule ALSO ships its own
+# helix-deps.yaml inside the referenced repo; auth/llmprovider/containers each
+# declare deps: [] (verified leaf Go libraries).
+#
+# Consumer go.mod `replace` wiring for the three leaf Go libraries is added in
+# each service's own go.mod alongside its bridge implementation (module paths
+# are fictitious digital.vasic.* / NXDOMAIN, so a replace directive is
+# mandatory — noted per-dep below).
+schema_version: 1
+deps:
+  - name: auth
+    ssh_url: git@github.com:vasic-digital/auth.git
+    ref: main
+    why: >-
+      Leaf Go library (digital.vasic.auth) — JWT create/validate/refresh
+      (pkg/jwt) + pluggable access/refresh token-manager (pkg/tokenmanager).
+      Consumed by helixtrack-bridge-service to hold the JWT issued by a
+      self-hosted Helix-Track/Core POST /do {action:authenticate} flow. Zero
+      own-org transitive deps (verified: auth's own helix-deps.yaml deps: []).
+      Consumer wiring: services/helixtrack-bridge-service/go.mod needs
+      `replace digital.vasic.auth => ../../submodules/auth`.
+    layout: flat
 
-# TODO: pin exact versions for Go, Docker, K8s, Terraform, Flutter
+  - name: llmprovider
+    ssh_url: git@github.com:vasic-digital/LLMProvider.git
+    ref: master
+    why: >-
+      Leaf Go library (digital.vasic.llmprovider) — multi-provider LLM facade,
+      40+ cloud-provider adapters, plus pkg/providers/generic (any
+      OpenAI-compatible chat-completions endpoint via a configurable baseURL).
+      Consumed by ai-service to call a self-hosted HelixLLM container's
+      local-tier endpoint (cloud tier operator-blocked on API keys). Zero
+      own-org transitive deps (verified: own helix-deps.yaml deps: []).
+      Consumer wiring: services/ai-service/go.mod needs
+      `replace digital.vasic.llmprovider => ../../submodules/llmprovider`.
+    layout: flat
+
+  - name: containers
+    ssh_url: git@github.com:vasic-digital/containers.git
+    ref: main
+    why: >-
+      Leaf Go library (digital.vasic.containers) — pkg/runtime.ContainerRuntime
+      interface (Podman/Docker/Kubernetes/CRI-O/LXD/nerdctl backends;
+      Start/Stop/Remove/Status/List/Stats/Exec/Logs). Consumed by
+      container-bridge-service; also the project's mandated sole
+      container-orchestration layer per §11.4.161/§11.4.76. Zero own-org
+      transitive deps (verified: own helix-deps.yaml deps: []).
+      Consumer wiring: services/container-bridge-service/go.mod needs
+      `replace digital.vasic.containers => ../../submodules/containers`.
+    layout: flat
+
+  - name: helixtrack-core
+    ssh_url: git@github.com:Helix-Track/Core.git
+    ref: main
+    why: >-
+      Runtime-only target (self-hosted "open-source JIRA alternative" server) —
+      NOT a go.mod import. helixtrack-bridge-service authenticates via its
+      POST /do {action:authenticate} JWT flow and calls further /do actions
+      over plain HTTP. Ships its own nested own-org submodule (Website,
+      Helix-Track/Website) — deliberately left uninitialized (docs/marketing
+      site, not needed; §11.4.28(C) forbids treating it as a transitive dep of
+      ours). Added NON-recursively.
+    layout: flat
+
+  - name: helixllm
+    ssh_url: git@github.com:HelixDevelopment/HelixLLM.git
+    ref: main
+    why: >-
+      Runtime-only target (local LLM inference server) — NOT a go.mod import
+      (its go.mod has 30+ replace directives assuming an unvendored 33-repo
+      monorepo sibling layout — vendoring it as a library is disproportionate).
+      Deployed as its own container via its own container/Containerfile* +
+      deploy/compose*.yaml; ai-service calls it over HTTP via llmprovider's
+      generic OpenAI-compatible adapter. UPSTREAM GAP (§11.4.31): HelixLLM ships
+      no helix-deps.yaml despite the largest transitive own-org graph of the
+      five — flagged here, not silently worked around.
+    layout: flat
+
+transitive_handling:
+  recursive: true
+  conflict_resolution: operator-required
+
+language_specific_subtree: false

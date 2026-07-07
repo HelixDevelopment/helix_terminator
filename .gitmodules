@@ -4,3 +4,18 @@
 [submodule "open-design"]
 	path = submodules/open-design
 	url = git@github.com:nexu-io/open-design.git
+[submodule "submodules/auth"]
+	path = submodules/auth
+	url = git@github.com:vasic-digital/auth.git
+[submodule "submodules/llmprovider"]
+	path = submodules/llmprovider
+	url = git@github.com:vasic-digital/LLMProvider.git
+[submodule "submodules/containers"]
+	path = submodules/containers
+	url = git@github.com:vasic-digital/containers.git
+[submodule "submodules/helixllm"]
+	path = submodules/helixllm
+	url = git@github.com:HelixDevelopment/HelixLLM.git
+[submodule "submodules/helixtrack-core"]
+	path = submodules/helixtrack-core
+	url = git@github.com:Helix-Track/Core.git
