@@ -6,19 +6,29 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/keychain-service/internal/crypto"
+	"github.com/helixdevelopment/keychain-service/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/helixdevelopment/keychain-service/internal/model"
 )
 
 // Repository handles keychain data access
 type Repository struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	encKey string
 }
 
-// New creates a new Repository
-func New(pool *pgxpool.Pool) *Repository {
-	return &Repository{pool: pool}
+// New creates a new Repository. encKey is the encryption-at-rest key used
+// to protect private_key + passphrase (§11.4.10 / T10) — it MUST be
+// non-empty; New fails closed (returns an error, never a repository that
+// would silently store plaintext) when it is not. Production callers MUST
+// source it from the KEYCHAIN_ENCRYPTION_KEY environment variable (never
+// hardcoded, §11.4.10); tests supply a test-only key.
+func New(pool *pgxpool.Pool, encKey string) (*Repository, error) {
+	if encKey == "" {
+		return nil, fmt.Errorf("encryption key cannot be empty")
+	}
+	return &Repository{pool: pool, encKey: encKey}, nil
 }
 
 func (r *Repository) checkPool() error {
@@ -36,18 +46,31 @@ func (r *Repository) Ping(ctx context.Context) error {
 	return r.pool.Ping(ctx)
 }
 
-// CreateItem creates a new keychain item
+// CreateItem creates a new keychain item. private_key and passphrase are
+// encrypted at rest (§11.4.10 / T10) — the caller's item struct is left
+// untouched (still holds plaintext in memory); only the values written to
+// the database are ciphertext.
 func (r *Repository) CreateItem(ctx context.Context, item *model.KeychainItem) error {
 	if err := r.checkPool(); err != nil {
 		return err
 	}
+
+	encPrivateKey, err := crypto.Encrypt(item.PrivateKey, r.encKey)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt private key: %w", err)
+	}
+	encPassphrase, err := crypto.Encrypt(item.Passphrase, r.encKey)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt passphrase: %w", err)
+	}
+
 	query := `
 		INSERT INTO keychain_items (id, user_id, org_id, name, type, fingerprint, public_key, private_key, passphrase, metadata, tags, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
 	`
-	_, err := r.pool.Exec(ctx, query,
+	_, err = r.pool.Exec(ctx, query,
 		item.ID, item.UserID, item.OrgID, item.Name, item.Type, item.Fingerprint,
-		item.PublicKey, item.PrivateKey, item.Passphrase, item.Metadata, item.Tags,
+		item.PublicKey, encPrivateKey, encPassphrase, item.Metadata, item.Tags,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create keychain item: %w", err)
@@ -55,7 +78,9 @@ func (r *Repository) CreateItem(ctx context.Context, item *model.KeychainItem) e
 	return nil
 }
 
-// GetItemByID retrieves a keychain item by ID
+// GetItemByID retrieves a keychain item by ID. private_key and passphrase
+// are decrypted on read (§11.4.10 / T10) so the returned item carries
+// plaintext, matching CreateItem's contract.
 func (r *Repository) GetItemByID(ctx context.Context, id uuid.UUID) (*model.KeychainItem, error) {
 	if err := r.checkPool(); err != nil {
 		return nil, err
@@ -76,6 +101,16 @@ func (r *Repository) GetItemByID(ctx context.Context, id uuid.UUID) (*model.Keyc
 		}
 		return nil, err
 	}
+
+	item.PrivateKey, err = crypto.Decrypt(item.PrivateKey, r.encKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt private key: %w", err)
+	}
+	item.Passphrase, err = crypto.Decrypt(item.Passphrase, r.encKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt passphrase: %w", err)
+	}
+
 	return &item, nil
 }
 

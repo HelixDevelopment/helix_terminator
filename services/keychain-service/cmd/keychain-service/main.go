@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/helixdevelopment/keychain-service/internal/repository"
 	"github.com/helixdevelopment/keychain-service/internal/server"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -20,6 +20,14 @@ func main() {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		databaseURL = "postgres://postgres:postgres@localhost:5432/helixterminator?sslmode=disable"
+	}
+
+	// Encryption-at-rest key for private_key + passphrase (§11.4.10 / T10).
+	// Fail-closed: the service MUST NOT start without it — there is no
+	// silent plaintext fallback.
+	encKey := os.Getenv("KEYCHAIN_ENCRYPTION_KEY")
+	if encKey == "" {
+		log.Fatalf("KEYCHAIN_ENCRYPTION_KEY environment variable is required")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -35,7 +43,10 @@ func main() {
 	}
 	log.Println("database connection established")
 
-	repo := repository.New(pool)
+	repo, err := repository.New(pool, encKey)
+	if err != nil {
+		log.Fatalf("failed to initialize repository: %v", err)
+	}
 	srv := server.New(repo)
 
 	log.Printf("keychain-service starting on port %s", port)
