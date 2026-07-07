@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -10,14 +12,38 @@ import (
 	"github.com/helixdevelopment/helixtrack-bridge-service/internal/repository"
 )
 
+// Authenticator authenticates against a real HelixTrack Core instance (see
+// internal/coreclient.Client, which satisfies this interface). Declared as a
+// minimal interface here so handler tests can substitute a spy without a
+// live Core server (unit-test layer, §11.4.27), while production wiring
+// (cmd/helixtrack-bridge-service/main.go) injects the real coreclient.Client.
+type Authenticator interface {
+	EnsureAuthenticated(ctx context.Context) error
+}
+
 // Handler contains HTTP handlers for HelixTrack-bridge
 type Handler struct {
 	repo *repository.Repository
+	core Authenticator
 }
 
-// New creates a new Handler
-func New(repo *repository.Repository) *Handler {
-	return &Handler{repo: repo}
+// New creates a new Handler. core MAY be nil (e.g. in tests that never reach
+// CreateBridge's auth gate) but a nil core fails CLOSED — see authenticateCore.
+func New(repo *repository.Repository, core Authenticator) *Handler {
+	return &Handler{repo: repo, core: core}
+}
+
+// authenticateCore verifies (or refreshes) a real HelixTrack Core
+// authentication before any bridge may be marked active. This is the
+// anti-bluff fix for the fabricated-status defect (§11.4.108): CreateBridge
+// previously set Status "active" unconditionally, without ever contacting a
+// real Core. A nil Authenticator (misconfiguration) fails closed rather than
+// fabricating success.
+func (h *Handler) authenticateCore(ctx context.Context) error {
+	if h.core == nil {
+		return fmt.Errorf("helixtrack core client not configured")
+	}
+	return h.core.EnsureAuthenticated(ctx)
 }
 
 // CreateBridge creates a new HelixTrack bridge
@@ -31,6 +57,19 @@ func (h *Handler) CreateBridge(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Anti-bluff gate (§11.4.108/§11.4.43/§11.4.115): Status MUST NEVER be
+	// fabricated as "active" without a genuine authenticate call succeeding
+	// against the running HelixTrack Core. Short-circuits BEFORE any DB
+	// write is attempted.
+	if err := h.authenticateCore(c.Request.Context()); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status": model.HelixTrackBridgeStatusError,
+			"error":  err.Error(),
+		})
+		return
+	}
+
 	orgID, _ := uuid.Parse(req.OrgID)
 	bridge := &model.HelixTrackBridge{
 		ID:            uuid.New(),

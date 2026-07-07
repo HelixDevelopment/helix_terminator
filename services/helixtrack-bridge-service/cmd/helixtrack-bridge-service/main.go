@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/helixdevelopment/helixtrack-bridge-service/internal/coreclient"
 	"github.com/helixdevelopment/helixtrack-bridge-service/internal/handler"
 	"github.com/helixdevelopment/helixtrack-bridge-service/internal/repository"
 	"github.com/helixdevelopment/helixtrack-bridge-service/internal/server"
@@ -35,7 +36,16 @@ func run() error {
 	defer pool.Close()
 
 	repo := repository.New(pool)
-	h := handler.New(repo)
+
+	// Real HelixTrack Core JWT client (§11.4.28(B): injected via env, never
+	// hardcoded). A nil core (base URL unset) is intentional fail-closed —
+	// CreateBridge refuses to fabricate "active" without it.
+	var core handler.Authenticator
+	if coreBaseURL := os.Getenv("HELIXTRACK_CORE_BASE_URL"); coreBaseURL != "" {
+		core = coreclient.New(coreBaseURL, os.Getenv("HELIXTRACK_CORE_USERNAME"), os.Getenv("HELIXTRACK_CORE_PASSWORD"))
+	}
+
+	h := handler.New(repo, core)
 	srv := server.New(h)
 
 	return srv.Run()
