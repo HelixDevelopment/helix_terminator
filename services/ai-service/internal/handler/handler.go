@@ -2,7 +2,10 @@ package handler
 
 import (
 	"context"
+	"errors"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +14,41 @@ import (
 	"github.com/google/uuid"
 	"github.com/helixdevelopment/ai-service/internal/model"
 )
+
+// DefaultLLMTimeout bounds the local-LLM completion budget: CreateRequest wraps
+// every h.llm.Complete call in a context.WithTimeout(DefaultLLMTimeout) (overridable
+// via AI_LLM_TIMEOUT, see ResolveLLMTimeout) so a slow-but-SUCCESSFUL completion
+// returns a clean context.DeadlineExceeded error — mapped to 504 Gateway Timeout by
+// CreateRequest — well before the ai-service http.Server's WriteTimeout could
+// silently truncate the in-flight HTTP response underneath the synchronous call.
+//
+// Independent-review finding (T8-x, §11.4.108): making CreateRequest synchronous
+// exposed server.go's pre-existing 15s WriteTimeout, while the LLM
+// generic.Provider's own httpClient allows up to 120s (generic.DefaultTimeout) and
+// CreateAIRequest.MaxTokens allows up to 32000 — so a slow-but-successful
+// completion (>15s) got its HTTP response truncated by WriteTimeout even though the
+// DB row was written correctly (the client saw a broken connection, not the real
+// completion). DefaultLLMTimeout MUST stay comfortably BELOW the ai-service
+// http.Server's WriteTimeout — see internal/server.DefaultHTTPWriteTimeout +
+// internal/server.ResolveHTTPWriteTimeout, and the paired invariant test
+// internal/server.TestHTTPWriteTimeoutExceedsLLMBudget.
+const DefaultLLMTimeout = 90 * time.Second
+
+// llmTimeoutEnvVar overrides DefaultLLMTimeout — see ResolveLLMTimeout.
+const llmTimeoutEnvVar = "AI_LLM_TIMEOUT"
+
+// ResolveLLMTimeout reads AI_LLM_TIMEOUT (a Go duration string, e.g. "90s") and
+// returns it when present and valid (> 0); otherwise returns DefaultLLMTimeout.
+// Exported so internal/server's WriteTimeout invariant test can assert the two
+// timeouts stay correctly ordered without duplicating the env-var name or default.
+func ResolveLLMTimeout() time.Duration {
+	if v := os.Getenv(llmTimeoutEnvVar); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
+		}
+	}
+	return DefaultLLMTimeout
+}
 
 // Repository defines the persistence operations the handler depends on. Satisfied by
 // *repository.Repository in production; tests inject a fake (§11.4.27(A) — unit tests
@@ -32,16 +70,19 @@ type LLMClient interface {
 
 // Handler holds AI service handlers
 type Handler struct {
-	repo Repository
-	llm  LLMClient
+	repo       Repository
+	llm        LLMClient
+	llmTimeout time.Duration
 }
 
 // New creates a new Handler. llm may be nil only for call sites that never invoke
 // CreateRequest (e.g. health-check-only wiring in tests) — CreateRequest treats a nil
 // llm as a real provider failure (Status: "failed"), never as a silent fabricated
 // success, so passing nil never risks resurrecting the fabricated-"pending" bluff.
+// llmTimeout is resolved from AI_LLM_TIMEOUT (or DefaultLLMTimeout) at construction
+// time — see ResolveLLMTimeout.
 func New(repo Repository, llm LLMClient) *Handler {
-	return &Handler{repo: repo, llm: llm}
+	return &Handler{repo: repo, llm: llm, llmTimeout: ResolveLLMTimeout()}
 }
 
 // CreateRequest handles AI request creation. It SYNCHRONOUSLY calls the configured
@@ -82,9 +123,36 @@ func (h *Handler) CreateRequest(c *gin.Context) {
 		// deployment or a test that intentionally exercises this path.
 		aiReq.Status = "failed"
 	} else {
-		content, tokensUsed, err := h.llm.Complete(c.Request.Context(), req.Model, req.MaxTokens, req.Temperature, req.Prompt)
+		// Bound the completion call to h.llmTimeout (§DefaultLLMTimeout) so an
+		// over-budget call returns a clean context.DeadlineExceeded error instead of
+		// running until the HTTP server's WriteTimeout silently truncates the
+		// response underneath this synchronous call (T8-x finding).
+		llmCtx := c.Request.Context()
+		if h.llmTimeout > 0 {
+			var cancel context.CancelFunc
+			llmCtx, cancel = context.WithTimeout(llmCtx, h.llmTimeout)
+			defer cancel()
+		}
+		content, tokensUsed, err := h.llm.Complete(llmCtx, req.Model, req.MaxTokens, req.Temperature, req.Prompt)
 		if err != nil {
+			// §11.4.1/§11.4.6 — the LLM failure MUST be surfaced, never silently
+			// dropped: it is the only diagnostic signal an operator has for why a
+			// request landed with Status "failed" instead of a real completion.
+			log.Printf("ai-service: LLM completion failed (request %s): %v", aiReq.ID, err)
 			aiReq.Status = "failed"
+			if errors.Is(err, context.DeadlineExceeded) {
+				// Clean timeout: the completion exceeded its bounded budget. Persist
+				// the honest "failed" row for the operator's audit trail (best
+				// effort — a persistence error here is logged, not fatal to the
+				// timeout response), then respond 504 so the caller can
+				// distinguish "provider overloaded/too slow" from an ordinary
+				// provider error (which stays 201 + Status "failed" below).
+				if perr := h.repo.CreateRequest(c.Request.Context(), aiReq); perr != nil {
+					log.Printf("ai-service: failed to persist timed-out request %s: %v", aiReq.ID, perr)
+				}
+				c.JSON(http.StatusGatewayTimeout, gin.H{"error": "LLM completion timed out"})
+				return
+			}
 		} else {
 			aiReq.Response = content
 			aiReq.TokensUsed = tokensUsed

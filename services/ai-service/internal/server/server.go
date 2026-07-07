@@ -15,6 +15,32 @@ import (
 	"github.com/helixdevelopment/ai-service/internal/repository"
 )
 
+// DefaultHTTPWriteTimeout is applied to the ai-service http.Server's WriteTimeout
+// when AI_HTTP_WRITE_TIMEOUT is unset. It MUST stay comfortably above
+// handler.DefaultLLMTimeout (see the paired invariant test
+// TestHTTPWriteTimeoutExceedsLLMBudget) — CreateRequest calls the configured LLM
+// provider SYNCHRONOUSLY (§11.4.108), so a WriteTimeout shorter than (or too close
+// to) the LLM completion budget truncates the HTTP response on a slow-but-successful
+// completion even though the DB row was written correctly (T8-x independent-review
+// finding: the pre-fix 15s WriteTimeout vs. the LLM provider's up-to-120s budget).
+const DefaultHTTPWriteTimeout = 150 * time.Second
+
+// httpWriteTimeoutEnvVar overrides DefaultHTTPWriteTimeout — see
+// ResolveHTTPWriteTimeout.
+const httpWriteTimeoutEnvVar = "AI_HTTP_WRITE_TIMEOUT"
+
+// ResolveHTTPWriteTimeout reads AI_HTTP_WRITE_TIMEOUT (a Go duration string, e.g.
+// "150s") and returns it when present and valid (> 0); otherwise returns
+// DefaultHTTPWriteTimeout.
+func ResolveHTTPWriteTimeout() time.Duration {
+	if v := os.Getenv(httpWriteTimeoutEnvVar); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
+		}
+	}
+	return DefaultHTTPWriteTimeout
+}
+
 // Server wraps the Gin engine and HTTP server.
 type Server struct {
 	router *gin.Engine
@@ -59,7 +85,7 @@ func (s *Server) Run(addr string) error {
 		Addr:         addr,
 		Handler:      s.router,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: ResolveHTTPWriteTimeout(),
 		IdleTimeout:  60 * time.Second,
 	}
 

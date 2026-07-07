@@ -5,8 +5,11 @@ package handler_test
 // handler.CreateRequest code path — a fake Repository + fake LLMClient are injected
 // (§11.4.27(A) unit-test fake), but CreateRequest itself is the unmodified
 // production code under test. On the pre-fix handler these tests FAIL (captured RED
-// evidence below); after the fix they PASS (GREEN) with no change to the test source
-// — the same test is both the bug-catcher and the regression guard.
+// evidence below); after the fix they PASS (GREEN) with the SAME assertions —
+// the only diff between the RED and GREEN commits of this file is a gofmt
+// struct-field realignment (whitespace only, see `fakeLLM`'s field column widths);
+// no assertion changed — the same test is both the bug-catcher and the regression
+// guard.
 
 import (
 	"bytes"
@@ -15,6 +18,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -193,3 +197,51 @@ func TestCreateRequest_LLMProviderError_SetsFailedStatus(t *testing.T) {
 }
 
 const errProviderUnreachable = sentinelErr("provider unreachable")
+
+// blockingLLM is a handler.LLMClient fake that blocks until its ctx is cancelled —
+// simulating an over-budget LLM call — and returns ctx.Err() (context.DeadlineExceeded
+// when CreateRequest's bounded context times it out).
+type blockingLLM struct{}
+
+func (blockingLLM) Complete(ctx context.Context, model string, maxTokens int, temperature float64, prompt string) (string, int, error) {
+	<-ctx.Done()
+	return "", 0, ctx.Err()
+}
+
+// TestCreateRequest_LLMTimeout_ReturnsCleanGatewayTimeout is the RED→GREEN test for
+// the T8-x independent-review finding: a slow-but-otherwise-successful LLM call must
+// never be allowed to run until the HTTP server's WriteTimeout silently truncates the
+// response. CreateRequest bounds the h.llm.Complete call to AI_LLM_TIMEOUT (here set
+// to 50ms so the test completes fast) and, on context.DeadlineExceeded, returns a
+// CLEAN 504 well within that budget — never hangs for the full (production) 90s
+// default nor for the server's WriteTimeout.
+func TestCreateRequest_LLMTimeout_ReturnsCleanGatewayTimeout(t *testing.T) {
+	t.Setenv("AI_LLM_TIMEOUT", "50ms")
+
+	repo := newFakeRepo()
+	llm := blockingLLM{}
+	h := handler.New(repo, llm)
+	r := setupAIRouter(h)
+
+	body := model.CreateAIRequest{Prompt: "a prompt that never returns in time", Model: "qwen-test"}
+	b, _ := json.Marshal(body)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/ai/requests", bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+
+	start := time.Now()
+	r.ServeHTTP(w, req)
+	elapsed := time.Since(start)
+
+	// Proof #1: CreateRequest returned promptly — the LLM deadline bounded the call
+	// instead of blocking for the production 90s default (or worse, indefinitely).
+	if elapsed > 5*time.Second {
+		t.Fatalf("CreateRequest took %s to return — the AI_LLM_TIMEOUT deadline did not bound the LLM call", elapsed)
+	}
+
+	// Proof #2: the response is a clean 504 Gateway Timeout, not a truncated/broken
+	// connection and not a fabricated 201 success.
+	if w.Code != http.StatusGatewayTimeout {
+		t.Fatalf("expected 504 Gateway Timeout on LLM deadline exceeded, got %d body=%s", w.Code, w.Body.String())
+	}
+}
