@@ -141,6 +141,10 @@ type Server struct {
 	breakersMu      sync.RWMutex
 	jwtPublicKey    ed25519.PublicKey
 	httpClient      *http.Client
+	// startTime records the real process/server boot instant (§11.4.108
+	// anti-bluff: /healthz "uptime" MUST be a genuine elapsed-time
+	// measurement derived from this timestamp, never a hardcoded literal).
+	startTime time.Time
 }
 
 // Logger interface for logging
@@ -177,6 +181,7 @@ func New(logger Logger) *Server {
 		endpointLimiter: newRateLimiter(time.Minute),
 		breakers:        make(map[string]*circuitBreaker),
 		httpClient:      &http.Client{Timeout: 15 * time.Second},
+		startTime:       time.Now(),
 	}
 
 	// Load JWT public key from environment
@@ -788,9 +793,14 @@ func (s *Server) fullHealthHandler(c *gin.Context) {
 	s.upstreamsMu.RLock()
 	services := make(map[string]gin.H)
 	for name, upstream := range s.upstreams {
+		// NOTE (§11.4.6/§11.4.108 anti-bluff): gateway-service has no real
+		// per-upstream latency probe wired up (IsHealthy() is a static flag,
+		// never derived from a timed network call — see registerUpstreams).
+		// A "latency" field here would necessarily be an invented number, so
+		// it is intentionally omitted rather than fabricated. Add a real
+		// timed health-check probe before reintroducing this field.
 		services[name] = gin.H{
 			"status":  "healthy",
-			"latency": 0,
 			"version": "1.0.0",
 		}
 		if !upstream.IsHealthy() {
@@ -800,9 +810,13 @@ func (s *Server) fullHealthHandler(c *gin.Context) {
 	s.upstreamsMu.RUnlock()
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":    "ok",
-		"version":   "1.0.0",
-		"uptime":    0,
+		"status":  "ok",
+		"version": "1.0.0",
+		// uptime is the real elapsed wall-clock time since this Server was
+		// constructed (s.startTime, set in New()) — genuine process/server
+		// uptime, never a hardcoded literal (§11.4/§11.4.108 anti-bluff:
+		// this field previously always reported 0).
+		"uptime":    time.Since(s.startTime).Seconds(),
 		"services":  services,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	})

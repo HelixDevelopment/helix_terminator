@@ -3,6 +3,7 @@ package server_test
 import (
 	"crypto/ed25519"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -150,6 +151,69 @@ func TestFullHealthEndpoint(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "ok")
 	assert.Contains(t, w.Body.String(), "version")
 	assert.Contains(t, w.Body.String(), "services")
+}
+
+// TestFullHealthEndpointRealUptime is a §11.4.43/§11.4.115 RED-then-GREEN
+// regression guard for T8-7(A): the /healthz "uptime" field previously
+// reported a hardcoded literal 0 (fabricated telemetry, §11.4/§11.4.108
+// anti-bluff violation). A real uptime measurement MUST (a) be strictly
+// positive shortly after server start and (b) strictly increase across two
+// calls separated by real elapsed wall-clock time — a hardcoded constant can
+// never satisfy either property.
+func TestFullHealthEndpointRealUptime(t *testing.T) {
+	s := setupTestServer()
+	time.Sleep(5 * time.Millisecond)
+
+	uptime1 := fetchHealthzUptime(t, s)
+	assert.Greater(t, uptime1, 0.0, "uptime must be a real positive elapsed-time measurement, not a hardcoded 0")
+
+	time.Sleep(50 * time.Millisecond)
+
+	uptime2 := fetchHealthzUptime(t, s)
+	assert.Greater(t, uptime2, uptime1, "uptime must reflect real elapsed process time across calls, not a hardcoded constant")
+}
+
+func fetchHealthzUptime(t *testing.T, s *server.Server) float64 {
+	t.Helper()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/healthz", nil)
+	s.Router().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+
+	uptime, ok := body["uptime"].(float64)
+	require.True(t, ok, "uptime field must be present and numeric")
+	return uptime
+}
+
+// TestFullHealthEndpointNoFabricatedLatency is a §11.4.6/§11.4.108 RED-then-
+// GREEN regression guard for T8-7(A): each per-service entry in /healthz
+// previously reported a hardcoded "latency": 0 literal with no real
+// measurement behind it (invented telemetry). Since gateway-service has no
+// real per-upstream latency probe wired up, the honest fix is to NOT emit
+// the field at all rather than fabricate a number.
+func TestFullHealthEndpointNoFabricatedLatency(t *testing.T) {
+	s := setupTestServer()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/healthz", nil)
+	s.Router().ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+
+	services, ok := body["services"].(map[string]interface{})
+	require.True(t, ok, "services field must be a map")
+	require.NotEmpty(t, services)
+
+	for name, raw := range services {
+		svc, ok := raw.(map[string]interface{})
+		require.True(t, ok, "service entry %s must be an object", name)
+		_, hasLatency := svc["latency"]
+		assert.False(t, hasLatency, "service %s must not report a fabricated hardcoded latency field (§11.4.6/§11.4.108)", name)
+	}
 }
 
 func TestMetricsEndpoint(t *testing.T) {
