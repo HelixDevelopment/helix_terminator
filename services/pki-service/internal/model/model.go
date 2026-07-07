@@ -17,33 +17,33 @@ const (
 
 // CertificateAuthority represents a CA in the system.
 type CertificateAuthority struct {
-	ID            uuid.UUID  `json:"id" db:"id"`
-	OrgID         uuid.UUID  `json:"org_id" db:"org_id"`
-	Name          string     `json:"name" db:"name"`
-	Description   string     `json:"description,omitempty" db:"description"`
-	CACertPEM     string     `json:"ca_cert_pem,omitempty" db:"ca_cert_pem"`
-	CAKeyPEM      string     `json:"-" db:"ca_key_pem"`
-	SerialNumber  int64      `json:"serial_number" db:"serial_number"`
-	ValidityDays  int        `json:"validity_days" db:"validity_days"`
-	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at" db:"updated_at"`
-	DeletedAt     *time.Time `json:"-" db:"deleted_at"`
+	ID           uuid.UUID  `json:"id" db:"id"`
+	OrgID        uuid.UUID  `json:"org_id" db:"org_id"`
+	Name         string     `json:"name" db:"name"`
+	Description  string     `json:"description,omitempty" db:"description"`
+	CACertPEM    string     `json:"ca_cert_pem,omitempty" db:"ca_cert_pem"`
+	CAKeyPEM     string     `json:"-" db:"ca_key_pem"`
+	SerialNumber int64      `json:"serial_number" db:"serial_number"`
+	ValidityDays int        `json:"validity_days" db:"validity_days"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
+	DeletedAt    *time.Time `json:"-" db:"deleted_at"`
 }
 
 // Certificate represents an issued certificate.
 type Certificate struct {
-	ID               uuid.UUID         `json:"id" db:"id"`
-	CAID             uuid.UUID         `json:"ca_id" db:"ca_id"`
-	OrgID            uuid.UUID         `json:"org_id" db:"org_id"`
-	Name             string            `json:"name" db:"name"`
-	CertPEM          string            `json:"cert_pem,omitempty" db:"cert_pem"`
-	KeyPEM           string            `json:"-" db:"key_pem"`
-	SerialNumber     int64             `json:"serial_number" db:"serial_number"`
-	Subject          []byte            `json:"subject,omitempty" db:"subject"`
-	Issuer           []byte            `json:"issuer,omitempty" db:"issuer"`
-	NotBefore        time.Time         `json:"not_before" db:"not_before"`
-	NotAfter         time.Time         `json:"not_after" db:"not_after"`
-	RevokedAt        *time.Time        `json:"revoked_at,omitempty" db:"revoked_at"`
+	ID           uuid.UUID  `json:"id" db:"id"`
+	CAID         uuid.UUID  `json:"ca_id" db:"ca_id"`
+	OrgID        uuid.UUID  `json:"org_id" db:"org_id"`
+	Name         string     `json:"name" db:"name"`
+	CertPEM      string     `json:"cert_pem,omitempty" db:"cert_pem"`
+	KeyPEM       string     `json:"-" db:"key_pem"`
+	SerialNumber int64      `json:"serial_number" db:"serial_number"`
+	Subject      []byte     `json:"subject,omitempty" db:"subject"`
+	Issuer       []byte     `json:"issuer,omitempty" db:"issuer"`
+	NotBefore    time.Time  `json:"not_before" db:"not_before"`
+	NotAfter     time.Time  `json:"not_after" db:"not_after"`
+	RevokedAt    *time.Time `json:"revoked_at,omitempty" db:"revoked_at"`
 	// RevocationReason is nullable in the schema (migrations/001_init.sql:
 	// "revocation_reason TEXT" with no NOT NULL) — every never-revoked
 	// certificate has a real NULL here. It MUST be a pointer so pgx can
