@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# pre-commit hook — CANONICAL TRACKED SOURCE.
+#
+# Installed into the shared <common-gitdir>/hooks/pre-commit by
+# scripts/install_git_hooks.sh. The shared hooks dir is used by the main
+# checkout AND every `git worktree`, so one install covers all of them.
+#
+# Purpose:
+#   Run the constitution-inheritance + docs-consistency gates before EVERY
+#   commit, from the main checkout AND from any worktree. Refuses the commit
+#   (non-zero exit) if a gate fails. Never bypasses (§11.4 anti-bluff).
+#
+# Worktree-safety (root cause fixed 2026-07-07, empirically verified):
+#   During a worktree commit, git exports GIT_DIR (pointing at the worktree's
+#   private gitdir under .git/worktrees/<name>) into the hook environment.
+#   That env leaks into downstream `git -C <dir> rev-parse --show-toplevel`
+#   calls (e.g. the docs gate) and makes them mis-resolve the repo root to
+#   "<worktree>/<dir>". Unsetting the injected git envvars restores normal
+#   path-based discovery so every gate resolves the real worktree root.
+#
+# This file is TRACKED so the gate cannot be silently disabled/replaced
+# without a reviewable diff (the failure mode that motivated §11.4.77 here).
+set -euo pipefail
+unset GIT_DIR GIT_WORK_TREE
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+exec "${REPO_ROOT}/scripts/pre_build_verification.sh"

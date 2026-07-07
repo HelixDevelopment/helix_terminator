@@ -27,7 +27,12 @@ set -euo pipefail
 
 # --- resolve repo root & corpus via git ------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+# Resolve the repo root filesystem-relative (this script lives at <root>/tests/).
+# Do NOT use `git -C "$SCRIPT_DIR" rev-parse --show-toplevel`: during a `git
+# worktree` commit, git injects GIT_DIR into the pre-commit hook env, which makes
+# the `-C` form mis-resolve to "<worktree>/tests" and breaks the corpus path.
+# Filesystem-relative resolution is git-env-independent and worktree-safe.
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
 CORPUS_DIR="$REPO_ROOT/docs/research/mvp/output/docs/markdown"
 
 DUP_WINDOW=40
