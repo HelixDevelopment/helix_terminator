@@ -1,12 +1,12 @@
 # CONTINUATION — helix_terminator
 
-**Revision:** 5
+**Revision:** 6
 **Last modified:** 2026-07-07T00:00:00Z
 
 Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep current.
 
 ## One-line resume
-**FULL DEVELOPMENT in progress** (operator kick-off 2026-07-07). Platform is SCAFFOLDED, being hardened. Ground truth is verified; **8 evidence-backed commits shipped + pushed** (clean tree at `9208b95`, remote==local). Resume by reading **`docs/research/mvp/final/implementation/DEVELOPMENT_PLAN.md`** (10-phase plan) + `.superpowers/sdd/progress.md` (controller ledger — SESSION 2026-07-07 CHECKPOINT block has the live queue). Then `git fetch --all` and continue the NEXT QUEUE below.
+**FULL DEVELOPMENT in progress** (operator kick-off 2026-07-07). Platform is SCAFFOLDED, being hardened. Ground truth is verified; **10 evidence-backed commits shipped + pushed** (clean tree at `85ddd02`, remote==local). Resume by reading **`docs/research/mvp/final/implementation/DEVELOPMENT_PLAN.md`** (10-phase plan) + `.superpowers/sdd/progress.md` (controller ledger — SESSION 2026-07-07 CHECKPOINT block has the live queue). Then `git fetch --all` and continue the NEXT QUEUE below.
 
 ## Where we are — 8 commits on GitHub `main` (all pushed, remote==local)
 | SHA | What | Proof |
@@ -18,6 +18,8 @@ Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep cur
 | `7fc9f09` | Flutter client compiles | `flutter analyze` 37→0 (container) |
 | `b9cd652` | Removed 511 dead/stub test-banks (§11.4.124/§11.4.27) | 106 real tests intact |
 | `9208b95` | **Fleet dep-bump** x/crypto v0.53.0 + pgx v5.10.0 + x/net v0.56.0 across 24 svc | all build+test green |
+| `c3f280a` | Resumption-doc refresh | — |
+| `85ddd02` | **Proto module reorg** — per-svc packages + `common.proto` (GAP-01 packaging) | full-module `buf build` exit 0 |
 
 ## Verified state
 - Backend: 25/25 build+vet clean (Go 1.26.4), 25/25 `-race` clean, all 4 CORS tests fixed. x/crypto CVE cleared fleet-wide.
@@ -26,7 +28,7 @@ Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep cur
 - Gates GREEN + mutation-proof. CI disabled per §11.4.156.
 
 ## NEXT QUEUE (priority order §11.4.132 — pace to host pid)
-1. **Proto full-module reorg** → `buf lint` clean (per-svc packages / common.proto; completes GAP-01). Redo cleanly (the prior attempt was reverted unverified).
+1. ~~Proto full-module reorg~~ **DONE** (`85ddd02`, `buf build` exit 0). Remaining proto work: 1125 `buf lint` naming-convention findings (RPC/message naming — large, separate, currently out of scope).
 2. **Migration-runner wiring** — embed golang-migrate so services apply their schema at startup.
 3. **GAP-08 security hardening** — mTLS rotation/WAF/threat-model; re-run `govulncheck` fleet-wide to CONFIRM x/crypto cleared + check pgx SQLi (GO-2026-5004) fixed-version.
 4. **Flutter terminal-emulator REAL implementation** (still a stub) + host-render visual proof §11.4.170; also `mfa_secret` nullable/non-pointer follow-up.
