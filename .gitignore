@@ -57,3 +57,11 @@ clients/flutter/windows/
 clients/flutter/web/
 clients/flutter/**/.dart_tool/
 clients/flutter/**/build/
+# Flutter golden-mismatch dumps + container pub-cache mount targets (never versioned). §11.4.30
+clients/flutter/test/failures/
+clients/flutter/**/test/failures/
+clients/flutter/.pubcache/
+clients/flutter/.pub-cache/
+
+# Agent worktree scratchpad — evidence + temp files, never versioned. §11.4.11 / §11.4.30
+scratchpad/
