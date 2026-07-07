@@ -35,17 +35,61 @@ func New(repo Repository) *Handler {
 	return &Handler{repo: repo}
 }
 
+// callerUserIDHeader is the request header conveying the caller's
+// authenticated tenant identity. It is the SAME header
+// server.tenantIsolationMiddleware validates for the secret-ID-scoped
+// routes (GET/PUT/DELETE/rotate/versions) — the collection-level routes
+// (ListSecrets, CreateSecret) have no target secret ID to check ownership
+// against before the handler runs, so the handler itself is the
+// authoritative point where the caller's identity MUST be derived and
+// enforced, instead of trusting any caller-supplied user_id in the query
+// string or JSON body (real IDOR / broken-object-level-authorization
+// otherwise: T7).
+const callerUserIDHeader = "X-User-ID"
+
+// CallerUserID extracts and parses the caller's authenticated tenant
+// identity from the X-User-ID header. Exported so server-layer middleware
+// (tenantIsolationMiddleware and the collection-route caller-identity
+// guard) share this exact parsing logic with the handlers that consume it,
+// rather than maintaining two independently-drifting implementations of
+// "what counts as a valid caller identity" (§11.4.124 reuse-don't-duplicate).
+func CallerUserID(c *gin.Context) (uuid.UUID, bool) {
+	id, err := uuid.Parse(c.GetHeader(callerUserIDHeader))
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
 // CreateSecret handles POST /api/v1/vault/secrets.
+//
+// Security (T7 IDOR fix): the secret's owner is ALWAYS the authenticated
+// caller (X-User-ID), never a body-supplied user_id — a caller could
+// otherwise create/own secrets under another tenant's user_id. If the body
+// carries a user_id that differs from the caller, the request is rejected
+// (safer than silently overriding it, per the same-object convention used
+// elsewhere in this service).
 func (h *Handler) CreateSecret(c *gin.Context) {
+	callerID, ok := CallerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-User-ID"})
+		return
+	}
+
 	var req model.CreateSecretRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	if req.UserID != uuid.Nil && req.UserID != callerID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id in request body must match the authenticated caller (X-User-ID)"})
+		return
+	}
+
 	secret := &model.Secret{
 		ID:             uuid.New(),
-		UserID:         req.UserID,
+		UserID:         callerID,
 		OrgID:          req.OrgID,
 		Name:           req.Name,
 		Type:           model.SecretType(req.Type),
@@ -85,17 +129,36 @@ func (h *Handler) GetSecret(c *gin.Context) {
 }
 
 // ListSecrets handles GET /api/v1/vault/secrets.
+//
+// Security (T7 IDOR fix): the tenant scope is ALWAYS the authenticated
+// caller (X-User-ID), never a client-supplied user_id query param — the
+// repository treats an empty/zero user_id filter as "no filter", so
+// previously a caller could omit user_id entirely and list EVERY tenant's
+// secrets, or supply another tenant's user_id and list theirs. A
+// user_id query param is now permitted ONLY when it equals the caller's
+// own identity (redundant no-op); any other value is rejected outright.
 func (h *Handler) ListSecrets(c *gin.Context) {
+	callerID, ok := CallerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-User-ID"})
+		return
+	}
+
 	var req model.ListSecretsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	var userID, orgID uuid.UUID
 	if req.UserID != "" {
-		userID, _ = uuid.Parse(req.UserID)
+		requested, err := uuid.Parse(req.UserID)
+		if err != nil || requested != callerID {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query parameter must match the authenticated caller (X-User-ID)"})
+			return
+		}
 	}
+
+	var orgID uuid.UUID
 	if req.OrgID != "" {
 		orgID, _ = uuid.Parse(req.OrgID)
 	}
@@ -105,13 +168,13 @@ func (h *Handler) ListSecrets(c *gin.Context) {
 		tags = []string{req.Tags}
 	}
 
-	secrets, err := h.repo.ListSecrets(c.Request.Context(), userID, orgID, model.SecretType(req.Type), tags, req.Limit, req.Offset)
+	secrets, err := h.repo.ListSecrets(c.Request.Context(), callerID, orgID, model.SecretType(req.Type), tags, req.Limit, req.Offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list secrets"})
 		return
 	}
 
-	total, err := h.repo.CountSecrets(c.Request.Context(), userID, orgID)
+	total, err := h.repo.CountSecrets(c.Request.Context(), callerID, orgID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count secrets"})
 		return
@@ -233,10 +296,10 @@ func (h *Handler) RotateSecret(c *gin.Context) {
 	}
 
 	var req struct {
-		EncryptedValue string         `json:"encrypted_value" binding:"required"`
-		IV             string         `json:"iv" binding:"required"`
-		Salt           string         `json:"salt" binding:"required"`
-		CreatedBy      uuid.UUID      `json:"created_by" binding:"required"`
+		EncryptedValue string    `json:"encrypted_value" binding:"required"`
+		IV             string    `json:"iv" binding:"required"`
+		Salt           string    `json:"salt" binding:"required"`
+		CreatedBy      uuid.UUID `json:"created_by" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

@@ -143,6 +143,9 @@ func createSecretViaRealHTTP(t *testing.T, srv *server.Server, userID uuid.UUID,
 	req, _ := http.NewRequest(http.MethodPost, "/api/v1/vault/secrets", bytes.NewReader(buf))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", testAPIKey)
+	// T7: CreateSecret derives the secret's owner from the authenticated
+	// caller (X-User-ID), which must match the body's user_id.
+	req.Header.Set("X-User-ID", userID.String())
 	srv.Router().ServeHTTP(w, req)
 	require.Equal(t, http.StatusCreated, w.Code, "CreateSecret via real HTTP server failed: %s", w.Body.String())
 
@@ -306,4 +309,133 @@ func TestSecurity_AnotherTenantCannotDeleteOrRotateSecret(t *testing.T) {
 	srv.Router().ServeHTTP(wOwner, reqOwner)
 	require.Equal(t, http.StatusOK, wOwner.Code,
 		"tenant A's secret must have survived tenant B's rejected delete/rotate attempts")
+}
+
+// listSecretsViaRealHTTP GETs /api/v1/vault/secrets as callerID through the
+// real server and returns the decoded response.
+func listSecretsViaRealHTTP(t *testing.T, srv *server.Server, callerID uuid.UUID, extraQuery string) (*http.Response, model.ListSecretsResponse) {
+	t.Helper()
+	url := "/api/v1/vault/secrets"
+	if extraQuery != "" {
+		url += "?" + extraQuery
+	}
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("X-API-Key", testAPIKey)
+	req.Header.Set("X-User-ID", callerID.String())
+	srv.Router().ServeHTTP(w, req)
+
+	resp := w.Result()
+	var decoded model.ListSecretsResponse
+	if resp.StatusCode == http.StatusOK {
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &decoded))
+	}
+	return resp, decoded
+}
+
+// TestSecurity_AnotherTenantCannotListSecrets is the T7 IDOR proof for
+// ListSecrets: two real tenants, two real secrets, real HTTP requests
+// against the real server + real Postgres. Tenant B must NEVER see tenant
+// A's secret — not by passing tenant A's user_id as a query parameter, and
+// not by omitting user_id (the pre-fix behaviour returned EVERY tenant's
+// secrets when no filter was supplied, since the repository treats a
+// zero-value user_id as "no filter").
+func TestSecurity_AnotherTenantCannotListSecrets(t *testing.T) {
+	mustConnectAndMigrate(t)
+	srv := newRealServer(t)
+
+	tenantA := uuid.New()
+	tenantB := uuid.New()
+
+	ctA, ivA, saltA := encryptAESGCM(t, []byte("tenant-A-list-secret"), []byte("tenant-a-list-key"))
+	secretAID := createSecretViaRealHTTP(t, srv, tenantA, ctA, ivA, saltA)
+
+	ctB, ivB, saltB := encryptAESGCM(t, []byte("tenant-B-list-secret"), []byte("tenant-b-list-key"))
+	secretBID := createSecretViaRealHTTP(t, srv, tenantB, ctB, ivB, saltB)
+
+	// Attack 1: tenant B, correctly authenticated as ITSELF, tries to list
+	// secrets by passing tenant A's user_id as the query parameter.
+	wMismatch, _ := listSecretsViaRealHTTP(t, srv, tenantB, "user_id="+tenantA.String())
+	require.Equal(t, http.StatusBadRequest, wMismatch.StatusCode,
+		"tenant B was able to pass tenant A's user_id to ListSecrets — access control is BROKEN")
+
+	// Attack 2 (the original bug): tenant B lists with NO user_id query
+	// param at all. Pre-fix, an empty/zero user_id fell through to the
+	// repository's "no filter" behaviour and returned every tenant's
+	// secrets, including tenant A's. Post-fix it must return ONLY tenant
+	// B's own secret.
+	wList, listResp := listSecretsViaRealHTTP(t, srv, tenantB, "")
+	require.Equal(t, http.StatusOK, wList.StatusCode)
+	for _, s := range listResp.Secrets {
+		require.NotEqual(t, secretAID, s.ID, "tenant B's list leaked tenant A's secret — IDOR is present")
+		require.Equal(t, tenantB, s.UserID, "every secret in tenant B's list must belong to tenant B")
+	}
+	foundOwnB := false
+	for _, s := range listResp.Secrets {
+		if s.ID == secretBID {
+			foundOwnB = true
+		}
+	}
+	require.True(t, foundOwnB, "tenant B's own secret must appear in tenant B's own list")
+
+	// Sanity: tenant A's own list still works, is scoped to tenant A only,
+	// and contains its own secret — proving the denials above are genuine
+	// tenant isolation, not a generally-broken endpoint.
+	wOwner, ownerResp := listSecretsViaRealHTTP(t, srv, tenantA, "")
+	require.Equal(t, http.StatusOK, wOwner.StatusCode)
+	foundOwnA := false
+	for _, s := range ownerResp.Secrets {
+		require.NotEqual(t, secretBID, s.ID, "tenant A's list leaked tenant B's secret")
+		if s.ID == secretAID {
+			foundOwnA = true
+		}
+	}
+	require.True(t, foundOwnA, "tenant A's own secret must appear in tenant A's own list")
+}
+
+// TestSecurity_AnotherTenantCannotCreateSecretForVictim is the T7 IDOR
+// proof for CreateSecret: a real caller authenticated as tenant B cannot
+// create/own a secret under tenant A's identity merely by putting tenant
+// A's user_id in the request body.
+func TestSecurity_AnotherTenantCannotCreateSecretForVictim(t *testing.T) {
+	pool := mustConnectAndMigrate(t)
+	srv := newRealServer(t)
+
+	tenantA := uuid.New()
+	tenantB := uuid.New()
+
+	ct, iv, salt := encryptAESGCM(t, []byte("attacker-attempted-secret"), []byte("attacker-key"))
+	body, err := json.Marshal(map[string]any{
+		"user_id":         tenantA.String(), // attacker-supplied victim tenant
+		"name":            "stolen-secret",
+		"type":            "api_token",
+		"encrypted_value": ct,
+		"iv":              iv,
+		"salt":            salt,
+	})
+	require.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/vault/secrets", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", testAPIKey)
+	req.Header.Set("X-User-ID", tenantB.String()) // real authenticated caller
+	srv.Router().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code,
+		"tenant B was able to create a secret owned by tenant A — access control is BROKEN")
+
+	// Confirm no row was ever persisted under tenant A's ownership for this
+	// attempt — the rejection is real, not just an API-shape mismatch.
+	ctx := context.Background()
+	var count int
+	errCount := pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM secrets WHERE user_id = $1 AND name = $2`, tenantA, "stolen-secret",
+	).Scan(&count)
+	require.NoError(t, errCount)
+	require.Equal(t, 0, count, "no secret must have been persisted under tenant A's ownership")
+
+	// Sanity: tenant B creating a secret for ITSELF still works.
+	secretBID := createSecretViaRealHTTP(t, srv, tenantB, ct, iv, salt)
+	require.NotEqual(t, uuid.Nil, secretBID)
 }

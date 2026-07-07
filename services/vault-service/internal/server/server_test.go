@@ -79,10 +79,47 @@ func TestAuthMiddleware_AllowsCorrectAPIKeyThroughToHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/vault/secrets", nil)
 	req.Header.Set("X-API-Key", "test-service-key-12345")
+	// ListSecrets is a tenant-scoped collection route (T7): it additionally
+	// requires a valid caller identity, independent of the API-key check
+	// this test targets.
+	req.Header.Set("X-User-ID", uuid.New().String())
 	srv.Router().ServeHTTP(w, req)
 
 	assert.NotEqual(t, http.StatusUnauthorized, w.Code,
 		"a correct X-API-Key must not be rejected by the auth middleware")
+}
+
+// TestRequireCallerIdentityMiddleware_RejectsMissingUserID proves the T7 fix:
+// the collection-level routes (ListSecrets, CreateSecret) reject a caller
+// that presents no X-User-ID at all, closing the gap where ListSecrets
+// previously trusted an absent/caller-supplied user_id query parameter.
+func TestRequireCallerIdentityMiddleware_RejectsMissingUserID(t *testing.T) {
+	t.Setenv("VAULT_SERVICE_API_KEY", "test-service-key-12345")
+	srv := newTestServer(t)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/vault/secrets", nil)
+	req.Header.Set("X-API-Key", "test-service-key-12345")
+	srv.Router().ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "X-User-ID")
+}
+
+// TestRequireCallerIdentityMiddleware_RejectsMalformedUserID mirrors the
+// tenant-isolation middleware's malformed-header rejection for the
+// collection-level routes.
+func TestRequireCallerIdentityMiddleware_RejectsMalformedUserID(t *testing.T) {
+	t.Setenv("VAULT_SERVICE_API_KEY", "test-service-key-12345")
+	srv := newTestServer(t)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/vault/secrets", nil)
+	req.Header.Set("X-API-Key", "test-service-key-12345")
+	req.Header.Set("X-User-ID", "not-a-uuid")
+	srv.Router().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestTenantIsolationMiddleware_RejectsMissingUserID(t *testing.T) {

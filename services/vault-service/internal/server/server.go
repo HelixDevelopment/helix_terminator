@@ -88,8 +88,17 @@ func New(logger Logger) (*Server, error) {
 	v1 := r.Group("/api/v1/vault")
 	v1.Use(s.authMiddleware())
 	{
-		v1.POST("/secrets", h.CreateSecret)
-		v1.GET("/secrets", h.ListSecrets)
+		// Collection-level routes additionally require a valid caller
+		// identity (X-User-ID) before the handler runs: ListSecrets and
+		// CreateSecret have no target secret ID for a pre-handler ownership
+		// lookup (unlike the secret-ID-scoped routes below), so the
+		// handlers themselves derive/enforce the authoritative tenant scope
+		// from that identity (see handler.CallerUserID) — this middleware
+		// guarantees a valid identity reaches them at all, short-circuiting
+		// unauthenticated collection requests at the router layer just like
+		// tenantIsolationMiddleware does for the ID-scoped routes (T7).
+		v1.POST("/secrets", s.requireCallerIdentityMiddleware(), h.CreateSecret)
+		v1.GET("/secrets", s.requireCallerIdentityMiddleware(), h.ListSecrets)
 		// Secret-ID-scoped routes additionally require tenant isolation: the
 		// caller-asserted X-User-ID MUST match the target secret's owner, so
 		// one tenant can never read/modify/rotate another tenant's secret.
@@ -133,6 +142,21 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 	}
 }
 
+// requireCallerIdentityMiddleware enforces that a caller of a tenant-scoped
+// collection route (ListSecrets, CreateSecret) presents a valid X-User-ID
+// header before the handler runs. It shares its identity-parsing logic with
+// tenantIsolationMiddleware via handler.CallerUserID (§11.4.124
+// reuse-don't-duplicate) rather than re-implementing header validation.
+func (s *Server) requireCallerIdentityMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if _, ok := handler.CallerUserID(c); !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-User-ID"})
+			return
+		}
+		c.Next()
+	}
+}
+
 // tenantIsolationMiddleware enforces object-level access control on
 // secret-ID-scoped routes: the caller MUST present a valid X-User-ID header,
 // and that identity MUST match the target secret's owning user_id. A
@@ -148,8 +172,8 @@ func (s *Server) tenantIsolationMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		callerID, err := uuid.Parse(c.GetHeader("X-User-ID"))
-		if err != nil {
+		callerID, ok := handler.CallerUserID(c)
+		if !ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-User-ID"})
 			return
 		}
