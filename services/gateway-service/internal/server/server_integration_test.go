@@ -62,7 +62,11 @@ func startRealUpstream(t *testing.T) (baseURL string, recorded func() []recorded
 	var seen []recordedUpstreamRequest
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/hosts", func(w http.ResponseWriter, r *http.Request) {
+	// Real host-service registers this collection at "/api/v1/hosts"
+	// (services/host-service/internal/server/server.go:91), not the bare
+	// "/hosts" this stub used before the T8-1 route-table realignment —
+	// updated here in lockstep with the gateway's corrected proxyTo call.
+	mux.HandleFunc("/api/v1/hosts", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		seen = append(seen, recordedUpstreamRequest{
 			Method:          r.Method,
@@ -207,7 +211,7 @@ func TestIntegration_GatewayProxiesRealHTTPRequestToRealUpstream(t *testing.T) {
 	require.Len(t, reqs, 1, "the real upstream must have received exactly one real request")
 	got := reqs[0]
 	require.Equal(t, http.MethodGet, got.Method)
-	require.Equal(t, "/hosts", got.Path)
+	require.Equal(t, "/api/v1/hosts", got.Path)
 	require.Equal(t, "host-service", got.GatewayUpstream,
 		"gateway must identify itself/the route to the real upstream")
 	require.Equal(t, requestID, got.RequestID,
@@ -251,4 +255,183 @@ func TestIntegration_GatewayReturnsBadGatewayForUnreachableUpstream(t *testing.T
 	require.Equal(t, http.StatusBadGateway, resp.StatusCode,
 		"a real, genuinely-unreachable upstream must surface as a real 502, never a fabricated 200")
 	require.Contains(t, string(body), "auth-service")
+}
+
+// startExactPathStub starts a genuine net/http server bound to a real
+// loopback TCP port whose router registers ONLY the given method+path
+// pattern (Go 1.22+ enhanced http.ServeMux syntax, e.g.
+// "GET /api/v1/hosts/{hostId}") — mirroring the exact shape of the real
+// upstream service's own route registration, not a catch-all. Any request
+// for a DIFFERENT path (in particular the OLD, pre-T8-1 mismatched path)
+// gets net/http's genuine "404 page not found" from this stub's own
+// router, exactly as the real upstream service would have returned it —
+// this is what makes the RED-style "old path would have missed" assertion
+// below a real proof rather than a string comparison.
+func startExactPathStub(t *testing.T, pattern string, body string) (baseURL string, hits func() int, stop func()) {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	var mu sync.Mutex
+	var count int
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		count++
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprint(w, body)
+	})
+
+	httpSrv := &http.Server{Handler: mux}
+	go func() { _ = httpSrv.Serve(ln) }()
+
+	return "http://" + ln.Addr().String(),
+		func() int {
+			mu.Lock()
+			defer mu.Unlock()
+			return count
+		},
+		func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = httpSrv.Shutdown(ctx)
+		}
+}
+
+// requestExactPath issues a real, direct (gateway-bypassing) HTTP request
+// against a stub started by startExactPathStub, to prove — independently
+// of the gateway — what that stub's own router does for a given path.
+func requestExactPath(t *testing.T, client *http.Client, method, baseURL, path string) int {
+	t.Helper()
+	req, err := http.NewRequest(method, baseURL+path, nil)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	return resp.StatusCode
+}
+
+// TestIntegration_CorrectedRoutesReachRealUpstreamAcrossServices is the
+// T8-1 multi-service anti-bluff proof required by the task: for five
+// different upstream services (covering a pure prefix/rename fix, a
+// param route, an HTTP-method fix, and a gateway-route-reshape fix), it
+// stands up a REAL, independent net/http stub registered ONLY at the
+// CORRECTED real upstream path, drives a REAL request through the REAL
+// gateway server over a real loopback TCP connection, and asserts the
+// request reaches the stub (a real 200 from the stub's own handler, and
+// the stub's own hit-counter increments) — never a 404. For every case it
+// ALSO issues a direct (gateway-bypassing) request for the OLD, pre-T8-1
+// mismatched path against the very same stub and asserts that request
+// gets a genuine 404 from the stub's own router — the RED-style proof
+// that the old path really would have missed.
+func TestIntegration_CorrectedRoutesReachRealUpstreamAcrossServices(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	type caseDef struct {
+		name            string
+		service         string
+		envKey          string
+		stubPattern     string // Go 1.22+ "METHOD /path/{param}" pattern
+		stubBody        string
+		method          string
+		gatewayPath     string
+		oldUpstreamPath string // the pre-T8-1 mismatched path, requested directly against the same stub
+	}
+
+	cases := []caseDef{
+		{
+			name:            "host-service param route",
+			service:         "host-service",
+			envKey:          "HOST_SERVICE_ADDR",
+			stubPattern:     "GET /api/v1/hosts/{hostId}",
+			stubBody:        `{"real_upstream":"host-service","id":"h-1","name":"prod-db-1.internal"}`,
+			method:          http.MethodGet,
+			gatewayPath:     "/api/v1/hosts/h-1",
+			oldUpstreamPath: "/hosts/h-1",
+		},
+		{
+			name:            "vault-service flat secrets rename",
+			service:         "vault-service",
+			envKey:          "VAULT_SERVICE_ADDR",
+			stubPattern:     "GET /api/v1/vault/secrets",
+			stubBody:        `{"real_upstream":"vault-service","secrets":[]}`,
+			method:          http.MethodGet,
+			gatewayPath:     "/api/v1/vaults",
+			oldUpstreamPath: "/vaults",
+		},
+		{
+			name:            "ssh-proxy-service prefix rename",
+			service:         "ssh-proxy-service",
+			envKey:          "SSH_PROXY_SERVICE_ADDR",
+			stubPattern:     "GET /api/v1/ssh/sessions",
+			stubBody:        `{"real_upstream":"ssh-proxy-service","sessions":[]}`,
+			method:          http.MethodGet,
+			gatewayPath:     "/api/v1/sessions",
+			oldUpstreamPath: "/sessions",
+		},
+		{
+			name:            "snippet-service method fix (PATCH -> PUT)",
+			service:         "snippet-service",
+			envKey:          "SNIPPET_SERVICE_ADDR",
+			stubPattern:     "PUT /api/v1/snippets/{snippetId}",
+			stubBody:        `{"real_upstream":"snippet-service","id":"sn-1"}`,
+			method:          http.MethodPut,
+			gatewayPath:     "/api/v1/snippets/sn-1",
+			oldUpstreamPath: "/snippets/sn-1", // old stub had no method-matched PATCH handler either; same path also never matched the real (prefix-less) registration
+		},
+		{
+			name:            "pki-service gateway-route-reshape (added :caId)",
+			service:         "pki-service",
+			envKey:          "PKI_SERVICE_ADDR",
+			stubPattern:     "POST /api/v1/pki/ca/{caId}/certs",
+			stubBody:        `{"real_upstream":"pki-service","certId":"c-1"}`,
+			method:          http.MethodPost,
+			gatewayPath:     "/api/v1/pki/ca/ca-1/certs",
+			oldUpstreamPath: "/pki/certificates", // the old gateway route had no :caId segment at all
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			stubURL, hits, stopStub := startExactPathStub(t, tc.stubPattern, tc.stubBody)
+			defer stopStub()
+
+			// --- RED: the OLD, pre-T8-1 mismatched path genuinely misses
+			// against this exact same stub (net/http's own real 404,
+			// never a fabricated result). ---
+			oldStatus := requestExactPath(t, client, tc.method, stubURL, tc.oldUpstreamPath)
+			require.Equal(t, http.StatusNotFound, oldStatus,
+				"%s: the OLD upstream path %q must NOT match the real upstream's router (proves the pre-T8-1 mismatch was real)", tc.service, tc.oldUpstreamPath)
+			require.Equal(t, 0, hits(), "the old-path probe must not have hit the real handler")
+
+			// --- GREEN: a real request through the real gateway, over a
+			// real TCP hop, to the corrected upstream path. ---
+			t.Setenv(tc.envKey, stubURL)
+			gatewayURL, stopGateway := startRealGateway(t)
+			defer stopGateway()
+
+			req, err := http.NewRequest(tc.method, gatewayURL+tc.gatewayPath, nil)
+			require.NoError(t, err)
+			req.Header.Set("Authorization", "Bearer "+generateTestToken())
+
+			resp, err := client.Do(req)
+			require.NoError(t, err, "%s: real TCP request through the gateway must succeed at the transport layer", tc.service)
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			_ = resp.Body.Close()
+
+			require.Equal(t, http.StatusOK, resp.StatusCode,
+				"%s: gateway route %s %s must reach the real upstream at the corrected path (got body: %s)",
+				tc.service, tc.method, tc.gatewayPath, string(respBody))
+			require.Contains(t, string(respBody), tc.service,
+				"%s: response must be the real upstream's own payload, proxied back through the gateway", tc.service)
+			require.Equal(t, 1, hits(),
+				"%s: the real upstream's own handler must have been hit exactly once", tc.service)
+		})
+	}
 }

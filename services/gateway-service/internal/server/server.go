@@ -218,7 +218,10 @@ func New(logger Logger) *Server {
 	api := r.Group("/api/v1")
 	api.Use(s.jwtValidationMiddleware())
 	{
-		// Auth routes (proxy to auth-service)
+		// Auth routes (proxy to auth-service). auth-service registers all
+		// six of these at bare root paths (services/auth-service/internal/
+		// server/server.go:126-146) — re-verified current (T8-1): these
+		// already matched the real registrations and are unchanged.
 		api.POST("/auth/register", s.proxyTo("auth-service", "/register"))
 		api.POST("/auth/login", s.proxyTo("auth-service", "/login"))
 		api.POST("/auth/mfa/verify", s.proxyTo("auth-service", "/mfa/verify"))
@@ -226,107 +229,248 @@ func New(logger Logger) *Server {
 		api.POST("/auth/refresh", s.proxyTo("auth-service", "/refresh"))
 		api.POST("/auth/logout", s.proxyTo("auth-service", "/logout"))
 
-		// User routes (proxy to user-service)
-		api.GET("/users/me", s.proxyTo("user-service", "/me"))
-		api.PATCH("/users/me", s.proxyTo("user-service", "/me"))
-		api.GET("/users/me/sessions", s.proxyTo("user-service", "/sessions"))
-		api.DELETE("/users/me/sessions/:sessionId", s.proxyTo("user-service", "/sessions/:sessionId"))
-		api.GET("/users/me/preferences", s.proxyTo("user-service", "/preferences"))
-		api.PATCH("/users/me/preferences", s.proxyTo("user-service", "/preferences"))
+		// User routes. user-service (services/user-service/internal/
+		// server/server.go:44-53) exposes only /api/v1/users,
+		// /api/v1/users/:id, /api/v1/users/:id/profile and
+		// /api/v1/users/by-email — there is NO self ("/me") lookup, no
+		// sessions concept and no preferences concept anywhere in the
+		// service. auth-service independently generates its own user ID
+		// (services/auth-service/internal/handler/handler.go Register) and
+		// user-service independently generates its own uuid.New() at
+		// CreateUser (services/user-service/internal/handler/handler.go:41)
+		// — there is no code anywhere establishing these two ID spaces are
+		// the same, so resolving "/me" by injecting the JWT userID as a
+		// user-service :id would be an unverified guess (§11.4.6); if the
+		// ID spaces really are disjoint (confirmed: they are, both call
+		// uuid.New() independently with no cross-service linkage) it would
+		// never resolve to real data. Honest 501 gaps, not fabricated
+		// routes to nowhere.
+		api.GET("/users/me", s.notImplemented("users.me",
+			"user-service exposes no self/\"me\" endpoint; its user IDs are independently generated from auth-service's with no verified cross-service identity link"))
+		api.PATCH("/users/me", s.notImplemented("users.me",
+			"user-service exposes no self/\"me\" endpoint; see GET /users/me"))
+		// auth-service DOES track sessions in its repository
+		// (ListActiveSessions / RevokeSession, services/auth-service/
+		// internal/repository/repository.go:262-297) but no handler or
+		// route anywhere exposes them over HTTP — confirmed: auth-service's
+		// handler set has no caller of ListActiveSessions or RevokeSession.
+		// Wiring that up is an auth-service change, out of gateway-service's
+		// scope; tracked as a gap here.
+		api.GET("/users/me/sessions", s.notImplemented("users.me.sessions",
+			"no HTTP route anywhere exposes session listing; auth-service has the repository method (ListActiveSessions) but never wires it to a handler/route"))
+		api.DELETE("/users/me/sessions/:sessionId", s.notImplemented("users.me.sessions.delete",
+			"no HTTP route anywhere exposes session revoke-by-id; auth-service has the repository method (RevokeSession) but never wires it to a handler/route"))
+		api.GET("/users/me/preferences", s.notImplemented("users.me.preferences",
+			"no preferences concept exists anywhere in user-service (only \"profile\", a different resource)"))
+		api.PATCH("/users/me/preferences", s.notImplemented("users.me.preferences",
+			"no preferences concept exists anywhere in user-service; see GET /users/me/preferences"))
 
-		// Vault routes (proxy to vault-service)
-		api.GET("/vaults", s.proxyTo("vault-service", "/vaults"))
-		api.POST("/vaults", s.proxyTo("vault-service", "/vaults"))
-		api.GET("/vaults/:vaultId", s.proxyTo("vault-service", "/vaults/:vaultId"))
-		api.DELETE("/vaults/:vaultId", s.proxyTo("vault-service", "/vaults/:vaultId"))
-		api.GET("/vaults/:vaultId/items", s.proxyTo("vault-service", "/vaults/:vaultId/items"))
-		api.POST("/vaults/:vaultId/items", s.proxyTo("vault-service", "/vaults/:vaultId/items"))
-		api.POST("/vaults/:vaultId/share", s.proxyTo("vault-service", "/vaults/:vaultId/share"))
+		// Vault routes. vault-service (services/vault-service/internal/
+		// server/server.go:88-109) is a flat secrets store mounted at
+		// /api/v1/vault/secrets — there is no "vault" grouping/container
+		// concept and no "/share" action anywhere. The gateway's own
+		// client-facing "/vaults" contract is kept; the proxied upstream
+		// path is corrected to the real "secrets" resource.
+		api.GET("/vaults", s.proxyTo("vault-service", "/api/v1/vault/secrets"))
+		api.POST("/vaults", s.proxyTo("vault-service", "/api/v1/vault/secrets"))
+		api.GET("/vaults/:vaultId", s.proxyTo("vault-service", "/api/v1/vault/secrets/:vaultId"))
+		api.DELETE("/vaults/:vaultId", s.proxyTo("vault-service", "/api/v1/vault/secrets/:vaultId"))
+		// "items within a vault" would need a two-level vault->item
+		// hierarchy; vault-service has no such nesting (Secret is the only,
+		// flat resource — already reachable via GET /vaults above). Mapping
+		// these onto the same flat collection would silently discard the
+		// :vaultId scope and return an unrelated result set, which is
+		// worse than an honest gap.
+		api.GET("/vaults/:vaultId/items", s.notImplemented("vaults.items",
+			"vault-service has no vault->item nesting; secrets are already flat and reachable via GET /vaults"))
+		api.POST("/vaults/:vaultId/items", s.notImplemented("vaults.items",
+			"vault-service has no vault->item nesting; see GET /vaults/:vaultId/items"))
+		api.POST("/vaults/:vaultId/share", s.notImplemented("vaults.share",
+			"vault-service has no share/access-grant action anywhere"))
 
-		// Host routes (proxy to host-service)
-		api.GET("/hosts", s.proxyTo("host-service", "/hosts"))
-		api.POST("/hosts", s.proxyTo("host-service", "/hosts"))
-		api.GET("/hosts/:hostId", s.proxyTo("host-service", "/hosts/:hostId"))
-		api.PATCH("/hosts/:hostId", s.proxyTo("host-service", "/hosts/:hostId"))
-		api.DELETE("/hosts/:hostId", s.proxyTo("host-service", "/hosts/:hostId"))
-		api.POST("/hosts/:hostId/connect", s.proxyTo("host-service", "/hosts/:hostId/connect"))
-		api.POST("/hosts/:hostId/test", s.proxyTo("host-service", "/hosts/:hostId/test"))
+		// Host routes. host-service (services/host-service/internal/
+		// server/server.go:90-96) registers PUT (not PATCH) for update, so
+		// the gateway's own route verb is corrected to PUT to actually
+		// reach it. Its connectivity check is "/test-connection" — there is
+		// no "/connect" action; host-service never opens a live connection,
+		// only tests reachability.
+		api.GET("/hosts", s.proxyTo("host-service", "/api/v1/hosts"))
+		api.POST("/hosts", s.proxyTo("host-service", "/api/v1/hosts"))
+		api.GET("/hosts/:hostId", s.proxyTo("host-service", "/api/v1/hosts/:hostId"))
+		api.PUT("/hosts/:hostId", s.proxyTo("host-service", "/api/v1/hosts/:hostId"))
+		api.DELETE("/hosts/:hostId", s.proxyTo("host-service", "/api/v1/hosts/:hostId"))
+		api.POST("/hosts/:hostId/connect", s.notImplemented("hosts.connect",
+			"host-service has no live-connect action; only a connectivity probe exists (see /hosts/:hostId/test)"))
+		api.POST("/hosts/:hostId/test", s.proxyTo("host-service", "/api/v1/hosts/:hostId/test-connection"))
 
-		// SSH/Session routes (proxy to ssh-proxy-service, terminal-service)
-		api.GET("/sessions", s.proxyTo("ssh-proxy-service", "/sessions"))
-		api.GET("/sessions/:sessionId", s.proxyTo("ssh-proxy-service", "/sessions/:sessionId"))
-		api.DELETE("/sessions/:sessionId", s.proxyTo("ssh-proxy-service", "/sessions/:sessionId"))
-		api.GET("/sessions/:sessionId/terminal", s.proxyTo("terminal-service", "/sessions/:sessionId/terminal"))
-		api.POST("/sessions/:sessionId/share", s.proxyTo("collaboration-service", "/sessions/:sessionId/share"))
-		api.POST("/sessions/:sessionId/record", s.proxyTo("recording-service", "/sessions/:sessionId/record"))
+		// SSH/Session routes. ssh-proxy-service (services/ssh-proxy-service/
+		// internal/server/server.go:89-93) mounts sessions at
+		// /api/v1/ssh/sessions.
+		api.GET("/sessions", s.proxyTo("ssh-proxy-service", "/api/v1/ssh/sessions"))
+		api.GET("/sessions/:sessionId", s.proxyTo("ssh-proxy-service", "/api/v1/ssh/sessions/:sessionId"))
+		api.DELETE("/sessions/:sessionId", s.proxyTo("ssh-proxy-service", "/api/v1/ssh/sessions/:sessionId"))
+		// terminal-service (services/terminal-service/internal/server/
+		// server.go:90-103) generates its OWN uuid.New() terminal-session ID
+		// (CreateTerminalSession, internal/handler/handler.go:56) — it is
+		// NOT the ssh-proxy-service session ID, and nothing in the codebase
+		// links the two. There is no way to honestly resolve "the terminal
+		// for ssh session :sessionId".
+		api.GET("/sessions/:sessionId/terminal", s.notImplemented("sessions.terminal",
+			"terminal-service's own session IDs are independently generated and not linked to ssh-proxy-service's session IDs anywhere in the codebase"))
+		// collaboration-service (services/collaboration-service/internal/
+		// server/server.go:34-41) only has join/leave/end actions; no
+		// "share" (generate/return an access grant) action exists.
+		api.POST("/sessions/:sessionId/share", s.notImplemented("sessions.share",
+			"collaboration-service has no share action (only join/leave/end)"))
+		// recording-service's CreateRecording explicitly requires a
+		// sessionId field in its own JSON request body
+		// (binding:"required,uuid" — services/recording-service/internal/
+		// model/model.go:41), independently confirming session-linkage is
+		// part of its real design; the flat /api/v1/recordings collection
+		// is the real "start recording this session" endpoint (the
+		// gateway's :sessionId path segment is not itself forwarded — the
+		// client is expected to supply the same sessionId in the body,
+		// which recording-service's own contract already requires).
+		api.POST("/sessions/:sessionId/record", s.proxyTo("recording-service", "/api/v1/recordings"))
 
-		// SFTP routes
-		api.GET("/sessions/:sessionId/sftp", s.proxyTo("sftp-service", "/sessions/:sessionId/sftp"))
-		api.POST("/sessions/:sessionId/sftp/download", s.proxyTo("sftp-service", "/sessions/:sessionId/sftp/download"))
-		api.POST("/sessions/:sessionId/sftp/upload", s.proxyTo("sftp-service", "/sessions/:sessionId/sftp/upload"))
+		// SFTP routes. sftp-service (services/sftp-service/internal/
+		// server/server.go:34-40) is a flat, HOST-scoped transfer-session
+		// resource (CreateSFTPSessionRequest has hostId/remotePath/
+		// localPath/direction — no sessionId field anywhere). There is no
+		// download/upload action route, and no way to scope by an ssh
+		// sessionId.
+		api.GET("/sessions/:sessionId/sftp", s.notImplemented("sessions.sftp",
+			"sftp-service has no per-ssh-session scoping (its sessions are host-scoped only)"))
+		api.POST("/sessions/:sessionId/sftp/download", s.notImplemented("sessions.sftp.download",
+			"sftp-service has no download/upload action route and no sessionId field in its create request"))
+		api.POST("/sessions/:sessionId/sftp/upload", s.notImplemented("sessions.sftp.upload",
+			"sftp-service has no download/upload action route and no sessionId field in its create request"))
 
-		// Port forwarding routes
-		api.GET("/sessions/:sessionId/tunnels", s.proxyTo("port-forward-service", "/sessions/:sessionId/tunnels"))
-		api.POST("/sessions/:sessionId/tunnels", s.proxyTo("port-forward-service", "/sessions/:sessionId/tunnels"))
-		api.DELETE("/sessions/:sessionId/tunnels/:tunnelId", s.proxyTo("port-forward-service", "/sessions/:sessionId/tunnels/:tunnelId"))
+		// Port forwarding routes. port-forward-service (services/
+		// port-forward-service/internal/server/server.go:34-43) is also a
+		// flat, HOST-scoped resource (CreatePortForwardRequest has no
+		// sessionId field) — listing/creating "for this session" cannot be
+		// honestly resolved. Deleting a specific tunnel BY ITS OWN ID needs
+		// no session scoping at all: :tunnelId already addresses one exact
+		// resource, so that one is a genuine, low-risk fix.
+		api.GET("/sessions/:sessionId/tunnels", s.notImplemented("sessions.tunnels",
+			"port-forward-service has no per-ssh-session scoping (its forwards are host-scoped only)"))
+		api.POST("/sessions/:sessionId/tunnels", s.notImplemented("sessions.tunnels.create",
+			"port-forward-service's create request has no sessionId field; forwards are host-scoped only"))
+		api.DELETE("/sessions/:sessionId/tunnels/:tunnelId", s.proxyTo("port-forward-service", "/api/v1/forwards/:tunnelId"))
 
-		// Snippet routes
-		api.GET("/snippets", s.proxyTo("snippet-service", "/snippets"))
-		api.POST("/snippets", s.proxyTo("snippet-service", "/snippets"))
-		api.GET("/snippets/:snippetId", s.proxyTo("snippet-service", "/snippets/:snippetId"))
-		api.PATCH("/snippets/:snippetId", s.proxyTo("snippet-service", "/snippets/:snippetId"))
-		api.DELETE("/snippets/:snippetId", s.proxyTo("snippet-service", "/snippets/:snippetId"))
-		api.POST("/snippets/:snippetId/execute", s.proxyTo("snippet-service", "/snippets/:snippetId/execute"))
+		// Snippet routes. snippet-service (services/snippet-service/
+		// internal/server/server.go:34-40) registers PUT (not PATCH) for
+		// update, so the gateway's own route verb is corrected to PUT. It
+		// has no execute action anywhere — confirmed: no ExecuteSnippet
+		// handler exists in the service at all.
+		api.GET("/snippets", s.proxyTo("snippet-service", "/api/v1/snippets"))
+		api.POST("/snippets", s.proxyTo("snippet-service", "/api/v1/snippets"))
+		api.GET("/snippets/:snippetId", s.proxyTo("snippet-service", "/api/v1/snippets/:snippetId"))
+		api.PUT("/snippets/:snippetId", s.proxyTo("snippet-service", "/api/v1/snippets/:snippetId"))
+		api.DELETE("/snippets/:snippetId", s.proxyTo("snippet-service", "/api/v1/snippets/:snippetId"))
+		api.POST("/snippets/:snippetId/execute", s.notImplemented("snippets.execute",
+			"snippet-service has no execute handler or route anywhere"))
 
-		// Keychain routes
-		api.GET("/keychains", s.proxyTo("keychain-service", "/keychains"))
-		api.POST("/keychains", s.proxyTo("keychain-service", "/keychains"))
-		api.GET("/keychains/:keyId", s.proxyTo("keychain-service", "/keychains/:keyId"))
-		api.DELETE("/keychains/:keyId", s.proxyTo("keychain-service", "/keychains/:keyId"))
+		// Keychain routes. keychain-service (services/keychain-service/
+		// internal/server/server.go:41-47) mounts the SINGULAR "/keychain"
+		// resource (not plural "/keychains").
+		api.GET("/keychains", s.proxyTo("keychain-service", "/api/v1/keychain"))
+		api.POST("/keychains", s.proxyTo("keychain-service", "/api/v1/keychain"))
+		api.GET("/keychains/:keyId", s.proxyTo("keychain-service", "/api/v1/keychain/:keyId"))
+		api.DELETE("/keychains/:keyId", s.proxyTo("keychain-service", "/api/v1/keychain/:keyId"))
 
-		// Workspace routes
-		api.GET("/workspaces", s.proxyTo("workspace-service", "/workspaces"))
-		api.POST("/workspaces", s.proxyTo("workspace-service", "/workspaces"))
-		api.GET("/workspaces/:workspaceId", s.proxyTo("workspace-service", "/workspaces/:workspaceId"))
-		api.PATCH("/workspaces/:workspaceId", s.proxyTo("workspace-service", "/workspaces/:workspaceId"))
-		api.DELETE("/workspaces/:workspaceId", s.proxyTo("workspace-service", "/workspaces/:workspaceId"))
+		// Workspace routes. workspace-service (services/workspace-service/
+		// internal/server/server.go:90-97) registers PUT (not PATCH) for
+		// update, so the gateway's own route verb is corrected to PUT.
+		api.GET("/workspaces", s.proxyTo("workspace-service", "/api/v1/workspaces"))
+		api.POST("/workspaces", s.proxyTo("workspace-service", "/api/v1/workspaces"))
+		api.GET("/workspaces/:workspaceId", s.proxyTo("workspace-service", "/api/v1/workspaces/:workspaceId"))
+		api.PUT("/workspaces/:workspaceId", s.proxyTo("workspace-service", "/api/v1/workspaces/:workspaceId"))
+		api.DELETE("/workspaces/:workspaceId", s.proxyTo("workspace-service", "/api/v1/workspaces/:workspaceId"))
 
-		// Recording routes
-		api.GET("/recordings", s.proxyTo("recording-service", "/recordings"))
-		api.GET("/recordings/:recordingId", s.proxyTo("recording-service", "/recordings/:recordingId"))
-		api.GET("/recordings/:recordingId/playback", s.proxyTo("recording-service", "/recordings/:recordingId/playback"))
-		api.POST("/recordings/:recordingId/export", s.proxyTo("recording-service", "/recordings/:recordingId/export"))
+		// Recording routes. recording-service (services/recording-service/
+		// internal/server/server.go:34-40) has no playback or export
+		// action — GetPlayback exists but is wired only under
+		// terminal-service, keyed by a DIFFERENT (terminal-session) ID, not
+		// recording-service's own ID.
+		api.GET("/recordings", s.proxyTo("recording-service", "/api/v1/recordings"))
+		api.GET("/recordings/:recordingId", s.proxyTo("recording-service", "/api/v1/recordings/:recordingId"))
+		api.GET("/recordings/:recordingId/playback", s.notImplemented("recordings.playback",
+			"recording-service has no playback route; GetPlayback exists only under terminal-service, keyed by a different (terminal-session) ID"))
+		api.POST("/recordings/:recordingId/export", s.notImplemented("recordings.export",
+			"recording-service has no export route anywhere"))
 
-		// Audit routes
-		api.GET("/audit", s.proxyTo("audit-service", "/audit"))
+		// Audit routes. audit-service (services/audit-service/internal/
+		// server/server.go:89-93) mounts the list under
+		// "/api/v1/audit/logs".
+		api.GET("/audit", s.proxyTo("audit-service", "/api/v1/audit/logs"))
 
-		// Analytics routes
-		api.GET("/analytics/usage", s.proxyTo("analytics-service", "/analytics/usage"))
+		// Analytics routes. analytics-service (services/analytics-service/
+		// internal/server/server.go:34-39) has no "usage" endpoint
+		// anywhere (only event CRUD and a stats/event-types breakdown — a
+		// different concept from usage/quota metrics).
+		api.GET("/analytics/usage", s.notImplemented("analytics.usage",
+			"analytics-service has no usage/quota endpoint anywhere"))
 
-		// AI routes
-		api.POST("/ai/autocomplete", s.proxyTo("ai-service", "/ai/autocomplete"))
-		api.POST("/ai/explain", s.proxyTo("ai-service", "/ai/explain"))
+		// AI routes. ai-service (services/ai-service/internal/server/
+		// server.go:41-45) only has a generic, undifferentiated
+		// CreateAIRequest (prompt/context/model — no type/kind field). There
+		// is no autocomplete- or explain-specific prompting logic anywhere;
+		// silently routing these through the generic endpoint would fake a
+		// feature that doesn't exist.
+		api.POST("/ai/autocomplete", s.notImplemented("ai.autocomplete",
+			"ai-service has no autocomplete-specific endpoint or prompting logic; only a generic, undifferentiated AI request resource exists"))
+		api.POST("/ai/explain", s.notImplemented("ai.explain",
+			"ai-service has no explain-specific endpoint or prompting logic; only a generic, undifferentiated AI request resource exists"))
 
-		// Notification routes
-		api.GET("/notifications", s.proxyTo("notification-service", "/notifications"))
-		api.POST("/notifications", s.proxyTo("notification-service", "/notifications"))
-		api.POST("/notifications/:notificationId/read", s.proxyTo("notification-service", "/notifications/:notificationId/read"))
+		// Notification routes. notification-service (services/
+		// notification-service/internal/server/server.go:96-107) mounts
+		// under "/api/v1/notifications".
+		api.GET("/notifications", s.proxyTo("notification-service", "/api/v1/notifications"))
+		api.POST("/notifications", s.proxyTo("notification-service", "/api/v1/notifications"))
+		api.POST("/notifications/:notificationId/read", s.proxyTo("notification-service", "/api/v1/notifications/:notificationId/read"))
 
-		// Billing routes
-		api.GET("/billing/subscription", s.proxyTo("billing-service", "/billing/subscription"))
-		api.GET("/billing/usage", s.proxyTo("billing-service", "/billing/usage"))
-		api.GET("/billing/invoices", s.proxyTo("billing-service", "/billing/invoices"))
+		// Billing routes. billing-service (services/billing-service/
+		// internal/server/server.go:41-49) has no "usage" endpoint
+		// anywhere. Its ListSubscriptions is NOT auto-scoped to the caller
+		// — it filters by an optional orgId QUERY parameter and returns
+		// everything when omitted (services/billing-service/internal/
+		// handler/handler.go:83-101); there is no "my current subscription"
+		// endpoint. Proxying "/billing/subscription" straight to the list
+		// would silently turn a "my subscription" request into an
+		// unscoped, cross-tenant list — an honest gap is safer than that.
+		api.GET("/billing/subscription", s.notImplemented("billing.subscription",
+			"billing-service has no self-scoped \"current subscription\" endpoint; its list is unscoped by caller unless an orgId query param is supplied, so mapping straight to the list risks a cross-tenant data leak"))
+		api.GET("/billing/usage", s.notImplemented("billing.usage",
+			"billing-service has no usage endpoint anywhere"))
+		api.GET("/billing/invoices", s.proxyTo("billing-service", "/api/v1/invoices"))
 
-		// PKI routes
-		api.POST("/pki/certificates", s.proxyTo("pki-service", "/pki/certificates"))
-		api.POST("/pki/certificates/:certId/revoke", s.proxyTo("pki-service", "/pki/certificates/:certId/revoke"))
+		// PKI routes. pki-service (services/pki-service/internal/server/
+		// server.go:92-99) requires a CA id as the SOLE source of the
+		// issuing CA (c.Param("id") only, no body fallback — internal/
+		// handler/handler.go:200-205); certificate creation is necessarily
+		// CA-scoped. The gateway's flat "/pki/certificates" route had no
+		// way to carry that id at all, so the gateway ROUTE itself is
+		// corrected (not just the proxied path) to add the required
+		// :caId segment.
+		api.POST("/pki/ca/:caId/certs", s.proxyTo("pki-service", "/api/v1/pki/ca/:caId/certs"))
+		api.POST("/pki/certificates/:certId/revoke", s.proxyTo("pki-service", "/api/v1/pki/certs/:certId/revoke"))
 
-		// Config routes
-		api.GET("/config", s.proxyTo("config-service", "/config"))
+		// Config routes. config-service (services/config-service/internal/
+		// server/server.go:88-96) mounts the PLURAL "/api/v1/configs".
+		api.GET("/config", s.proxyTo("config-service", "/api/v1/configs"))
 
-		// System routes
-		api.GET("/system/status", s.proxyTo("health-service", "/system/status"))
-		api.GET("/system/maintenance", s.proxyTo("health-service", "/system/maintenance"))
+		// System routes. health-service (services/health-service/internal/
+		// server/server.go:64-68) has no dedicated "/system/status" path,
+		// but GetSystemHealth (mounted at "/api/v1/health/system") IS a
+		// genuine, real system-wide status rollup (calls
+		// checker.CheckAll(), returns an OverallStatus field) — a real,
+		// direct match, not a stretch. There is no maintenance-mode concept
+		// anywhere in health-service.
+		api.GET("/system/status", s.proxyTo("health-service", "/api/v1/health/system"))
+		api.GET("/system/maintenance", s.notImplemented("system.maintenance",
+			"health-service has no maintenance-mode concept anywhere"))
 	}
 
 	// WebSocket terminal endpoint
@@ -689,6 +833,28 @@ func (s *Server) ssoHandler(c *gin.Context) {
 func (s *Server) ssoCallbackHandler(c *gin.Context) {
 	// TODO: implement SSO callback handling
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "SSO callback not yet implemented"})
+}
+
+// notImplemented returns a handler for a gateway route that has no
+// corresponding real upstream capability anywhere in the fleet (re-verified
+// per §11.4.6 against every upstream service's current route registration
+// and request-model contract, not merely inherited from a prior audit).
+// This is the honest alternative to either (a) silently proxying to a
+// upstream path that would 404 at the upstream's own router before any
+// real handler runs, or (b) fabricating a mapping onto an unrelated
+// endpoint that would produce a misleading result. feature is a short,
+// stable machine-readable identifier (dot-separated, mirrors the route);
+// reason is the human-readable evidence for why no real mapping exists,
+// intended to point a future implementer at exactly what would need to be
+// built (composes §11.4.3 SKIP-with-reason, applied to routing).
+func (s *Server) notImplemented(feature, reason string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusNotImplemented, gin.H{
+			"error":   "not implemented",
+			"feature": feature,
+			"reason":  reason,
+		})
+	}
 }
 
 // hopByHopHeaders are per-connection headers that MUST NOT be forwarded
