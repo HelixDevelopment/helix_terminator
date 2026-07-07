@@ -15,7 +15,7 @@ import (
 func setupTestRouter() (*gin.Engine, *Handler) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	h := New(nil)
+	h := New(nil, nil)
 	router.GET("/healthz", h.HealthCheck)
 	router.GET("/healthz/ready", h.ReadinessCheck)
 	return router, h

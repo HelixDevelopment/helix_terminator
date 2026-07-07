@@ -1,23 +1,40 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/container-bridge-service/internal/containerrt"
 	"github.com/helixdevelopment/container-bridge-service/internal/model"
-	"github.com/helixdevelopment/container-bridge-service/internal/repository"
 )
+
+// BridgeStore is the persistence surface Handler needs. It is satisfied
+// structurally by *repository.Repository (the real, Postgres-backed store)
+// and by any test fake, without repository.go needing to change or the
+// handler package needing to import it directly.
+type BridgeStore interface {
+	CreateBridge(ctx context.Context, bridge *model.ContainerBridge) error
+	GetBridgeByID(ctx context.Context, id uuid.UUID) (*model.ContainerBridge, error)
+	ListBridges(ctx context.Context, hostID uuid.UUID, limit, offset int) ([]*model.ContainerBridge, int, error)
+	UpdateBridge(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error
+	DeleteBridge(ctx context.Context, id uuid.UUID) error
+	Ping(ctx context.Context) error
+}
 
 // Handler contains HTTP handlers for container-bridge
 type Handler struct {
-	repo *repository.Repository
+	repo    BridgeStore
+	backend containerrt.Backend
 }
 
-// New creates a new Handler
-func New(repo *repository.Repository) *Handler {
-	return &Handler{repo: repo}
+// New creates a new Handler. backend may be nil when no supported container
+// runtime was detected at startup; every route that needs it degrades to an
+// honest 503 rather than fabricating container state.
+func New(repo BridgeStore, backend containerrt.Backend) *Handler {
+	return &Handler{repo: repo, backend: backend}
 }
 
 // CreateBridge creates a new container bridge

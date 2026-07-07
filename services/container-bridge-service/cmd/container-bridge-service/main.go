@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/helixdevelopment/container-bridge-service/internal/containerrt"
 	"github.com/helixdevelopment/container-bridge-service/internal/handler"
 	"github.com/helixdevelopment/container-bridge-service/internal/repository"
 	"github.com/helixdevelopment/container-bridge-service/internal/server"
@@ -35,7 +36,20 @@ func run() error {
 	defer pool.Close()
 
 	repo := repository.New(pool)
-	h := handler.New(repo)
+
+	// Detect the local container runtime (Podman-first per §11.4.161, override
+	// via CONTAINER_RUNTIME_PRIORITY). A detection failure is NOT fatal to the
+	// service — it degrades every container-lifecycle route to an honest 503
+	// rather than fabricating container state (see internal/handler).
+	rtCtx, rtCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	backend, backendErr := containerrt.Detect(rtCtx, os.Getenv("CONTAINER_RUNTIME_PRIORITY"))
+	rtCancel()
+	if backendErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: no container runtime available: %v\n", backendErr)
+		backend = nil
+	}
+
+	h := handler.New(repo, backend)
 	srv := server.New(h)
 
 	return srv.Run()
