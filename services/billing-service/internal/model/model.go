@@ -72,9 +72,14 @@ type UpdateSubscriptionRequest struct {
 	Status *string `json:"status,omitempty" binding:"omitempty,oneof=active canceled expired"`
 }
 
-// ListSubscriptionsRequest represents a request to list subscriptions
+// ListSubscriptionsRequest represents a request to list subscriptions.
+// Deliberately has NO OrgID field (T12): the tenant filter comes
+// exclusively from the caller's authenticated identity (see
+// internal/handler.callerOrgID), never from client-supplied input — a
+// client-controlled org filter is exactly how the cross-tenant leak
+// occurred (an omitted or arbitrary value bypassed tenant scoping
+// entirely).
 type ListSubscriptionsRequest struct {
-	OrgID  string `form:"orgId"`
 	Status string `form:"status"`
 	Limit  int    `form:"limit,default=20"`
 	Offset int    `form:"offset,default=0"`

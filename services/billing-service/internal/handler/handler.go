@@ -22,6 +22,33 @@ func New(repo *repository.Repository) *Handler {
 	return &Handler{repo: repo}
 }
 
+// callerOrgID returns the requesting tenant's org ID as established by the
+// server's auth middleware (context key "orgID", populated from a
+// validated JWT claim — see internal/server/server.go). It is the SOLE
+// source of truth for tenant scoping on every billing read endpoint (T12):
+// a client-supplied "orgId" query parameter or path segment MUST NEVER be
+// trusted to select which tenant's data is served, since any caller could
+// then read another tenant's subscriptions/invoices (or, if omitted,
+// every tenant's data at once) by supplying an arbitrary or absent value.
+// Returns ok=false when no valid identity is present, in which case the
+// caller MUST reject the request (401) rather than fall back to serving
+// unscoped data.
+func callerOrgID(c *gin.Context) (uuid.UUID, bool) {
+	val, exists := c.Get("orgID")
+	if !exists {
+		return uuid.Nil, false
+	}
+	str, ok := val.(string)
+	if !ok || str == "" {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(str)
+	if err != nil || id == uuid.Nil {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
 // CreateSubscription handles subscription creation
 func (h *Handler) CreateSubscription(c *gin.Context) {
 	var req model.CreateSubscriptionRequest
@@ -63,6 +90,12 @@ func (h *Handler) GetSubscription(c *gin.Context) {
 		return
 	}
 
+	callerOrg, ok := callerOrgID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid caller identity"})
+		return
+	}
+
 	sub, err := h.repo.GetSubscriptionByID(c.Request.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
@@ -74,6 +107,15 @@ func (h *Handler) GetSubscription(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get subscription"})
+		return
+	}
+	// T12: a subscription that exists but belongs to a DIFFERENT tenant
+	// must be indistinguishable from one that does not exist at all —
+	// the same "subscription not found" response the ID-genuinely-missing
+	// case already returns, so a cross-tenant probe cannot even confirm
+	// another tenant's subscription ID is valid.
+	if sub.OrgID != callerOrg {
+		c.JSON(http.StatusNotFound, gin.H{"error": "subscription not found"})
 		return
 	}
 	c.JSON(http.StatusOK, toSubscriptionResponse(sub))
@@ -93,9 +135,14 @@ func (h *Handler) ListSubscriptions(c *gin.Context) {
 		req.Limit = 100
 	}
 
-	var orgID uuid.UUID
-	if req.OrgID != "" {
-		orgID, _ = uuid.Parse(req.OrgID)
+	// T12: the tenant filter comes EXCLUSIVELY from the authenticated
+	// caller's identity, never from a client-supplied query parameter —
+	// previously an omitted (or arbitrary) "orgId" query parameter meant
+	// this endpoint returned every tenant's subscriptions.
+	orgID, ok := callerOrgID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid caller identity"})
+		return
 	}
 
 	subs, total, err := h.repo.ListSubscriptions(c.Request.Context(), orgID, req.Status, req.Limit, req.Offset)
@@ -195,6 +242,12 @@ func (h *Handler) GetInvoice(c *gin.Context) {
 		return
 	}
 
+	callerOrg, ok := callerOrgID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid caller identity"})
+		return
+	}
+
 	inv, err := h.repo.GetInvoiceByID(c.Request.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
@@ -208,17 +261,28 @@ func (h *Handler) GetInvoice(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get invoice"})
 		return
 	}
+	// T12: same not-found-for-a-different-tenant treatment as
+	// GetSubscription — a cross-tenant probe must not be able to
+	// distinguish "exists but not yours" from "does not exist".
+	if inv.OrgID != callerOrg {
+		c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
+		return
+	}
 	c.JSON(http.StatusOK, toInvoiceResponse(inv))
 }
 
-// ListInvoices handles listing invoices for an org
+// ListInvoices handles listing invoices for the caller's own org
 func (h *Handler) ListInvoices(c *gin.Context) {
-	orgIDStr := c.Query("orgId")
-	if orgIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "orgId query parameter required"})
+	// T12: the tenant filter comes EXCLUSIVELY from the authenticated
+	// caller's identity, never from the client-supplied "orgId" query
+	// parameter this endpoint previously required and trusted verbatim —
+	// any caller could read any other tenant's invoices by supplying that
+	// tenant's org ID.
+	orgID, ok := callerOrgID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid caller identity"})
 		return
 	}
-	orgID, _ := uuid.Parse(orgIDStr)
 
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	if limit <= 0 || limit > 100 {
