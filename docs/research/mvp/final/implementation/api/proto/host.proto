@@ -93,7 +93,7 @@ message HostNetworkInfo {
   string public_ip = 2;
   string private_ip = 3;
   repeated string dns_names = 4;
-  repeated open_ports = 5;
+  repeated OpenPort open_ports = 5;
 }
 
 message OpenPort {

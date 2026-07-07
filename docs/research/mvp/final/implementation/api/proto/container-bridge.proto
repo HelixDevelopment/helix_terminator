@@ -115,6 +115,36 @@ message ContainerFiles {
   repeated ContainerFile files = 2;
 }
 
+message ContainerNetwork {
+  string name = 1;
+  string network_id = 2;
+  string driver = 3;
+  string ip_address = 4;
+  int32 ip_prefix_len = 5;
+  string gateway = 6;
+  string mac_address = 7;
+}
+
+message ContainerNetworks {
+  string id = 1;
+  repeated ContainerNetwork networks = 2;
+}
+
+message ContainerVolume {
+  string name = 1;
+  string source = 2;
+  string destination = 3;
+  string driver = 4;
+  string mode = 5;
+  bool read_write = 6;
+  string type = 7;
+}
+
+message ContainerVolumes {
+  string id = 1;
+  repeated ContainerVolume volumes = 2;
+}
+
 message FileInfo {
   string path = 1;
   string name = 2;
