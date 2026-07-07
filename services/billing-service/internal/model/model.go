@@ -8,56 +8,56 @@ import (
 
 // BillingPlan represents a subscription plan
 type BillingPlan struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Slug        string    `json:"slug" db:"slug"`
-	Description string    `json:"description" db:"description"`
-	PriceCents  int       `json:"priceCents" db:"price_cents"`
-	Currency    string    `json:"currency" db:"currency"`
-	Interval    string    `json:"interval" db:"interval"`
-	Features    []string  `json:"features" db:"features"`
+	ID          uuid.UUID              `json:"id" db:"id"`
+	Name        string                 `json:"name" db:"name"`
+	Slug        string                 `json:"slug" db:"slug"`
+	Description string                 `json:"description" db:"description"`
+	PriceCents  int                    `json:"priceCents" db:"price_cents"`
+	Currency    string                 `json:"currency" db:"currency"`
+	Interval    string                 `json:"interval" db:"interval"`
+	Features    []string               `json:"features" db:"features"`
 	Limits      map[string]interface{} `json:"limits,omitempty" db:"limits"`
-	IsActive    bool      `json:"isActive" db:"is_active"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+	IsActive    bool                   `json:"isActive" db:"is_active"`
+	CreatedAt   time.Time              `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time              `json:"updatedAt" db:"updated_at"`
 }
 
 // Subscription represents an organization subscription
 type Subscription struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	OrgID       uuid.UUID `json:"orgId" db:"org_id"`
-	PlanID      uuid.UUID `json:"planId" db:"plan_id"`
-	Status      string    `json:"status" db:"status"`
-	StartedAt   time.Time `json:"startedAt" db:"started_at"`
-	EndsAt      *time.Time `json:"endsAt,omitempty" db:"ends_at"`
-	CanceledAt  *time.Time `json:"canceledAt,omitempty" db:"canceled_at"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+	ID         uuid.UUID  `json:"id" db:"id"`
+	OrgID      uuid.UUID  `json:"orgId" db:"org_id"`
+	PlanID     uuid.UUID  `json:"planId" db:"plan_id"`
+	Status     string     `json:"status" db:"status"`
+	StartedAt  time.Time  `json:"startedAt" db:"started_at"`
+	EndsAt     *time.Time `json:"endsAt,omitempty" db:"ends_at"`
+	CanceledAt *time.Time `json:"canceledAt,omitempty" db:"canceled_at"`
+	CreatedAt  time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt  time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // Invoice represents a billing invoice
 type Invoice struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	OrgID       uuid.UUID `json:"orgId" db:"org_id"`
-	SubscriptionID uuid.UUID `json:"subscriptionId" db:"subscription_id"`
-	AmountCents int       `json:"amountCents" db:"amount_cents"`
-	Currency    string    `json:"currency" db:"currency"`
-	Status      string    `json:"status" db:"status"`
-	DueDate     time.Time `json:"dueDate" db:"due_date"`
-	PaidAt      *time.Time `json:"paidAt,omitempty" db:"paid_at"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+	ID             uuid.UUID  `json:"id" db:"id"`
+	OrgID          uuid.UUID  `json:"orgId" db:"org_id"`
+	SubscriptionID uuid.UUID  `json:"subscriptionId" db:"subscription_id"`
+	AmountCents    int        `json:"amountCents" db:"amount_cents"`
+	Currency       string     `json:"currency" db:"currency"`
+	Status         string     `json:"status" db:"status"`
+	DueDate        time.Time  `json:"dueDate" db:"due_date"`
+	PaidAt         *time.Time `json:"paidAt,omitempty" db:"paid_at"`
+	CreatedAt      time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt      time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // UsageRecord represents a resource usage record
 type UsageRecord struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	OrgID       uuid.UUID `json:"orgId" db:"org_id"`
-	ResourceType string   `json:"resourceType" db:"resource_type"`
-	Quantity    int       `json:"quantity" db:"quantity"`
-	PeriodStart time.Time `json:"periodStart" db:"period_start"`
-	PeriodEnd   time.Time `json:"periodEnd" db:"period_end"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	ID           uuid.UUID `json:"id" db:"id"`
+	OrgID        uuid.UUID `json:"orgId" db:"org_id"`
+	ResourceType string    `json:"resourceType" db:"resource_type"`
+	Quantity     int       `json:"quantity" db:"quantity"`
+	PeriodStart  time.Time `json:"periodStart" db:"period_start"`
+	PeriodEnd    time.Time `json:"periodEnd" db:"period_end"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 }
 
 // CreateSubscriptionRequest represents a request to create a subscription.

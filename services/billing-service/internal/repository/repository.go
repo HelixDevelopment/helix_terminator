@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/billing-service/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/helixdevelopment/billing-service/internal/model"
 )
 
 // Repository handles billing data access
