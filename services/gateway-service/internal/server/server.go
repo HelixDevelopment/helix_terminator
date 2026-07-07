@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -700,19 +701,29 @@ var hopByHopHeaders = []string{
 // resolvePathParams substitutes gin route params (":name") in the given
 // upstream path template with their real values from the current request,
 // e.g. "/hosts/:hostId" + c.Param("hostId")=="h-1" -> "/hosts/h-1".
-func resolvePathParams(template string, c *gin.Context) string {
+func resolvePathParams(template string, c *gin.Context) (string, bool) {
 	if !strings.Contains(template, ":") {
-		return template
+		return template, true
 	}
 	segments := strings.Split(template, "/")
 	for i, seg := range segments {
 		if strings.HasPrefix(seg, ":") {
-			if val := c.Param(seg[1:]); val != "" {
-				segments[i] = val
+			val := c.Param(seg[1:])
+			if val == "" {
+				continue
 			}
+			// A route param occupies exactly one path segment. Reject values that
+			// could break out of it — path/query/fragment separators and traversal
+			// sequences — so a caller can never inject into the upstream host, path,
+			// or query. Then URL-escape the remainder so it stays confined to its
+			// own path component (defends against SSRF / path-injection).
+			if strings.ContainsAny(val, "/?#") || strings.Contains(val, "..") {
+				return "", false
+			}
+			segments[i] = url.PathEscape(val)
 		}
 	}
-	return strings.Join(segments, "/")
+	return strings.Join(segments, "/"), true
 }
 
 // proxyTo returns a handler that performs a REAL reverse-proxy hop to the
@@ -737,7 +748,14 @@ func (s *Server) proxyTo(serviceName, path string) gin.HandlerFunc {
 			return
 		}
 
-		targetPath := resolvePathParams(path, c)
+		targetPath, okPath := resolvePathParams(path, c)
+		if !okPath {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "invalid path parameter",
+				"service": serviceName,
+			})
+			return
+		}
 		targetURL := strings.TrimRight(upstream.Address, "/") + targetPath
 		if rawQuery := c.Request.URL.RawQuery; rawQuery != "" {
 			targetURL += "?" + rawQuery
