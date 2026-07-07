@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package helixterm.common.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/common/v1;commonv1";
+
+import "google/protobuf/timestamp.proto";
+
+// AuditLogEntry is the lightweight, cross-service audit-log entry shared by
+// every service's own "get/stream audit log for this resource" RPC family
+// (Config, Gateway, HelixTrack-Bridge, Host, Organization, Recording, User,
+// Workspace). It was previously copy-pasted byte-for-byte into 8 separate
+// per-service proto files under package helixterm.v1; this is the single
+// canonical definition.
+//
+// The richer, full-detail audit-trail entry (actor_type, organization_id,
+// workspace_id, session_id, ip_address, user_agent, result, severity,
+// integrity_hash) owned by the dedicated Audit service is a DIFFERENT,
+// intentionally distinct type: helixterm.audit.v1.AuditLogEntry
+// (api/proto/audit.proto).
+message AuditLogEntry {
+  string id = 1;
+  string action = 2;
+  string actor_id = 3;
+  string resource_type = 4;
+  string resource_id = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  map<string, string> metadata = 7;
+}
+
+// AuditLogStream wraps a page/batch of AuditLogEntry, returned by the same
+// per-service "get audit log" RPC family described above.
+message AuditLogStream {
+  repeated AuditLogEntry entries = 1;
+}
+
+// ValidationResult is the generic validate-and-report-errors/warnings result
+// shared by every "Validate*" RPC across services (Config, Gateway,
+// PortForward, Snippet). It was previously copy-pasted byte-for-byte into 4
+// separate per-service proto files.
+message ValidationResult {
+  bool valid = 1;
+  repeated string errors = 2;
+  repeated string warnings = 3;
+}
+
+// Session is the lightweight, cross-service session summary (id, user_id,
+// host_id, status, created_at, expires_at) embedded wherever a service lists
+// sessions it does not own (Host, User, Workspace). It was previously
+// copy-pasted byte-for-byte into those 3 separate per-service proto files.
+//
+// The richer, canonical authentication session (device_id, ip_address,
+// user_agent, mfa_verified, etc.) owned by the Auth service is a DIFFERENT,
+// intentionally distinct type: helixterm.auth.v1.Session (api/proto/auth.proto).
+message Session {
+  string id = 1;
+  string user_id = 2;
+  string host_id = 3;
+  string status = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+// FileInfo is the lightweight, cross-service file descriptor (path, name,
+// size, type, modified_at) embedded wherever a service references a file it
+// does not own the storage layer for (ContainerBridge, Workspace). It was
+// previously copy-pasted byte-for-byte into those 2 separate per-service
+// proto files.
+//
+// The richer, canonical file descriptor (permissions, owner, group,
+// created_at, checksum) owned by the SFTP service is a DIFFERENT,
+// intentionally distinct type: helixterm.sftp.v1.FileInfo (api/proto/sftp.proto).
+message FileInfo {
+  string path = 1;
+  string name = 2;
+  int64 size = 3;
+  string type = 4;
+  google.protobuf.Timestamp modified_at = 5;
+}
+
+// ActivityRecord is the shared "actor performed action on resource at time"
+// activity-feed entry used by services that report activity attributable to
+// a third-party actor (Organization, Workspace). It was previously
+// copy-pasted byte-for-byte into those 2 separate per-service proto files.
+//
+// The User service's own per-user activity record intentionally omits
+// actor_id (the actor is always the user themselves) and stays local as the
+// DIFFERENT, distinct type helixterm.user.v1.ActivityRecord (api/proto/user.proto).
+message ActivityRecord {
+  string action = 1;
+  string actor_id = 2;
+  string resource_type = 3;
+  string resource_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// ConnectionTestResult is the generic network-reachability probe result
+// shared by every "Test*Connection" RPC across services (Host, PortForward).
+// It was previously copy-pasted byte-for-byte into those 2 separate
+// per-service proto files.
+message ConnectionTestResult {
+  bool success = 1;
+  float latency_ms = 2;
+  string message = 3;
+  google.protobuf.Timestamp tested_at = 4;
+}

@@ -1,0 +1,92 @@
+syntax = "proto3";
+package helixterm.keychain.v1;
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/keychain/v1;keychainv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// KeychainService provides hardware-backed key storage operations.
+// gRPC-only; no REST surface.
+service KeychainService {
+  rpc WrapKey(WrapKeyRequest) returns (WrapKeyResponse);
+  rpc UnwrapKey(UnwrapKeyRequest) returns (UnwrapKeyResponse);
+  rpc RotateKey(RotateKeyRequest) returns (RotateKeyResponse);
+  rpc GetHardwareKey(GetHardwareKeyRequest) returns (GetHardwareKeyResponse);
+  rpc ListHardwareKeys(ListHardwareKeysRequest) returns (ListHardwareKeysResponse);
+  rpc DeleteHardwareKey(DeleteHardwareKeyRequest) returns (google.protobuf.Empty);
+}
+
+message WrapKeyRequest {
+  string key_id = 1;
+  bytes plaintext_key = 2;
+  string key_type = 3; // "aes", "ssh", "pgp"
+  string wrapping_key_id = 4;
+}
+
+message WrapKeyResponse {
+  string wrapped_key_id = 1;
+  bytes wrapped_key = 2;
+  string wrapping_key_id = 3;
+  google.protobuf.Timestamp wrapped_at = 4;
+}
+
+message UnwrapKeyRequest {
+  string wrapped_key_id = 1;
+  bytes wrapped_key = 2;
+  string wrapping_key_id = 3;
+  string user_id = 4;
+}
+
+message UnwrapKeyResponse {
+  bytes plaintext_key = 1;
+  string key_type = 2;
+  google.protobuf.Timestamp unwrapped_at = 3;
+}
+
+message RotateKeyRequest {
+  string key_id = 1;
+  string user_id = 2;
+  string org_id = 3;
+  string reason = 4;
+}
+
+message RotateKeyResponse {
+  string new_key_id = 1;
+  string old_key_id = 2;
+  google.protobuf.Timestamp rotated_at = 3;
+}
+
+message GetHardwareKeyRequest {
+  string key_id = 1;
+  string user_id = 2;
+}
+
+message HardwareKeyInfo {
+  string key_id = 1;
+  string name = 2;
+  string key_type = 3;
+  string algorithm = 4;
+  string storage_type = 5; // "secure_enclave", "android_keystore", "dpapi", "kernel_keyring", "hsm"
+  string fingerprint = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp last_used_at = 8;
+}
+
+message GetHardwareKeyResponse {
+  HardwareKeyInfo key = 1;
+}
+
+message ListHardwareKeysRequest {
+  string user_id = 1;
+  string org_id = 2;
+}
+
+message ListHardwareKeysResponse {
+  repeated HardwareKeyInfo keys = 1;
+}
+
+message DeleteHardwareKeyRequest {
+  string key_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}

@@ -1,0 +1,106 @@
+syntax = "proto3";
+package helixterm.vault.v1;
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/vault/v1;vaultv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// VaultService provides internal vault operations for other microservices.
+service VaultService {
+  rpc GetVault(GetVaultRequest) returns (Vault);
+  rpc CheckVaultAccess(CheckVaultAccessRequest) returns (CheckVaultAccessResponse);
+  rpc GetVaultMember(GetVaultMemberRequest) returns (VaultMember);
+  rpc RecordVaultEvent(RecordVaultEventRequest) returns (google.protobuf.Empty);
+  rpc GetVaultSyncState(GetVaultSyncStateRequest) returns (VaultSyncState);
+  rpc UpdateVaultSyncState(UpdateVaultSyncStateRequest) returns (google.protobuf.Empty);
+  rpc GetEncryptedVaultKey(GetEncryptedVaultKeyRequest) returns (GetEncryptedVaultKeyResponse);
+  rpc ListVaultMembers(ListVaultMembersRequest) returns (ListVaultMembersResponse);
+}
+
+message GetVaultRequest {
+  string vault_id = 1;
+}
+
+message Vault {
+  string id = 1;
+  string name = 2;
+  string owner_id = 3;
+  string org_id = 4;
+  bool sync_enabled = 5;
+  bool encrypted = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message CheckVaultAccessRequest {
+  string vault_id = 1;
+  string user_id = 2;
+  string required_permission = 3;
+}
+
+message CheckVaultAccessResponse {
+  bool allowed = 1;
+  string permission = 2;
+  string reason = 3;
+}
+
+message GetVaultMemberRequest {
+  string vault_id = 1;
+  string user_id = 2;
+}
+
+message VaultMember {
+  string vault_id = 1;
+  string user_id = 2;
+  string permission = 3;
+  bytes encrypted_vault_key = 4;
+  google.protobuf.Timestamp joined_at = 5;
+}
+
+message RecordVaultEventRequest {
+  string vault_id = 1;
+  string user_id = 2;
+  string event_type = 3;
+  string resource_type = 4;
+  string resource_id = 5;
+  bytes metadata_json = 6;
+  string ip_address = 7;
+}
+
+message GetVaultSyncStateRequest {
+  string vault_id = 1;
+  string client_id = 2;
+}
+
+message VaultSyncState {
+  string vault_id = 1;
+  string client_id = 2;
+  string cursor = 3;
+  google.protobuf.Timestamp last_synced_at = 4;
+  int64 server_version = 5;
+}
+
+message UpdateVaultSyncStateRequest {
+  string vault_id = 1;
+  string client_id = 2;
+  string cursor = 3;
+  int64 server_version = 4;
+}
+
+message GetEncryptedVaultKeyRequest {
+  string vault_id = 1;
+  string user_id = 2;
+}
+
+message GetEncryptedVaultKeyResponse {
+  bytes encrypted_key_blob = 1;
+  bytes kdf_params_json = 2;
+}
+
+message ListVaultMembersRequest {
+  string vault_id = 1;
+}
+
+message ListVaultMembersResponse {
+  repeated VaultMember members = 1;
+}

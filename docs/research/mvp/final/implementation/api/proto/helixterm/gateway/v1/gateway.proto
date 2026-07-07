@@ -1,0 +1,606 @@
+syntax = "proto3";
+
+package helixterm.gateway.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/gateway/v1;gatewayv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "helixterm/common/v1/common.proto";
+
+service GatewayService {
+  rpc GetGatewayConfig(google.protobuf.Empty) returns (GatewayConfig);
+  rpc UpdateGatewayConfig(UpdateGatewayConfigRequest) returns (GatewayConfig);
+  rpc GetRoutes(GetRoutesRequest) returns (Routes);
+  rpc CreateRoute(CreateRouteRequest) returns (Route);
+  rpc UpdateRoute(UpdateRouteRequest) returns (Route);
+  rpc DeleteRoute(DeleteRouteRequest) returns (google.protobuf.Empty);
+  rpc GetRateLimits(GetRateLimitsRequest) returns (RateLimits);
+  rpc UpdateRateLimits(UpdateRateLimitsRequest) returns (RateLimits);
+  rpc GetAuthenticationPolicies(google.protobuf.Empty) returns (AuthenticationPolicies);
+  rpc UpdateAuthenticationPolicies(UpdateAuthenticationPoliciesRequest) returns (AuthenticationPolicies);
+  rpc GetCORSConfig(google.protobuf.Empty) returns (CORSConfig);
+  rpc UpdateCORSConfig(UpdateCORSConfigRequest) returns (CORSConfig);
+  rpc GetSSLConfig(google.protobuf.Empty) returns (SSLConfig);
+  rpc UpdateSSLConfig(UpdateSSLConfigRequest) returns (SSLConfig);
+  rpc GetLoadBalancerConfig(google.protobuf.Empty) returns (LoadBalancerConfig);
+  rpc UpdateLoadBalancerConfig(UpdateLoadBalancerConfigRequest) returns (LoadBalancerConfig);
+  rpc GetCacheConfig(google.protobuf.Empty) returns (CacheConfig);
+  rpc UpdateCacheConfig(UpdateCacheConfigRequest) returns (CacheConfig);
+  rpc GetCircuitBreakerConfig(google.protobuf.Empty) returns (CircuitBreakerConfig);
+  rpc UpdateCircuitBreakerConfig(UpdateCircuitBreakerConfigRequest) returns (CircuitBreakerConfig);
+  rpc GetRetryConfig(google.protobuf.Empty) returns (RetryConfig);
+  rpc UpdateRetryConfig(UpdateRetryConfigRequest) returns (RetryConfig);
+  rpc GetTimeoutConfig(google.protobuf.Empty) returns (TimeoutConfig);
+  rpc UpdateTimeoutConfig(UpdateTimeoutConfigRequest) returns (TimeoutConfig);
+  rpc GetLoggingConfig(google.protobuf.Empty) returns (LoggingConfig);
+  rpc UpdateLoggingConfig(UpdateLoggingConfigRequest) returns (LoggingConfig);
+  rpc GetMetricsConfig(google.protobuf.Empty) returns (MetricsConfig);
+  rpc UpdateMetricsConfig(UpdateMetricsConfigRequest) returns (MetricsConfig);
+  rpc GetTracingConfig(google.protobuf.Empty) returns (TracingConfig);
+  rpc UpdateTracingConfig(UpdateTracingConfigRequest) returns (TracingConfig);
+  rpc GetWebSocketConfig(google.protobuf.Empty) returns (WebSocketConfig);
+  rpc UpdateWebSocketConfig(UpdateWebSocketConfigRequest) returns (WebSocketConfig);
+  rpc GetIPWhitelist(google.protobuf.Empty) returns (IPWhitelist);
+  rpc UpdateIPWhitelist(UpdateIPWhitelistRequest) returns (IPWhitelist);
+  rpc GetIPBlacklist(google.protobuf.Empty) returns (IPBlacklist);
+  rpc UpdateIPBlacklist(UpdateIPBlacklistRequest) returns (IPBlacklist);
+  rpc GetGatewayMetrics(google.protobuf.Empty) returns (GatewayMetrics);
+  rpc GetGatewayLogs(GetGatewayLogsRequest) returns (GatewayLogStream);
+  rpc StreamGatewayLogs(StreamGatewayLogsRequest) returns (stream GatewayLogEntry);
+  rpc GetGatewayHealth(google.protobuf.Empty) returns (GatewayHealth);
+  rpc ReloadGateway(ReloadGatewayRequest) returns (google.protobuf.Empty);
+  rpc GetGatewayVersion(google.protobuf.Empty) returns (GatewayVersion);
+  rpc GetGatewayStatus(google.protobuf.Empty) returns (GatewayStatus);
+  rpc GetGatewayTopology(google.protobuf.Empty) returns (GatewayTopology);
+  rpc ValidateGatewayConfig(ValidateGatewayConfigRequest) returns (common.v1.ValidationResult);
+  rpc GetGatewayAuditLog(GetGatewayAuditLogRequest) returns (common.v1.AuditLogStream);
+  rpc GetGatewayAlerts(GetGatewayAlertsRequest) returns (GatewayAlerts);
+  rpc CreateGatewayAlert(CreateGatewayAlertRequest) returns (GatewayAlert);
+  rpc UpdateGatewayAlert(UpdateGatewayAlertRequest) returns (GatewayAlert);
+  rpc DeleteGatewayAlert(DeleteGatewayAlertRequest) returns (google.protobuf.Empty);
+  rpc GetGatewayBackups(google.protobuf.Empty) returns (GatewayBackups);
+  rpc CreateGatewayBackup(google.protobuf.Empty) returns (GatewayBackup);
+  rpc RestoreGatewayBackup(RestoreGatewayBackupRequest) returns (google.protobuf.Empty);
+  rpc GetGatewayPlugins(google.protobuf.Empty) returns (GatewayPlugins);
+  rpc InstallGatewayPlugin(InstallGatewayPluginRequest) returns (GatewayPlugin);
+  rpc UninstallGatewayPlugin(UninstallGatewayPluginRequest) returns (google.protobuf.Empty);
+  rpc EnableGatewayPlugin(EnableGatewayPluginRequest) returns (GatewayPlugin);
+  rpc DisableGatewayPlugin(DisableGatewayPluginRequest) returns (GatewayPlugin);
+}
+
+message GatewayConfig {
+  string version = 1;
+  string environment = 2;
+  bool debug_mode = 3;
+  map<string, string> metadata = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message Route {
+  string id = 1;
+  string path = 2;
+  string method = 3;
+  string service = 4;
+  string target_url = 5;
+  repeated string middleware = 6;
+  bool enabled = 7;
+  int32 priority = 8;
+  map<string, string> metadata = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message Routes {
+  repeated Route routes = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message RateLimit {
+  string id = 1;
+  string route_id = 2;
+  string client_type = 3;
+  int32 requests_per_second = 4;
+  int32 burst_size = 5;
+  string strategy = 6;
+  bool enabled = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message RateLimits {
+  repeated RateLimit rate_limits = 1;
+}
+
+message AuthenticationPolicy {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string config = 4;
+  repeated string routes = 5;
+  bool enabled = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message AuthenticationPolicies {
+  repeated AuthenticationPolicy policies = 1;
+}
+
+message CORSConfig {
+  bool enabled = 1;
+  repeated string allowed_origins = 2;
+  repeated string allowed_methods = 3;
+  repeated string allowed_headers = 4;
+  bool allow_credentials = 5;
+  int32 max_age = 6;
+  repeated string exposed_headers = 7;
+}
+
+message SSLConfig {
+  bool enabled = 1;
+  string certificate_path = 2;
+  string key_path = 3;
+  string ca_path = 4;
+  bool verify_client = 5;
+  repeated string protocols = 6;
+  repeated string ciphers = 7;
+  int32 session_timeout = 8;
+}
+
+message LoadBalancerConfig {
+  string strategy = 1;
+  int32 health_check_interval = 2;
+  int32 health_check_timeout = 3;
+  repeated string health_check_endpoints = 4;
+  map<string, string> metadata = 5;
+}
+
+message CacheConfig {
+  bool enabled = 1;
+  int32 default_ttl = 2;
+  int32 max_size_mb = 3;
+  string eviction_policy = 4;
+  repeated string cacheable_routes = 5;
+  map<string, string> metadata = 6;
+}
+
+message CircuitBreakerConfig {
+  bool enabled = 1;
+  int32 failure_threshold = 2;
+  int32 success_threshold = 3;
+  int32 timeout_seconds = 4;
+  int32 half_open_max_calls = 5;
+  map<string, string> metadata = 6;
+}
+
+message RetryConfig {
+  bool enabled = 1;
+  int32 max_retries = 2;
+  int32 initial_interval_ms = 3;
+  float backoff_multiplier = 4;
+  repeated int32 retryable_status_codes = 5;
+  map<string, string> metadata = 6;
+}
+
+message TimeoutConfig {
+  int32 connect_timeout_ms = 1;
+  int32 read_timeout_ms = 2;
+  int32 write_timeout_ms = 3;
+  int32 idle_timeout_ms = 4;
+  map<string, string> metadata = 5;
+}
+
+message LoggingConfig {
+  bool enabled = 1;
+  string level = 2;
+  string format = 3;
+  repeated string excluded_routes = 4;
+  bool log_request_body = 5;
+  bool log_response_body = 6;
+  map<string, string> metadata = 7;
+}
+
+message MetricsConfig {
+  bool enabled = 1;
+  string endpoint = 2;
+  int32 scrape_interval = 3;
+  repeated string excluded_routes = 4;
+  map<string, string> metadata = 5;
+}
+
+message TracingConfig {
+  bool enabled = 1;
+  string provider = 2;
+  string endpoint = 3;
+  float sampling_rate = 4;
+  map<string, string> metadata = 5;
+}
+
+message WebSocketConfig {
+  bool enabled = 1;
+  int32 max_connections = 2;
+  int32 message_size_limit = 3;
+  int32 read_timeout_ms = 4;
+  int32 write_timeout_ms = 5;
+  int32 ping_interval_ms = 6;
+  map<string, string> metadata = 7;
+}
+
+message IPWhitelist {
+  repeated string ips = 1;
+  repeated string cidrs = 2;
+  bool enabled = 3;
+}
+
+message IPBlacklist {
+  repeated string ips = 1;
+  repeated string cidrs = 2;
+  bool enabled = 3;
+}
+
+message GatewayMetrics {
+  int64 total_requests = 1;
+  float requests_per_second = 2;
+  float average_latency_ms = 3;
+  float p95_latency_ms = 4;
+  float p99_latency_ms = 5;
+  float error_rate = 6;
+  int64 active_connections = 7;
+  map<string, float> route_metrics = 8;
+  google.protobuf.Timestamp collected_at = 9;
+}
+
+message GatewayLogEntry {
+  string id = 1;
+  string method = 2;
+  string path = 3;
+  string client_ip = 4;
+  int32 status_code = 5;
+  float latency_ms = 6;
+  string user_agent = 7;
+  google.protobuf.Timestamp timestamp = 8;
+  map<string, string> metadata = 9;
+}
+
+message GatewayLogStream {
+  repeated GatewayLogEntry entries = 1;
+  string next_page_token = 2;
+}
+
+message GatewayHealth {
+  string status = 1;
+  int64 uptime_seconds = 2;
+  float cpu_percent = 3;
+  float memory_percent = 4;
+  int64 active_connections = 5;
+  repeated string issues = 6;
+  google.protobuf.Timestamp checked_at = 7;
+}
+
+message GatewayVersion {
+  string version = 1;
+  string git_commit = 2;
+  string build_date = 3;
+  string go_version = 4;
+}
+
+message GatewayStatus {
+  string status = 1;
+  int32 active_routes = 2;
+  int32 active_connections = 3;
+  float requests_per_second = 4;
+  float average_latency_ms = 5;
+  google.protobuf.Timestamp checked_at = 6;
+}
+
+message GatewayTopology {
+  repeated GatewayNode nodes = 1;
+  repeated GatewayEdge edges = 2;
+}
+
+message GatewayNode {
+  string id = 1;
+  string type = 2;
+  string status = 3;
+  map<string, string> metadata = 4;
+}
+
+message GatewayEdge {
+  string source = 1;
+  string target = 2;
+  string type = 3;
+  map<string, string> metadata = 4;
+}
+
+message GatewayAlert {
+  string id = 1;
+  string name = 2;
+  string condition = 3;
+  string severity = 4;
+  repeated string notification_channels = 5;
+  bool enabled = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message GatewayAlerts {
+  repeated GatewayAlert alerts = 1;
+}
+
+message GatewayBackup {
+  string id = 1;
+  string version = 2;
+  google.protobuf.Timestamp created_at = 3;
+  int64 size_bytes = 4;
+  string status = 5;
+}
+
+message GatewayBackups {
+  repeated GatewayBackup backups = 1;
+}
+
+message GatewayPlugin {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string description = 4;
+  string author = 5;
+  bool enabled = 6;
+  google.protobuf.Timestamp installed_at = 7;
+  map<string, string> config = 8;
+}
+
+message GatewayPlugins {
+  repeated GatewayPlugin plugins = 1;
+}
+
+
+message UpdateGatewayConfigRequest {
+  string environment = 1;
+  bool debug_mode = 2;
+  map<string, string> metadata = 3;
+}
+
+message GetRoutesRequest {
+  string service = 1;
+  bool enabled_only = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message CreateRouteRequest {
+  string path = 1;
+  string method = 2;
+  string service = 3;
+  string target_url = 4;
+  repeated string middleware = 5;
+  int32 priority = 6;
+  map<string, string> metadata = 7;
+}
+
+message UpdateRouteRequest {
+  string id = 1;
+  string path = 2;
+  string method = 3;
+  string service = 4;
+  string target_url = 5;
+  repeated string middleware = 6;
+  bool enabled = 7;
+  int32 priority = 8;
+  map<string, string> metadata = 9;
+}
+
+message DeleteRouteRequest {
+  string id = 1;
+}
+
+message GetRateLimitsRequest {
+  string route_id = 1;
+  string client_type = 2;
+}
+
+message UpdateRateLimitsRequest {
+  repeated RateLimit rate_limits = 1;
+}
+
+message UpdateAuthenticationPoliciesRequest {
+  repeated AuthenticationPolicy policies = 1;
+}
+
+message UpdateCORSConfigRequest {
+  bool enabled = 1;
+  repeated string allowed_origins = 2;
+  repeated string allowed_methods = 3;
+  repeated string allowed_headers = 4;
+  bool allow_credentials = 5;
+  int32 max_age = 6;
+  repeated string exposed_headers = 7;
+}
+
+message UpdateSSLConfigRequest {
+  bool enabled = 1;
+  string certificate_path = 2;
+  string key_path = 3;
+  string ca_path = 4;
+  bool verify_client = 5;
+  repeated string protocols = 6;
+  repeated string ciphers = 7;
+  int32 session_timeout = 8;
+}
+
+message UpdateLoadBalancerConfigRequest {
+  string strategy = 1;
+  int32 health_check_interval = 2;
+  int32 health_check_timeout = 3;
+  repeated string health_check_endpoints = 4;
+  map<string, string> metadata = 5;
+}
+
+message UpdateCacheConfigRequest {
+  bool enabled = 1;
+  int32 default_ttl = 2;
+  int32 max_size_mb = 3;
+  string eviction_policy = 4;
+  repeated string cacheable_routes = 5;
+  map<string, string> metadata = 6;
+}
+
+message UpdateCircuitBreakerConfigRequest {
+  bool enabled = 1;
+  int32 failure_threshold = 2;
+  int32 success_threshold = 3;
+  int32 timeout_seconds = 4;
+  int32 half_open_max_calls = 5;
+  map<string, string> metadata = 6;
+}
+
+message UpdateRetryConfigRequest {
+  bool enabled = 1;
+  int32 max_retries = 2;
+  int32 initial_interval_ms = 3;
+  float backoff_multiplier = 4;
+  repeated int32 retryable_status_codes = 5;
+  map<string, string> metadata = 6;
+}
+
+message UpdateTimeoutConfigRequest {
+  int32 connect_timeout_ms = 1;
+  int32 read_timeout_ms = 2;
+  int32 write_timeout_ms = 3;
+  int32 idle_timeout_ms = 4;
+  map<string, string> metadata = 5;
+}
+
+message UpdateLoggingConfigRequest {
+  bool enabled = 1;
+  string level = 2;
+  string format = 3;
+  repeated string excluded_routes = 4;
+  bool log_request_body = 5;
+  bool log_response_body = 6;
+  map<string, string> metadata = 7;
+}
+
+message UpdateMetricsConfigRequest {
+  bool enabled = 1;
+  string endpoint = 2;
+  int32 scrape_interval = 3;
+  repeated string excluded_routes = 4;
+  map<string, string> metadata = 5;
+}
+
+message UpdateTracingConfigRequest {
+  bool enabled = 1;
+  string provider = 2;
+  string endpoint = 3;
+  float sampling_rate = 4;
+  map<string, string> metadata = 5;
+}
+
+message UpdateWebSocketConfigRequest {
+  bool enabled = 1;
+  int32 max_connections = 2;
+  int32 message_size_limit = 3;
+  int32 read_timeout_ms = 4;
+  int32 write_timeout_ms = 5;
+  int32 ping_interval_ms = 6;
+  map<string, string> metadata = 7;
+}
+
+message UpdateIPWhitelistRequest {
+  repeated string ips = 1;
+  repeated string cidrs = 2;
+  bool enabled = 3;
+}
+
+message UpdateIPBlacklistRequest {
+  repeated string ips = 1;
+  repeated string cidrs = 2;
+  bool enabled = 3;
+}
+
+message GetGatewayLogsRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  string method = 3;
+  string path = 4;
+  int32 status_code = 5;
+  int32 page_size = 6;
+  string page_token = 7;
+}
+
+message StreamGatewayLogsRequest {
+  google.protobuf.Timestamp start_date = 1;
+  string method = 2;
+  string path = 3;
+  int32 status_code = 4;
+}
+
+message ReloadGatewayRequest {
+  bool graceful = 1;
+  int32 timeout_seconds = 2;
+}
+
+message ValidateGatewayConfigRequest {
+  bytes config = 1;
+  string format = 2;
+}
+
+message GetGatewayAuditLogRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message GetGatewayAlertsRequest {
+  bool active_only = 1;
+  string severity = 2;
+}
+
+message CreateGatewayAlertRequest {
+  string name = 1;
+  string condition = 2;
+  string severity = 3;
+  repeated string notification_channels = 4;
+  bool enabled = 5;
+}
+
+message UpdateGatewayAlertRequest {
+  string id = 1;
+  string name = 2;
+  string condition = 3;
+  string severity = 4;
+  repeated string notification_channels = 5;
+  bool enabled = 6;
+}
+
+message DeleteGatewayAlertRequest {
+  string id = 1;
+}
+
+message RestoreGatewayBackupRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+message InstallGatewayPluginRequest {
+  string name = 1;
+  string version = 2;
+  string source = 3;
+  map<string, string> config = 4;
+}
+
+message UninstallGatewayPluginRequest {
+  string id = 1;
+}
+
+message EnableGatewayPluginRequest {
+  string id = 1;
+}
+
+message DisableGatewayPluginRequest {
+  string id = 1;
+}

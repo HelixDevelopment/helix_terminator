@@ -1,0 +1,128 @@
+syntax = "proto3";
+package helixterm.session.v1;
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/session/v1;sessionv1";
+
+import "google/protobuf/timestamp.proto";
+
+// SessionService provides terminal session management.
+service SessionService {
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  rpc GetSession(GetSessionRequest) returns (SessionInfo);
+  rpc TerminateSession(TerminateSessionRequest) returns (TerminateSessionResponse);
+  rpc ResizeTerminal(ResizeTerminalRequest) returns (ResizeTerminalResponse);
+  rpc ExecuteCommand(ExecuteCommandRequest) returns (ExecuteCommandResponse);
+  rpc StreamTerminal(stream TerminalStreamMessage) returns (stream TerminalStreamMessage);
+  rpc GetRecording(GetRecordingRequest) returns (GetRecordingResponse);
+  rpc StartCollaboration(StartCollaborationRequest) returns (StartCollaborationResponse);
+}
+
+message CreateSessionRequest {
+  string user_id = 1;
+  string host_id = 2;
+  string org_id = 3;
+  string key_id = 4;
+  string auth_method = 5;
+  int32 terminal_cols = 6;
+  int32 terminal_rows = 7;
+  bool recording_enabled = 8;
+  bool collab_enabled = 9;
+}
+
+message CreateSessionResponse {
+  string session_id = 1;
+  string status = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message SessionInfo {
+  string session_id = 1;
+  string user_id = 2;
+  string host_id = 3;
+  string org_id = 4;
+  string status = 5;
+  int32 terminal_cols = 6;
+  int32 terminal_rows = 7;
+  bool recording_enabled = 8;
+  bool collab_enabled = 9;
+  google.protobuf.Timestamp started_at = 10;
+  google.protobuf.Timestamp connected_at = 11;
+  google.protobuf.Timestamp ended_at = 12;
+  int32 duration_seconds = 13;
+  int64 bytes_sent = 14;
+  int64 bytes_received = 15;
+}
+
+message TerminateSessionRequest {
+  string session_id = 1;
+  string reason = 2;
+}
+
+message TerminateSessionResponse {
+  string session_id = 1;
+  string status = 2;
+  google.protobuf.Timestamp ended_at = 3;
+}
+
+message ResizeTerminalRequest {
+  string session_id = 1;
+  int32 cols = 2;
+  int32 rows = 3;
+}
+
+message ResizeTerminalResponse {
+  string session_id = 1;
+  int32 cols = 2;
+  int32 rows = 3;
+  google.protobuf.Timestamp resized_at = 4;
+}
+
+message ExecuteCommandRequest {
+  string session_id = 1;
+  string command = 2;
+  int32 timeout_seconds = 3;
+}
+
+message ExecuteCommandResponse {
+  string session_id = 1;
+  string stdout = 2;
+  string stderr = 3;
+  int32 exit_code = 4;
+  int32 duration_ms = 5;
+}
+
+message TerminalStreamMessage {
+  string session_id = 1;
+  bytes data = 2;
+  string direction = 3; // "i" = input, "o" = output
+  int64 elapsed_ms = 4;
+  string event_type = 5; // "data", "resize", "marker", "metadata"
+}
+
+message GetRecordingRequest {
+  string session_id = 1;
+}
+
+message GetRecordingResponse {
+  string session_id = 1;
+  string storage_path = 2;
+  int64 file_size_bytes = 3;
+  int32 duration_seconds = 4;
+  string format = 5;
+  string checksum_sha256 = 6;
+}
+
+message StartCollaborationRequest {
+  string session_id = 1;
+  int32 max_participants = 2;
+  bool allow_input = 3;
+}
+
+message StartCollaborationResponse {
+  string collab_session_id = 1;
+  string join_url = 2;
+  google.protobuf.Timestamp started_at = 3;
+}

@@ -1,0 +1,215 @@
+syntax = "proto3";
+
+package helixterm.port_forward.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/port_forward/v1;portforwardv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "helixterm/common/v1/common.proto";
+
+service PortForwardService {
+  rpc CreatePortForward(CreatePortForwardRequest) returns (PortForward);
+  rpc ListPortForwards(ListPortForwardsRequest) returns (ListPortForwardsResponse);
+  rpc GetPortForward(GetPortForwardRequest) returns (PortForward);
+  rpc UpdatePortForward(UpdatePortForwardRequest) returns (PortForward);
+  rpc DeletePortForward(DeletePortForwardRequest) returns (google.protobuf.Empty);
+  rpc StartPortForward(StartPortForwardRequest) returns (PortForward);
+  rpc StopPortForward(StopPortForwardRequest) returns (PortForward);
+  rpc GetPortForwardStatus(GetPortForwardRequest) returns (PortForwardStatus);
+  rpc GetPortForwardLogs(GetPortForwardRequest) returns (PortForwardLogStream);
+  rpc BulkCreatePortForwards(BulkCreatePortForwardsRequest) returns (BulkCreatePortForwardsResponse);
+  rpc GetPortForwardMetrics(GetPortForwardRequest) returns (PortForwardMetrics);
+  rpc ValidatePortForward(ValidatePortForwardRequest) returns (common.v1.ValidationResult);
+  rpc ListActivePortForwards(ListPortForwardsRequest) returns (ListPortForwardsResponse);
+  rpc GetPortForwardRules(GetPortForwardRequest) returns (PortForwardRules);
+  rpc UpdatePortForwardRules(UpdatePortForwardRulesRequest) returns (PortForwardRules);
+  rpc TestPortForward(TestPortForwardRequest) returns (common.v1.ConnectionTestResult);
+  rpc ExportPortForwardConfig(GetPortForwardRequest) returns (ExportConfigResponse);
+  rpc ImportPortForwardConfig(ImportPortForwardConfigRequest) returns (PortForward);
+  rpc GetPortForwardHistory(GetPortForwardRequest) returns (PortForwardHistory);
+  rpc EnablePortForward(EnablePortForwardRequest) returns (PortForward);
+  rpc DisablePortForward(DisablePortForwardRequest) returns (PortForward);
+}
+
+message PortForward {
+  string id = 1;
+  string session_id = 2;
+  string host_id = 3;
+  string name = 4;
+  string type = 5;
+  int32 local_port = 6;
+  string remote_host = 7;
+  int32 remote_port = 8;
+  string status = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  string bind_address = 12;
+  bool auto_start = 13;
+  map<string, string> metadata = 14;
+}
+
+message PortForwardStatus {
+  string id = 1;
+  string status = 2;
+  int64 bytes_sent = 3;
+  int64 bytes_received = 4;
+  int32 active_connections = 5;
+  google.protobuf.Timestamp started_at = 6;
+  google.protobuf.Timestamp last_activity_at = 7;
+  string last_error = 8;
+}
+
+message PortForwardMetrics {
+  string id = 1;
+  int64 total_bytes_sent = 2;
+  int64 total_bytes_received = 3;
+  int32 total_connections = 4;
+  float average_latency_ms = 5;
+  google.protobuf.Timestamp collected_at = 6;
+}
+
+message PortForwardRules {
+  string id = 1;
+  repeated PortForwardRule rules = 2;
+}
+
+message PortForwardRule {
+  string id = 1;
+  string type = 2;
+  string source_ip = 3;
+  int32 source_port = 4;
+  string destination_ip = 5;
+  int32 destination_port = 6;
+  string protocol = 7;
+  bool enabled = 8;
+}
+
+message PortForwardLogEntry {
+  string id = 1;
+  string port_forward_id = 2;
+  string event_type = 3;
+  string details = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+message PortForwardLogStream {
+  repeated PortForwardLogEntry entries = 1;
+}
+
+message PortForwardHistory {
+  string id = 1;
+  repeated PortForwardHistoryEntry entries = 2;
+}
+
+message PortForwardHistoryEntry {
+  string action = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string actor_id = 3;
+  map<string, string> details = 4;
+}
+
+message CreatePortForwardRequest {
+  string session_id = 1;
+  string host_id = 2;
+  string name = 3;
+  string type = 4;
+  int32 local_port = 5;
+  string remote_host = 6;
+  int32 remote_port = 7;
+  string bind_address = 8;
+  bool auto_start = 9;
+  map<string, string> metadata = 10;
+}
+
+message ListPortForwardsRequest {
+  string session_id = 1;
+  string host_id = 2;
+  string status = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListPortForwardsResponse {
+  repeated PortForward port_forwards = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message GetPortForwardRequest {
+  string id = 1;
+}
+
+message UpdatePortForwardRequest {
+  string id = 1;
+  string name = 2;
+  int32 local_port = 3;
+  string remote_host = 4;
+  int32 remote_port = 5;
+  string bind_address = 6;
+  bool auto_start = 7;
+  map<string, string> metadata = 8;
+}
+
+message DeletePortForwardRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+message StartPortForwardRequest {
+  string id = 1;
+}
+
+message StopPortForwardRequest {
+  string id = 1;
+}
+
+message BulkCreatePortForwardsRequest {
+  repeated CreatePortForwardRequest port_forwards = 1;
+}
+
+message BulkCreatePortForwardsResponse {
+  repeated PortForward created = 1;
+  repeated string failed = 2;
+  int32 total = 3;
+}
+
+message ValidatePortForwardRequest {
+  string session_id = 1;
+  string host_id = 2;
+  int32 local_port = 3;
+  string remote_host = 4;
+  int32 remote_port = 5;
+}
+
+message UpdatePortForwardRulesRequest {
+  string id = 1;
+  repeated PortForwardRule rules = 2;
+  bool replace = 3;
+}
+
+message TestPortForwardRequest {
+  string id = 1;
+  string target_host = 2;
+  int32 target_port = 3;
+}
+
+message ExportConfigResponse {
+  bytes config = 1;
+  string format = 2;
+}
+
+message ImportPortForwardConfigRequest {
+  bytes config = 1;
+  string format = 2;
+  string session_id = 3;
+}
+
+message EnablePortForwardRequest {
+  string id = 1;
+}
+
+message DisablePortForwardRequest {
+  string id = 1;
+  string reason = 2;
+}

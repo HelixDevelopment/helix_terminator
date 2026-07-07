@@ -1,0 +1,131 @@
+syntax = "proto3";
+package helixterm.pki.v1;
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/pki/v1;pkiv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+
+// PKIService provides SSH certificate issuance and management.
+service PKIService {
+  rpc SignUserCertificate(SignUserCertificateRequest) returns (SignUserCertificateResponse);
+  rpc SignHostCertificate(SignHostCertificateRequest) returns (SignHostCertificateResponse);
+  rpc GetCACertificate(GetCACertificateRequest) returns (GetCACertificateResponse);
+  rpc RevokeCertificate(RevokeCertificateRequest) returns (google.protobuf.Empty);
+  rpc GetCRL(GetCRLRequest) returns (GetCRLResponse);
+  rpc CheckCertificate(CheckCertificateRequest) returns (CheckCertificateResponse);
+  rpc ListCertificates(ListCertificatesRequest) returns (ListCertificatesResponse);
+  rpc RotateCA(RotateCARequest) returns (RotateCAResponse);
+}
+
+message CertExtension {
+  string name = 1;
+  string value = 2;
+  bool critical = 3;
+}
+
+message SignUserCertificateRequest {
+  string public_key_openssh = 1;
+  string user_id = 2;
+  string username = 3;
+  repeated string principals = 4;
+  repeated CertExtension extensions = 5;
+  google.protobuf.Duration validity = 6;
+  string source_address = 7;
+  bool force_command = 8;
+  string forced_command = 9;
+}
+
+message SignUserCertificateResponse {
+  string certificate_openssh = 1;
+  string certificate_id = 2;
+  google.protobuf.Timestamp valid_after = 3;
+  google.protobuf.Timestamp valid_before = 4;
+  string serial = 5;
+}
+
+message SignHostCertificateRequest {
+  string public_key_openssh = 1;
+  string host_id = 2;
+  repeated string hostnames = 3;
+  google.protobuf.Duration validity = 4;
+}
+
+message SignHostCertificateResponse {
+  string certificate_openssh = 1;
+  string certificate_id = 2;
+  google.protobuf.Timestamp valid_before = 3;
+  string serial = 4;
+}
+
+message GetCACertificateRequest {
+  string ca_type = 1; // "user" or "host"
+}
+
+message GetCACertificateResponse {
+  string public_key_openssh = 1;
+  string fingerprint = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp rotated_at = 4;
+  string version = 5;
+}
+
+message RevokeCertificateRequest {
+  string certificate_id = 1;
+  string reason = 2;
+  string revoked_by = 3;
+}
+
+message GetCRLRequest {
+  string ca_type = 1;
+}
+
+message GetCRLResponse {
+  repeated string revoked_serials = 1;
+  string krl_binary_base64 = 2;
+  google.protobuf.Timestamp generated_at = 3;
+}
+
+message CheckCertificateRequest {
+  string certificate_openssh = 1;
+}
+
+message CheckCertificateResponse {
+  bool valid = 1;
+  bool revoked = 2;
+  bool expired = 3;
+  string certificate_id = 4;
+  string reason = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message ListCertificatesRequest {
+  string entity_type = 1;
+  string entity_id = 2;
+  bool include_revoked = 3;
+}
+
+message CertificateInfo {
+  string certificate_id = 1;
+  string certificate_openssh = 2;
+  google.protobuf.Timestamp valid_after = 3;
+  google.protobuf.Timestamp valid_before = 4;
+  string serial = 5;
+  bool revoked = 6;
+}
+
+message ListCertificatesResponse {
+  repeated CertificateInfo certificates = 1;
+}
+
+message RotateCARequest {
+  string ca_type = 1;
+  string algorithm = 2;
+  int32 bits = 3;
+}
+
+message RotateCAResponse {
+  string new_ca_key_id = 1;
+  string fingerprint = 2;
+  google.protobuf.Timestamp rotated_at = 3;
+}

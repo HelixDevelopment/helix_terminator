@@ -1,0 +1,370 @@
+syntax = "proto3";
+
+package helixterm.org.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/org/v1;orgv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "helixterm/common/v1/common.proto";
+
+service OrganizationService {
+  rpc GetOrganization(GetOrganizationRequest) returns (Organization);
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc CreateOrganization(CreateOrganizationRequest) returns (Organization);
+  rpc UpdateOrganization(UpdateOrganizationRequest) returns (Organization);
+  rpc DeleteOrganization(DeleteOrganizationRequest) returns (google.protobuf.Empty);
+  rpc GetOrganizationMembers(GetOrganizationRequest) returns (OrganizationMembers);
+  rpc AddOrganizationMember(AddOrganizationMemberRequest) returns (OrganizationMember);
+  rpc RemoveOrganizationMember(RemoveOrganizationMemberRequest) returns (google.protobuf.Empty);
+  rpc UpdateOrganizationMemberRole(UpdateOrganizationMemberRoleRequest) returns (OrganizationMember);
+  rpc GetOrganizationWorkspaces(GetOrganizationRequest) returns (OrganizationWorkspaces);
+  rpc GetOrganizationHosts(GetOrganizationRequest) returns (OrganizationHosts);
+  rpc GetOrganizationBilling(GetOrganizationRequest) returns (OrganizationBilling);
+  rpc GetOrganizationQuota(GetOrganizationRequest) returns (OrganizationQuota);
+  rpc UpdateOrganizationQuota(UpdateOrganizationQuotaRequest) returns (OrganizationQuota);
+  rpc GetOrganizationSettings(GetOrganizationRequest) returns (OrganizationSettings);
+  rpc UpdateOrganizationSettings(UpdateOrganizationSettingsRequest) returns (OrganizationSettings);
+  rpc GetOrganizationAuditLog(GetOrganizationRequest) returns (common.v1.AuditLogStream);
+  rpc GetOrganizationActivity(GetOrganizationRequest) returns (OrganizationActivity);
+  rpc SearchOrganizations(SearchOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc ExportOrganization(ExportOrganizationRequest) returns (ExportOrganizationResponse);
+  rpc ImportOrganization(ImportOrganizationRequest) returns (Organization);
+  rpc GetOrganizationPermissions(GetOrganizationRequest) returns (OrganizationPermissions);
+  rpc UpdateOrganizationPermissions(UpdateOrganizationPermissionsRequest) returns (OrganizationPermissions);
+  rpc GetOrganizationInvites(GetOrganizationRequest) returns (OrganizationInvites);
+  rpc CreateOrganizationInvite(CreateOrganizationInviteRequest) returns (OrganizationInvite);
+  rpc RevokeOrganizationInvite(RevokeOrganizationInviteRequest) returns (google.protobuf.Empty);
+  rpc AcceptOrganizationInvite(AcceptOrganizationInviteRequest) returns (OrganizationMember);
+  rpc GetOrganizationRoles(GetOrganizationRequest) returns (OrganizationRoles);
+  rpc CreateOrganizationRole(CreateOrganizationRoleRequest) returns (OrganizationRole);
+  rpc UpdateOrganizationRole(UpdateOrganizationRoleRequest) returns (OrganizationRole);
+  rpc DeleteOrganizationRole(DeleteOrganizationRoleRequest) returns (google.protobuf.Empty);
+  rpc GetOrganizationDomains(GetOrganizationRequest) returns (OrganizationDomains);
+  rpc AddOrganizationDomain(AddOrganizationDomainRequest) returns (OrganizationDomain);
+  rpc RemoveOrganizationDomain(RemoveOrganizationDomainRequest) returns (google.protobuf.Empty);
+  rpc VerifyOrganizationDomain(VerifyOrganizationDomainRequest) returns (OrganizationDomain);
+}
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  string owner_id = 5;
+  string plan = 6;
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp deleted_at = 10;
+  map<string, string> metadata = 11;
+}
+
+message OrganizationMember {
+  string organization_id = 1;
+  string user_id = 2;
+  string role = 3;
+  string status = 4;
+  google.protobuf.Timestamp joined_at = 5;
+  google.protobuf.Timestamp last_active_at = 6;
+  map<string, string> metadata = 7;
+}
+
+message OrganizationMembers {
+  string organization_id = 1;
+  repeated OrganizationMember members = 2;
+}
+
+message OrganizationWorkspaces {
+  string organization_id = 1;
+  repeated Workspace workspaces = 2;
+}
+
+message Workspace {
+  string id = 1;
+  string name = 2;
+  string owner_id = 3;
+  string status = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message OrganizationHosts {
+  string organization_id = 1;
+  repeated Host hosts = 2;
+}
+
+message Host {
+  string id = 1;
+  string name = 2;
+  string hostname = 3;
+  string status = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message OrganizationBilling {
+  string organization_id = 1;
+  string plan = 2;
+  string billing_email = 3;
+  string payment_method = 4;
+  google.protobuf.Timestamp next_billing_date = 5;
+  int64 current_balance_cents = 6;
+  string currency = 7;
+  bool auto_renew = 8;
+}
+
+message OrganizationQuota {
+  string organization_id = 1;
+  int64 max_storage_bytes = 2;
+  int64 used_storage_bytes = 3;
+  int32 max_members = 4;
+  int32 active_members = 5;
+  int32 max_workspaces = 6;
+  int32 active_workspaces = 7;
+  int32 max_hosts = 8;
+  int32 active_hosts = 9;
+  int32 max_sessions = 10;
+  int32 active_sessions = 11;
+}
+
+message OrganizationSettings {
+  string organization_id = 1;
+  bool require_mfa = 2;
+  string default_role = 3;
+  int32 session_timeout_minutes = 4;
+  bool enforce_ip_whitelist = 5;
+  repeated string allowed_domains = 6;
+  map<string, string> custom_settings = 7;
+}
+
+message OrganizationActivity {
+  string organization_id = 1;
+  int32 total_sessions = 2;
+  int32 total_commands = 3;
+  int32 active_members = 4;
+  google.protobuf.Timestamp last_active_at = 5;
+  repeated common.v1.ActivityRecord recent_activity = 6;
+}
+
+message OrganizationPermissions {
+  string organization_id = 1;
+  repeated OrganizationPermission permissions = 2;
+}
+
+message OrganizationPermission {
+  string user_id = 1;
+  string role = 2;
+  repeated string actions = 3;
+}
+
+message OrganizationInvite {
+  string id = 1;
+  string organization_id = 2;
+  string email = 3;
+  string role = 4;
+  string invited_by = 5;
+  string status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+}
+
+message OrganizationInvites {
+  string organization_id = 1;
+  repeated OrganizationInvite invites = 2;
+}
+
+message OrganizationRole {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated string permissions = 5;
+  bool is_custom = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message OrganizationRoles {
+  string organization_id = 1;
+  repeated OrganizationRole roles = 2;
+}
+
+message OrganizationDomain {
+  string id = 1;
+  string organization_id = 2;
+  string domain = 3;
+  bool verified = 4;
+  string verification_method = 5;
+  google.protobuf.Timestamp verified_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message OrganizationDomains {
+  string organization_id = 1;
+  repeated OrganizationDomain domains = 2;
+}
+
+message GetOrganizationRequest {
+  string id = 1;
+}
+
+message ListOrganizationsRequest {
+  string owner_id = 1;
+  string status = 2;
+  string plan = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+  string sort_by = 6;
+}
+
+message ListOrganizationsResponse {
+  repeated Organization organizations = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message CreateOrganizationRequest {
+  string name = 1;
+  string slug = 2;
+  string description = 3;
+  string owner_id = 4;
+  string plan = 5;
+  map<string, string> metadata = 6;
+}
+
+message UpdateOrganizationRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string plan = 4;
+  string status = 5;
+  map<string, string> metadata = 6;
+}
+
+message DeleteOrganizationRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+message AddOrganizationMemberRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+
+message RemoveOrganizationMemberRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  string reason = 3;
+}
+
+message UpdateOrganizationMemberRoleRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+
+message UpdateOrganizationQuotaRequest {
+  string organization_id = 1;
+  int64 max_storage_bytes = 2;
+  int32 max_members = 3;
+  int32 max_workspaces = 4;
+  int32 max_hosts = 5;
+  int32 max_sessions = 6;
+}
+
+message UpdateOrganizationSettingsRequest {
+  string organization_id = 1;
+  bool require_mfa = 2;
+  string default_role = 3;
+  int32 session_timeout_minutes = 4;
+  bool enforce_ip_whitelist = 5;
+  repeated string allowed_domains = 6;
+  map<string, string> custom_settings = 7;
+}
+
+message SearchOrganizationsRequest {
+  string query = 1;
+  string owner_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ExportOrganizationRequest {
+  string id = 1;
+  string format = 2;
+  bool include_members = 3;
+  bool include_workspaces = 4;
+}
+
+message ExportOrganizationResponse {
+  bytes data = 1;
+  string format = 2;
+}
+
+message ImportOrganizationRequest {
+  bytes data = 1;
+  string format = 2;
+  string owner_id = 3;
+}
+
+message UpdateOrganizationPermissionsRequest {
+  string organization_id = 1;
+  repeated OrganizationPermission permissions = 2;
+  bool replace = 3;
+}
+
+message CreateOrganizationInviteRequest {
+  string organization_id = 1;
+  string email = 2;
+  string role = 3;
+  string invited_by = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message RevokeOrganizationInviteRequest {
+  string id = 1;
+  string organization_id = 2;
+}
+
+message AcceptOrganizationInviteRequest {
+  string id = 1;
+  string user_id = 2;
+}
+
+message CreateOrganizationRoleRequest {
+  string organization_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+}
+
+message UpdateOrganizationRoleRequest {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated string permissions = 5;
+}
+
+message DeleteOrganizationRoleRequest {
+  string id = 1;
+  string organization_id = 2;
+}
+
+message AddOrganizationDomainRequest {
+  string organization_id = 1;
+  string domain = 2;
+  string verification_method = 3;
+}
+
+message RemoveOrganizationDomainRequest {
+  string id = 1;
+  string organization_id = 2;
+}
+
+message VerifyOrganizationDomainRequest {
+  string id = 1;
+  string organization_id = 2;
+  string verification_token = 3;
+}
+

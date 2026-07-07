@@ -1,0 +1,451 @@
+syntax = "proto3";
+
+package helixterm.billing.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/billing/v1;billingv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service BillingService {
+  rpc GetSubscription(GetSubscriptionRequest) returns (Subscription);
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse);
+  rpc CreateSubscription(CreateSubscriptionRequest) returns (Subscription);
+  rpc UpdateSubscription(UpdateSubscriptionRequest) returns (Subscription);
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (Subscription);
+  rpc GetInvoice(GetInvoiceRequest) returns (Invoice);
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  rpc GetPaymentMethod(GetPaymentMethodRequest) returns (PaymentMethod);
+  rpc ListPaymentMethods(ListPaymentMethodsRequest) returns (ListPaymentMethodsResponse);
+  rpc AddPaymentMethod(AddPaymentMethodRequest) returns (PaymentMethod);
+  rpc RemovePaymentMethod(RemovePaymentMethodRequest) returns (google.protobuf.Empty);
+  rpc SetDefaultPaymentMethod(SetDefaultPaymentMethodRequest) returns (PaymentMethod);
+  rpc GetUsageReport(GetUsageReportRequest) returns (UsageReport);
+  rpc GetPricingPlans(google.protobuf.Empty) returns (PricingPlans);
+  rpc GetPlanDetails(GetPlanDetailsRequest) returns (Plan);
+  rpc UpgradePlan(UpgradePlanRequest) returns (Subscription);
+  rpc DowngradePlan(DowngradePlanRequest) returns (Subscription);
+  rpc GetBillingHistory(GetBillingHistoryRequest) returns (BillingHistory);
+  rpc GetPromotions(google.protobuf.Empty) returns (Promotions);
+  rpc ApplyPromotion(ApplyPromotionRequest) returns (Subscription);
+  rpc RemovePromotion(RemovePromotionRequest) returns (Subscription);
+  rpc GetBillingAlerts(GetBillingAlertsRequest) returns (BillingAlerts);
+  rpc CreateBillingAlert(CreateBillingAlertRequest) returns (BillingAlert);
+  rpc UpdateBillingAlert(UpdateBillingAlertRequest) returns (BillingAlert);
+  rpc DeleteBillingAlert(DeleteBillingAlertRequest) returns (google.protobuf.Empty);
+  rpc GetBillingSettings(GetBillingSettingsRequest) returns (BillingSettings);
+  rpc UpdateBillingSettings(UpdateBillingSettingsRequest) returns (BillingSettings);
+  rpc GetTaxInformation(GetTaxInformationRequest) returns (TaxInformation);
+  rpc UpdateTaxInformation(UpdateTaxInformationRequest) returns (TaxInformation);
+  rpc PreviewInvoice(PreviewInvoiceRequest) returns (Invoice);
+  rpc RetryFailedPayment(RetryFailedPaymentRequest) returns (PaymentResult);
+  rpc GetRefundPolicy(google.protobuf.Empty) returns (RefundPolicy);
+  rpc RequestRefund(RequestRefundRequest) returns (RefundResult);
+  rpc GetCreditBalance(GetCreditBalanceRequest) returns (CreditBalance);
+  rpc ApplyCredit(ApplyCreditRequest) returns (CreditBalance);
+}
+
+message Subscription {
+  string id = 1;
+  string organization_id = 2;
+  string plan_id = 3;
+  string plan_name = 4;
+  string status = 5;
+  google.protobuf.Timestamp start_date = 6;
+  google.protobuf.Timestamp end_date = 7;
+  google.protobuf.Timestamp next_billing_date = 8;
+  string billing_cycle = 9;
+  int64 amount_cents = 10;
+  string currency = 11;
+  bool auto_renew = 12;
+  google.protobuf.Timestamp canceled_at = 13;
+  string cancel_reason = 14;
+  map<string, string> metadata = 15;
+}
+
+message Invoice {
+  string id = 1;
+  string organization_id = 2;
+  string subscription_id = 3;
+  string status = 4;
+  int64 amount_cents = 5;
+  string currency = 6;
+  google.protobuf.Timestamp issue_date = 7;
+  google.protobuf.Timestamp due_date = 8;
+  google.protobuf.Timestamp paid_date = 9;
+  repeated InvoiceLineItem line_items = 10;
+  map<string, string> metadata = 11;
+}
+
+message InvoiceLineItem {
+  string id = 1;
+  string description = 2;
+  int64 quantity = 3;
+  int64 unit_price_cents = 4;
+  int64 total_cents = 5;
+  string period_start = 6;
+  string period_end = 7;
+}
+
+message PaymentMethod {
+  string id = 1;
+  string organization_id = 2;
+  string type = 3;
+  string last_four = 4;
+  string brand = 5;
+  int32 expiry_month = 6;
+  int32 expiry_year = 7;
+  bool is_default = 8;
+  string billing_name = 9;
+  google.protobuf.Timestamp created_at = 10;
+  map<string, string> metadata = 11;
+}
+
+message UsageReport {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  repeated UsageMetric metrics = 4;
+  int64 total_cost_cents = 5;
+  string currency = 6;
+}
+
+message UsageMetric {
+  string metric_name = 1;
+  int64 quantity = 2;
+  string unit = 3;
+  int64 cost_cents = 4;
+}
+
+message Plan {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 price_cents = 4;
+  string currency = 5;
+  string billing_cycle = 6;
+  repeated PlanFeature features = 7;
+  map<string, int64> limits = 8;
+  bool is_active = 9;
+}
+
+message PlanFeature {
+  string name = 1;
+  string description = 2;
+  bool included = 3;
+  string limit = 4;
+}
+
+message PricingPlans {
+  repeated Plan plans = 1;
+}
+
+message BillingHistory {
+  string organization_id = 1;
+  repeated BillingHistoryEntry entries = 2;
+}
+
+message BillingHistoryEntry {
+  string id = 1;
+  string type = 2;
+  string description = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string status = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+message Promotion {
+  string id = 1;
+  string code = 2;
+  string description = 3;
+  string discount_type = 4;
+  int64 discount_value = 5;
+  google.protobuf.Timestamp valid_from = 6;
+  google.protobuf.Timestamp valid_until = 7;
+  int32 max_uses = 8;
+  int32 used_count = 9;
+  bool is_active = 10;
+}
+
+message Promotions {
+  repeated Promotion promotions = 1;
+}
+
+message BillingAlert {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  string condition = 4;
+  string severity = 5;
+  repeated string notification_channels = 6;
+  bool enabled = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message BillingAlerts {
+  string organization_id = 1;
+  repeated BillingAlert alerts = 2;
+}
+
+message BillingSettings {
+  string organization_id = 1;
+  string billing_email = 2;
+  string billing_address = 3;
+  string tax_id = 4;
+  string currency = 5;
+  string billing_cycle = 6;
+  bool auto_renew = 7;
+  map<string, string> custom_settings = 8;
+}
+
+message TaxInformation {
+  string organization_id = 1;
+  string tax_id = 2;
+  string tax_exempt_status = 3;
+  string tax_region = 4;
+  float tax_rate = 5;
+  map<string, string> tax_details = 6;
+}
+
+message RefundPolicy {
+  string policy_text = 1;
+  int32 refund_window_days = 2;
+  bool prorated_refunds = 3;
+  repeated string exclusions = 4;
+}
+
+message RefundResult {
+  string refund_id = 1;
+  string status = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  google.protobuf.Timestamp processed_at = 5;
+  string reason = 6;
+}
+
+message CreditBalance {
+  string organization_id = 1;
+  int64 balance_cents = 2;
+  string currency = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message PaymentResult {
+  string payment_id = 1;
+  string status = 2;
+  string message = 3;
+  google.protobuf.Timestamp processed_at = 4;
+}
+
+message GetSubscriptionRequest {
+  string id = 1;
+}
+
+message ListSubscriptionsRequest {
+  string organization_id = 1;
+  string status = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListSubscriptionsResponse {
+  repeated Subscription subscriptions = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message CreateSubscriptionRequest {
+  string organization_id = 1;
+  string plan_id = 2;
+  string billing_cycle = 3;
+  string payment_method_id = 4;
+  map<string, string> metadata = 5;
+}
+
+message UpdateSubscriptionRequest {
+  string id = 1;
+  string plan_id = 2;
+  string billing_cycle = 3;
+  string payment_method_id = 4;
+  map<string, string> metadata = 5;
+}
+
+message CancelSubscriptionRequest {
+  string id = 1;
+  string reason = 2;
+  bool immediate = 3;
+}
+
+message GetInvoiceRequest {
+  string id = 1;
+}
+
+message ListInvoicesRequest {
+  string organization_id = 1;
+  string status = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ListInvoicesResponse {
+  repeated Invoice invoices = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message GetPaymentMethodRequest {
+  string id = 1;
+}
+
+message ListPaymentMethodsRequest {
+  string organization_id = 1;
+}
+
+message ListPaymentMethodsResponse {
+  repeated PaymentMethod payment_methods = 1;
+}
+
+message AddPaymentMethodRequest {
+  string organization_id = 1;
+  string type = 2;
+  string token = 3;
+  bool is_default = 4;
+  string billing_name = 5;
+  map<string, string> metadata = 6;
+}
+
+message RemovePaymentMethodRequest {
+  string id = 1;
+}
+
+message SetDefaultPaymentMethodRequest {
+  string id = 1;
+  string organization_id = 2;
+}
+
+message GetUsageReportRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  string granularity = 4;
+}
+
+message GetPlanDetailsRequest {
+  string id = 1;
+}
+
+message UpgradePlanRequest {
+  string organization_id = 1;
+  string plan_id = 2;
+  bool immediate = 3;
+}
+
+message DowngradePlanRequest {
+  string organization_id = 1;
+  string plan_id = 2;
+  bool immediate = 3;
+}
+
+message GetBillingHistoryRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ApplyPromotionRequest {
+  string organization_id = 1;
+  string code = 2;
+}
+
+message RemovePromotionRequest {
+  string organization_id = 1;
+  string promotion_id = 2;
+}
+
+message GetBillingAlertsRequest {
+  string organization_id = 1;
+  bool enabled_only = 2;
+}
+
+message CreateBillingAlertRequest {
+  string organization_id = 1;
+  string name = 2;
+  string condition = 3;
+  string severity = 4;
+  repeated string notification_channels = 5;
+  bool enabled = 6;
+}
+
+message UpdateBillingAlertRequest {
+  string id = 1;
+  string name = 2;
+  string condition = 3;
+  string severity = 4;
+  repeated string notification_channels = 5;
+  bool enabled = 6;
+}
+
+message DeleteBillingAlertRequest {
+  string id = 1;
+}
+
+message GetBillingSettingsRequest {
+  string organization_id = 1;
+}
+
+message UpdateBillingSettingsRequest {
+  string organization_id = 1;
+  string billing_email = 2;
+  string billing_address = 3;
+  string tax_id = 4;
+  string currency = 5;
+  string billing_cycle = 6;
+  bool auto_renew = 7;
+  map<string, string> custom_settings = 8;
+}
+
+message GetTaxInformationRequest {
+  string organization_id = 1;
+}
+
+message UpdateTaxInformationRequest {
+  string organization_id = 1;
+  string tax_id = 2;
+  string tax_exempt_status = 3;
+  string tax_region = 4;
+  map<string, string> tax_details = 5;
+}
+
+message PreviewInvoiceRequest {
+  string organization_id = 1;
+  string plan_id = 2;
+  string billing_cycle = 3;
+  google.protobuf.Timestamp start_date = 4;
+}
+
+message RetryFailedPaymentRequest {
+  string invoice_id = 1;
+  string payment_method_id = 2;
+}
+
+message RequestRefundRequest {
+  string invoice_id = 1;
+  string reason = 2;
+  int64 amount_cents = 3;
+}
+
+message GetCreditBalanceRequest {
+  string organization_id = 1;
+}
+
+message ApplyCreditRequest {
+  string organization_id = 1;
+  int64 amount_cents = 2;
+  string reason = 3;
+}

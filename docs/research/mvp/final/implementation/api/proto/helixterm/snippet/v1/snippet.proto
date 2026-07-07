@@ -1,0 +1,279 @@
+syntax = "proto3";
+
+package helixterm.snippet.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/snippet/v1;snippetv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "helixterm/common/v1/common.proto";
+
+service SnippetService {
+  rpc GetSnippet(GetSnippetRequest) returns (Snippet);
+  rpc ListSnippets(ListSnippetsRequest) returns (ListSnippetsResponse);
+  rpc CreateSnippet(CreateSnippetRequest) returns (Snippet);
+  rpc UpdateSnippet(UpdateSnippetRequest) returns (Snippet);
+  rpc DeleteSnippet(DeleteSnippetRequest) returns (google.protobuf.Empty);
+  rpc ExecuteSnippet(ExecuteSnippetRequest) returns (ExecutionResult);
+  rpc ShareSnippet(ShareSnippetRequest) returns (SnippetShare);
+  rpc ForkSnippet(ForkSnippetRequest) returns (Snippet);
+  rpc StarSnippet(StarSnippetRequest) returns (Snippet);
+  rpc UnstarSnippet(StarSnippetRequest) returns (Snippet);
+  rpc GetSnippetHistory(GetSnippetRequest) returns (SnippetHistory);
+  rpc RevertSnippet(RevertSnippetRequest) returns (Snippet);
+  rpc SearchSnippets(SearchSnippetsRequest) returns (ListSnippetsResponse);
+  rpc ImportSnippets(ImportSnippetsRequest) returns (ImportSnippetsResponse);
+  rpc ExportSnippets(ExportSnippetsRequest) returns (ExportSnippetsResponse);
+  rpc GetSnippetTags(GetSnippetRequest) returns (SnippetTags);
+  rpc UpdateSnippetTags(UpdateSnippetTagsRequest) returns (SnippetTags);
+  rpc GetSnippetPermissions(GetSnippetRequest) returns (SnippetPermissions);
+  rpc UpdateSnippetPermissions(UpdateSnippetPermissionsRequest) returns (SnippetPermissions);
+  rpc BulkDeleteSnippets(BulkDeleteSnippetsRequest) returns (google.protobuf.Empty);
+  rpc GetSnippetStats(GetSnippetRequest) returns (SnippetStats);
+  rpc CloneSnippet(CloneSnippetRequest) returns (Snippet);
+  rpc ValidateSnippet(ValidateSnippetRequest) returns (common.v1.ValidationResult);
+  rpc GetSnippetComments(GetSnippetRequest) returns (SnippetComments);
+  rpc AddSnippetComment(AddSnippetCommentRequest) returns (SnippetComment);
+  rpc DeleteSnippetComment(DeleteSnippetCommentRequest) returns (google.protobuf.Empty);
+}
+
+message Snippet {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string language = 4;
+  string content = 5;
+  string owner_id = 6;
+  string organization_id = 7;
+  repeated string tags = 8;
+  bool is_public = 9;
+  int32 star_count = 10;
+  int32 fork_count = 11;
+  int32 execution_count = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  map<string, string> metadata = 15;
+}
+
+message SnippetShare {
+  string snippet_id = 1;
+  string share_url = 2;
+  string access_token = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  repeated string permissions = 5;
+}
+
+message SnippetHistory {
+  string snippet_id = 1;
+  repeated SnippetVersion versions = 2;
+}
+
+message SnippetVersion {
+  string id = 1;
+  string content = 2;
+  string editor_id = 3;
+  google.protobuf.Timestamp created_at = 4;
+  string change_summary = 5;
+}
+
+message SnippetTags {
+  string snippet_id = 1;
+  repeated string tags = 2;
+}
+
+message SnippetPermissions {
+  string snippet_id = 1;
+  repeated SnippetPermission permissions = 2;
+}
+
+message SnippetPermission {
+  string user_id = 1;
+  string role = 2;
+  repeated string actions = 3;
+}
+
+message SnippetStats {
+  string snippet_id = 1;
+  int32 views = 2;
+  int32 stars = 3;
+  int32 forks = 4;
+  int32 executions = 5;
+  google.protobuf.Timestamp last_executed_at = 6;
+}
+
+message SnippetComment {
+  string id = 1;
+  string snippet_id = 2;
+  string author_id = 3;
+  string content = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message SnippetComments {
+  string snippet_id = 1;
+  repeated SnippetComment comments = 2;
+}
+
+message GetSnippetRequest {
+  string id = 1;
+}
+
+message ListSnippetsRequest {
+  string owner_id = 1;
+  string organization_id = 2;
+  string language = 3;
+  repeated string tags = 4;
+  bool is_public = 5;
+  int32 page_size = 6;
+  string page_token = 7;
+  string sort_by = 8;
+}
+
+message ListSnippetsResponse {
+  repeated Snippet snippets = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message CreateSnippetRequest {
+  string title = 1;
+  string description = 2;
+  string language = 3;
+  string content = 4;
+  string owner_id = 5;
+  string organization_id = 6;
+  repeated string tags = 7;
+  bool is_public = 8;
+}
+
+message UpdateSnippetRequest {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string language = 4;
+  string content = 5;
+  repeated string tags = 6;
+  bool is_public = 7;
+}
+
+message DeleteSnippetRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+message ExecuteSnippetRequest {
+  string id = 1;
+  string session_id = 2;
+  string host_id = 3;
+  map<string, string> variables = 4;
+  int32 timeout_seconds = 5;
+}
+
+message ExecutionResult {
+  string snippet_id = 1;
+  string status = 2;
+  string stdout = 3;
+  string stderr = 4;
+  int32 exit_code = 5;
+  int64 execution_time_ms = 6;
+  google.protobuf.Timestamp executed_at = 7;
+}
+
+message ShareSnippetRequest {
+  string id = 1;
+  repeated string permissions = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  bool generate_token = 4;
+}
+
+message ForkSnippetRequest {
+  string id = 1;
+  string new_title = 2;
+  string owner_id = 3;
+  string organization_id = 4;
+}
+
+message StarSnippetRequest {
+  string id = 1;
+  string user_id = 2;
+}
+
+message RevertSnippetRequest {
+  string id = 1;
+  string version_id = 2;
+}
+
+message SearchSnippetsRequest {
+  string query = 1;
+  string language = 2;
+  repeated string tags = 3;
+  bool is_public = 4;
+  string organization_id = 5;
+  int32 page_size = 6;
+  string page_token = 7;
+}
+
+message ImportSnippetsRequest {
+  bytes data = 1;
+  string format = 2;
+  string owner_id = 3;
+  string organization_id = 4;
+}
+
+message ImportSnippetsResponse {
+  repeated Snippet imported = 1;
+  repeated string failed = 2;
+  int32 total = 3;
+}
+
+message ExportSnippetsRequest {
+  repeated string ids = 1;
+  string format = 2;
+  string owner_id = 3;
+}
+
+message ExportSnippetsResponse {
+  bytes data = 1;
+  string format = 2;
+  int32 count = 3;
+}
+
+message UpdateSnippetTagsRequest {
+  string id = 1;
+  repeated string tags = 2;
+  bool replace = 3;
+}
+
+message UpdateSnippetPermissionsRequest {
+  string id = 1;
+  repeated SnippetPermission permissions = 2;
+  bool replace = 3;
+}
+
+message BulkDeleteSnippetsRequest {
+  repeated string ids = 1;
+  bool force = 2;
+}
+
+message CloneSnippetRequest {
+  string id = 1;
+  string new_title = 2;
+  string owner_id = 3;
+}
+
+message ValidateSnippetRequest {
+  string language = 1;
+  string content = 2;
+}
+
+message AddSnippetCommentRequest {
+  string snippet_id = 1;
+  string author_id = 2;
+  string content = 3;
+}
+
+message DeleteSnippetCommentRequest {
+  string id = 1;
+  string snippet_id = 2;
+}

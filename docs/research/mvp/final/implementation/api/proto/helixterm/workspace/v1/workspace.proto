@@ -1,0 +1,302 @@
+syntax = "proto3";
+
+package helixterm.workspace.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/workspace/v1;workspacev1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "helixterm/common/v1/common.proto";
+
+service WorkspaceService {
+  rpc GetWorkspace(GetWorkspaceRequest) returns (Workspace);
+  rpc ListWorkspaces(ListWorkspacesRequest) returns (ListWorkspacesResponse);
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (Workspace);
+  rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (Workspace);
+  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (google.protobuf.Empty);
+  rpc GetWorkspaceMembers(GetWorkspaceRequest) returns (WorkspaceMembers);
+  rpc AddWorkspaceMember(AddWorkspaceMemberRequest) returns (WorkspaceMember);
+  rpc RemoveWorkspaceMember(RemoveWorkspaceMemberRequest) returns (google.protobuf.Empty);
+  rpc UpdateWorkspaceMemberRole(UpdateWorkspaceMemberRoleRequest) returns (WorkspaceMember);
+  rpc GetWorkspaceSessions(GetWorkspaceRequest) returns (WorkspaceSessions);
+  rpc GetWorkspaceFiles(GetWorkspaceRequest) returns (WorkspaceFiles);
+  rpc ShareWorkspace(ShareWorkspaceRequest) returns (WorkspaceShare);
+  rpc ForkWorkspace(ForkWorkspaceRequest) returns (Workspace);
+  rpc GetWorkspaceSettings(GetWorkspaceRequest) returns (WorkspaceSettings);
+  rpc UpdateWorkspaceSettings(UpdateWorkspaceSettingsRequest) returns (WorkspaceSettings);
+  rpc GetWorkspaceActivity(GetWorkspaceRequest) returns (WorkspaceActivity);
+  rpc SearchWorkspaces(SearchWorkspacesRequest) returns (ListWorkspacesResponse);
+  rpc ExportWorkspace(ExportWorkspaceRequest) returns (ExportWorkspaceResponse);
+  rpc ImportWorkspace(ImportWorkspaceRequest) returns (Workspace);
+  rpc GetWorkspacePermissions(GetWorkspaceRequest) returns (WorkspacePermissions);
+  rpc UpdateWorkspacePermissions(UpdateWorkspacePermissionsRequest) returns (WorkspacePermissions);
+  rpc ArchiveWorkspace(ArchiveWorkspaceRequest) returns (Workspace);
+  rpc RestoreWorkspace(RestoreWorkspaceRequest) returns (Workspace);
+  rpc GetWorkspaceHistory(GetWorkspaceRequest) returns (WorkspaceHistory);
+  rpc GetWorkspaceTemplates(ListWorkspacesRequest) returns (ListWorkspacesResponse);
+  rpc ApplyWorkspaceTemplate(ApplyWorkspaceTemplateRequest) returns (Workspace);
+  rpc GetWorkspaceQuota(GetWorkspaceRequest) returns (WorkspaceQuota);
+  rpc UpdateWorkspaceQuota(UpdateWorkspaceQuotaRequest) returns (WorkspaceQuota);
+  rpc GetWorkspaceAuditLog(GetWorkspaceRequest) returns (common.v1.AuditLogStream);
+  rpc SyncWorkspaceToGit(SyncWorkspaceToGitRequest) returns (WorkspaceSyncStatus);
+  rpc GetWorkspaceSyncStatus(GetWorkspaceRequest) returns (WorkspaceSyncStatus);
+}
+
+message Workspace {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string owner_id = 4;
+  string organization_id = 5;
+  string status = 6;
+  bool is_public = 7;
+  bool is_template = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  google.protobuf.Timestamp archived_at = 11;
+  map<string, string> metadata = 12;
+}
+
+message WorkspaceMember {
+  string workspace_id = 1;
+  string user_id = 2;
+  string role = 3;
+  string status = 4;
+  google.protobuf.Timestamp joined_at = 5;
+  google.protobuf.Timestamp last_active_at = 6;
+}
+
+message WorkspaceMembers {
+  string workspace_id = 1;
+  repeated WorkspaceMember members = 2;
+}
+
+message WorkspaceSessions {
+  string workspace_id = 1;
+  repeated common.v1.Session sessions = 2;
+}
+
+message WorkspaceFiles {
+  string workspace_id = 1;
+  repeated common.v1.FileInfo files = 2;
+}
+
+message WorkspaceShare {
+  string workspace_id = 1;
+  string share_url = 2;
+  string access_token = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  repeated string permissions = 5;
+}
+
+message WorkspaceSettings {
+  string workspace_id = 1;
+  string default_shell = 2;
+  string theme = 3;
+  int32 font_size = 4;
+  string font_family = 5;
+  bool auto_save = 6;
+  int32 auto_save_interval = 7;
+  map<string, string> custom_settings = 8;
+}
+
+message WorkspaceActivity {
+  string workspace_id = 1;
+  int32 total_sessions = 2;
+  int32 total_commands = 3;
+  int32 active_members = 4;
+  google.protobuf.Timestamp last_active_at = 5;
+  repeated common.v1.ActivityRecord recent_activity = 6;
+}
+
+message WorkspacePermissions {
+  string workspace_id = 1;
+  repeated WorkspacePermission permissions = 2;
+}
+
+message WorkspacePermission {
+  string user_id = 1;
+  string role = 2;
+  repeated string actions = 3;
+}
+
+message WorkspaceHistory {
+  string workspace_id = 1;
+  repeated WorkspaceHistoryEntry entries = 2;
+}
+
+message WorkspaceHistoryEntry {
+  string action = 1;
+  string actor_id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  map<string, string> details = 4;
+}
+
+message WorkspaceQuota {
+  string workspace_id = 1;
+  int64 max_storage_bytes = 2;
+  int64 used_storage_bytes = 3;
+  int32 max_members = 4;
+  int32 active_members = 5;
+  int32 max_sessions = 6;
+  int32 active_sessions = 7;
+}
+
+message WorkspaceSyncStatus {
+  string workspace_id = 1;
+  string git_url = 2;
+  string branch = 3;
+  string last_commit_hash = 4;
+  google.protobuf.Timestamp last_synced_at = 5;
+  string status = 6;
+  string error = 7;
+}
+
+message GetWorkspaceRequest {
+  string id = 1;
+}
+
+message ListWorkspacesRequest {
+  string owner_id = 1;
+  string organization_id = 2;
+  bool include_archived = 3;
+  bool is_template = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+  string sort_by = 7;
+}
+
+message ListWorkspacesResponse {
+  repeated Workspace workspaces = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message CreateWorkspaceRequest {
+  string name = 1;
+  string description = 2;
+  string owner_id = 3;
+  string organization_id = 4;
+  bool is_public = 5;
+  bool is_template = 6;
+  map<string, string> metadata = 7;
+}
+
+message UpdateWorkspaceRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  bool is_public = 4;
+  map<string, string> metadata = 5;
+}
+
+message DeleteWorkspaceRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+message AddWorkspaceMemberRequest {
+  string workspace_id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+
+message RemoveWorkspaceMemberRequest {
+  string workspace_id = 1;
+  string user_id = 2;
+}
+
+message UpdateWorkspaceMemberRoleRequest {
+  string workspace_id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+
+message ShareWorkspaceRequest {
+  string id = 1;
+  repeated string permissions = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  bool generate_token = 4;
+}
+
+message ForkWorkspaceRequest {
+  string id = 1;
+  string new_name = 2;
+  string owner_id = 3;
+  string organization_id = 4;
+}
+
+message UpdateWorkspaceSettingsRequest {
+  string workspace_id = 1;
+  string default_shell = 2;
+  string theme = 3;
+  int32 font_size = 4;
+  string font_family = 5;
+  bool auto_save = 6;
+  int32 auto_save_interval = 7;
+  map<string, string> custom_settings = 8;
+}
+
+message SearchWorkspacesRequest {
+  string query = 1;
+  string organization_id = 2;
+  string owner_id = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ExportWorkspaceRequest {
+  string id = 1;
+  string format = 2;
+  bool include_history = 3;
+}
+
+message ExportWorkspaceResponse {
+  bytes data = 1;
+  string format = 2;
+}
+
+message ImportWorkspaceRequest {
+  bytes data = 1;
+  string format = 2;
+  string owner_id = 3;
+  string organization_id = 4;
+}
+
+message UpdateWorkspacePermissionsRequest {
+  string workspace_id = 1;
+  repeated WorkspacePermission permissions = 2;
+  bool replace = 3;
+}
+
+message ArchiveWorkspaceRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message RestoreWorkspaceRequest {
+  string id = 1;
+}
+
+message ApplyWorkspaceTemplateRequest {
+  string template_id = 1;
+  string new_name = 2;
+  string owner_id = 3;
+  string organization_id = 4;
+}
+
+message UpdateWorkspaceQuotaRequest {
+  string workspace_id = 1;
+  int64 max_storage_bytes = 2;
+  int32 max_members = 3;
+  int32 max_sessions = 4;
+}
+
+message SyncWorkspaceToGitRequest {
+  string workspace_id = 1;
+  string git_url = 2;
+  string branch = 3;
+  string commit_message = 4;
+  bool force = 5;
+}
+

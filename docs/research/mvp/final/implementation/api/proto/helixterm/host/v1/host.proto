@@ -1,0 +1,246 @@
+syntax = "proto3";
+
+package helixterm.host.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/host/v1;hostv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "helixterm/common/v1/common.proto";
+
+service HostService {
+  rpc GetHost(GetHostRequest) returns (Host);
+  rpc ListHosts(ListHostsRequest) returns (ListHostsResponse);
+  rpc CreateHost(CreateHostRequest) returns (Host);
+  rpc UpdateHost(UpdateHostRequest) returns (Host);
+  rpc DeleteHost(DeleteHostRequest) returns (google.protobuf.Empty);
+  rpc TestHostConnection(TestHostConnectionRequest) returns (common.v1.ConnectionTestResult);
+  rpc GetHostMetrics(GetHostRequest) returns (HostMetrics);
+  rpc ListHostSessions(GetHostRequest) returns (ListHostSessionsResponse);
+  rpc RotateHostCredentials(RotateHostCredentialsRequest) returns (HostCredentials);
+  rpc GetHostCredentials(GetHostRequest) returns (HostCredentials);
+  rpc BulkImportHosts(BulkImportHostsRequest) returns (BulkImportHostsResponse);
+  rpc ExportHosts(ExportHostsRequest) returns (ExportHostsResponse);
+  rpc SearchHosts(SearchHostsRequest) returns (ListHostsResponse);
+  rpc GetHostAuditLog(GetHostRequest) returns (common.v1.AuditLogStream);
+  rpc EnableHost(EnableHostRequest) returns (Host);
+  rpc DisableHost(DisableHostRequest) returns (Host);
+  rpc GetHostHealth(GetHostRequest) returns (HostHealth);
+  rpc UpdateHostTags(UpdateHostTagsRequest) returns (Host);
+  rpc GetHostAccessLogs(GetHostRequest) returns (AccessLogStream);
+  rpc CloneHost(CloneHostRequest) returns (Host);
+  rpc GetHostConfig(GetHostRequest) returns (HostConfig);
+  rpc UpdateHostConfig(UpdateHostConfigRequest) returns (HostConfig);
+  rpc DiscoverHosts(DiscoverHostsRequest) returns (ListHostsResponse);
+  rpc GetHostNetworkInfo(GetHostRequest) returns (HostNetworkInfo);
+}
+
+message Host {
+  string id = 1;
+  string name = 2;
+  string hostname = 3;
+  int32 port = 4;
+  string protocol = 5;
+  string status = 6;
+  string os_type = 7;
+  string region = 8;
+  repeated string tags = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  google.protobuf.Timestamp last_seen_at = 12;
+  map<string, string> metadata = 13;
+  string organization_id = 14;
+}
+
+message HostMetrics {
+  string host_id = 1;
+  float cpu_percent = 2;
+  float memory_percent = 3;
+  float disk_percent = 4;
+  int32 active_connections = 5;
+  int64 bytes_sent = 6;
+  int64 bytes_received = 7;
+  google.protobuf.Timestamp collected_at = 8;
+}
+
+message HostCredentials {
+  string host_id = 1;
+  string auth_type = 2;
+  string username = 3;
+  string key_fingerprint = 4;
+  google.protobuf.Timestamp rotated_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message HostHealth {
+  string host_id = 1;
+  string status = 2;
+  float latency_ms = 3;
+  string last_error = 4;
+  google.protobuf.Timestamp checked_at = 5;
+}
+
+message HostConfig {
+  string host_id = 1;
+  string ssh_config = 2;
+  int32 keepalive_interval = 3;
+  int32 connection_timeout = 4;
+  bool compression_enabled = 5;
+  map<string, string> custom_options = 6;
+}
+
+message HostNetworkInfo {
+  string host_id = 1;
+  string public_ip = 2;
+  string private_ip = 3;
+  repeated string dns_names = 4;
+  repeated OpenPort open_ports = 5;
+}
+
+message OpenPort {
+  int32 port = 1;
+  string protocol = 2;
+  string service = 3;
+}
+
+message GetHostRequest {
+  string id = 1;
+}
+
+message ListHostsRequest {
+  string organization_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  string filter = 4;
+  string sort_by = 5;
+}
+
+message ListHostsResponse {
+  repeated Host hosts = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message CreateHostRequest {
+  string name = 1;
+  string hostname = 2;
+  int32 port = 3;
+  string protocol = 4;
+  string os_type = 5;
+  string region = 6;
+  repeated string tags = 7;
+  string organization_id = 8;
+  string auth_type = 9;
+  string username = 10;
+  string password = 11;
+  string private_key = 12;
+}
+
+message UpdateHostRequest {
+  string id = 1;
+  string name = 2;
+  string hostname = 3;
+  int32 port = 4;
+  repeated string tags = 5;
+  string status = 6;
+}
+
+message DeleteHostRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+message TestHostConnectionRequest {
+  string id = 1;
+  bool test_credentials = 2;
+}
+
+message ListHostSessionsResponse {
+  repeated common.v1.Session sessions = 1;
+}
+
+message RotateHostCredentialsRequest {
+  string host_id = 1;
+  string auth_type = 2;
+  bool notify_admins = 3;
+}
+
+message BulkImportHostsRequest {
+  repeated CreateHostRequest hosts = 1;
+  bool skip_duplicates = 2;
+}
+
+message BulkImportHostsResponse {
+  repeated Host imported = 1;
+  repeated string failed = 2;
+  int32 total = 3;
+}
+
+message ExportHostsRequest {
+  string organization_id = 1;
+  string format = 2;
+  string filter = 3;
+}
+
+message ExportHostsResponse {
+  bytes data = 1;
+  string format = 2;
+  int32 count = 3;
+}
+
+message SearchHostsRequest {
+  string query = 1;
+  string organization_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message EnableHostRequest {
+  string id = 1;
+}
+
+message DisableHostRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message UpdateHostTagsRequest {
+  string id = 1;
+  repeated string tags = 2;
+  bool replace = 3;
+}
+
+message AccessLogStream {
+  repeated AccessLogEntry entries = 1;
+}
+
+message AccessLogEntry {
+  string id = 1;
+  string user_id = 2;
+  string action = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  string ip_address = 5;
+}
+
+message CloneHostRequest {
+  string source_id = 1;
+  string new_name = 2;
+  bool clone_credentials = 3;
+}
+
+message UpdateHostConfigRequest {
+  string host_id = 1;
+  string ssh_config = 2;
+  int32 keepalive_interval = 3;
+  int32 connection_timeout = 4;
+  bool compression_enabled = 5;
+  map<string, string> custom_options = 6;
+}
+
+message DiscoverHostsRequest {
+  string network_range = 1;
+  string protocol = 2;
+  repeated int32 ports = 3;
+  string organization_id = 4;
+}
+
