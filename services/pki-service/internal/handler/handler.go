@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"math/big"
 	"net/http"
 	"time"
@@ -45,7 +46,24 @@ func (h *Handler) CreateCA(c *gin.Context) {
 	}
 
 	subject := "CN=" + req.Name + " CA,O=Helix,C=US"
-	certPEM, serial, err := crypto.CreateCACertificate(privPEM, subject, req.ValidityDays)
+	// The second return value is the CA's OWN self-signed X.509 serial
+	// number (a random 128-bit value, correctly embedded in certPEM
+	// already) — it is intentionally NOT stored in
+	// CertificateAuthority.SerialNumber. That column is a DIFFERENT
+	// thing: the monotonic counter GetNextSerialNumber increments to
+	// assign serials to CHILD certificates issued under this CA. It
+	// MUST start at 0 (see below) and MUST NEVER be seeded from a
+	// random 128-bit value truncated via big.Int.Int64() — that
+	// truncation is undefined/effectively-random-signed (Go big.Int
+	// docs: "If x cannot be represented in an int64, the result is
+	// undefined") and was ~50% likely to start the per-CA counter
+	// negative, which then poisoned every certificate issued under
+	// that CA with a negative serial and made x509.CreateCertificate
+	// reject it with "x509: serial number must be positive" — a real
+	// defect discovered ONLY via the real-persistence, real-x509-signing
+	// integration test (queue#4, §11.4.27); no unit test with a mocked
+	// repository could ever have caught it.
+	certPEM, _, err := crypto.CreateCACertificate(privPEM, subject, req.ValidityDays)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create CA certificate"})
 		return
@@ -65,7 +83,7 @@ func (h *Handler) CreateCA(c *gin.Context) {
 		Description:  req.Description,
 		CACertPEM:    certPEM,
 		CAKeyPEM:     encPriv,
-		SerialNumber: serial.Int64(),
+		SerialNumber: 0, // child-certificate serial counter — starts at 0, see comment above
 		ValidityDays: req.ValidityDays,
 		CreatedAt:    now,
 		UpdatedAt:    now,
@@ -234,6 +252,23 @@ func (h *Handler) CreateCertificate(c *gin.Context) {
 		return
 	}
 
+	// The certificates.subject / certificates.issuer columns are jsonb
+	// (migrations/001_init.sql). A raw DN string ("CN=...,O=...") is not
+	// valid JSON, so it MUST be JSON-encoded before being stored — a raw
+	// []byte(req.Subject) causes Postgres to reject the INSERT with
+	// "invalid input syntax for type json" (SQLSTATE 22P02), discovered
+	// via the real-persistence integration test (queue#4, §11.4.27).
+	subjectJSON, err := json.Marshal(req.Subject)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encode subject"})
+		return
+	}
+	issuerJSON, err := json.Marshal(ca.CACertPEM)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encode issuer"})
+		return
+	}
+
 	now := time.Now().UTC()
 	cert := &model.Certificate{
 		ID:           uuid.New(),
@@ -243,8 +278,8 @@ func (h *Handler) CreateCertificate(c *gin.Context) {
 		CertPEM:      certPEM,
 		KeyPEM:       encPriv,
 		SerialNumber: serial,
-		Subject:      []byte(req.Subject),
-		Issuer:       []byte(ca.CACertPEM),
+		Subject:      subjectJSON,
+		Issuer:       issuerJSON,
 		NotBefore:    parsedCert.NotBefore,
 		NotAfter:     parsedCert.NotAfter,
 		Status:       model.StatusActive,

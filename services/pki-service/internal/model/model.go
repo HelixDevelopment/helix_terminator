@@ -44,7 +44,14 @@ type Certificate struct {
 	NotBefore        time.Time         `json:"not_before" db:"not_before"`
 	NotAfter         time.Time         `json:"not_after" db:"not_after"`
 	RevokedAt        *time.Time        `json:"revoked_at,omitempty" db:"revoked_at"`
-	RevocationReason string            `json:"revocation_reason,omitempty" db:"revocation_reason"`
+	// RevocationReason is nullable in the schema (migrations/001_init.sql:
+	// "revocation_reason TEXT" with no NOT NULL) — every never-revoked
+	// certificate has a real NULL here. It MUST be a pointer so pgx can
+	// scan NULL; a bare string field made GetCertByID/ListCerts fail on
+	// every active certificate ("cannot scan NULL into *string"),
+	// discovered via the real-persistence integration test (queue#4,
+	// §11.4.27).
+	RevocationReason *string           `json:"revocation_reason,omitempty" db:"revocation_reason"`
 	Status           CertificateStatus `json:"status" db:"status"`
 	CreatedAt        time.Time         `json:"created_at" db:"created_at"`
 	UpdatedAt        time.Time         `json:"updated_at" db:"updated_at"`
@@ -100,7 +107,7 @@ type CertResponse struct {
 	NotBefore        time.Time         `json:"not_before"`
 	NotAfter         time.Time         `json:"not_after"`
 	RevokedAt        *time.Time        `json:"revoked_at,omitempty"`
-	RevocationReason string            `json:"revocation_reason,omitempty"`
+	RevocationReason *string           `json:"revocation_reason,omitempty"`
 	Status           CertificateStatus `json:"status"`
 	CreatedAt        time.Time         `json:"created_at"`
 	UpdatedAt        time.Time         `json:"updated_at"`
