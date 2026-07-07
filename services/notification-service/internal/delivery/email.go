@@ -11,9 +11,24 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"os"
 	"strings"
+)
+
+const (
+	// maxEmailSubjectLength caps the Subject header line length per
+	// RFC 5322 §2.1.1 (an unfolded header line SHOULD NOT exceed 998
+	// characters). Defense-in-depth (Constitution §11.4 security-hardening
+	// audit): the HTTP layer already caps the notification title at 255
+	// characters, but EmailSender.Send is a public API other callers can
+	// invoke directly.
+	maxEmailSubjectLength = 998
+
+	// maxEmailRecipientLength is the RFC 5321 §4.5.3.1.3 maximum total
+	// length of a forward-path (mailbox) address.
+	maxEmailRecipientLength = 254
 )
 
 // SMTPConfig holds SMTP server connection settings. Values are sourced from
@@ -76,12 +91,52 @@ func NewEmailSender(cfg SMTPConfig) *EmailSender {
 // does NOT by itself prove the recipient received it — that confirmation
 // comes from the downstream mailbox/sink (see the integration tests in this
 // package, which assert against a real MailHog/Mailpit inbox).
+//
+// Security (Constitution §11.4 header-injection hardening): to and subject
+// are woven directly into hand-built RFC 5322 header lines in buildMessage.
+// A value containing CR or LF could smuggle extra headers (or, depending on
+// the downstream MTA, extra SMTP commands) past this point, so BOTH are
+// rejected outright if they contain CR/LF, to is additionally required to
+// parse as a single well-formed RFC 5322 address (net/mail.ParseAddress) —
+// rejecting address lists, comments that hide control characters, and
+// anything else that is not a bare mailbox — and the parsed, canonical
+// address is what actually reaches the envelope and the header, never the
+// raw caller-supplied string.
 func (s *EmailSender) Send(ctx context.Context, to, subject, body string) error {
 	if to == "" {
 		return fmt.Errorf("email recipient (target) is required")
 	}
+	if containsCRLF(to) {
+		return fmt.Errorf("email recipient must not contain CR/LF characters (header injection rejected)")
+	}
+	if len(to) > maxEmailRecipientLength {
+		return fmt.Errorf("email recipient exceeds maximum length of %d characters", maxEmailRecipientLength)
+	}
+	parsedTo, err := mail.ParseAddress(to)
+	if err != nil {
+		return fmt.Errorf("invalid email recipient %q: %w", to, err)
+	}
+	// Use the parsed, canonical bare address for BOTH the envelope
+	// recipient and the "To" header — never the raw caller-supplied
+	// string — so a syntactically-valid-but-decorated address cannot
+	// smuggle anything past this point.
+	to = parsedTo.Address
+
+	if containsCRLF(subject) {
+		return fmt.Errorf("email subject must not contain CR/LF characters (header injection rejected)")
+	}
+	if len(subject) > maxEmailSubjectLength {
+		return fmt.Errorf("email subject exceeds maximum length of %d characters", maxEmailSubjectLength)
+	}
+
 	if s.cfg.Host == "" {
 		return fmt.Errorf("smtp not configured: SMTP_HOST is unset")
+	}
+	if containsCRLF(s.cfg.From) {
+		// Defense-in-depth: SMTP_FROM is operator-sourced (Constitution
+		// §11.4.10), not attacker input, but a misconfigured value must
+		// still never reach a hand-built header line unchecked.
+		return fmt.Errorf("configured SMTP_FROM address must not contain CR/LF characters")
 	}
 
 	addr := net.JoinHostPort(s.cfg.Host, s.cfg.Port)
@@ -106,6 +161,15 @@ func (s *EmailSender) Send(ctx context.Context, to, subject, body string) error 
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+// containsCRLF reports whether s contains a carriage return or line feed —
+// the two characters an attacker needs to smuggle extra SMTP/MIME headers
+// into a value this package weaves into a hand-built header line.
+// Constitution §11.4 security-hardening: every value that reaches a
+// hand-built header MUST be checked with this guard before use.
+func containsCRLF(s string) bool {
+	return strings.ContainsAny(s, "\r\n")
 }
 
 // buildMessage renders a minimal, valid RFC 5322 plaintext email.

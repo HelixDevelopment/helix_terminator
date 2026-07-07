@@ -45,7 +45,7 @@ type CreateNotificationRequest struct {
 	Type    string          `json:"type" binding:"required,oneof=info warning error success"`
 	Title   string          `json:"title" binding:"required,max=255"`
 	Message string          `json:"message" binding:"required,max=2000"`
-	Data    json.RawMessage `json:"data,omitempty"`
+	Data    json.RawMessage `json:"data,omitempty" binding:"omitempty,max=65536"`
 	Channel string          `json:"channel" binding:"required,oneof=email in_app push webhook"`
 	Status  string          `json:"status" binding:"omitempty,oneof=pending sent delivered failed"`
 	// Target is the delivery destination, required for channel=email

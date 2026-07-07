@@ -23,6 +23,12 @@ import (
 // a REAL outbound HTTP POST: it stands up a real net/http receiver, sends a
 // real webhook notification through WebhookSender, and asserts the receiver
 // actually got the POST with the exact expected payload.
+//
+// This test's receiver is an httptest.Server bound to loopback (127.0.0.1),
+// so it uses NewWebhookSenderForTesting — the production sender
+// (NewWebhookSender) would correctly refuse to dial a loopback address
+// (SSRF guard, see webhook_ssrf_test.go). This is a test-infra concession,
+// not a weakening of the production path.
 func TestWebhookSender_RealHTTPDelivery_ReceiverConfirms(t *testing.T) {
 	var mu sync.Mutex
 	var receivedBody []byte
@@ -48,7 +54,7 @@ func TestWebhookSender_RealHTTPDelivery_ReceiverConfirms(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	sender := delivery.NewWebhookSender(5 * time.Second)
+	sender := delivery.NewWebhookSenderForTesting(5 * time.Second)
 	payload := delivery.WebhookPayload{
 		ID:      "11111111-1111-1111-1111-111111111111",
 		UserID:  "22222222-2222-2222-2222-222222222222",
@@ -88,14 +94,15 @@ func TestWebhookSender_RealHTTPDelivery_ReceiverConfirms(t *testing.T) {
 
 // TestWebhookSender_NonSuccessStatus_ReturnsHonestFailure proves a non-2xx
 // receiver response is surfaced as a real error — never silently accepted
-// as "delivered".
+// as "delivered". The receiver is loopback, so this uses the test-permissive
+// constructor (see TestWebhookSender_RealHTTPDelivery_ReceiverConfirms).
 func TestWebhookSender_NonSuccessStatus_ReturnsHonestFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
 
-	sender := delivery.NewWebhookSender(5 * time.Second)
+	sender := delivery.NewWebhookSenderForTesting(5 * time.Second)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -105,9 +112,14 @@ func TestWebhookSender_NonSuccessStatus_ReturnsHonestFailure(t *testing.T) {
 }
 
 // TestWebhookSender_UnreachableURL_ReturnsHonestFailure proves a genuinely
-// unreachable target surfaces as an error, never a fabricated success.
+// unreachable-but-otherwise-permitted target surfaces as an error, never a
+// fabricated success. Uses the test-permissive constructor so the failure
+// this test is actually named for (connection refused on an open loopback
+// port with nothing listening) is what fires — NOT the SSRF guard, which
+// has its own dedicated proof in webhook_ssrf_test.go and would otherwise
+// preempt this test's intent now that loopback is guarded in production.
 func TestWebhookSender_UnreachableURL_ReturnsHonestFailure(t *testing.T) {
-	sender := delivery.NewWebhookSender(2 * time.Second)
+	sender := delivery.NewWebhookSenderForTesting(2 * time.Second)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 

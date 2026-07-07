@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"os"
@@ -83,8 +84,17 @@ func New(logger Logger) (*Server, error) {
 	r.GET("/healthz/ready", h.ReadinessCheck)
 	r.GET("/healthz", h.HealthCheck)
 
-	// Notification routes
+	// Notification routes — require a valid service-to-service API key.
+	// This closes the open-relay gap the real email/webhook delivery sinks
+	// introduced: without authentication, CreateNotification could be
+	// abused by anyone as an unauthenticated spam / SSRF-amplification
+	// relay (Constitution §11.4.133 security-hardening finding). The whole
+	// group is protected, not just CreateNotification, mirroring
+	// vault-service's convention and closing the related gap where any
+	// caller could otherwise list/read/delete another user's notifications
+	// by simply supplying their user_id.
 	api := r.Group("/api/v1/notifications")
+	api.Use(s.authMiddleware())
 	{
 		api.POST("", h.CreateNotification)
 		api.GET("", h.ListNotifications)
@@ -109,6 +119,29 @@ func (s *Server) Router() http.Handler {
 
 func (s *Server) recoveryMiddleware() gin.HandlerFunc {
 	return gin.Recovery()
+}
+
+// authMiddleware enforces service-to-service API key authentication on
+// every /api/v1/notifications/* route. The expected key is provisioned via
+// the NOTIFICATION_SERVICE_API_KEY environment variable. A request with a
+// missing, empty, or mismatched X-API-Key header is rejected with 401
+// Unauthorized. If NOTIFICATION_SERVICE_API_KEY is not configured at all,
+// the service fails CLOSED (every notification request is rejected) rather
+// than silently allowing unauthenticated access to a channel that now
+// performs real outbound SMTP/HTTP delivery — an unauthenticated
+// CreateNotification would otherwise be usable as an open spam /
+// SSRF-amplification relay. Comparison uses subtle.ConstantTimeCompare to
+// avoid a timing side-channel on the configured key.
+func (s *Server) authMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		expected := os.Getenv("NOTIFICATION_SERVICE_API_KEY")
+		got := c.GetHeader("X-API-Key")
+		if expected == "" || got == "" || subtle.ConstantTimeCompare([]byte(got), []byte(expected)) != 1 {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-API-Key"})
+			return
+		}
+		c.Next()
+	}
 }
 
 func (s *Server) requestIDMiddleware() gin.HandlerFunc {

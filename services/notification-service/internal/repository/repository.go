@@ -22,8 +22,19 @@ func New(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
+// checkPool reports whether the repository has a usable connection pool. It
+// is deliberately safe to call on a NIL *Repository receiver (r == nil) —
+// that is exactly the state server.New() produces when DATABASE_URL is
+// unset (see server.go: "var repo *repository.Repository" is never
+// assigned via repository.New(...) in that path). Before this guard, every
+// repository method's first line ("if err := r.checkPool(); err != nil")
+// dereferenced r.pool on a nil r, causing a runtime nil-pointer-dereference
+// panic on the very first request to any repo-backed route when the
+// service starts without a database configured — an availability bug
+// surfaced by the notification-service security-hardening audit (a route
+// MUST degrade to an honest 503 "database not connected", never crash).
 func (r *Repository) checkPool() error {
-	if r.pool == nil {
+	if r == nil || r.pool == nil {
 		return fmt.Errorf("database not connected")
 	}
 	return nil

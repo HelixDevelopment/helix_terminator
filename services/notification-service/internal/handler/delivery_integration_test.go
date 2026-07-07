@@ -167,7 +167,12 @@ func TestCreateNotification_Webhook_RealDeliveryEndToEnd(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ws := delivery.NewWebhookSender(5 * time.Second)
+	// The receiver above is a loopback httptest.Server, so this uses the
+	// test-permissive constructor — the production sender used by
+	// handler.New() (delivery.NewWebhookSender) correctly refuses to dial
+	// loopback/private/link-local destinations (SSRF guard, see
+	// internal/delivery/webhook_ssrf_test.go).
+	ws := delivery.NewWebhookSenderForTesting(5 * time.Second)
 	ps := delivery.NewPushSender()
 	h := handler.NewWithDelivery(repo, nil, ws, ps)
 

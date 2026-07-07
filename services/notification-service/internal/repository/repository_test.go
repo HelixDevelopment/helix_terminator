@@ -14,6 +14,42 @@ import (
 	"github.com/helixdevelopment/notification-service/internal/repository"
 )
 
+// TestNilRepository_NeverPanics_AlwaysHonestError is a regression guard for
+// an availability bug the security-hardening audit surfaced: server.New()
+// leaves h.repo as a genuinely NIL *repository.Repository when
+// DATABASE_URL is unset (in-memory mode), and every repo method's first
+// call was checkPool() dereferencing r.pool on that nil receiver — a
+// runtime nil-pointer-dereference panic on the very first request to any
+// repo-backed route (e.g. POST /api/v1/notifications) in that mode. A repo
+// method MUST degrade to the honest "database not connected" error, never
+// crash the request goroutine.
+func TestNilRepository_NeverPanics_AlwaysHonestError(t *testing.T) {
+	var repo *repository.Repository // deliberately nil, mirrors server.New()'s in-memory-mode state
+	ctx := context.Background()
+
+	assert.NotPanics(t, func() {
+		err := repo.CreateNotification(ctx, &model.Notification{ID: uuid.New()})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "database not connected")
+	})
+
+	assert.NotPanics(t, func() {
+		_, err := repo.GetNotificationByID(ctx, uuid.New())
+		require.Error(t, err)
+	})
+
+	assert.NotPanics(t, func() {
+		_, _, err := repo.ListNotifications(ctx, uuid.New(), nil, "", "", 20, 0)
+		require.Error(t, err)
+	})
+
+	assert.NotPanics(t, func() {
+		err := repo.Ping(ctx)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "database not connected")
+	})
+}
+
 func setupTestDB(t *testing.T) *repository.Repository {
 	dbURL := "postgres://postgres:postgres@localhost:5432/notification_test?sslmode=disable"
 	pool, err := pgxpool.New(context.Background(), dbURL)
@@ -177,10 +213,10 @@ func TestPreference(t *testing.T) {
 
 	userID := uuid.New()
 	pref := &model.NotificationPreference{
-		UserID:  userID,
-		Channel: "email",
-		Enabled: true,
-		Types:   []string{"info", "warning"},
+		UserID:    userID,
+		Channel:   "email",
+		Enabled:   true,
+		Types:     []string{"info", "warning"},
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}
