@@ -1,12 +1,18 @@
 module github.com/helixdevelopment/ai-service
 
-go 1.25.0
+go 1.25.3
 
 require (
+	digital.vasic.llmprovider v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 )
+
+// digital.vasic.llmprovider's module path is fictitious (NXDOMAIN) — it is only ever
+// consumed via this local replace, pointing at the owned-org submodule pinned at the
+// parent repo's submodules/llmprovider (§11.4.31 verified leaf dependency, deps: []).
+replace digital.vasic.llmprovider => ../../submodules/llmprovider
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
