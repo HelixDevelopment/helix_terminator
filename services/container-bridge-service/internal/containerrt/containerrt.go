@@ -16,8 +16,11 @@ package containerrt
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
 
 	ctrruntime "digital.vasic.containers/pkg/runtime"
@@ -64,11 +67,128 @@ func runBinary(name string) (string, bool) {
 	}
 }
 
+// ErrInvalidInput is the sentinel every ValidateRunFromImageInputs failure
+// wraps (via %w), letting callers — in particular the HTTP handler — detect
+// a caller-input defect with errors.Is and map it to HTTP 400, distinctly
+// from a genuine container-runtime failure (which surfaces as 502).
+var ErrInvalidInput = errors.New("containerrt: invalid input")
+
+// containerNamePattern matches the docker/podman container-name grammar
+// (`[a-zA-Z0-9][a-zA-Z0-9_.-]*`). It intentionally REJECTS a leading '-' (or
+// any other non-alphanumeric first character) — the exact shape a
+// flag/argument-injection payload like "--privileged" would need to be
+// parsed as a CLI flag instead of the `--name` value / a harmless string.
+var containerNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
+
+// The following build an OCI/docker image-reference pattern from the
+// documented grammar (OCI Distribution Spec / docker/distribution
+// `reference` package grammar — a public specification, reimplemented here
+// rather than importing an extra dependency): optional
+// registry-domain[:port] + '/' separated lowercase path components + optional
+// ":tag" + optional "@digest". Every component MUST start with an
+// alphanumeric character, which — same as containerNamePattern above —
+// structurally forbids a leading '-' anywhere a flag-injection payload could
+// hide.
+var (
+	imageNameComponent    = `[a-z0-9]+(?:(?:[._]|__|[-]+)[a-z0-9]+)*`
+	imageDomainComponent  = `[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?`
+	imageDomain           = imageDomainComponent + `(?:\.` + imageDomainComponent + `)*(?::[0-9]+)?`
+	imagePath             = imageNameComponent + `(?:/` + imageNameComponent + `)*`
+	imageTag              = `[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}`
+	imageDigest           = `[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*:[0-9a-fA-F]{32,}`
+	imageReferencePattern = regexp.MustCompile(
+		`^(?:` + imageDomain + `/)?` + imagePath +
+			`(?::` + imageTag + `)?` +
+			`(?:@` + imageDigest + `)?$`,
+	)
+)
+
+// portMappingPattern matches "hostPort:containerPort", optionally prefixed
+// with a host IP ("hostIP:hostPort:containerPort") and optionally suffixed
+// with "/tcp" or "/udp". Port numbers are range-checked separately (1-65535)
+// so an out-of-range numeric value is still cleanly rejected rather than
+// silently truncated by the regex.
+var portMappingPattern = regexp.MustCompile(
+	`^(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}:)?([0-9]{1,5}):([0-9]{1,5})(?:/(?:tcp|udp))?$`,
+)
+
+// ValidateRunFromImageInputs rejects any caller-controlled value that could
+// reach the podman/docker/nerdctl `run` CLI unsanitized and be parsed as a
+// FLAG instead of the positional/value slot it is meant to occupy — e.g. an
+// Image of "--privileged" sitting in the IMAGE positional, or a Ports
+// element like "-v" sitting in a `-p <value>` slot, both scanned by the
+// underlying CLI's flag parser before (or in place of) the intended
+// positional argument. It is intentionally the SOLE gate: relying only on
+// an allow-listed runtime binary (runBinary) does not restrict what
+// arguments reach that binary.
+//
+// It is pure — no exec, no I/O — so it is unit-testable in a table test
+// without a real container runtime, and it is called from BOTH
+// cliBackend.RunFromImage (the actual exec boundary, protecting every
+// caller) and the HTTP handler's bringUp (so the rejection surfaces as a
+// clean 400 before any backend call is attempted, per §11.4.108 — a caller
+// mistake is never conflated with a genuine runtime failure).
+//
+// name may be "" (the caller has not yet decided a name / will auto-generate
+// one); every other non-empty value is validated.
+//
+// cmd is deliberately NOT rejected for a leading '-': in the argv this
+// package builds (`run -d --name <name> [-p <port>]* <image> <cmd...>`),
+// every cmd element lands strictly AFTER the already-validated image
+// positional — the documented `IMAGE [COMMAND] [ARG...]` region where
+// podman/docker/nerdctl stop treating tokens as `run` options and instead
+// pass them straight through as the container's entrypoint override
+// (verified against Docker's own reference docs, e.g. `docker run nginx -g
+// 'daemon off;'`, and exercised by this service's own real-Podman
+// integration test's `["sh", "-c", "sleep 300"]`). Rejecting a leading '-'
+// there would regress that legitimate, already-shipped capability without
+// closing any actual injection vector — cmd can never be mistaken for the
+// name/image/ports slots that DO precede it in argv, which are the ones
+// this validator protects.
+func ValidateRunFromImageInputs(name, image string, ports []string, cmd []string) error {
+	if name != "" && !containerNamePattern.MatchString(name) {
+		return fmt.Errorf("%w: name %q must match %s (docker/podman container-name grammar, no leading '-')",
+			ErrInvalidInput, name, containerNamePattern.String())
+	}
+	if !imageReferencePattern.MatchString(image) {
+		return fmt.Errorf("%w: image %q is not a valid OCI image reference (registry/name[:tag][@digest], no leading '-')",
+			ErrInvalidInput, image)
+	}
+	for i, p := range ports {
+		if err := validatePortMapping(p); err != nil {
+			return fmt.Errorf("%w: ports[%d] %q: %v", ErrInvalidInput, i, p, err)
+		}
+	}
+	_ = cmd // intentionally not validated here — see doc comment above.
+	return nil
+}
+
+// validatePortMapping enforces the documented "hostPort:containerPort"
+// syntax (optionally "hostIP:hostPort:containerPort", optionally suffixed
+// "/tcp"|"/udp") with both port numbers range-checked to 1-65535.
+func validatePortMapping(p string) error {
+	m := portMappingPattern.FindStringSubmatch(p)
+	if m == nil {
+		return fmt.Errorf(
+			"must match hostPort:containerPort (optionally hostIP:hostPort:containerPort, optional /tcp or /udp suffix)")
+	}
+	for _, portStr := range m[1:3] {
+		port, err := strconv.Atoi(portStr)
+		if err != nil || port < 1 || port > 65535 {
+			return fmt.Errorf("port %q out of range 1-65535", portStr)
+		}
+	}
+	return nil
+}
+
 // RunFromImage implements Backend by shelling out to the detected runtime's
 // CLI, mirroring digital.vasic.containers/pkg/brokertest.StartNATS.
 func (b *cliBackend) RunFromImage(
 	ctx context.Context, name, image string, ports []string, cmd ...string,
 ) (string, error) {
+	if err := ValidateRunFromImageInputs(name, image, ports, cmd); err != nil {
+		return "", err
+	}
 	args := []string{"run", "-d", "--name", name}
 	for _, p := range ports {
 		p = strings.TrimSpace(p)

@@ -2,9 +2,12 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	ctrruntime "digital.vasic.containers/pkg/runtime"
@@ -65,6 +68,14 @@ func (h *Handler) CreateBridge(c *gin.Context) {
 
 	containerID, status, err := h.bringUp(ctx, req.ContainerID, req.Image, req.Ports, req.Command...)
 	if err != nil {
+		if errors.Is(err, containerrt.ErrInvalidInput) {
+			// A caller-input defect (e.g. a flag-injection payload in
+			// Image/ContainerID/Ports/Command) is a client mistake, not a
+			// runtime failure — it MUST surface as 400, never the 502 a
+			// genuine backend/runtime error gets below.
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
 	}
@@ -97,6 +108,19 @@ func (h *Handler) CreateBridge(c *gin.Context) {
 func (h *Handler) bringUp(
 	ctx context.Context, containerID, image string, ports []string, cmd ...string,
 ) (string, string, error) {
+	// Validate EVERY caller-controlled value that could reach the
+	// container-runtime CLI unsanitized — BEFORE any backend call (attach's
+	// h.backend.Status included) — so a flag-injection payload (e.g.
+	// ContainerID/Image "--privileged") is rejected up front, wrapped in
+	// containerrt.ErrInvalidInput so CreateBridge maps it to HTTP 400
+	// instead of the 502 a genuine runtime failure gets. containerrt's own
+	// RunFromImage re-validates at the exec boundary too (defense in depth
+	// for any other caller), so this is not the only gate — but it is the
+	// one that lets the handler classify the error correctly.
+	if err := containerrt.ValidateRunFromImageInputs(containerID, image, ports, cmd); err != nil {
+		return "", "", err
+	}
+
 	if containerID != "" {
 		if st, err := h.backend.Status(ctx, containerID); err == nil {
 			if st.State != ctrruntime.StateRunning {
@@ -118,6 +142,15 @@ func (h *Handler) bringUp(
 		return "", "", fmt.Errorf(
 			"no existing container %q and no image given to create one from", containerID)
 	}
+	// The name=="" fallback below is UNREACHABLE via the HTTP-bound path
+	// today: model.CreateContainerBridgeRequest.ContainerID carries
+	// `binding:"required"`, so gin's ShouldBindJSON already rejects an
+	// empty ContainerID before CreateBridge ever calls bringUp. It is kept
+	// (per §11.4.124 — investigate before removing seemingly-dead code) as
+	// a defensive fallback for bringUp's own contract as a general
+	// "attach-or-create" helper: any FUTURE or direct caller invoking it
+	// with containerID=="" still gets a safe, unique, validation-passing
+	// generated name instead of an empty --name argument.
 	name := containerID
 	if name == "" {
 		name = "bridge-" + uuid.New().String()
@@ -236,7 +269,15 @@ func (h *Handler) ListBridges(c *gin.Context) {
 	})
 }
 
-// UpdateBridge updates a bridge
+// UpdateBridge updates a bridge's client-editable fields (name, image,
+// ports). Status is NEVER taken from the client-supplied req.Status — a PUT
+// body asserting `{"status":"active"}` MUST NOT be able to fabricate that
+// state (§11.4.108): the persisted status is always recomputed from the
+// REAL container-runtime state, the same rule GetBridge/ListBridges/
+// reconcile already enforce. (Dropping "status" from the update map instead
+// is NOT an option here: repository.UpdateBridge writes all four columns
+// positionally on every call, so an absent map key would write SQL NULL
+// into the status column rather than leaving it untouched.)
 func (h *Handler) UpdateBridge(c *gin.Context) {
 	if h.repo == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
@@ -252,13 +293,33 @@ func (h *Handler) UpdateBridge(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	ctx := c.Request.Context()
+	bridge, err := h.repo.GetBridgeByID(ctx, id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Compute the REAL status from the runtime — never req.Status. When no
+	// backend is available, or the bridge has no ContainerID yet, the
+	// existing persisted status is preserved rather than guessed (§11.4.6).
+	realStatus := bridge.Status
+	if h.backend != nil && bridge.ContainerID != "" && h.backend.IsAvailable(ctx) {
+		if st, statusErr := h.backend.Status(ctx, bridge.ContainerID); statusErr == nil {
+			realStatus = containerrt.StatusFromState(st.State)
+		} else {
+			realStatus = model.ContainerBridgeStatusInactive
+		}
+	}
+
 	updates := map[string]interface{}{
 		"name":   req.Name,
 		"image":  req.Image,
-		"status": req.Status,
+		"status": realStatus,
 		"ports":  req.Ports,
 	}
-	if err := h.repo.UpdateBridge(c.Request.Context(), id, updates); err != nil {
+	if err := h.repo.UpdateBridge(ctx, id, updates); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -267,7 +328,12 @@ func (h *Handler) UpdateBridge(c *gin.Context) {
 
 // DeleteBridge actually Stops+Removes the backing container via the runtime
 // (best-effort — a container already stopped/removed manually must not block
-// deleting the bridge record) before deleting the row.
+// deleting the bridge record) before deleting the row. Stop/Remove failures
+// are logged, never silently discarded (§11.4.1): a genuine runtime failure
+// here means a real, still-running container is about to be orphaned (its
+// row deleted while the container keeps running on the host) — that MUST be
+// discoverable in the service logs. Delete stays idempotent either way: a
+// logged failure never blocks the row deletion below.
 func (h *Handler) DeleteBridge(c *gin.Context) {
 	if h.repo == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database not available"})
@@ -282,9 +348,13 @@ func (h *Handler) DeleteBridge(c *gin.Context) {
 	ctx := c.Request.Context()
 	if bridge, getErr := h.repo.GetBridgeByID(ctx, id); getErr == nil &&
 		bridge.ContainerID != "" && h.backend != nil && h.backend.IsAvailable(ctx) {
-		_ = h.backend.Stop(ctx, bridge.ContainerID, ctrruntime.WithStopTimeout(10*time.Second))
-		_ = h.backend.Remove(ctx, bridge.ContainerID,
-			ctrruntime.WithForceRemove(true), ctrruntime.WithRemoveVolumes(true))
+		if stopErr := h.backend.Stop(ctx, bridge.ContainerID, ctrruntime.WithStopTimeout(10*time.Second)); stopErr != nil {
+			logContainerTeardownError("stop", bridge.ContainerID, stopErr)
+		}
+		if rmErr := h.backend.Remove(ctx, bridge.ContainerID,
+			ctrruntime.WithForceRemove(true), ctrruntime.WithRemoveVolumes(true)); rmErr != nil {
+			logContainerTeardownError("remove", bridge.ContainerID, rmErr)
+		}
 	}
 
 	if err := h.repo.DeleteBridge(ctx, id); err != nil {
@@ -292,6 +362,40 @@ func (h *Handler) DeleteBridge(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "bridge deleted"})
+}
+
+// alreadyGoneMarkers are container-runtime CLI error substrings (covering
+// podman AND docker; nerdctl mirrors docker's wording) indicating the
+// container was already stopped/removed out-of-band rather than a genuine
+// teardown failure. This is a best-effort, cheap classification — a simple
+// string match, not a structured sentinel error (pkg/runtime just wraps the
+// raw CLI error text, e.g. "podman stop %s: %w") — so any unrecognised
+// message is conservatively logged as a real failure rather than assumed
+// harmless.
+var alreadyGoneMarkers = []string{
+	"no such container",
+	"no container with",
+	"does not exist",
+}
+
+// logContainerTeardownError logs a Stop/Remove failure that DeleteBridge
+// previously discarded outright (`_ = h.backend.Stop(...)` /
+// `_ = h.backend.Remove(...)`), so an orphaned REAL running container is
+// discoverable instead of silently vanishing from the row while still
+// running on the host.
+func logContainerTeardownError(op, containerID string, err error) {
+	lower := strings.ToLower(err.Error())
+	for _, marker := range alreadyGoneMarkers {
+		if strings.Contains(lower, marker) {
+			log.Printf(
+				"container-bridge: DeleteBridge %s %s: already gone (idempotent, not an orphan): %v",
+				op, containerID, err)
+			return
+		}
+	}
+	log.Printf(
+		"container-bridge: DeleteBridge %s %s FAILED — container may be ORPHANED (still running/present on host): %v",
+		op, containerID, err)
 }
 
 // HealthCheck returns service health
