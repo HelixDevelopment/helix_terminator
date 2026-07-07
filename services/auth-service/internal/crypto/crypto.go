@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -138,9 +139,25 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateAccessToken generates a new access token
+// GenerateAccessToken generates a new access token using the default
+// access-token TTL.
 func (m *JWTManager) GenerateAccessToken(userID, orgID, email, role, sessionID string, permissions []string) (string, time.Time, error) {
 	expiresAt := time.Now().UTC().Add(accessTokenExpiry)
+	tokenString, err := m.GenerateAccessTokenWithExpiry(userID, orgID, email, role, sessionID, permissions, expiresAt)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return tokenString, expiresAt, nil
+}
+
+// GenerateAccessTokenWithExpiry generates a new access token signed by
+// this exact manager with an explicit expiry instead of the default
+// access-token TTL. GenerateAccessToken is a thin convenience wrapper
+// around this function. Exported so callers needing a non-default TTL
+// (e.g. a security test proving expired tokens are genuinely rejected
+// by this manager's own key) can do so without duplicating the claims
+// construction logic.
+func (m *JWTManager) GenerateAccessTokenWithExpiry(userID, orgID, email, role, sessionID string, permissions []string, expiresAt time.Time) (string, error) {
 	claims := Claims{
 		UserID:      userID,
 		OrgID:       orgID,
@@ -156,16 +173,26 @@ func (m *JWTManager) GenerateAccessToken(userID, orgID, email, role, sessionID s
 			Subject:   userID,
 			Issuer:    "helixterminator",
 			Audience:  jwt.ClaimStrings{"helixterminator"},
+			// A fresh per-token identifier (RFC 7519 "jti"). EdDSA
+			// signing is deterministic: two access tokens issued for
+			// the same session with every other claim identical (e.g.
+			// a login immediately followed by a /refresh within the
+			// same wall-clock second, which NumericDate encodes at
+			// second granularity) would otherwise serialize to the
+			// exact same signed JWT string. A unique jti guarantees
+			// every issuance is genuinely distinct regardless of
+			// timing.
+			ID: uuid.NewString(),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 	tokenString, err := token.SignedString(m.privateKey)
 	if err != nil {
-		return "", time.Time{}, fmt.Errorf("failed to sign token: %w", err)
+		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
 
-	return tokenString, expiresAt, nil
+	return tokenString, nil
 }
 
 // GenerateRefreshToken generates a new refresh token

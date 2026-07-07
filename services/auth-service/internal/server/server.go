@@ -110,13 +110,17 @@ func New(logger Logger) (*Server, error) {
 	r.POST("/mfa/verify", h.VerifyMFA)
 	r.POST("/mfa/setup", h.SetupMFA)
 	r.POST("/refresh", h.RefreshToken)
-	r.POST("/logout", h.Logout)
 	r.POST("/validate", h.ValidateToken)
 
-	// Authenticated routes
+	// Authenticated routes - require a valid, non-revoked bearer access
+	// token. /logout lives here (not in the "no auth required" block
+	// above) because its handler resolves the session(s) to revoke from
+	// the authenticated userID the middleware sets on the context; a
+	// logout call with no bearer token has no user to log out.
 	auth := r.Group("/")
 	auth.Use(s.jwtValidationMiddleware())
 	{
+		auth.POST("/logout", h.Logout)
 		// TODO: add authenticated routes (profile, sessions, etc.)
 		auth.GET("/me", func(c *gin.Context) {
 			userID, _ := c.Get("userID")
@@ -257,6 +261,17 @@ func (s *Server) jwtValidationMiddleware() gin.HandlerFunc {
 		claims, err := s.jwtManager.ValidateToken(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.Abort()
+			return
+		}
+
+		// JWT signature validation alone is stateless: a token revoked
+		// by a prior /logout still verifies cryptographically until it
+		// naturally expires. Reject it here too so a replayed,
+		// logged-out access token is genuinely denied, not just an
+		// unenforced session row in the database.
+		if !s.handler.IsAccessTokenActive(c.Request.Context(), token) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token has been revoked"})
 			c.Abort()
 			return
 		}

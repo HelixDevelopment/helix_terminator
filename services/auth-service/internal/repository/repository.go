@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"net/netip"
 	"time"
 
 	"github.com/google/uuid"
@@ -147,9 +148,20 @@ func (r *Repository) CreateSession(ctx context.Context, session *model.Session) 
 		                          access_token_hash, refresh_token_hash, expires_at, last_active_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
+	// ip_address is a nullable INET column. Several call sites (e.g.
+	// Register, VerifyMFA) do not have a client IP to record and leave
+	// model.Session.IPAddress at its Go zero value (""), which is NOT a
+	// valid INET literal - PostgreSQL rejects it with "invalid input
+	// syntax for type inet". An unknown IP is correctly represented as
+	// SQL NULL, not the empty string, so translate it here rather than
+	// requiring every caller to remember to do so.
+	var ipAddress interface{}
+	if session.IPAddress != "" {
+		ipAddress = session.IPAddress
+	}
 	_, err := r.pool.Exec(ctx, query,
 		session.ID, session.UserID, session.DeviceID, session.DeviceName, session.DeviceType,
-		session.IPAddress, session.UserAgent, session.AccessTokenHash, session.RefreshTokenHash,
+		ipAddress, session.UserAgent, session.AccessTokenHash, session.RefreshTokenHash,
 		session.ExpiresAt, session.LastActiveAt, session.CreatedAt,
 	)
 	if err != nil {
@@ -168,10 +180,18 @@ func (r *Repository) GetSessionByTokenHash(ctx context.Context, tokenHash string
 	`
 	row := r.pool.QueryRow(ctx, query, tokenHash)
 
+	// ip_address is a nullable Postgres INET column. pgx v5 decodes a
+	// non-NULL inet value in binary format into net/netip.Prefix (NOT
+	// a plain string - scanning into *string/**string only happens to
+	// "work" for the trivial NULL case and errors with "cannot scan
+	// inet ... in binary format into **string" for any real value), so
+	// scan into a *netip.Prefix and fold the address portion into the
+	// model's plain string field.
 	session := &model.Session{}
+	var ipPrefix *netip.Prefix
 	err := row.Scan(
 		&session.ID, &session.UserID, &session.DeviceID, &session.DeviceName, &session.DeviceType,
-		&session.IPAddress, &session.UserAgent, &session.AccessTokenHash, &session.RefreshTokenHash,
+		&ipPrefix, &session.UserAgent, &session.AccessTokenHash, &session.RefreshTokenHash,
 		&session.ExpiresAt, &session.LastActiveAt, &session.RevokedAt, &session.CreatedAt,
 	)
 	if err != nil {
@@ -180,7 +200,35 @@ func (r *Repository) GetSessionByTokenHash(ctx context.Context, tokenHash string
 		}
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
+	if ipPrefix != nil {
+		session.IPAddress = ipPrefix.Addr().String()
+	}
 	return session, nil
+}
+
+// UpdateSessionAccessTokenHash rebinds a session's revocation-lookup key
+// to a freshly-minted access token hash. Called after a successful
+// /refresh mints a new access token so that GetSessionByTokenHash keeps
+// recognising the session by whichever access token the client is
+// currently presenting, rather than only the one issued at login. Only
+// updates non-revoked sessions - RowsAffected()==0 tells the caller the
+// session was already revoked (e.g. by a prior /logout) or never
+// existed, so a stolen/expired refresh token cannot mint a session-
+// bound access token after logout.
+func (r *Repository) UpdateSessionAccessTokenHash(ctx context.Context, sessionID uuid.UUID, newAccessTokenHash string) error {
+	query := `
+		UPDATE user_sessions
+		SET access_token_hash = $2
+		WHERE id = $1 AND revoked_at IS NULL
+	`
+	ct, err := r.pool.Exec(ctx, query, sessionID, newAccessTokenHash)
+	if err != nil {
+		return fmt.Errorf("failed to update session access token hash: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("session not found or already revoked")
+	}
+	return nil
 }
 
 // RevokeSession revokes a session
@@ -229,12 +277,16 @@ func (r *Repository) ListActiveSessions(ctx context.Context, userID uuid.UUID) (
 	var sessions []*model.Session
 	for rows.Next() {
 		session := &model.Session{}
+		var ipPrefix *netip.Prefix
 		err := rows.Scan(
 			&session.ID, &session.UserID, &session.DeviceID, &session.DeviceName, &session.DeviceType,
-			&session.IPAddress, &session.UserAgent, &session.ExpiresAt, &session.LastActiveAt, &session.CreatedAt,
+			&ipPrefix, &session.UserAgent, &session.ExpiresAt, &session.LastActiveAt, &session.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan session: %w", err)
+		}
+		if ipPrefix != nil {
+			session.IPAddress = ipPrefix.Addr().String()
 		}
 		sessions = append(sessions, session)
 	}

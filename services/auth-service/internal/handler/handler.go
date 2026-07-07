@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -30,6 +31,23 @@ func New(repo *repository.Repository, jwtManager *crypto.JWTManager) *Handler {
 		hasher:     crypto.NewPasswordHasher(),
 		jwtManager: jwtManager,
 	}
+}
+
+// IsAccessTokenActive reports whether accessToken is bound to a real,
+// non-revoked session row in the database - i.e. whether it has NOT
+// been invalidated by a /logout. JWT signature validation alone is
+// stateless and cannot detect revocation (a logged-out-but-unexpired
+// token still verifies cryptographically), so the jwt validation
+// middleware calls this as a second, stateful gate. When the handler
+// has no repository configured (in-memory/degraded mode - see
+// server.New's existing no-DATABASE_URL fallback), it reports true so
+// JWT signature validation remains the sole gate in that mode.
+func (h *Handler) IsAccessTokenActive(ctx context.Context, accessToken string) bool {
+	if h.repo == nil {
+		return true
+	}
+	_, err := h.repo.GetSessionByTokenHash(ctx, crypto.HashToken(accessToken))
+	return err == nil
 }
 
 // Register handles user registration
@@ -133,7 +151,7 @@ func (h *Handler) Login(c *gin.Context) {
 	// Check if account is locked
 	if user.LockedUntil != nil && time.Now().UTC().Before(*user.LockedUntil) {
 		c.JSON(http.StatusForbidden, gin.H{
-			"error":     "account is locked due to too many failed attempts",
+			"error":       "account is locked due to too many failed attempts",
 			"lockedUntil": user.LockedUntil,
 		})
 		return
@@ -420,6 +438,22 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate access token"})
+		return
+	}
+
+	// Rebind the session's revocation-lookup key to the freshly-minted
+	// access token so IsAccessTokenActive keeps recognising this
+	// session by whichever access token the client is now presenting.
+	// If the session was already revoked (e.g. a prior /logout), this
+	// fails and the refresh is correctly rejected rather than minting a
+	// working token for a logged-out session.
+	sessionID, err := uuid.Parse(claims.SessionID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid session"})
+		return
+	}
+	if err := h.repo.UpdateSessionAccessTokenHash(c.Request.Context(), sessionID, crypto.HashToken(newAccessToken)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "session revoked or not found"})
 		return
 	}
 
