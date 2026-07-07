@@ -90,6 +90,33 @@ func TestValidateRunFromImageInputs(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// Blank ports elements are REJECTED, not silently skipped — see
+			// the "Contract" paragraph on ValidateRunFromImageInputs' doc
+			// comment. RunFromImage's argv-building loop forwards every
+			// validated ports element straight to `-p <value>` with no
+			// further filtering, so this strict-reject contract is what
+			// makes that unconditional forwarding safe.
+			name:    "blank ports element is rejected, not silently skipped",
+			ctrName: "bridge-abc123",
+			image:   "nginx:latest",
+			ports:   []string{""},
+			wantErr: true,
+		},
+		{
+			name:    "whitespace-only ports element is rejected, not silently skipped",
+			ctrName: "bridge-abc123",
+			image:   "nginx:latest",
+			ports:   []string{"   "},
+			wantErr: true,
+		},
+		{
+			name:    "one valid and one blank ports element still rejects the whole call",
+			ctrName: "bridge-abc123",
+			image:   "nginx:latest",
+			ports:   []string{"8080:80", ""},
+			wantErr: true,
+		},
+		{
 			// cmd is intentionally NOT subject to the leading-dash rejection
 			// (see the doc comment on ValidateRunFromImageInputs): it lands
 			// strictly after the already-validated image in argv, in the

@@ -122,6 +122,15 @@ var portMappingPattern = regexp.MustCompile(
 // an allow-listed runtime binary (runBinary) does not restrict what
 // arguments reach that binary.
 //
+// Contract: every element of ports MUST be non-blank and match the
+// documented hostPort:containerPort grammar — a blank or whitespace-only
+// element is REJECTED (wrapping ErrInvalidInput), not silently skipped.
+// This is deliberately strict rather than permissive: RunFromImage forwards
+// every validated ports element straight to `-p <value>` with no further
+// filtering, so the caller gets an explicit 400 for a malformed request
+// instead of the runtime silently receiving one fewer port mapping than
+// requested.
+//
 // It is pure — no exec, no I/O — so it is unit-testable in a table test
 // without a real container runtime, and it is called from BOTH
 // cliBackend.RunFromImage (the actual exec boundary, protecting every
@@ -189,12 +198,14 @@ func (b *cliBackend) RunFromImage(
 	if err := ValidateRunFromImageInputs(name, image, ports, cmd); err != nil {
 		return "", err
 	}
+	// Every element of ports has already been validated (non-blank,
+	// hostPort:containerPort grammar) by ValidateRunFromImageInputs above —
+	// a blank/whitespace-only element is rejected there with ErrInvalidInput
+	// before this loop ever runs, so no defensive trim/skip is needed or
+	// performed here. See ValidateRunFromImageInputs' doc comment for the
+	// strict reject-blank-ports contract this loop relies on.
 	args := []string{"run", "-d", "--name", name}
 	for _, p := range ports {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
 		args = append(args, "-p", p)
 	}
 	args = append(args, image)

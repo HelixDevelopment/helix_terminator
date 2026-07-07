@@ -3,8 +3,10 @@ package handler
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -55,15 +57,36 @@ func TestDeleteBridge_IsIdempotent_EvenWhenTeardownFails(t *testing.T) {
 }
 
 // TestLogContainerTeardownError_ClassifiesAlreadyGoneVsRealFailure is a pure
-// unit test for the already-gone/real-failure classification helper — cheap
-// string-matching, table-tested without any container runtime involved.
+// unit test for the already-gone/real-failure classification helper. It
+// redirects the standard "log" package's output into a buffer so the
+// emitted line can be asserted directly — a mutation that deleted either
+// log.Printf call inside logContainerTeardownError would leave the
+// corresponding buffer empty and FAIL the assertions below (verified by
+// temporarily removing each log.Printf during development of this fix and
+// observing this test go RED, then restoring it to GREEN).
 func TestLogContainerTeardownError_ClassifiesAlreadyGoneVsRealFailure(t *testing.T) {
-	// This test only proves the function does not panic and runs to
-	// completion for both branches (the classification itself only affects
-	// the emitted log line's phrasing, not control flow) — capturing actual
-	// stdlib "log" package output would require globally redirecting
-	// log.SetOutput, which is unnecessary here: the branch coverage below
-	// is what's load-bearing.
+	oldFlags := log.Flags()
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(os.Stderr)
+		log.SetFlags(oldFlags)
+	})
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+
 	logContainerTeardownError("stop", "cid-1", fmt.Errorf("podman stop cid-1: exit status 125: Error: no such container cid-1"))
+	alreadyGoneLine := buf.String()
+	assert.Contains(t, alreadyGoneLine, "already gone (idempotent, not an orphan)",
+		"an already-gone teardown error must be classified as idempotent, not an orphan")
+	assert.NotContains(t, alreadyGoneLine, "may be ORPHANED",
+		"an already-gone teardown error must NOT be classified as a real failure")
+
+	buf.Reset()
 	logContainerTeardownError("remove", "cid-2", fmt.Errorf("podman rm cid-2: exit status 1: Error: container in use"))
+	realFailureLine := buf.String()
+	assert.Contains(t, realFailureLine, "may be ORPHANED",
+		"a genuine teardown failure must be classified as a possible orphan")
+	assert.NotContains(t, realFailureLine, "already gone (idempotent, not an orphan)",
+		"a genuine teardown failure must NOT be classified as already-gone")
 }
