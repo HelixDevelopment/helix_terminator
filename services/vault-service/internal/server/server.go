@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/helixdevelopment/vault-service/internal/handler"
@@ -82,16 +84,20 @@ func New(logger Logger) (*Server, error) {
 	r.GET("/healthz", h.HealthCheck)
 	r.GET("/healthz/ready", h.ReadinessCheck)
 
-	// Vault routes
+	// Vault routes — all require a valid service-to-service API key (§security).
 	v1 := r.Group("/api/v1/vault")
+	v1.Use(s.authMiddleware())
 	{
 		v1.POST("/secrets", h.CreateSecret)
 		v1.GET("/secrets", h.ListSecrets)
-		v1.GET("/secrets/:id", h.GetSecret)
-		v1.PUT("/secrets/:id", h.UpdateSecret)
-		v1.DELETE("/secrets/:id", h.DeleteSecret)
-		v1.GET("/secrets/:id/versions", h.GetSecretVersions)
-		v1.POST("/secrets/:id/rotate", h.RotateSecret)
+		// Secret-ID-scoped routes additionally require tenant isolation: the
+		// caller-asserted X-User-ID MUST match the target secret's owner, so
+		// one tenant can never read/modify/rotate another tenant's secret.
+		v1.GET("/secrets/:id", s.tenantIsolationMiddleware(), h.GetSecret)
+		v1.PUT("/secrets/:id", s.tenantIsolationMiddleware(), h.UpdateSecret)
+		v1.DELETE("/secrets/:id", s.tenantIsolationMiddleware(), h.DeleteSecret)
+		v1.GET("/secrets/:id/versions", s.tenantIsolationMiddleware(), h.GetSecretVersions)
+		v1.POST("/secrets/:id/rotate", s.tenantIsolationMiddleware(), h.RotateSecret)
 	}
 
 	return s, nil
@@ -106,6 +112,67 @@ func (s *Server) Router() http.Handler {
 
 func (s *Server) recoveryMiddleware() gin.HandlerFunc {
 	return gin.Recovery()
+}
+
+// authMiddleware enforces service-to-service API key authentication on every
+// /api/v1/vault/* route. The expected key is provisioned via the
+// VAULT_SERVICE_API_KEY environment variable. A request with a missing,
+// empty, or mismatched X-API-Key header is rejected with 401 Unauthorized.
+// If VAULT_SERVICE_API_KEY is not configured at all, the service fails
+// closed (every vault request is rejected) rather than silently allowing
+// unauthenticated access to a secrets store.
+func (s *Server) authMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		expected := os.Getenv("VAULT_SERVICE_API_KEY")
+		got := c.GetHeader("X-API-Key")
+		if expected == "" || got == "" || subtle.ConstantTimeCompare([]byte(got), []byte(expected)) != 1 {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-API-Key"})
+			return
+		}
+		c.Next()
+	}
+}
+
+// tenantIsolationMiddleware enforces object-level access control on
+// secret-ID-scoped routes: the caller MUST present a valid X-User-ID header,
+// and that identity MUST match the target secret's owning user_id. A
+// mismatch returns 404 (not 403) so the endpoint never confirms or denies
+// the existence of another tenant's secret to an unauthorized caller.
+func (s *Server) tenantIsolationMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			// Malformed ID: let the handler produce its own 400.
+			c.Next()
+			return
+		}
+
+		callerID, err := uuid.Parse(c.GetHeader("X-User-ID"))
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-User-ID"})
+			return
+		}
+
+		if s.repo == nil {
+			// No database wired (e.g. degraded mode) — defer to the handler.
+			c.Next()
+			return
+		}
+
+		secret, err := s.repo.GetSecretByID(c.Request.Context(), id)
+		if err != nil {
+			// Secret does not exist (or already soft-deleted) — let the
+			// handler return its own not-found response.
+			c.Next()
+			return
+		}
+		if secret.UserID != callerID {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "secret not found"})
+			return
+		}
+		c.Next()
+	}
 }
 
 func (s *Server) requestIDMiddleware() gin.HandlerFunc {
