@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -97,7 +98,21 @@ func main() {
 // parseEndpoints parses a comma-separated string of name=url pairs.
 func parseEndpoints(input string) map[string]string {
 	result := make(map[string]string)
-	// Simple parsing: expects "name1=url1,name2=url2"
-	// For production, a more robust parser or JSON config would be better.
+	pairs := strings.Split(input, ",")
+	for _, pair := range pairs {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+		parts := strings.SplitN(pair, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		name := strings.TrimSpace(parts[0])
+		url := strings.TrimSpace(parts[1])
+		if name != "" && url != "" {
+			result[name] = url
+		}
+	}
 	return result
 }

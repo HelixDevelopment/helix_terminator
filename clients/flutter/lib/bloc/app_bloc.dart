@@ -55,26 +55,34 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     AppStarted event,
     Emitter<AppState> emit,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeModeString = prefs.getString('theme_mode') ?? 'system';
-    final localeString = prefs.getString('locale') ?? 'en';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final themeModeString = prefs.getString('theme_mode') ?? 'system';
+      final localeString = prefs.getString('locale') ?? 'en';
 
-    final themeMode = _parseThemeMode(themeModeString);
-    final locale = Locale(localeString);
+      final themeMode = _parseThemeMode(themeModeString);
+      final locale = Locale(localeString);
 
-    emit(state.copyWith(
-      themeMode: themeMode,
-      locale: locale,
-      isInitialized: true,
-    ));
+      emit(state.copyWith(
+        themeMode: themeMode,
+        locale: locale,
+        isInitialized: true,
+      ));
+    } catch (e) {
+      emit(state.copyWith(isInitialized: true));
+    }
   }
 
   Future<void> _onThemeChanged(
     AppThemeChanged event,
     Emitter<AppState> emit,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('theme_mode', event.themeMode.name);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('theme_mode', event.themeMode.name);
+    } catch (e) {
+      // Silently fail persistence
+    }
     emit(state.copyWith(themeMode: event.themeMode));
   }
 
@@ -82,8 +90,12 @@ class AppBloc extends Bloc<AppEvent, AppState> {
     AppLocaleChanged event,
     Emitter<AppState> emit,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('locale', event.locale.languageCode);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('locale', event.locale.languageCode);
+    } catch (e) {
+      // Silently fail persistence
+    }
     emit(state.copyWith(locale: event.locale));
   }
 

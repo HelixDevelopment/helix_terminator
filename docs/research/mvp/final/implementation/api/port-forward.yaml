@@ -1,0 +1,260 @@
+openapi: 3.0.3
+info:
+  title: Port Forwarding Service API
+  description: Port-forward rule catalog + lifecycle (local/remote/dynamic/reverse), auto-reconnect, tunnel metrics
+  version: 1.0.0
+  contact:
+    name: HelixDevelopment API Team
+    email: api@helixdevelopment.io
+servers:
+  - url: https://api.helixterminator.io
+    description: Production
+  - url: https://staging-api.helixterminator.io
+    description: Staging
+tags:
+  - name: port-forward
+    description: Port-forward rule catalog + lifecycle (local/remote/dynamic/reverse), auto-reconnect, tunnel metrics
+paths:
+  get:
+    /api/v1/port-forwards:
+      summary: List rules
+      operationId: /api/v1/port-forwardsget
+      tags:
+        - port-forward
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortForwardsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  post:
+    /api/v1/port-forwards:
+      summary: Create rule
+      operationId: /api/v1/port-forwardspost
+      tags:
+        - port-forward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePortForwardRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortForwardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  get:
+    /api/v1/port-forwards/{ruleId}:
+      summary: Get rule
+      operationId: /api/v1/port-forwards/{ruleId}get
+      tags:
+        - port-forward
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortForwardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  put:
+    /api/v1/port-forwards/{ruleId}:
+      summary: Update rule
+      operationId: /api/v1/port-forwards/{ruleId}put
+      tags:
+        - port-forward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePortForwardRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortForwardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  delete:
+    /api/v1/port-forwards/{ruleId}:
+      summary: Delete rule
+      operationId: /api/v1/port-forwards/{ruleId}delete
+      tags:
+        - port-forward
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletePortForwardResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  post:
+    /api/v1/port-forwards/{ruleId}/start:
+      summary: Start tunnel
+      operationId: /api/v1/port-forwards/{ruleId}/startpost
+      tags:
+        - port-forward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartTunnelRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartTunnelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  post:
+    /api/v1/port-forwards/{ruleId}/stop:
+      summary: Stop tunnel
+      operationId: /api/v1/port-forwards/{ruleId}/stoppost
+      tags:
+        - port-forward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopTunnelRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopTunnelResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  get:
+    /api/v1/port-forwards/{ruleId}/metrics:
+      summary: Tunnel metrics
+      operationId: /api/v1/port-forwards/{ruleId}/metricsget
+      tags:
+        - port-forward
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TunnelMetricsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  schemas:
+    # Request/Response schemas are defined in the full OpenAPI spec
+    # See openapi.yaml for complete schema definitions
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

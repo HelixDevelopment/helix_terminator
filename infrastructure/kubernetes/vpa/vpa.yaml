@@ -1,0 +1,574 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: gateway-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gateway-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: auth-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: user-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: user-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: vault-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vault-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: host-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: host-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ssh-proxy-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ssh-proxy-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: terminal-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: terminal-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: keychain-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: keychain-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: workspace-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: workspace-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: config-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: config-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: pki-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pki-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: billing-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: billing-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: org-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: org-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: notification-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: notification-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: audit-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: audit-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: health-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: health-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ai-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 256Mi
+          cpu: 100m
+        maxAllowed:
+          memory: 4Gi
+          cpu: 4000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: collaboration-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: collaboration-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: container-bridge-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: container-bridge-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: helixtrack-bridge-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: helixtrack-bridge-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: port-forward-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: port-forward-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: sftp-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sftp-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: recording-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: recording-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: snippet-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: snippet-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: analytics-service
+  namespace: helixterminator
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: analytics-service
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          memory: 128Mi
+          cpu: 50m
+        maxAllowed:
+          memory: 2Gi
+          cpu: 2000m
+        controlledResources: ["cpu", "memory"]

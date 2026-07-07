@@ -146,8 +146,8 @@ class TerminalBloc extends Bloc<TerminalEvent, TerminalState> {
   }
 
   @override
-  Future<void> close() {
-    _terminalService.dispose();
+  Future<void> close() async {
+    await _terminalService.dispose();
     return super.close();
   }
 }

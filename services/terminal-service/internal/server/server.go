@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -156,16 +157,15 @@ func (s *Server) loggingMiddleware() gin.HandlerFunc {
 }
 
 func (s *Server) corsMiddleware() gin.HandlerFunc {
+	allowedOrigins := parseCORSAllowedOrigins()
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		if origin == "" {
-			origin = "*"
+		if isAllowedOrigin(origin, allowedOrigins) {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
 		}
-
-		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID, X-API-Key")
-		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Max-Age", "86400")
 
 		if c.Request.Method == "OPTIONS" {
@@ -175,4 +175,31 @@ func (s *Server) corsMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func parseCORSAllowedOrigins() []string {
+	env := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if env == "" {
+		return nil
+	}
+	var origins []string
+	for _, o := range strings.Split(env, ",") {
+		o = strings.TrimSpace(o)
+		if o != "" {
+			origins = append(origins, o)
+		}
+	}
+	return origins
+}
+
+func isAllowedOrigin(origin string, allowed []string) bool {
+	if origin == "" {
+		return false
+	}
+	for _, a := range allowed {
+		if a == origin {
+			return true
+		}
+	}
+	return false
 }

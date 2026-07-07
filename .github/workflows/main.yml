@@ -1,12 +1,12 @@
+# DISABLED per Helix Constitution §11.4.156 — CI/CD automation must be disabled. Manual (workflow_dispatch) only. Re-enabling automatic triggers requires an explicit operator decision.
 name: CI/CD Pipeline
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 env:
   GO_VERSION: '1.22'
@@ -17,6 +17,7 @@ jobs:
   # Phase 1: Pre-build verification
   pre-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +30,7 @@ jobs:
   # Phase 2: Lint and static analysis
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: pre-build
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +48,7 @@ jobs:
   # Phase 3: Unit tests for all services
   unit-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: lint
     strategy:
       fail-fast: false
@@ -81,18 +84,276 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-      - name: Run tests
+      - name: Run service unit tests
         run: cd services/${{ matrix.service }} && go test -v -race -coverprofile=coverage.out ./...
-      - name: Upload coverage
+      - name: Run test bank unit tests
+        run: cd test/banks/unit/${{ matrix.service }} && go test -v -race -coverprofile=coverage.out ./...
+      - name: Upload service coverage
         uses: codecov/codecov-action@v4
         with:
           files: services/${{ matrix.service }}/coverage.out
           flags: ${{ matrix.service }}
           fail_ci_if_error: false
+      - name: Upload test bank coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: test/banks/unit/${{ matrix.service }}/coverage.out
+          flags: test-bank-unit-${{ matrix.service }}
+          fail_ci_if_error: false
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results-${{ matrix.service }}
+          path: |
+            services/${{ matrix.service }}/coverage.out
+            test/banks/unit/${{ matrix.service }}/coverage.out
+          retention-days: 30
+
+  # Phase 3b: Test bank integration tests
+  test-bank-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: unit-tests
+    services:
+      postgres:
+        image: postgres:17.2
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: helixterminator
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:8.0.0-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test bank integration tests
+        run: cd test/banks/integration && go test -v -race -coverprofile=coverage.out ./...
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/helixterminator?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: test/banks/integration/coverage.out
+          flags: test-bank-integration
+          fail_ci_if_error: false
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-bank-integration-results
+          path: test/banks/integration/coverage.out
+          retention-days: 30
+
+  # Phase 3c: Test bank E2E tests
+  test-bank-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: test-bank-integration
+    services:
+      postgres:
+        image: postgres:17.2
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: helixterminator
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:8.0.0-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test bank E2E tests
+        run: cd test/banks/e2e && go test -v -race -coverprofile=coverage.out ./...
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/helixterminator?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: test/banks/e2e/coverage.out
+          flags: test-bank-e2e
+          fail_ci_if_error: false
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-bank-e2e-results
+          path: test/banks/e2e/coverage.out
+          retention-days: 30
+
+  # Phase 3d: Test bank contract tests
+  test-bank-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test bank contract tests
+        run: cd test/banks/contract && go test -v -race -coverprofile=coverage.out ./...
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: test/banks/contract/coverage.out
+          flags: test-bank-contract
+          fail_ci_if_error: false
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-bank-contract-results
+          path: test/banks/contract/coverage.out
+          retention-days: 30
+
+  # Phase 3e: Test bank security tests
+  test-bank-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: test-bank-integration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test bank security tests
+        run: cd test/banks/security && go test -v -race -coverprofile=coverage.out ./...
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: test/banks/security/coverage.out
+          flags: test-bank-security
+          fail_ci_if_error: false
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-bank-security-results
+          path: test/banks/security/coverage.out
+          retention-days: 30
+
+  # Phase 3f: Test bank performance tests
+  test-bank-performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test bank performance benchmarks
+        run: cd test/banks/performance && go test -v -bench=. -benchmem -coverprofile=coverage.out ./...
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-bank-performance-results
+          path: |
+            test/banks/performance/coverage.out
+            test/banks/performance/benchmark-results.json
+          retention-days: 30
+
+  # Phase 3g: Test bank chaos tests
+  test-bank-chaos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test bank chaos tests
+        run: cd test/banks/chaos && go test -v -race -coverprofile=coverage.out ./...
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-bank-chaos-results
+          path: test/banks/chaos/coverage.out
+          retention-days: 30
+
+  # Phase 3h: Test bank accessibility tests
+  test-bank-accessibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: pre-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test bank accessibility tests
+        run: cd test/banks/accessibility && go test -v -race -coverprofile=coverage.out ./...
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-bank-accessibility-results
+          path: test/banks/accessibility/coverage.out
+          retention-days: 30
+
+  # Phase 3i: Test bank compatibility tests
+  test-bank-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: pre-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run test bank compatibility tests
+        run: cd test/banks/compatibility && go test -v -race -coverprofile=coverage.out ./...
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-bank-compatibility-results
+          path: test/banks/compatibility/coverage.out
+          retention-days: 30
 
   # Phase 4: Contract tests
   contract-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: unit-tests
     steps:
       - uses: actions/checkout@v4
@@ -101,10 +362,18 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
       - name: Run contract tests
         run: cd test/contracts && go test -v ./...
+      - name: Upload contract test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contract-test-results
+          path: test/contracts/
+          retention-days: 30
 
   # Phase 5: Integration tests
   integration-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: unit-tests
     services:
       postgres:
@@ -139,10 +408,18 @@ jobs:
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/helixterminator?sslmode=disable
           REDIS_URL: redis://localhost:6379
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: test/integration/
+          retention-days: 30
 
   # Phase 6: Security scanning
   security-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: pre-build
     steps:
       - uses: actions/checkout@v4
@@ -166,11 +443,20 @@ jobs:
         with:
           path: ./
           base: main
+      - name: Upload security scan artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results
+          path: |
+            trivy-results.sarif
+          retention-days: 30
 
   # Phase 7: Build Docker images
   docker-build:
     runs-on: ubuntu-latest
-    needs: [unit-tests, contract-tests, integration-tests]
+    timeout-minutes: 60
+    needs: [unit-tests, contract-tests, integration-tests, test-bank-integration, test-bank-contract, test-bank-security]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     strategy:
       fail-fast: false
@@ -226,6 +512,7 @@ jobs:
   # Phase 8: Flutter build
   flutter-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: pre-build
     steps:
       - uses: actions/checkout@v4
@@ -237,10 +524,18 @@ jobs:
       - run: cd clients/flutter && flutter test
       - run: cd clients/flutter && flutter build web --release
       - run: cd clients/flutter && flutter build apk --release
+      - name: Upload Flutter test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flutter-test-results
+          path: clients/flutter/test/
+          retention-days: 30
 
   # Phase 9: Terraform validation
   terraform-validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: pre-build
     steps:
       - uses: actions/checkout@v4
@@ -257,6 +552,7 @@ jobs:
   # Phase 10: Helm lint
   helm-lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: pre-build
     steps:
       - uses: actions/checkout@v4
@@ -271,6 +567,7 @@ jobs:
   # Phase 11: Performance tests
   performance-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -279,10 +576,18 @@ jobs:
         uses: grafana/k6-action@v0.3.1
         with:
           filename: test/performance/k6/load-test.js
+      - name: Upload performance test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-test-results
+          path: test/performance/k6/
+          retention-days: 30
 
   # Phase 12: Security audit (OWASP ZAP)
   zap-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [docker-build]
     if: github.event_name == 'schedule'
     steps:
@@ -292,22 +597,102 @@ jobs:
         with:
           target: 'https://api.helixterminator.io'
           rules_file_name: '.zap/rules.tsv'
+      - name: Upload ZAP scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-scan-results
+          path: report_*
+          retention-days: 30
 
-  # Phase 13: Deploy to staging
+  # Phase 13: Image signing
+  image-signing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - gateway-service
+          - auth-service
+          - user-service
+          - vault-service
+          - host-service
+          - ssh-proxy-service
+          - terminal-service
+          - sftp-service
+          - port-forward-service
+          - snippet-service
+          - keychain-service
+          - workspace-service
+          - collaboration-service
+          - notification-service
+          - audit-service
+          - analytics-service
+          - ai-service
+          - recording-service
+          - pki-service
+          - org-service
+          - billing-service
+          - config-service
+          - health-service
+          - container-bridge-service
+          - helixtrack-bridge-service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sign image
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cosign sign --key env://COSIGN_PRIVATE_KEY \
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+      - name: Verify image signature
+        run: |
+          cosign verify --key cosign.pub \
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+
+  # Phase 14: Deploy to staging
   deploy-staging:
     runs-on: ubuntu-latest
-    needs: [docker-build, flutter-build, terraform-validate, helm-lint]
+    timeout-minutes: 30
+    needs: [image-signing, flutter-build, terraform-validate, helm-lint, test-bank-e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: staging
     steps:
       - uses: actions/checkout@v4
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.30.0'
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
       - name: Deploy to staging
-        run: echo "Deploy to staging cluster"
-        # kubectl apply -k infrastructure/kubernetes/overlays/staging/
+        run: |
+          helm upgrade --install helixterm infrastructure/helm/helixterm \
+            -f infrastructure/helm/helixterm/values-staging.yaml \
+            --namespace helixterminator --create-namespace \
+            --wait --timeout 10m
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/gateway -n helixterminator
 
-  # Phase 14: Smoke tests
+  # Phase 15: Smoke tests
   smoke-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: deploy-staging
     steps:
       - uses: actions/checkout@v4
@@ -315,15 +700,80 @@ jobs:
         run: |
           curl -sf https://api.staging.helixterminator.io/healthz || exit 1
           curl -sf https://api.staging.helixterminator.io/healthz/ready || exit 1
+      - name: Upload smoke test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-test-results
+          path: |
+            smoke-test-*.log
+          retention-days: 30
 
-  # Phase 15: Deploy to production
+  # Phase 16: Deploy to production
   deploy-production:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [smoke-tests, security-scan]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
     steps:
       - uses: actions/checkout@v4
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.30.0'
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > ~/.kube/config
       - name: Deploy to production
-        run: echo "Deploy to production cluster"
-        # kubectl apply -k infrastructure/kubernetes/overlays/production/
+        run: |
+          helm upgrade --install helixterm infrastructure/helm/helixterm \
+            -f infrastructure/helm/helixterm/values-production.yaml \
+            --namespace helixterminator --create-namespace \
+            --wait --timeout 10m --atomic
+      - name: Post-deployment verification
+        run: |
+          kubectl get deployments -n helixterminator -o json | \
+            jq -r '.items[] | select(.status.readyReplicas != .status.replicas) | .metadata.name' | \
+            xargs -r -I {} sh -c 'echo "Deployment {} is not ready"; exit 1'
+          echo "All deployments are ready"
+
+  # Phase 17: Test coverage summary
+  coverage-summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [unit-tests, test-bank-integration, test-bank-e2e, test-bank-contract, test-bank-security, test-bank-performance, test-bank-chaos, test-bank-accessibility, test-bank-compatibility]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: coverage-artifacts
+          pattern: '*-test-results-*'
+      - name: Generate coverage summary
+        run: |
+          echo "# HelixTerminator Test Coverage Summary" > coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "| Test Bank | Status | Coverage |" >> coverage-summary.md
+          echo "|-----------|--------|----------|" >> coverage-summary.md
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} | TBD |" >> coverage-summary.md
+          echo "| Integration Tests | ${{ needs.test-bank-integration.result }} | TBD |" >> coverage-summary.md
+          echo "| E2E Tests | ${{ needs.test-bank-e2e.result }} | TBD |" >> coverage-summary.md
+          echo "| Contract Tests | ${{ needs.test-bank-contract.result }} | TBD |" >> coverage-summary.md
+          echo "| Security Tests | ${{ needs.test-bank-security.result }} | TBD |" >> coverage-summary.md
+          echo "| Performance Tests | ${{ needs.test-bank-performance.result }} | TBD |" >> coverage-summary.md
+          echo "| Chaos Tests | ${{ needs.test-bank-chaos.result }} | TBD |" >> coverage-summary.md
+          echo "| Accessibility Tests | ${{ needs.test-bank-accessibility.result }} | TBD |" >> coverage-summary.md
+          echo "| Compatibility Tests | ${{ needs.test-bank-compatibility.result }} | TBD |" >> coverage-summary.md
+          cat coverage-summary.md
+      - name: Upload coverage summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage-summary.md
+          retention-days: 30

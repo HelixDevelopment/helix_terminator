@@ -1,0 +1,29 @@
+{
+  "platform": "macos",
+  "description": "macOS-specific design token overrides for HelixTerminator",
+  "overrides": {
+    "typography": {
+      "primitive": {
+        "fontFamily": {
+          "ui": {
+            "value": "'Inter', -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif",
+            "type": "fontFamily"
+          },
+          "mono": {
+            "value": "'JetBrains Mono', 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace",
+            "type": "fontFamily"
+          }
+        }
+      }
+    },
+    "component": {
+      "window": {
+        "titleBarHeight": { "value": "28px", "type": "dimension" },
+        "vibrancy": { "value": "true", "type": "boolean" }
+      },
+      "sidebar": {
+        "vibrancyMaterial": { "value": "sidebar", "type": "string" }
+      }
+    }
+  }
+}

@@ -1,14 +1,30 @@
 package server
 
 import (
+	"crypto/ed25519"
+	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
+
+// Claims represents custom JWT claims for gateway validation.
+type Claims struct {
+	UserID      string   `json:"userId"`
+	OrgID       string   `json:"orgId,omitempty"`
+	Email       string   `json:"email"`
+	Role        string   `json:"role"`
+	Permissions []string `json:"permissions,omitempty"`
+	SessionID   string   `json:"sessionId"`
+	TokenType   string   `json:"tokenType"`
+	jwt.RegisteredClaims
+}
 
 // upstreamService represents a backend service for routing
 type upstreamService struct {
@@ -112,15 +128,16 @@ func (cb *circuitBreaker) Call(fn func() error) error {
 
 // Server wraps the Gin engine with gateway functionality
 type Server struct {
-	router         *gin.Engine
-	logger         Logger
-	upstreams      map[string]*upstreamService
-	upstreamsMu    sync.RWMutex
-	userLimiter    *rateLimiter
-	ipLimiter      *rateLimiter
+	router          *gin.Engine
+	logger          Logger
+	upstreams       map[string]*upstreamService
+	upstreamsMu     sync.RWMutex
+	userLimiter     *rateLimiter
+	ipLimiter       *rateLimiter
 	endpointLimiter *rateLimiter
-	breakers       map[string]*circuitBreaker
-	breakersMu     sync.RWMutex
+	breakers        map[string]*circuitBreaker
+	breakersMu      sync.RWMutex
+	jwtPublicKey    ed25519.PublicKey
 }
 
 // Logger interface for logging
@@ -156,6 +173,18 @@ func New(logger Logger) *Server {
 		ipLimiter:       newRateLimiter(time.Minute),
 		endpointLimiter: newRateLimiter(time.Minute),
 		breakers:        make(map[string]*circuitBreaker),
+	}
+
+	// Load JWT public key from environment
+	if pubKeyB64 := os.Getenv("JWT_PUBLIC_KEY"); pubKeyB64 != "" {
+		pubKeyBytes, err := base64.StdEncoding.DecodeString(pubKeyB64)
+		if err != nil {
+			logger.Printf("warning: failed to decode JWT_PUBLIC_KEY: %v", err)
+		} else if len(pubKeyBytes) != ed25519.PublicKeySize {
+			logger.Printf("warning: invalid JWT_PUBLIC_KEY size: expected %d, got %d", ed25519.PublicKeySize, len(pubKeyBytes))
+		} else {
+			s.jwtPublicKey = ed25519.PublicKey(pubKeyBytes)
+		}
 	}
 
 	// Global middleware
@@ -401,16 +430,15 @@ func (s *Server) loggingMiddleware() gin.HandlerFunc {
 }
 
 func (s *Server) corsMiddleware() gin.HandlerFunc {
+	allowedOrigins := parseCORSAllowedOrigins()
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		if origin == "" {
-			origin = "*"
+		if isAllowedOrigin(origin, allowedOrigins) {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
 		}
-
-		c.Header("Access-Control-Allow-Origin", origin)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID, X-API-Key")
-		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Max-Age", "86400")
 
 		if c.Request.Method == "OPTIONS" {
@@ -420,6 +448,33 @@ func (s *Server) corsMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func parseCORSAllowedOrigins() []string {
+	env := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if env == "" {
+		return nil
+	}
+	var origins []string
+	for _, o := range strings.Split(env, ",") {
+		o = strings.TrimSpace(o)
+		if o != "" {
+			origins = append(origins, o)
+		}
+	}
+	return origins
+}
+
+func isAllowedOrigin(origin string, allowed []string) bool {
+	if origin == "" {
+		return false
+	}
+	for _, a := range allowed {
+		if a == origin {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) rateLimitMiddleware() gin.HandlerFunc {
@@ -481,12 +536,48 @@ func (s *Server) jwtValidationMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// TODO: validate JWT signature with Ed25519 public key
-		// For now, accept any non-empty token and set user context
-		c.Set("userID", "user-id-from-token")
-		c.Set("orgID", "org-id-from-token")
+		if s.jwtPublicKey == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "JWT validation not configured"})
+			c.Abort()
+			return
+		}
+
+		claims, err := s.validateToken(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.Abort()
+			return
+		}
+
+		c.Set("userID", claims.UserID)
+		c.Set("orgID", claims.OrgID)
+		c.Set("role", claims.Role)
+		c.Set("permissions", claims.Permissions)
 		c.Next()
 	}
+}
+
+func (s *Server) validateToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return s.jwtPublicKey, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims type")
+	}
+
+	return claims, nil
 }
 
 // --- Handlers ---

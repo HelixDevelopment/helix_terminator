@@ -127,15 +127,17 @@ func (h *Handler) TerminateSSHSession(c *gin.Context) {
 // HandleWebSocket is the WebSocket endpoint for SSH connections.
 func (h *Handler) HandleWebSocket(c *gin.Context) {
 	var req model.CreateSSHSessionRequest
-	req.HostID = c.Query("host_id")
-	req.AuthType = c.Query("auth_type")
-	req.HostAddress = c.Query("host_address")
-	req.Username = c.Query("username")
-	req.Password = c.Query("password")
-	req.PrivateKey = c.Query("private_key")
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	if req.HostID == "" || req.HostAddress == "" || req.Username == "" || req.AuthType == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing required query parameters: host_id, host_address, username, auth_type"})
+	if req.AuthType == "password" && req.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is required for auth_type=password"})
+		return
+	}
+	if req.AuthType == "key" && req.PrivateKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "private_key is required for auth_type=key"})
 		return
 	}
 
@@ -146,7 +148,7 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 	}
 	_ = hostID
 
-	userIDStr := c.Query("user_id")
+	userIDStr := c.GetHeader("X-User-ID")
 	if userIDStr == "" {
 		userIDStr = "00000000-0000-0000-0000-000000000000"
 	}

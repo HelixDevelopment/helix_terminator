@@ -1,12 +1,15 @@
 package server_test
 
 import (
+	"crypto/ed25519"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -22,8 +25,39 @@ type testLogger struct{}
 func (t *testLogger) Printf(format string, v ...interface{}) {}
 func (t *testLogger) Println(v ...interface{})            {}
 
+var testPublicKey ed25519.PublicKey
+var testPrivateKey ed25519.PrivateKey
+
+func init() {
+	var err error
+	testPublicKey, testPrivateKey, err = ed25519.GenerateKey(nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func setupTestServer() *server.Server {
 	return server.New(&testLogger{})
+}
+
+func generateTestToken() string {
+	claims := server.Claims{
+		UserID:    "test-user-id",
+		OrgID:     "test-org-id",
+		Email:     "test@example.com",
+		Role:      "user",
+		SessionID: "test-session-id",
+		TokenType: "access",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+			Subject:   "test-user-id",
+			Issuer:    "helixterminator",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
+	tokenString, _ := token.SignedString(testPrivateKey)
+	return tokenString
 }
 
 func TestLivenessEndpoint(t *testing.T) {
@@ -75,6 +109,7 @@ func TestMetricsEndpoint(t *testing.T) {
 }
 
 func TestCORSMiddleware(t *testing.T) {
+	t.Setenv("CORS_ALLOWED_ORIGINS", "https://app.helixterminator.io")
 	s := setupTestServer()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodOptions, "/api/v1/hosts", nil)
@@ -86,6 +121,21 @@ func TestCORSMiddleware(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, w.Code)
 	assert.Equal(t, "https://app.helixterminator.io", w.Header().Get("Access-Control-Allow-Origin"))
 	assert.Contains(t, w.Header().Get("Access-Control-Allow-Methods"), "GET")
+}
+
+func TestCORSMiddleware_UnknownOrigin(t *testing.T) {
+	t.Setenv("CORS_ALLOWED_ORIGINS", "https://app.helixterminator.io")
+	s := setupTestServer()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodOptions, "/api/v1/hosts", nil)
+	req.Header.Set("Origin", "https://evil.com")
+	req.Header.Set("Access-Control-Request-Method", "GET")
+
+	s.Router().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+	assert.Empty(t, w.Header().Get("Access-Control-Allow-Credentials"))
 }
 
 func TestRequestIDMiddleware(t *testing.T) {
@@ -112,6 +162,7 @@ func TestRequestIDMiddleware_GeneratesID(t *testing.T) {
 }
 
 func TestJWTValidationMiddleware_MissingToken(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
 	s := setupTestServer()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
@@ -123,6 +174,7 @@ func TestJWTValidationMiddleware_MissingToken(t *testing.T) {
 }
 
 func TestJWTValidationMiddleware_InvalidFormat(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
 	s := setupTestServer()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
@@ -135,6 +187,7 @@ func TestJWTValidationMiddleware_InvalidFormat(t *testing.T) {
 }
 
 func TestJWTValidationMiddleware_EmptyToken(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
 	s := setupTestServer()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
@@ -147,16 +200,30 @@ func TestJWTValidationMiddleware_EmptyToken(t *testing.T) {
 }
 
 func TestJWTValidationMiddleware_PassesWithToken(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
 	s := setupTestServer()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
-	req.Header.Set("Authorization", "Bearer test-valid-token")
+	req.Header.Set("Authorization", "Bearer "+generateTestToken())
 
 	s.Router().ServeHTTP(w, req)
 
 	// Should route to host-service (returns stub response)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "host-service")
+}
+
+func TestJWTValidationMiddleware_InvalidToken(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
+	s := setupTestServer()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
+	req.Header.Set("Authorization", "Bearer invalid-token")
+
+	s.Router().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "invalid token")
 }
 
 func TestAuthRoutes_NoTokenRequired(t *testing.T) {
@@ -185,10 +252,11 @@ func TestRateLimitMiddleware(t *testing.T) {
 }
 
 func TestProxyToUpstream(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
 	s := setupTestServer()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/hosts", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Authorization", "Bearer "+generateTestToken())
 
 	s.Router().ServeHTTP(w, req)
 
@@ -198,10 +266,11 @@ func TestProxyToUpstream(t *testing.T) {
 }
 
 func TestProxyToUnknownService(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
 	s := setupTestServer()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/vaults", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Authorization", "Bearer "+generateTestToken())
 
 	s.Router().ServeHTTP(w, req)
 
@@ -252,6 +321,7 @@ func TestServer_RouterExposure(t *testing.T) {
 }
 
 func TestAllUpstreamServicesRegistered(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY", base64.StdEncoding.EncodeToString(testPublicKey))
 	s := setupTestServer()
 
 	// Test a few key upstream services are routable
@@ -284,7 +354,7 @@ func TestAllUpstreamServicesRegistered(t *testing.T) {
 			}
 			req, _ := http.NewRequest(method, tc.path, nil)
 			if tc.auth {
-				req.Header.Set("Authorization", "Bearer test-token")
+				req.Header.Set("Authorization", "Bearer "+generateTestToken())
 			}
 
 			s.Router().ServeHTTP(w, req)

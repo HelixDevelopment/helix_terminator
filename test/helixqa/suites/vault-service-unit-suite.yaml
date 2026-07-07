@@ -1,0 +1,115 @@
+apiVersion: helixqa.io/v1
+kind: TestSuite
+metadata:
+  name: vault-service-unit-suite
+  category: unit
+  service: vault-service
+  version: "1.0.0"
+
+spec:
+  description: >
+    Comprehensive unit test suite for the vault-service covering
+    secret storage, encryption, rotation, access control, and audit.
+
+  testCases:
+    - id: VAULT-001
+      name: "Happy Path - Store Secret"
+      type: happy-path
+      description: "Store a secret and retrieve it successfully"
+      steps:
+        - Authenticate as authorized user
+        - Store secret at path /secrets/app/db-password
+        - Retrieve secret from same path
+        - Assert: Retrieved value matches stored value
+      tags: [vault, secret, happy-path]
+
+    - id: VAULT-002
+      name: "Happy Path - Rotate Secret"
+      type: happy-path
+      description: "Rotate a secret and verify old version is accessible"
+      steps:
+        - Store secret v1
+        - Rotate to secret v2
+        - Retrieve version 1 and version 2
+        - Assert: Both versions are accessible
+      tags: [vault, rotation, happy-path]
+
+    - id: VAULT-003
+      name: "Error Handling - Unauthorized Access"
+      type: error-handling
+      description: "Unauthorized user cannot access secrets"
+      steps:
+        - Authenticate as user without vault permissions
+        - Attempt to retrieve secret
+        - Assert: 403 Forbidden
+      tags: [vault, error-handling, authorization]
+
+    - id: VAULT-004
+      name: "Error Handling - Nonexistent Path"
+      type: error-handling
+      description: "Accessing nonexistent path returns 404"
+      steps:
+        - Authenticate as authorized user
+        - Retrieve secret from nonexistent path
+        - Assert: 404 Not Found
+      tags: [vault, error-handling, not-found]
+
+    - id: VAULT-005
+      name: "Edge Case - Empty Secret Value"
+      type: edge-case
+      description: "Empty secret values are stored and retrieved correctly"
+      steps:
+        - Store empty string as secret
+        - Retrieve it
+        - Assert: Value is empty string, not null or missing
+      tags: [vault, edge-case, empty-value]
+
+    - id: VAULT-006
+      name: "Edge Case - Maximum Secret Size"
+      type: edge-case
+      description: "Secrets up to 1MB are accepted"
+      steps:
+        - Store 1MB secret
+        - Assert: Success
+        - Store 1MB+1 byte secret
+        - Assert: 413 Payload Too Large
+      tags: [vault, edge-case, size-limit]
+
+    - id: VAULT-007
+      name: "Security - Encryption at Rest"
+      type: security
+      description: "Secrets are encrypted at rest"
+      steps:
+        - Store secret
+        - Query database directly
+        - Assert: Value is not plaintext, encryption metadata present
+      tags: [vault, security, encryption, at-rest]
+
+    - id: VAULT-008
+      name: "Security - Audit Log"
+      type: security
+      description: "All secret access is audited"
+      steps:
+        - Store, retrieve, and delete a secret
+        - Query audit log
+        - Assert: All three operations logged with actor and timestamp
+      tags: [vault, security, audit, logging]
+
+    - id: VAULT-009
+      name: "Performance - Batch Retrieval"
+      type: performance
+      description: "Retrieve 1000 secrets within 1 second"
+      steps:
+        - Store 1000 secrets
+        - Retrieve all in batch
+        - Assert: Total time < 1 second
+      tags: [vault, performance, batch, benchmark]
+
+    - id: VAULT-010
+      name: "Concurrency - Simultaneous Writes"
+      type: concurrency
+      description: "Concurrent writes to same path are safe"
+      steps:
+        - Spawn 50 goroutines writing to same path
+        - Assert: No data corruption, last write wins or versioned
+      tags: [vault, concurrency, race-condition, write]

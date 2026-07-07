@@ -1,0 +1,261 @@
+syntax = "proto3";
+
+package helixterm.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/v1;helixtermv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (User);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc CreateUser(CreateUserRequest) returns (User);
+  rpc UpdateUser(UpdateUserRequest) returns (User);
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty);
+  rpc GetUserProfile(GetUserRequest) returns (UserProfile);
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UserProfile);
+  rpc ListUserSessions(GetUserRequest) returns (ListUserSessionsResponse);
+  rpc GetUserPreferences(GetUserRequest) returns (UserPreferences);
+  rpc UpdateUserPreferences(UpdateUserPreferencesRequest) returns (UserPreferences);
+  rpc SearchUsers(SearchUsersRequest) returns (ListUsersResponse);
+  rpc BulkDeleteUsers(BulkDeleteUsersRequest) returns (google.protobuf.Empty);
+  rpc ExportUserData(GetUserRequest) returns (ExportUserDataResponse);
+  rpc ImportUserData(ImportUserDataRequest) returns (User);
+  rpc GetUserActivity(GetUserRequest) returns (UserActivity);
+  rpc SetUserStatus(SetUserStatusRequest) returns (User);
+  rpc ListUserOrganizations(GetUserRequest) returns (ListUserOrganizationsResponse);
+  rpc ListUserPermissions(GetUserRequest) returns (ListUserPermissionsResponse);
+  rpc ImpersonateUser(ImpersonateUserRequest) returns (ImpersonateUserResponse);
+  rpc GetUserAuditLog(GetUserRequest) returns (AuditLogStream);
+  rpc SyncUserToDirectory(SyncUserRequest) returns (User);
+  rpc GenerateUserReport(GenerateUserReportRequest) returns (Report);
+  rpc GetUserQuota(GetUserRequest) returns (UserQuota);
+  rpc UpdateUserQuota(UpdateUserQuotaRequest) returns (UserQuota);
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string username = 3;
+  string display_name = 4;
+  string role = 5;
+  bool mfa_enabled = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  google.protobuf.Timestamp last_login_at = 9;
+  string status = 10;
+  string avatar_url = 11;
+  map<string, string> metadata = 12;
+}
+
+message UserProfile {
+  string user_id = 1;
+  string bio = 2;
+  string timezone = 3;
+  string locale = 4;
+  string ssh_public_key = 5;
+  string gpg_public_key = 6;
+  map<string, string> custom_fields = 7;
+}
+
+message UserPreferences {
+  string user_id = 1;
+  string theme = 2;
+  string font_family = 3;
+  int32 font_size = 4;
+  bool notifications_enabled = 5;
+  string default_shell = 6;
+  map<string, string> editor_settings = 7;
+  map<string, string> terminal_settings = 8;
+}
+
+message UserActivity {
+  string user_id = 1;
+  int32 total_sessions = 2;
+  int32 total_commands = 3;
+  google.protobuf.Timestamp last_active_at = 4;
+  repeated ActivityRecord recent_activity = 5;
+}
+
+message ActivityRecord {
+  string action = 1;
+  string resource_type = 2;
+  string resource_id = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message UserQuota {
+  string user_id = 1;
+  int64 max_storage_bytes = 2;
+  int64 used_storage_bytes = 3;
+  int32 max_sessions = 4;
+  int32 active_sessions = 5;
+  int32 max_hosts = 6;
+  int32 active_hosts = 7;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message ListUsersRequest {
+  string organization_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  string filter = 4;
+  string sort_by = 5;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string username = 2;
+  string password = 3;
+  string display_name = 4;
+  string role = 5;
+  string organization_id = 6;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  string email = 2;
+  string display_name = 3;
+  string role = 4;
+  bool mfa_enabled = 5;
+  string status = 6;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+message UpdateUserProfileRequest {
+  string user_id = 1;
+  string bio = 2;
+  string timezone = 3;
+  string locale = 4;
+  string ssh_public_key = 5;
+  map<string, string> custom_fields = 6;
+}
+
+message UpdateUserPreferencesRequest {
+  string user_id = 1;
+  string theme = 2;
+  string font_family = 3;
+  int32 font_size = 4;
+  bool notifications_enabled = 5;
+  map<string, string> editor_settings = 6;
+  map<string, string> terminal_settings = 7;
+}
+
+message SearchUsersRequest {
+  string query = 1;
+  string organization_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message BulkDeleteUsersRequest {
+  repeated string ids = 1;
+  bool force = 2;
+}
+
+message ExportUserDataResponse {
+  bytes data = 1;
+  string format = 2;
+}
+
+message ImportUserDataRequest {
+  bytes data = 1;
+  string format = 2;
+}
+
+message SetUserStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message ListUserSessionsResponse {
+  repeated Session sessions = 1;
+}
+
+message Session {
+  string id = 1;
+  string user_id = 2;
+  string host_id = 3;
+  string status = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message ListUserOrganizationsResponse {
+  repeated Organization organizations = 1;
+}
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string role = 3;
+}
+
+message ListUserPermissionsResponse {
+  repeated string permissions = 1;
+}
+
+message ImpersonateUserRequest {
+  string target_user_id = 1;
+  string reason = 2;
+  int32 duration_minutes = 3;
+}
+
+message ImpersonateUserResponse {
+  string token = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message SyncUserRequest {
+  string user_id = 1;
+  string directory_provider = 2;
+}
+
+message GenerateUserReportRequest {
+  string user_id = 1;
+  string report_type = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+}
+
+message Report {
+  string id = 1;
+  string type = 2;
+  bytes content = 3;
+  google.protobuf.Timestamp generated_at = 4;
+}
+
+message AuditLogStream {
+  repeated AuditLogEntry entries = 1;
+}
+
+message AuditLogEntry {
+  string id = 1;
+  string action = 2;
+  string actor_id = 3;
+  string resource_type = 4;
+  string resource_id = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  map<string, string> metadata = 7;
+}
+
+message UpdateUserQuotaRequest {
+  string user_id = 1;
+  int64 max_storage_bytes = 2;
+  int32 max_sessions = 3;
+  int32 max_hosts = 4;
+}

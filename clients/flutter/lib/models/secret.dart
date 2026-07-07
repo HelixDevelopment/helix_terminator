@@ -4,6 +4,7 @@ class Secret {
   final String type; // password, key, token
   final String category;
   final String? description;
+  final String? value;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -13,6 +14,7 @@ class Secret {
     required this.type,
     this.category = 'general',
     this.description,
+    this.value,
     required this.createdAt,
     this.updatedAt,
   });
@@ -23,6 +25,7 @@ class Secret {
     String? type,
     String? category,
     String? description,
+    String? value,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -32,6 +35,7 @@ class Secret {
       type: type ?? this.type,
       category: category ?? this.category,
       description: description ?? this.description,
+      value: value ?? this.value,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

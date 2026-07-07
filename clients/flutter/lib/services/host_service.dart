@@ -1,37 +1,72 @@
 import '../models/host.dart';
 import 'api_client.dart';
 
+class HostServiceException implements Exception {
+  final String message;
+  HostServiceException(this.message);
+}
+
 class HostService {
   final ApiClient _apiClient;
 
   HostService({required ApiClient apiClient}) : _apiClient = apiClient;
 
   Future<List<Host>> getHosts() async {
-    final response = await _apiClient.get('/hosts');
-    final data = response['data'] as List<dynamic>? ?? [];
-    return data.map((json) => _hostFromJson(json as Map<String, dynamic>)).toList();
+    try {
+      final response = await _apiClient.get('/hosts');
+      final data = response['data'] as List<dynamic>? ?? [];
+      return data.map((json) => _hostFromJson(json as Map<String, dynamic>)).toList();
+    } on ApiException catch (e) {
+      throw HostServiceException(e.message);
+    } catch (e) {
+      throw HostServiceException('Failed to load hosts');
+    }
   }
 
   Future<Host> getHostById(String id) async {
-    final response = await _apiClient.get('/hosts/$id');
-    final data = response['data'] as Map<String, dynamic>;
-    return _hostFromJson(data);
+    try {
+      final response = await _apiClient.get('/hosts/$id');
+      final data = response['data'] as Map<String, dynamic>;
+      return _hostFromJson(data);
+    } on ApiException catch (e) {
+      throw HostServiceException(e.message);
+    } catch (e) {
+      throw HostServiceException('Failed to load host');
+    }
   }
 
   Future<Host> createHost(Host host) async {
-    final response = await _apiClient.post('/hosts', _hostToJson(host));
-    final data = response['data'] as Map<String, dynamic>;
-    return _hostFromJson(data);
+    try {
+      final response = await _apiClient.post('/hosts', _hostToJson(host));
+      final data = response['data'] as Map<String, dynamic>;
+      return _hostFromJson(data);
+    } on ApiException catch (e) {
+      throw HostServiceException(e.message);
+    } catch (e) {
+      throw HostServiceException('Failed to create host');
+    }
   }
 
   Future<Host> updateHost(String id, Host host) async {
-    final response = await _apiClient.put('/hosts/$id', _hostToJson(host));
-    final data = response['data'] as Map<String, dynamic>;
-    return _hostFromJson(data);
+    try {
+      final response = await _apiClient.put('/hosts/$id', _hostToJson(host));
+      final data = response['data'] as Map<String, dynamic>;
+      return _hostFromJson(data);
+    } on ApiException catch (e) {
+      throw HostServiceException(e.message);
+    } catch (e) {
+      throw HostServiceException('Failed to update host');
+    }
   }
 
   Future<void> deleteHost(String id) async {
-    await _apiClient.delete('/hosts/$id');
+    try {
+      await _apiClient.delete('/hosts/$id');
+    } on ApiException catch (e) {
+      throw HostServiceException(e.message);
+    } catch (e) {
+      throw HostServiceException('Failed to delete host');
+    }
   }
 
   Host _hostFromJson(Map<String, dynamic> json) {

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_client.dart';
 import '../models/user.dart';
 
@@ -24,6 +24,7 @@ class AuthService {
   final ApiClient _apiClient;
   static const _tokenKey = 'auth_token';
   static const _refreshTokenKey = 'refresh_token';
+  final _secureStorage = const FlutterSecureStorage();
 
   AuthService({required ApiClient apiClient}) : _apiClient = apiClient;
 
@@ -89,8 +90,7 @@ class AuthService {
 
   Future<void> logout() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(_tokenKey);
+      final token = await _secureStorage.read(key: _tokenKey);
       if (token != null) {
         await _apiClient.post('/auth/logout', {});
       }
@@ -123,8 +123,7 @@ class AuthService {
   }
 
   Future<String?> refreshToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentRefreshToken = prefs.getString(_refreshTokenKey);
+    final currentRefreshToken = await _secureStorage.read(key: _refreshTokenKey);
     if (currentRefreshToken == null) return null;
 
     try {
@@ -145,8 +144,7 @@ class AuthService {
   }
 
   Future<bool> isAuthenticated() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_tokenKey);
+    final token = await _secureStorage.read(key: _tokenKey);
     if (token == null) return false;
 
     // Optionally validate token expiry here
@@ -162,17 +160,19 @@ class AuthService {
     }
   }
 
+  Future<String?> getToken() async {
+    return _secureStorage.read(key: _tokenKey);
+  }
+
   Future<void> _saveTokens(String token, String? refreshToken) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    await _secureStorage.write(key: _tokenKey, value: token);
     if (refreshToken != null) {
-      await prefs.setString(_refreshTokenKey, refreshToken);
+      await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
     }
   }
 
   Future<void> _clearTokens() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_refreshTokenKey);
+    await _secureStorage.delete(key: _tokenKey);
+    await _secureStorage.delete(key: _refreshTokenKey);
   }
 }

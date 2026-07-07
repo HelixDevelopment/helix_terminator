@@ -144,26 +144,39 @@ class _WorkspaceListScreenState extends State<WorkspaceListScreen> {
   void _showCreateDialog(BuildContext context) {
     final nameController = TextEditingController();
     final descController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Create Workspace'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 2,
-              ),
-            ],
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Name is required';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'Name must be at least 2 characters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: 'Description'),
+                  maxLines: 2,
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -172,8 +185,8 @@ class _WorkspaceListScreenState extends State<WorkspaceListScreen> {
             ),
             FilledButton(
               onPressed: () {
+                if (!formKey.currentState!.validate()) return;
                 final name = nameController.text.trim();
-                if (name.isEmpty) return;
                 context.read<WorkspaceBloc>().add(
                   WorkspaceCreateRequested(
                     name: name,

@@ -59,7 +59,7 @@ resource "aws_db_instance" "main" {
 
   db_name  = var.database_name
   username = var.master_username
-  password = var.master_password
+  password = var.master_password_secret_arn != "" ? null : var.master_password
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [var.rds_security_group_id]
@@ -85,3 +85,34 @@ resource "aws_db_instance" "main" {
     Environment = var.environment
   }
 }
+
+# AWS Secrets Manager Secret for RDS password
+resource "aws_secretsmanager_secret" "rds_password" {
+  count = var.master_password_secret_arn == "" ? 1 : 0
+
+  name        = "${var.project_name}/${var.environment}/rds-master-password"
+  description = "Master password for RDS PostgreSQL instance"
+
+  tags = {
+    Name        = "${var.project_name}-rds-password"
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "rds_password" {
+  count = var.master_password_secret_arn == "" ? 1 : 0
+
+  secret_id     = aws_secretsmanager_secret.rds_password[0].id
+  secret_string = jsonencode({
+    password = var.master_password != "" ? var.master_password : random_password.rds_password[0].result
+  })
+}
+
+resource "random_password" "rds_password" {
+  count = var.master_password_secret_arn == "" && var.master_password == "" ? 1 : 0
+
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+

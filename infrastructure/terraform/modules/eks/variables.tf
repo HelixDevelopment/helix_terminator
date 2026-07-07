@@ -29,7 +29,6 @@ variable "eks_node_security_group_id" {
 variable "allowed_cidr_blocks" {
   description = "Allowed CIDR blocks for public access"
   type        = list(string)
-  default     = ["0.0.0.0/0"]
 }
 
 variable "node_desired_size" {

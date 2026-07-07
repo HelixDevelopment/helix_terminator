@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'auth_service.dart';
 
 // TODO: replace with real API base URL and add auth interceptors
 
@@ -13,8 +14,11 @@ class ApiException implements Exception {
 class ApiClient {
   final String baseUrl;
   final http.Client _client;
+  final AuthService? _authService;
 
-  ApiClient({required this.baseUrl}) : _client = http.Client();
+  ApiClient({required this.baseUrl, AuthService? authService})
+      : _client = http.Client(),
+        _authService = authService;
 
   Future<Map<String, dynamic>> get(String path) async {
     final response = await _client.get(
@@ -52,7 +56,10 @@ class ApiClient {
 
   Future<Map<String, String>> _headers() async {
     final headers = {'Content-Type': 'application/json'};
-    // TODO: inject token from auth service if needed
+    final token = await _authService?.getToken();
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
     return headers;
   }
 

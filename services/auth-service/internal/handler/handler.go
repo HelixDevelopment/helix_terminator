@@ -1,11 +1,15 @@
 package handler
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/pquerna/otp/totp"
 
 	"github.com/helixdevelopment/auth-service/internal/crypto"
 	"github.com/helixdevelopment/auth-service/internal/model"
@@ -214,14 +218,77 @@ func (h *Handler) VerifyMFA(c *gin.Context) {
 		return
 	}
 
-	// TODO: implement actual MFA verification (TOTP, FIDO2)
-	// For now, accept any 6-digit code
-	if len(req.Code) != 6 {
+	// Get user from context or challenge
+	userIDStr, _ := c.Get("userID")
+	if userIDStr == nil || userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user"})
+		return
+	}
+
+	user, err := h.repo.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
+		return
+	}
+
+	if !user.MFAEnabled || user.MFASecret == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "MFA not enabled for this user"})
+		return
+	}
+
+	valid, err := totp.ValidateCustom(req.Code, user.MFASecret, time.Now().UTC(), totp.ValidateOpts{
+		Period:    30,
+		Skew:      1,
+		Digits:    6,
+		Algorithm: 1, // SHA1
+	})
+	if err != nil || !valid {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid MFA code"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "MFA verified"})
+	// Generate tokens after successful MFA
+	sessionID := uuid.New().String()
+	accessToken, _, err := h.jwtManager.GenerateAccessToken(
+		user.ID.String(), "", user.Email, user.Role, sessionID, nil,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate access token"})
+		return
+	}
+
+	refreshToken, expiresAt, err := h.jwtManager.GenerateRefreshToken(user.ID.String(), sessionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate refresh token"})
+		return
+	}
+
+	// Create session
+	session := &model.Session{
+		ID:               uuid.MustParse(sessionID),
+		UserID:           user.ID,
+		AccessTokenHash:  crypto.HashToken(accessToken),
+		RefreshTokenHash: crypto.HashToken(refreshToken),
+		ExpiresAt:        expiresAt,
+		LastActiveAt:     time.Now().UTC(),
+		CreatedAt:        time.Now().UTC(),
+	}
+	if err := h.repo.CreateSession(c.Request.Context(), session); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    int64(15 * time.Minute.Seconds()),
+		User:         user,
+	})
 }
 
 // SetupMFA handles MFA setup initiation
@@ -232,12 +299,86 @@ func (h *Handler) SetupMFA(c *gin.Context) {
 		return
 	}
 
-	// TODO: generate real TOTP secret and QR code
-	c.JSON(http.StatusOK, model.MFASetupResponse{
-		Secret:        "JBSWY3DPEHPK3PXP",
-		QRCode:        "data:image/png;base64,TODO",
-		RecoveryCodes: []string{"code1", "code2", "code3"},
+	// Get user from context
+	userIDStr, _ := c.Get("userID")
+	if userIDStr == nil || userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+		return
+	}
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user"})
+		return
+	}
+
+	user, err := h.repo.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
+		return
+	}
+
+	// Generate cryptographically random TOTP secret
+	secret, err := generateRandomTOTPSecret()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate TOTP secret"})
+		return
+	}
+
+	// Generate real recovery codes
+	recoveryCodes, err := generateRecoveryCodes(10)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate recovery codes"})
+		return
+	}
+
+	// Save secret to user (in production, this would be a separate setup flow with verification)
+	user.MFASecret = secret
+	user.MFAEnabled = true
+	user.MFAMethod = "totp"
+	if err := h.repo.UpdateUser(c.Request.Context(), user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save MFA setup"})
+		return
+	}
+
+	// Generate QR code URI
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "HelixTerminator",
+		AccountName: user.Email,
+		Secret:      []byte(secret),
 	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate TOTP key"})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.MFASetupResponse{
+		Secret:        key.Secret(),
+		QRCode:        key.URL(),
+		RecoveryCodes: recoveryCodes,
+	})
+}
+
+// generateRandomTOTPSecret generates a cryptographically random TOTP secret.
+func generateRandomTOTPSecret() (string, error) {
+	// Generate 160 bits (20 bytes) of randomness for a standard TOTP secret
+	b := make([]byte, 20)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("failed to read random bytes: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(b), nil
+}
+
+// generateRecoveryCodes generates cryptographically random recovery codes.
+func generateRecoveryCodes(count int) ([]string, error) {
+	codes := make([]string, count)
+	for i := 0; i < count; i++ {
+		b := make([]byte, 8)
+		if _, err := rand.Read(b); err != nil {
+			return nil, fmt.Errorf("failed to read random bytes: %w", err)
+		}
+		codes[i] = base64.RawStdEncoding.EncodeToString(b)
+	}
+	return codes, nil
 }
 
 // RefreshToken handles token refresh

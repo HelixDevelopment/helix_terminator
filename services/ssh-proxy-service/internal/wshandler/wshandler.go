@@ -40,6 +40,7 @@ type activeSession struct {
 	stderr      io.Reader
 	cancel      context.CancelFunc
 	resizeCh    chan model.TerminalResizeMessage
+	closeOnce   sync.Once
 }
 
 // NewSessionManager creates a new SessionManager.
@@ -100,7 +101,9 @@ func (m *SessionManager) cleanup(s *activeSession) {
 	if s.wsConn != nil {
 		_ = s.wsConn.Close()
 	}
-	close(s.resizeCh)
+	s.closeOnce.Do(func() {
+		close(s.resizeCh)
+	})
 }
 
 // HandleWebSocket upgrades the HTTP connection to WebSocket and bridges to SSH.

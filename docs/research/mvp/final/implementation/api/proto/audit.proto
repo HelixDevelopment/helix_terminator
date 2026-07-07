@@ -1,0 +1,341 @@
+syntax = "proto3";
+
+package helixterm.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/v1;helixtermv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service AuditService {
+  rpc GetAuditLogEntry(GetAuditLogEntryRequest) returns (AuditLogEntry);
+  rpc ListAuditLogEntries(ListAuditLogEntriesRequest) returns (ListAuditLogEntriesResponse);
+  rpc SearchAuditLogEntries(SearchAuditLogEntriesRequest) returns (ListAuditLogEntriesResponse);
+  rpc ExportAuditLog(ExportAuditLogRequest) returns (ExportAuditLogResponse);
+  rpc GetAuditLogStats(GetAuditLogStatsRequest) returns (AuditLogStats);
+  rpc GetAuditLogRetentionPolicy(google.protobuf.Empty) returns (AuditLogRetentionPolicy);
+  rpc UpdateAuditLogRetentionPolicy(UpdateAuditLogRetentionPolicyRequest) returns (AuditLogRetentionPolicy);
+  rpc PurgeAuditLog(PurgeAuditLogRequest) returns (PurgeAuditLogResponse);
+  rpc StreamAuditLogEntries(StreamAuditLogEntriesRequest) returns (stream AuditLogEntry);
+  rpc GetAuditLogSummary(GetAuditLogSummaryRequest) returns (AuditLogSummary);
+  rpc GetAuditLogByResource(GetAuditLogByResourceRequest) returns (ListAuditLogEntriesResponse);
+  rpc GetAuditLogByActor(GetAuditLogByActorRequest) returns (ListAuditLogEntriesResponse);
+  rpc GetAuditLogByAction(GetAuditLogByActionRequest) returns (ListAuditLogEntriesResponse);
+  rpc GetAuditLogIntegrityReport(GetAuditLogIntegrityReportRequest) returns (AuditLogIntegrityReport);
+  rpc VerifyAuditLogIntegrity(VerifyAuditLogIntegrityRequest) returns (IntegrityVerificationResult);
+  rpc GetAuditLogConfiguration(google.protobuf.Empty) returns (AuditLogConfiguration);
+  rpc UpdateAuditLogConfiguration(UpdateAuditLogConfigurationRequest) returns (AuditLogConfiguration);
+  rpc GetAuditLogAlerts(GetAuditLogAlertsRequest) returns (AuditLogAlerts);
+  rpc CreateAuditLogAlert(CreateAuditLogAlertRequest) returns (AuditLogAlert);
+  rpc UpdateAuditLogAlert(UpdateAuditLogAlertRequest) returns (AuditLogAlert);
+  rpc DeleteAuditLogAlert(DeleteAuditLogAlertRequest) returns (google.protobuf.Empty);
+  rpc GetAuditLogReport(GetAuditLogReportRequest) returns (AuditLogReport);
+  rpc GenerateAuditLogReport(GenerateAuditLogReportRequest) returns (AuditLogReport);
+  rpc ArchiveAuditLog(ArchiveAuditLogRequest) returns (ArchiveAuditLogResponse);
+  rpc RestoreAuditLog(RestoreAuditLogRequest) returns (AuditLogRestoreResponse);
+}
+
+message AuditLogEntry {
+  string id = 1;
+  string action = 2;
+  string actor_id = 3;
+  string actor_type = 4;
+  string resource_type = 5;
+  string resource_id = 6;
+  string organization_id = 7;
+  string workspace_id = 8;
+  string session_id = 9;
+  string ip_address = 10;
+  string user_agent = 11;
+  string result = 12;
+  string severity = 13;
+  map<string, string> metadata = 14;
+  google.protobuf.Timestamp timestamp = 15;
+  string integrity_hash = 16;
+}
+
+message AuditLogStats {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  int64 total_entries = 4;
+  int64 failed_actions = 5;
+  int64 successful_actions = 6;
+  map<string, int64> actions_by_type = 7;
+  map<string, int64> severity_distribution = 8;
+}
+
+message AuditLogRetentionPolicy {
+  int32 retention_days = 1;
+  bool auto_archive = 2;
+  int32 archive_after_days = 3;
+  bool auto_purge = 4;
+  int32 purge_after_days = 5;
+  string archive_location = 6;
+}
+
+message PurgeAuditLogRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp before_date = 2;
+  string severity = 3;
+  bool dry_run = 4;
+}
+
+message PurgeAuditLogResponse {
+  int64 deleted_count = 1;
+  int64 archived_count = 2;
+  bool dry_run = 3;
+}
+
+message AuditLogSummary {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  int64 total_entries = 4;
+  int64 unique_actors = 5;
+  int64 unique_resources = 6;
+  map<string, int64> top_actions = 7;
+  map<string, int64> top_actors = 8;
+}
+
+message AuditLogIntegrityReport {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  int64 total_entries = 4;
+  int64 verified_entries = 5;
+  int64 failed_entries = 6;
+  string overall_status = 7;
+  google.protobuf.Timestamp generated_at = 8;
+}
+
+message IntegrityVerificationResult {
+  bool valid = 1;
+  int64 verified_count = 2;
+  int64 failed_count = 3;
+  repeated string failed_entry_ids = 4;
+  string message = 5;
+}
+
+message AuditLogConfiguration {
+  bool enabled = 1;
+  repeated string excluded_actions = 2;
+  repeated string excluded_resources = 3;
+  bool log_ip_address = 4;
+  bool log_user_agent = 5;
+  bool log_metadata = 6;
+  string encryption_key_id = 7;
+  map<string, string> custom_settings = 8;
+}
+
+message AuditLogAlert {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string condition = 4;
+  string severity = 5;
+  repeated string notification_channels = 6;
+  bool enabled = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message AuditLogAlerts {
+  repeated AuditLogAlert alerts = 1;
+}
+
+message AuditLogReport {
+  string id = 1;
+  string type = 2;
+  string organization_id = 3;
+  google.protobuf.Timestamp start_date = 4;
+  google.protobuf.Timestamp end_date = 5;
+  bytes content = 6;
+  string format = 7;
+  google.protobuf.Timestamp generated_at = 8;
+}
+
+message ArchiveAuditLogResponse {
+  string archive_id = 1;
+  int64 archived_count = 2;
+  string location = 3;
+  google.protobuf.Timestamp archived_at = 4;
+}
+
+message AuditLogRestoreResponse {
+  string restore_id = 1;
+  int64 restored_count = 2;
+  google.protobuf.Timestamp restored_at = 3;
+}
+
+message GetAuditLogEntryRequest {
+  string id = 1;
+}
+
+message ListAuditLogEntriesRequest {
+  string organization_id = 1;
+  string workspace_id = 2;
+  string actor_id = 3;
+  string resource_type = 4;
+  string resource_id = 5;
+  string severity = 6;
+  google.protobuf.Timestamp start_date = 7;
+  google.protobuf.Timestamp end_date = 8;
+  int32 page_size = 9;
+  string page_token = 10;
+}
+
+message ListAuditLogEntriesResponse {
+  repeated AuditLogEntry entries = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message SearchAuditLogEntriesRequest {
+  string organization_id = 1;
+  string query = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message ExportAuditLogRequest {
+  string organization_id = 1;
+  string format = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+  string filter = 5;
+}
+
+message ExportAuditLogResponse {
+  bytes data = 1;
+  string format = 2;
+  int64 entry_count = 3;
+}
+
+message GetAuditLogStatsRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message UpdateAuditLogRetentionPolicyRequest {
+  int32 retention_days = 1;
+  bool auto_archive = 2;
+  int32 archive_after_days = 3;
+  bool auto_purge = 4;
+  int32 purge_after_days = 5;
+  string archive_location = 6;
+}
+
+message StreamAuditLogEntriesRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  repeated string event_types = 3;
+}
+
+message GetAuditLogSummaryRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message GetAuditLogByResourceRequest {
+  string resource_type = 1;
+  string resource_id = 2;
+  string organization_id = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message GetAuditLogByActorRequest {
+  string actor_id = 1;
+  string actor_type = 2;
+  string organization_id = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message GetAuditLogByActionRequest {
+  string action = 1;
+  string organization_id = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}
+
+message GetAuditLogIntegrityReportRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message VerifyAuditLogIntegrityRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message UpdateAuditLogConfigurationRequest {
+  bool enabled = 1;
+  repeated string excluded_actions = 2;
+  repeated string excluded_resources = 3;
+  bool log_ip_address = 4;
+  bool log_user_agent = 5;
+  bool log_metadata = 6;
+  string encryption_key_id = 7;
+  map<string, string> custom_settings = 8;
+}
+
+message GetAuditLogAlertsRequest {
+  string organization_id = 1;
+  bool enabled_only = 2;
+}
+
+message CreateAuditLogAlertRequest {
+  string name = 1;
+  string description = 2;
+  string condition = 3;
+  string severity = 4;
+  repeated string notification_channels = 5;
+  bool enabled = 6;
+}
+
+message UpdateAuditLogAlertRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string condition = 4;
+  string severity = 5;
+  repeated string notification_channels = 6;
+  bool enabled = 7;
+}
+
+message DeleteAuditLogAlertRequest {
+  string id = 1;
+}
+
+message GetAuditLogReportRequest {
+  string id = 1;
+}
+
+message GenerateAuditLogReportRequest {
+  string organization_id = 1;
+  string type = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+  string format = 5;
+}
+
+message ArchiveAuditLogRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp before_date = 2;
+  bool dry_run = 3;
+}
+
+message RestoreAuditLogRequest {
+  string archive_id = 1;
+  string organization_id = 2;
+}

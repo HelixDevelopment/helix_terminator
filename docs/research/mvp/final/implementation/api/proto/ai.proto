@@ -1,0 +1,689 @@
+syntax = "proto3";
+
+package helixterm.v1;
+
+option go_package = "github.com/HelixDevelopment/helix-terminator/proto/helixterm/v1;helixtermv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service AIService {
+  rpc GenerateCompletion(GenerateCompletionRequest) returns (CompletionResponse);
+  rpc StreamCompletion(GenerateCompletionRequest) returns (stream CompletionChunk);
+  rpc GenerateCode(GenerateCodeRequest) returns (CodeResponse);
+  rpc ExplainCode(ExplainCodeRequest) returns (ExplanationResponse);
+  rpc RefactorCode(RefactorCodeRequest) returns (RefactoredCodeResponse);
+  rpc GenerateTests(GenerateTestsRequest) returns (TestResponse);
+  rpc GenerateDocumentation(GenerateDocumentationRequest) returns (DocumentationResponse);
+  rpc AnalyzeCode(AnalyzeCodeRequest) returns (AnalysisResponse);
+  rpc SuggestFix(SuggestFixRequest) returns (FixSuggestionResponse);
+  rpc GetAIChatHistory(GetAIChatHistoryRequest) returns (AIChatHistory);
+  rpc SendAIChatMessage(SendAIChatMessageRequest) returns (AIChatMessage);
+  rpc StreamAIChatMessages(StreamAIChatMessagesRequest) returns (stream AIChatMessage);
+  rpc GetAIModels(google.protobuf.Empty) returns (AIModels);
+  rpc GetAIModelDetails(GetAIModelDetailsRequest) returns (AIModel);
+  rpc GetAIUsage(GetAIUsageRequest) returns (AIUsage);
+  rpc GetAIQuota(GetAIQuotaRequest) returns (AIQuota);
+  rpc GetAIPrompts(GetAIPromptsRequest) returns (AIPrompts);
+  rpc CreateAIPrompt(CreateAIPromptRequest) returns (AIPrompt);
+  rpc UpdateAIPrompt(UpdateAIPromptRequest) returns (AIPrompt);
+  rpc DeleteAIPrompt(DeleteAIPromptRequest) returns (google.protobuf.Empty);
+  rpc GetAIFineTuningJobs(GetAIFineTuningJobsRequest) returns (AIFineTuningJobs);
+  rpc CreateAIFineTuningJob(CreateAIFineTuningJobRequest) returns (AIFineTuningJob);
+  rpc GetAIFineTuningJob(GetAIFineTuningJobRequest) returns (AIFineTuningJob);
+  rpc CancelAIFineTuningJob(CancelAIFineTuningJobRequest) returns (AIFineTuningJob);
+  rpc GetAIEmbeddings(GetAIEmbeddingsRequest) returns (AIEmbeddings);
+  rpc GenerateEmbedding(GenerateEmbeddingRequest) returns (Embedding);
+  rpc SearchEmbeddings(SearchEmbeddingsRequest) returns (EmbeddingSearchResults);
+  rpc GetAIAgents(GetAIAgentsRequest) returns (AIAgents);
+  rpc CreateAIAgent(CreateAIAgentRequest) returns (AIAgent);
+  rpc UpdateAIAgent(UpdateAIAgentRequest) returns (AIAgent);
+  rpc DeleteAIAgent(DeleteAIAgentRequest) returns (google.protobuf.Empty);
+  rpc InvokeAIAgent(InvokeAIAgentRequest) returns (AIAgentResponse);
+  rpc GetAIAgentHistory(GetAIAgentHistoryRequest) returns (AIAgentHistory);
+  rpc GetAISettings(GetAISettingsRequest) returns (AISettings);
+  rpc UpdateAISettings(UpdateAISettingsRequest) returns (AISettings);
+  rpc GetAIFeedback(GetAIFeedbackRequest) returns (AIFeedback);
+  rpc SubmitAIFeedback(SubmitAIFeedbackRequest) returns (AIFeedbackEntry);
+  rpc GetAIAnalytics(GetAIAnalyticsRequest) returns (AIAnalytics);
+  rpc GetAIPerformanceMetrics(GetAIPerformanceMetricsRequest) returns (AIPerformanceMetrics);
+  rpc GetAIErrorLogs(GetAIErrorLogsRequest) returns (AIErrorLogs);
+  rpc GetAIHealth(google.protobuf.Empty) returns (AIHealth);
+}
+
+message CompletionResponse {
+  string id = 1;
+  string content = 2;
+  string model = 3;
+  int32 tokens_used = 4;
+  int32 prompt_tokens = 5;
+  int32 completion_tokens = 6;
+  float latency_ms = 7;
+  google.protobuf.Timestamp created_at = 8;
+  map<string, string> metadata = 9;
+}
+
+message CompletionChunk {
+  string id = 1;
+  string content = 2;
+  bool is_last = 3;
+  string model = 4;
+}
+
+message CodeResponse {
+  string id = 1;
+  string code = 2;
+  string language = 3;
+  string explanation = 4;
+  int32 tokens_used = 5;
+  float latency_ms = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message ExplanationResponse {
+  string id = 1;
+  string explanation = 2;
+  repeated string key_points = 3;
+  int32 tokens_used = 4;
+  float latency_ms = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message RefactoredCodeResponse {
+  string id = 1;
+  string original_code = 2;
+  string refactored_code = 3;
+  string explanation = 4;
+  repeated string improvements = 5;
+  int32 tokens_used = 6;
+  float latency_ms = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message TestResponse {
+  string id = 1;
+  string code = 2;
+  string test_code = 3;
+  string language = 4;
+  string framework = 5;
+  int32 tokens_used = 6;
+  float latency_ms = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message DocumentationResponse {
+  string id = 1;
+  string documentation = 2;
+  string format = 3;
+  int32 tokens_used = 4;
+  float latency_ms = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message AnalysisResponse {
+  string id = 1;
+  string code = 2;
+  repeated Issue issues = 3;
+  repeated string suggestions = 4;
+  float complexity_score = 5;
+  float quality_score = 6;
+  int32 tokens_used = 7;
+  float latency_ms = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message Issue {
+  string type = 1;
+  string severity = 2;
+  string message = 3;
+  int32 line = 4;
+  int32 column = 5;
+  string suggestion = 6;
+}
+
+message FixSuggestionResponse {
+  string id = 1;
+  string original_code = 2;
+  string fixed_code = 3;
+  string explanation = 4;
+  int32 tokens_used = 5;
+  float latency_ms = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message AIChatMessage {
+  string id = 1;
+  string session_id = 2;
+  string role = 3;
+  string content = 4;
+  string model = 5;
+  int32 tokens_used = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+message AIChatHistory {
+  string session_id = 1;
+  repeated AIChatMessage messages = 2;
+  string next_page_token = 3;
+}
+
+message AIModel {
+  string id = 1;
+  string name = 2;
+  string provider = 3;
+  string description = 4;
+  int32 max_tokens = 5;
+  bool supports_streaming = 6;
+  bool supports_vision = 7;
+  bool supports_functions = 8;
+  map<string, string> capabilities = 9;
+  map<string, string> pricing = 10;
+}
+
+message AIModels {
+  repeated AIModel models = 1;
+}
+
+message AIUsage {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  int64 total_requests = 4;
+  int64 total_tokens = 5;
+  int64 total_cost_cents = 6;
+  map<string, int64> requests_by_model = 7;
+  map<string, int64> tokens_by_model = 8;
+  map<string, int64> cost_by_model = 9;
+}
+
+message AIQuota {
+  string organization_id = 1;
+  int64 max_tokens_per_month = 2;
+  int64 used_tokens_this_month = 3;
+  int64 max_requests_per_minute = 4;
+  int64 max_tokens_per_minute = 5;
+  int64 max_concurrent_requests = 6;
+  int64 active_requests = 7;
+  google.protobuf.Timestamp resets_at = 8;
+}
+
+message AIPrompt {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string template = 4;
+  repeated string variables = 5;
+  string model = 6;
+  int32 max_tokens = 7;
+  float temperature = 8;
+  string owner_id = 9;
+  string organization_id = 10;
+  bool is_public = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message AIPrompts {
+  repeated AIPrompt prompts = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message AIFineTuningJob {
+  string id = 1;
+  string model = 2;
+  string status = 3;
+  string training_file = 4;
+  string validation_file = 5;
+  string output_model = 6;
+  int32 epochs = 7;
+  float learning_rate = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp started_at = 10;
+  google.protobuf.Timestamp completed_at = 11;
+  map<string, float> metrics = 12;
+}
+
+message AIFineTuningJobs {
+  repeated AIFineTuningJob jobs = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message Embedding {
+  string id = 1;
+  string model = 2;
+  repeated float vector = 3;
+  int32 dimensions = 4;
+  int32 tokens_used = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message AIEmbeddings {
+  repeated Embedding embeddings = 1;
+}
+
+message EmbeddingSearchResult {
+  string id = 1;
+  float score = 2;
+  string content = 3;
+  map<string, string> metadata = 4;
+}
+
+message EmbeddingSearchResults {
+  repeated EmbeddingSearchResult results = 1;
+}
+
+message AIAgent {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string type = 4;
+  string model = 5;
+  string system_prompt = 6;
+  repeated string tools = 7;
+  bool is_active = 8;
+  string owner_id = 9;
+  string organization_id = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message AIAgents {
+  repeated AIAgent agents = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message AIAgentResponse {
+  string id = 1;
+  string agent_id = 2;
+  string content = 3;
+  repeated string actions = 4;
+  int32 tokens_used = 5;
+  float latency_ms = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message AIAgentHistory {
+  string agent_id = 1;
+  repeated AIAgentHistoryEntry entries = 2;
+}
+
+message AIAgentHistoryEntry {
+  string id = 1;
+  string input = 2;
+  string output = 3;
+  int32 tokens_used = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+message AISettings {
+  string organization_id = 1;
+  string default_model = 2;
+  float default_temperature = 3;
+  int32 default_max_tokens = 4;
+  bool streaming_enabled = 5;
+  map<string, string> custom_settings = 6;
+}
+
+message AIFeedbackEntry {
+  string id = 1;
+  string request_id = 2;
+  string user_id = 3;
+  int32 rating = 4;
+  string comment = 5;
+  repeated string tags = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message AIFeedback {
+  repeated AIFeedbackEntry entries = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+  float average_rating = 4;
+}
+
+message AIAnalytics {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  int64 total_requests = 4;
+  float average_latency_ms = 5;
+  float average_tokens_per_request = 6;
+  map<string, int64> requests_by_endpoint = 7;
+  map<string, float> latency_by_endpoint = 8;
+  map<string, int64> errors_by_type = 9;
+}
+
+message AIPerformanceMetrics {
+  string model = 1;
+  float average_latency_ms = 2;
+  float p50_latency_ms = 3;
+  float p95_latency_ms = 4;
+  float p99_latency_ms = 5;
+  float error_rate = 6;
+  float throughput_rps = 7;
+  google.protobuf.Timestamp collected_at = 8;
+}
+
+message AIErrorLog {
+  string id = 1;
+  string request_id = 2;
+  string model = 3;
+  string error_type = 4;
+  string error_message = 5;
+  string stack_trace = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+message AIErrorLogs {
+  repeated AIErrorLog logs = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message AIHealth {
+  string status = 1;
+  repeated AIModelHealth model_health = 2;
+  float average_latency_ms = 3;
+  float error_rate = 4;
+  int64 active_requests = 5;
+  google.protobuf.Timestamp checked_at = 6;
+}
+
+message AIModelHealth {
+  string model = 1;
+  string status = 2;
+  float latency_ms = 3;
+  float error_rate = 4;
+  int64 queue_depth = 5;
+}
+
+message GenerateCompletionRequest {
+  string prompt = 1;
+  string model = 2;
+  int32 max_tokens = 3;
+  float temperature = 4;
+  float top_p = 5;
+  repeated string stop_sequences = 6;
+  string user_id = 7;
+  string organization_id = 8;
+  map<string, string> metadata = 9;
+}
+
+message GenerateCodeRequest {
+  string prompt = 1;
+  string language = 2;
+  string context = 3;
+  string model = 4;
+  int32 max_tokens = 5;
+  float temperature = 6;
+  string user_id = 7;
+  string organization_id = 8;
+}
+
+message ExplainCodeRequest {
+  string code = 1;
+  string language = 2;
+  string model = 3;
+  string user_id = 4;
+  string organization_id = 5;
+}
+
+message RefactorCodeRequest {
+  string code = 1;
+  string language = 2;
+  string instructions = 3;
+  string model = 4;
+  string user_id = 5;
+  string organization_id = 6;
+}
+
+message GenerateTestsRequest {
+  string code = 1;
+  string language = 2;
+  string framework = 3;
+  string model = 4;
+  string user_id = 5;
+  string organization_id = 6;
+}
+
+message GenerateDocumentationRequest {
+  string code = 1;
+  string language = 2;
+  string format = 3;
+  string model = 4;
+  string user_id = 5;
+  string organization_id = 6;
+}
+
+message AnalyzeCodeRequest {
+  string code = 1;
+  string language = 2;
+  string model = 3;
+  string user_id = 4;
+  string organization_id = 5;
+}
+
+message SuggestFixRequest {
+  string code = 1;
+  string language = 2;
+  string error_message = 3;
+  string model = 4;
+  string user_id = 5;
+  string organization_id = 6;
+}
+
+message GetAIChatHistoryRequest {
+  string session_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message SendAIChatMessageRequest {
+  string session_id = 1;
+  string content = 2;
+  string model = 3;
+  string user_id = 4;
+  string organization_id = 5;
+}
+
+message StreamAIChatMessagesRequest {
+  string session_id = 1;
+  string user_id = 2;
+}
+
+message GetAIModelDetailsRequest {
+  string id = 1;
+}
+
+message GetAIUsageRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message GetAIQuotaRequest {
+  string organization_id = 1;
+}
+
+message GetAIPromptsRequest {
+  string organization_id = 1;
+  string owner_id = 2;
+  bool is_public = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message CreateAIPromptRequest {
+  string name = 1;
+  string description = 2;
+  string template = 3;
+  repeated string variables = 4;
+  string model = 5;
+  int32 max_tokens = 6;
+  float temperature = 7;
+  string owner_id = 8;
+  string organization_id = 9;
+  bool is_public = 10;
+}
+
+message UpdateAIPromptRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string template = 4;
+  repeated string variables = 5;
+  string model = 6;
+  int32 max_tokens = 7;
+  float temperature = 8;
+  bool is_public = 9;
+}
+
+message DeleteAIPromptRequest {
+  string id = 1;
+}
+
+message GetAIFineTuningJobsRequest {
+  string organization_id = 1;
+  string status = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message CreateAIFineTuningJobRequest {
+  string model = 1;
+  string training_file = 2;
+  string validation_file = 3;
+  int32 epochs = 4;
+  float learning_rate = 5;
+  string organization_id = 6;
+}
+
+message GetAIFineTuningJobRequest {
+  string id = 1;
+}
+
+message CancelAIFineTuningJobRequest {
+  string id = 1;
+}
+
+message GetAIEmbeddingsRequest {
+  string organization_id = 1;
+  string model = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message GenerateEmbeddingRequest {
+  string text = 1;
+  string model = 2;
+  string organization_id = 3;
+}
+
+message SearchEmbeddingsRequest {
+  string query = 1;
+  string model = 2;
+  int32 top_k = 3;
+  float min_score = 4;
+  string organization_id = 5;
+}
+
+message GetAIAgentsRequest {
+  string organization_id = 1;
+  string owner_id = 2;
+  bool is_active = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message CreateAIAgentRequest {
+  string name = 1;
+  string description = 2;
+  string type = 3;
+  string model = 4;
+  string system_prompt = 5;
+  repeated string tools = 6;
+  string owner_id = 7;
+  string organization_id = 8;
+}
+
+message UpdateAIAgentRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string type = 4;
+  string model = 5;
+  string system_prompt = 6;
+  repeated string tools = 7;
+  bool is_active = 8;
+}
+
+message DeleteAIAgentRequest {
+  string id = 1;
+}
+
+message InvokeAIAgentRequest {
+  string agent_id = 1;
+  string input = 2;
+  string user_id = 3;
+  string organization_id = 4;
+  map<string, string> context = 5;
+}
+
+message GetAIAgentHistoryRequest {
+  string agent_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message GetAISettingsRequest {
+  string organization_id = 1;
+}
+
+message UpdateAISettingsRequest {
+  string organization_id = 1;
+  string default_model = 2;
+  float default_temperature = 3;
+  int32 default_max_tokens = 4;
+  bool streaming_enabled = 5;
+  map<string, string> custom_settings = 6;
+}
+
+message GetAIFeedbackRequest {
+  string organization_id = 1;
+  string request_id = 2;
+  string user_id = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message SubmitAIFeedbackRequest {
+  string request_id = 1;
+  string user_id = 2;
+  int32 rating = 3;
+  string comment = 4;
+  repeated string tags = 5;
+}
+
+message GetAIAnalyticsRequest {
+  string organization_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message GetAIPerformanceMetricsRequest {
+  string model = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message GetAIErrorLogsRequest {
+  string organization_id = 1;
+  string model = 2;
+  google.protobuf.Timestamp start_date = 3;
+  google.protobuf.Timestamp end_date = 4;
+  int32 page_size = 5;
+  string page_token = 6;
+}

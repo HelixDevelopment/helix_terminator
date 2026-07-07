@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -218,6 +219,6 @@ func (m *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
 
 // HashToken creates a SHA-256 hash of a token for storage
 func HashToken(token string) string {
-	// Simple hash for token storage - in production use crypto/sha256
-	return base64.RawStdEncoding.EncodeToString([]byte(token))
+	h := sha256.Sum256([]byte(token))
+	return base64.RawStdEncoding.EncodeToString(h[:])
 }

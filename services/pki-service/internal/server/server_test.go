@@ -10,6 +10,7 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
+	t.Setenv("PKI_ENCRYPTION_KEY", "test-encryption-key-32-bytes-long!!")
 	srv, err := server.New(nil)
 	require.NoError(t, err)
 	assert.NotNil(t, srv)

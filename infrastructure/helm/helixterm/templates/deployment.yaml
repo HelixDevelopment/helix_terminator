@@ -1,0 +1,61 @@
+{{- $global := . }}
+{{- $serviceNames := list "gateway" "auth" "user" "vault" "host" "sshproxy" "terminal" "keychain" "workspace" "config" "pki" "billing" "org" "notification" "audit" "health" "ai" "collaboration" "containerbridge" "helixtrackbridge" "portforward" "sftp" "recording" "snippet" "analytics" }}
+{{- range $serviceNames }}
+{{- $serviceName := . }}
+{{- $svc := index $global.Values $serviceName }}
+{{- if and $svc (kindIs "map" $svc) $svc.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helixterm.serviceFullname" (dict "root" $global "serviceName" $serviceName) }}
+  labels:
+    {{- include "helixterm.labels" $global | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceName }}
+spec:
+  replicas: {{ $svc.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "helixterm.selectorLabels" $global | nindent 6 }}
+      app.kubernetes.io/component: {{ $serviceName }}
+  template:
+    metadata:
+      labels:
+        {{- include "helixterm.selectorLabels" $global | nindent 8 }}
+        app.kubernetes.io/component: {{ $serviceName }}
+    spec:
+      {{- with $global.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helixterm.serviceAccountName" $global }}
+      securityContext:
+        {{- toYaml $global.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ $serviceName }}
+          securityContext:
+            {{- toYaml $global.Values.containerSecurityContext | nindent 12 }}
+          image: "{{ $global.Values.global.imageRegistry }}{{ if $global.Values.global.imageRegistry }}/{{ end }}{{ $svc.image.repository }}:{{ $svc.image.tag }}"
+          imagePullPolicy: {{ default "IfNotPresent" $svc.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          {{- if $svc.livenessProbe }}
+          livenessProbe:
+            {{- toYaml $svc.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if $svc.readinessProbe }}
+          readinessProbe:
+            {{- toYaml $svc.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if $svc.resources }}
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+          {{- end }}
+          {{- if $svc.env }}
+          env:
+            {{- toYaml $svc.env | nindent 12 }}
+          {{- end }}
+{{- end }}
+{{- end }}

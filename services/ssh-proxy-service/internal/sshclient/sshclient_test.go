@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 func TestAuthMethodFromPassword(t *testing.T) {
@@ -42,7 +44,7 @@ func TestSSHClient_ConnectAndClose(t *testing.T) {
 	config := &ssh.ServerConfig{
 		NoClientAuth: true,
 	}
-	_, privPEM, err := generateTestKey()
+	pub, privPEM, err := generateTestKey()
 	require.NoError(t, err)
 	privateKey, err := ssh.ParseRawPrivateKey([]byte(privPEM))
 	require.NoError(t, err)
@@ -84,7 +86,20 @@ func TestSSHClient_ConnectAndClose(t *testing.T) {
 		}()
 	}()
 
+	// Create a temporary known_hosts file with the test server key
 	addr := listener.Addr().(*net.TCPAddr)
+	hostPort := fmt.Sprintf("127.0.0.1:%d", addr.Port)
+	knownHostsFile, err := os.CreateTemp("", "known_hosts")
+	require.NoError(t, err)
+	defer os.Remove(knownHostsFile.Name())
+
+	line := knownhosts.Line([]string{hostPort}, pub)
+	_, err = knownHostsFile.WriteString(line + "\n")
+	require.NoError(t, err)
+	knownHostsFile.Close()
+
+	t.Setenv("SSH_KNOWN_HOSTS", knownHostsFile.Name())
+
 	client, err := Connect("127.0.0.1", fmt.Sprintf("%d", addr.Port), "testuser", ssh.Password("any"))
 	require.NoError(t, err)
 	assert.True(t, client.IsConnected())

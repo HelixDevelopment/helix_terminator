@@ -1,0 +1,15 @@
+dependencies:
+- name: postgresql
+  repository: https://charts.bitnami.com/bitnami
+  version: 15.5.0
+- name: redis
+  repository: https://charts.bitnami.com/bitnami
+  version: 20.0.0
+- name: kafka
+  repository: https://charts.bitnami.com/bitnami
+  version: 30.0.0
+- name: ingress-nginx
+  repository: https://kubernetes.github.io/ingress-nginx
+  version: 4.11.0
+digest: sha256:47dca57588112ee98c3f909c5436eb5691b704b13473610b6ec9bc7b0b9dfeb3
+generated: "2026-07-06T15:47:58.948234385+05:00"

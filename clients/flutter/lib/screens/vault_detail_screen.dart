@@ -28,7 +28,7 @@ class _VaultDetailScreenState extends State<VaultDetailScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.secret.name);
-    _valueController = TextEditingController(text: '••••••••••••');
+    _valueController = TextEditingController(text: widget.secret.value ?? '••••••••••••');
     _descController = TextEditingController(text: widget.secret.description ?? '');
     _selectedType = widget.secret.type;
   }
@@ -185,7 +185,7 @@ class _VaultDetailScreenState extends State<VaultDetailScreen> {
                           IconButton(
                             icon: const Icon(Icons.copy),
                             tooltip: 'Copy value',
-                            onPressed: () => _copyToClipboard('secret-value', 'Value'),
+                            onPressed: () => _copyToClipboard(widget.secret.value ?? '', 'Value'),
                           ),
                         ],
                       ),
@@ -198,7 +198,7 @@ class _VaultDetailScreenState extends State<VaultDetailScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: SelectableText(
-                          _isRevealed ? 'secret-value-placeholder' : '••••••••••••••••••',
+                          _isRevealed ? (widget.secret.value ?? '••••••••••••••••••') : '••••••••••••••••••',
                           style: TextStyle(
                             fontFamily: 'monospace',
                             color: _isRevealed

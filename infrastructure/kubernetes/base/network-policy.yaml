@@ -17,7 +17,8 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: gateway-service
+      app.kubernetes.io/name: gateway-service
+      app.kubernetes.io/part-of: helixterminator
   policyTypes:
     - Ingress
   ingress:
@@ -68,21 +69,21 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app: postgres
+              app.kubernetes.io/name: postgres
       ports:
         - protocol: TCP
           port: 5432
     - to:
         - podSelector:
             matchLabels:
-              app: redis
+              app.kubernetes.io/name: redis
       ports:
         - protocol: TCP
           port: 6379
     - to:
         - podSelector:
             matchLabels:
-              app: kafka
+              app.kubernetes.io/name: kafka
       ports:
         - protocol: TCP
           port: 9092

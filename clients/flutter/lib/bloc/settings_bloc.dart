@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Events
 abstract class SettingsEvent {}
@@ -99,6 +100,14 @@ class SettingsActionSuccess extends SettingsState {
 
 // Bloc
 class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
+  static const _darkModeKey = 'settings_dark_mode';
+  static const _fontSizeKey = 'settings_font_size';
+  static const _pushNotificationsKey = 'settings_push_notifications';
+  static const _emailNotificationsKey = 'settings_email_notifications';
+  static const _biometricLockKey = 'settings_biometric_lock';
+  static const _autoLockTimeoutKey = 'settings_auto_lock_timeout';
+  static const _languageKey = 'settings_language';
+
   SettingsBloc() : super(SettingsInitial()) {
     on<SettingsLoadRequested>(_onLoadRequested);
     on<SettingsDarkModeChanged>(_onDarkModeChanged);
@@ -113,8 +122,16 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   Future<void> _onLoadRequested(SettingsLoadRequested event, Emitter<SettingsState> emit) async {
     emit(SettingsLoading());
     try {
-      // TODO: load from shared preferences
-      emit(SettingsLoaded());
+      final prefs = await SharedPreferences.getInstance();
+      emit(SettingsLoaded(
+        darkMode: prefs.getBool(_darkModeKey) ?? false,
+        fontSize: prefs.getDouble(_fontSizeKey) ?? 1.0,
+        pushNotifications: prefs.getBool(_pushNotificationsKey) ?? true,
+        emailNotifications: prefs.getBool(_emailNotificationsKey) ?? true,
+        biometricLock: prefs.getBool(_biometricLockKey) ?? false,
+        autoLockTimeout: prefs.getInt(_autoLockTimeoutKey) ?? 15,
+        language: prefs.getString(_languageKey) ?? 'English',
+      ));
     } catch (e) {
       emit(SettingsError(e.toString()));
     }
@@ -123,8 +140,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   Future<void> _onDarkModeChanged(SettingsDarkModeChanged event, Emitter<SettingsState> emit) async {
     if (state is SettingsLoaded) {
       final current = state as SettingsLoaded;
-      emit(current.copyWith(darkMode: event.value));
+      final updated = current.copyWith(darkMode: event.value);
+      emit(updated);
       emit(SettingsActionSuccess('Dark mode ${event.value ? 'enabled' : 'disabled'}'));
+      await _persistSetting(_darkModeKey, event.value);
     }
   }
 
@@ -132,46 +151,74 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     if (state is SettingsLoaded) {
       final current = state as SettingsLoaded;
       emit(current.copyWith(fontSize: event.value));
+      await _persistSetting(_fontSizeKey, event.value);
     }
   }
 
   Future<void> _onPushNotificationsChanged(SettingsPushNotificationsChanged event, Emitter<SettingsState> emit) async {
     if (state is SettingsLoaded) {
       final current = state as SettingsLoaded;
-      emit(current.copyWith(pushNotifications: event.value));
+      final updated = current.copyWith(pushNotifications: event.value);
+      emit(updated);
       emit(SettingsActionSuccess('Push notifications ${event.value ? 'enabled' : 'disabled'}'));
+      await _persistSetting(_pushNotificationsKey, event.value);
     }
   }
 
   Future<void> _onEmailNotificationsChanged(SettingsEmailNotificationsChanged event, Emitter<SettingsState> emit) async {
     if (state is SettingsLoaded) {
       final current = state as SettingsLoaded;
-      emit(current.copyWith(emailNotifications: event.value));
+      final updated = current.copyWith(emailNotifications: event.value);
+      emit(updated);
       emit(SettingsActionSuccess('Email notifications ${event.value ? 'enabled' : 'disabled'}'));
+      await _persistSetting(_emailNotificationsKey, event.value);
     }
   }
 
   Future<void> _onBiometricLockChanged(SettingsBiometricLockChanged event, Emitter<SettingsState> emit) async {
     if (state is SettingsLoaded) {
       final current = state as SettingsLoaded;
-      emit(current.copyWith(biometricLock: event.value));
+      final updated = current.copyWith(biometricLock: event.value);
+      emit(updated);
       emit(SettingsActionSuccess('Biometric lock ${event.value ? 'enabled' : 'disabled'}'));
+      await _persistSetting(_biometricLockKey, event.value);
     }
   }
 
   Future<void> _onAutoLockTimeoutChanged(SettingsAutoLockTimeoutChanged event, Emitter<SettingsState> emit) async {
     if (state is SettingsLoaded) {
       final current = state as SettingsLoaded;
-      emit(current.copyWith(autoLockTimeout: event.value));
+      final updated = current.copyWith(autoLockTimeout: event.value);
+      emit(updated);
       emit(SettingsActionSuccess('Auto-lock timeout updated'));
+      await _persistSetting(_autoLockTimeoutKey, event.value);
     }
   }
 
   Future<void> _onLanguageChanged(SettingsLanguageChanged event, Emitter<SettingsState> emit) async {
     if (state is SettingsLoaded) {
       final current = state as SettingsLoaded;
-      emit(current.copyWith(language: event.value));
+      final updated = current.copyWith(language: event.value);
+      emit(updated);
       emit(SettingsActionSuccess('Language changed to ${event.value}'));
+      await _persistSetting(_languageKey, event.value);
+    }
+  }
+
+  Future<void> _persistSetting(String key, dynamic value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (value is bool) {
+        await prefs.setBool(key, value);
+      } else if (value is double) {
+        await prefs.setDouble(key, value);
+      } else if (value is int) {
+        await prefs.setInt(key, value);
+      } else if (value is String) {
+        await prefs.setString(key, value);
+      }
+    } catch (e) {
+      // Silently fail persistence to avoid disrupting UI
     }
   }
 }

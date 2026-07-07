@@ -1,0 +1,32 @@
+{
+  "name": "Nord",
+  "description": "Nord color scheme for HelixTerminator terminal",
+  "type": "dark",
+  "background": "#2E3440",
+  "foreground": "#D8DEE9",
+  "cursor": "#81A1C1",
+  "selection": "rgba(129, 161, 193, 0.3)",
+  "colors": {
+    "black": "#3B4252",
+    "red": "#BF616A",
+    "green": "#A3BE8C",
+    "yellow": "#EBCB8B",
+    "blue": "#81A1C1",
+    "magenta": "#B48EAD",
+    "cyan": "#88C0D0",
+    "white": "#E5E9F0",
+    "brightBlack": "#4C566A",
+    "brightRed": "#BF616A",
+    "brightGreen": "#A3BE8C",
+    "brightYellow": "#EBCB8B",
+    "brightBlue": "#81A1C1",
+    "brightMagenta": "#B48EAD",
+    "brightCyan": "#8FBCBB",
+    "brightWhite": "#ECEFF4"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "author": "Arctic Ice Studio",
+    "license": "MIT"
+  }
+}

@@ -112,7 +112,7 @@ class _HostDetailScreenState extends State<HostDetailScreen> with SingleTickerPr
       controller: _tabController,
       children: [
         _InfoTab(host: _host!),
-        const TerminalScreen(),
+        TerminalScreen(hostId: widget.hostId, hostName: _host!.name),
         const SftpBrowserScreen(),
         const PortForwardScreen(),
         const RecordingListScreen(),
@@ -230,7 +230,7 @@ class _InfoTab extends StatelessWidget {
                         label: 'Connect',
                         color: theme.colorScheme.primary,
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const TerminalScreen()),
+                          MaterialPageRoute(builder: (_) => TerminalScreen(hostId: widget.hostId, hostName: _host!.name)),
                         ),
                       ),
                     ),
@@ -273,7 +273,7 @@ class _InfoTab extends StatelessWidget {
                       label: 'Connect to Host',
                       color: theme.colorScheme.primary,
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const TerminalScreen()),
+                        MaterialPageRoute(builder: (_) => TerminalScreen(hostId: widget.hostId, hostName: _host!.name)),
                       ),
                     ),
                     const SizedBox(height: 12),

@@ -1,0 +1,180 @@
+apiVersion: helixqa.io/v1
+kind: TestCaseTemplate
+metadata:
+  name: reusable-test-case-templates
+  version: "1.0.0"
+
+spec:
+  description: >
+    Reusable test case templates for the HelixTerminator platform.
+    These templates provide standardized test structures for common
+    testing scenarios across all services.
+
+  templates:
+    - id: TEMPLATE-001
+      name: "Happy Path - Basic CRUD"
+      category: happy-path
+      description: "Standard template for basic CRUD operations"
+      steps:
+        - "Create a valid resource"
+        - "Read the created resource"
+        - "Update the resource with valid changes"
+        - "Delete the resource"
+        - "Verify deletion (expect 404)"
+      expectedResults:
+        - "Create returns 201 Created with resource ID"
+        - "Read returns 200 OK with correct data"
+        - "Update returns 200 OK with updated data"
+        - "Delete returns 204 No Content"
+        - "Subsequent read returns 404 Not Found"
+      tags: [crud, happy-path, basic]
+
+    - id: TEMPLATE-002
+      name: "Error Handling - Invalid Input"
+      category: error-handling
+      description: "Standard template for invalid input validation"
+      steps:
+        - "Submit request with missing required fields"
+        - "Submit request with invalid data types"
+        - "Submit request with values exceeding limits"
+        - "Submit request with malformed JSON/XML"
+      expectedResults:
+        - "Returns 400 Bad Request with field-level errors"
+        - "Returns 400 Bad Request with type mismatch details"
+        - "Returns 400 Bad Request with limit exceeded message"
+        - "Returns 400 Bad Request with parse error details"
+      tags: [validation, error-handling, input]
+
+    - id: TEMPLATE-003
+      name: "Security - Authentication Required"
+      category: security
+      description: "Standard template for authentication enforcement"
+      steps:
+        - "Access protected endpoint without authentication"
+        - "Access protected endpoint with expired token"
+        - "Access protected endpoint with invalid token"
+        - "Access protected endpoint with valid token"
+      expectedResults:
+        - "Returns 401 Unauthorized"
+        - "Returns 401 Unauthorized with token expired message"
+        - "Returns 401 Unauthorized with invalid token message"
+        - "Returns 200 OK with requested data"
+      tags: [security, authentication, authorization]
+
+    - id: TEMPLATE-004
+      name: "Security - Authorization Enforcement"
+      category: security
+      description: "Standard template for authorization enforcement"
+      steps:
+        - "Access resource as user with no permissions"
+        - "Access resource as user with read-only permissions"
+        - "Access resource as user with full permissions"
+        - "Access resource as admin user"
+      expectedResults:
+        - "Returns 403 Forbidden"
+        - "Read succeeds, write returns 403"
+        - "All operations succeed"
+        - "All operations succeed"
+      tags: [security, authorization, rbac]
+
+    - id: TEMPLATE-005
+      name: "Performance - Load Test"
+      category: performance
+      description: "Standard template for load testing"
+      steps:
+        - "Warm up: 10 requests at 1 RPS for 10 seconds"
+        - "Ramp up: 100 requests at 10 RPS for 30 seconds"
+        - "Steady state: 1000 requests at 100 RPS for 60 seconds"
+        - "Ramp down: 10 requests at 1 RPS for 10 seconds"
+      expectedResults:
+        - "p50 latency < 50ms"
+        - "p95 latency < 100ms"
+        - "p99 latency < 200ms"
+        - "Error rate < 0.1%"
+        - "No memory leaks detected"
+      tags: [performance, load-test, benchmark]
+
+    - id: TEMPLATE-006
+      name: "Concurrency - Race Condition"
+      category: concurrency
+      description: "Standard template for race condition detection"
+      steps:
+        - "Initialize shared resource"
+        - "Spawn N goroutines performing concurrent operations"
+        - "Wait for all goroutines to complete"
+        - "Verify resource state consistency"
+      expectedResults:
+        - "No data races detected (run with -race flag)"
+        - "Resource state is consistent"
+        - "No goroutine leaks"
+        - "All operations completed successfully"
+      tags: [concurrency, race-condition, goroutine]
+
+    - id: TEMPLATE-007
+      name: "Edge Case - Boundary Values"
+      category: edge-case
+      description: "Standard template for boundary value testing"
+      steps:
+        - "Test with minimum valid value"
+        - "Test with maximum valid value"
+        - "Test with value just below minimum"
+        - "Test with value just above maximum"
+        - "Test with zero/null value"
+      expectedResults:
+        - "Minimum valid value: success"
+        - "Maximum valid value: success"
+        - "Below minimum: 400 Bad Request"
+        - "Above maximum: 400 Bad Request"
+        - "Zero/null: depends on field semantics"
+      tags: [edge-case, boundary, validation]
+
+    - id: TEMPLATE-008
+      name: "Integration - Dependency Failure"
+      category: integration
+      description: "Standard template for dependency failure handling"
+      steps:
+        - "Start service with all dependencies healthy"
+        - "Simulate dependency failure (database, cache, external API)"
+        - "Verify service degrades gracefully"
+        - "Restore dependency"
+        - "Verify service recovers automatically"
+      expectedResults:
+        - "Service starts successfully"
+        - "Service continues operating in degraded mode"
+        - "No unhandled panics or crashes"
+        - "Service returns to full functionality"
+        - "No data loss during degradation"
+      tags: [integration, resilience, dependency, failure]
+
+    - id: TEMPLATE-009
+      name: "Chaos - Resource Exhaustion"
+      category: chaos
+      description: "Standard template for resource exhaustion chaos tests"
+      steps:
+        - "Establish baseline metrics (CPU, memory, response time)"
+        - "Induce resource exhaustion (CPU 100%, memory pressure, disk full)"
+        - "Monitor service behavior under stress"
+        - "Remove stress condition"
+        - "Verify service recovers to baseline"
+      expectedResults:
+        - "Service does not crash"
+        - "Critical paths remain functional"
+        - "Metrics are observable and within thresholds"
+        - "Service recovers without manual intervention"
+      tags: [chaos, resource, stress, resilience]
+
+    - id: TEMPLATE-010
+      name: "Contract - API Version Compatibility"
+      category: contract
+      description: "Standard template for API version compatibility testing"
+      steps:
+        - "Call API with current version headers"
+        - "Call API with previous version headers"
+        - "Call API with deprecated version headers"
+        - "Call API with invalid version headers"
+      expectedResults:
+        - "Current version: 200 OK with full feature set"
+        - "Previous version: 200 OK with compatible subset"
+        - "Deprecated version: 200 OK with deprecation warning"
+        - "Invalid version: 400 Bad Request or 406 Not Acceptable"
+      tags: [contract, api, version, compatibility]

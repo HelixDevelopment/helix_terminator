@@ -51,9 +51,16 @@ variable "master_username" {
 }
 
 variable "master_password" {
-  description = "Master password"
+  description = "Master password (deprecated: use aws_secretsmanager_secret_version instead)"
   type        = string
   sensitive   = true
+  default     = ""
+}
+
+variable "master_password_secret_arn" {
+  description = "ARN of AWS Secrets Manager secret containing the master password"
+  type        = string
+  default     = ""
 }
 
 variable "multi_az" {

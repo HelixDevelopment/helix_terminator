@@ -39,3 +39,7 @@ toPdfViaTempFile*
 .claude/
 .claude/
 submodules/open-design/
+
+# Helm chart dependencies — build derivatives, regenerable via `helm dependency build`
+# (Chart.yaml + Chart.lock are the tracked source of truth). §11.4.30 / §11.4.77
+infrastructure/helm/**/charts/*.tgz

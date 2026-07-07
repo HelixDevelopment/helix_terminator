@@ -1,0 +1,130 @@
+apiVersion: helixqa.io/v1
+kind: TestSuite
+metadata:
+  name: auth-service-unit-suite
+  category: unit
+  service: auth-service
+  version: "1.0.0"
+
+spec:
+  description: >
+    Comprehensive unit test suite for the auth-service covering
+    happy paths, error handling, edge cases, security, performance,
+    and concurrency scenarios.
+
+  testCases:
+    - id: AUTH-001
+      name: "Happy Path - Valid Login"
+      type: happy-path
+      description: "User logs in with valid credentials and receives JWT"
+      steps:
+        - Create a user with email and password
+        - Call Login endpoint with valid credentials
+        - Assert: 200 OK, JWT token returned, refresh token returned
+      tags: [auth, login, happy-path]
+
+    - id: AUTH-002
+      name: "Happy Path - Token Refresh"
+      type: happy-path
+      description: "Refresh token yields a new access token"
+      steps:
+        - Login and obtain refresh token
+        - Call Refresh endpoint with valid refresh token
+        - Assert: 200 OK, new access token returned, old refresh token revoked
+      tags: [auth, refresh, happy-path]
+
+    - id: AUTH-003
+      name: "Happy Path - Logout"
+      type: happy-path
+      description: "Logout invalidates all active tokens"
+      steps:
+        - Login and obtain tokens
+        - Call Logout endpoint
+        - Assert: 204 No Content, tokens are revoked
+      tags: [auth, logout, happy-path]
+
+    - id: AUTH-004
+      name: "Error Handling - Invalid Password"
+      type: error-handling
+      description: "Login with wrong password returns 401"
+      steps:
+        - Create a user
+        - Call Login with incorrect password
+        - Assert: 401 Unauthorized, generic error message
+      tags: [auth, login, error-handling]
+
+    - id: AUTH-005
+      name: "Error Handling - Nonexistent User"
+      type: error-handling
+      description: "Login with nonexistent email returns 401"
+      steps:
+        - Call Login with email that does not exist
+        - Assert: 401 Unauthorized, timing-safe response
+      tags: [auth, login, error-handling]
+
+    - id: AUTH-006
+      name: "Edge Case - Empty Password"
+      type: edge-case
+      description: "Login with empty password is rejected"
+      steps:
+        - Call Login with empty password string
+        - Assert: 400 Bad Request, validation error
+      tags: [auth, login, edge-case, validation]
+
+    - id: AUTH-007
+      name: "Edge Case - Very Long Password"
+      type: edge-case
+      description: "Passwords up to 72 bytes are accepted"
+      steps:
+        - Create user with 72-byte password
+        - Login succeeds
+        - Create user with 73-byte password
+        - Assert: 400 Bad Request or password truncated
+      tags: [auth, login, edge-case, validation]
+
+    - id: AUTH-008
+      name: "Security - JWT alg=none Attack"
+      type: security
+      description: "Tokens with alg=none are rejected"
+      steps:
+        - Craft a JWT with header alg=none
+        - Send request with forged token
+        - Assert: 401 Unauthorized, token rejected
+      tags: [auth, security, jwt, bypass]
+
+    - id: AUTH-009
+      name: "Security - Brute Force Rate Limiting"
+      type: security
+      description: "Repeated failed logins trigger rate limit"
+      steps:
+        - Attempt login 10 times with wrong password
+        - Assert: 429 Too Many Requests on 11th attempt
+      tags: [auth, security, rate-limiting, brute-force]
+
+    - id: AUTH-010
+      name: "Performance - Login Latency"
+      type: performance
+      description: "Login completes within 100ms at p99"
+      steps:
+        - Run 1000 login requests
+        - Assert: p99 latency < 100ms
+      tags: [auth, performance, latency, benchmark]
+
+    - id: AUTH-011
+      name: "Concurrency - Simultaneous Logins"
+      type: concurrency
+      description: "Multiple concurrent logins for same user are safe"
+      steps:
+        - Spawn 100 goroutines logging in same user simultaneously
+        - Assert: All succeed, no race conditions, no duplicate tokens
+      tags: [auth, concurrency, race-condition, goroutine]
+
+    - id: AUTH-012
+      name: "Edge Case - Unicode Email"
+      type: edge-case
+      description: "Unicode emails are normalized and accepted"
+      steps:
+        - Create user with unicode email (e.g., user@例え.jp)
+        - Login with same email
+        - Assert: Success, email normalized to punycode
+      tags: [auth, edge-case, unicode, email]

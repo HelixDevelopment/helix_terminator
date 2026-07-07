@@ -1,0 +1,29 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- $global := . }}
+{{- $serviceNames := list "gateway" "auth" "user" "vault" "host" "sshproxy" "terminal" "keychain" "workspace" "config" "pki" "billing" "org" "notification" "audit" "health" "ai" "collaboration" "containerbridge" "helixtrackbridge" "portforward" "sftp" "recording" "snippet" "analytics" }}
+{{- range $serviceNames }}
+{{- $serviceName := . }}
+{{- $svc := index $global.Values $serviceName }}
+{{- if and $svc (kindIs "map" $svc) $svc.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "helixterm.serviceFullname" (dict "root" $global "serviceName" $serviceName) }}
+  labels:
+    {{- include "helixterm.labels" $global | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceName }}
+spec:
+  {{- if $global.Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ $global.Values.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if $global.Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ $global.Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "helixterm.selectorLabels" $global | nindent 6 }}
+      app.kubernetes.io/component: {{ $serviceName }}
+{{- end }}
+{{- end }}
+{{- end }}

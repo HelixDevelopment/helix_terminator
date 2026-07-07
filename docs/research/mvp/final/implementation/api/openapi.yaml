@@ -1,0 +1,2571 @@
+openapi: "3.1.0"
+info:
+  title: HelixTerminator API
+  version: "1.0.0"
+  description: |
+    HelixTerminator — Next-Generation Enterprise SSH Client Platform.
+    Dual-module product family: Module A (Secure Terminal Platform) + Module B (Zero-Trust Connection Broker).
+  contact:
+    name: HelixTerminator Engineering
+    email: api@helixterminator.io
+    url: https://helixterminator.io
+  license:
+    name: Proprietary
+    identifier: Proprietary
+
+servers:
+  - url: https://api.helixterminator.io/api/v1
+    description: Production
+  - url: https://staging-api.helixterminator.io/api/v1
+    description: Staging
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Auth Service (14 endpoints)
+  /auth/register:
+    post:
+      summary: Register new user
+      operationId: authRegister
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimit' }
+
+  /auth/login:
+    post:
+      summary: Authenticate user
+      operationId: authLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated or MFA required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimit' }
+
+  /auth/logout:
+    post:
+      summary: Logout
+      operationId: authLogout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                all_sessions: { type: boolean, default: false }
+      responses:
+        '204': { description: Logged out }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      operationId: authRefresh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/mfa/totp/setup:
+    post:
+      summary: Setup TOTP
+      operationId: authMfaTotpSetup
+      responses:
+        '200':
+          description: TOTP setup initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secret: { type: string }
+                  provisioning_uri: { type: string, format: uri }
+                  qr_code_url: { type: string, format: uri }
+                  backup_codes: { type: array, items: { type: string } }
+                  setup_token: { type: string }
+                  expires_at: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /auth/mfa/totp/verify:
+    post:
+      summary: Verify TOTP
+      operationId: authMfaTotpVerify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, pattern: '^[0-9]{6}$' }
+                setup_token: { type: string }
+                challenge_id: { type: string, format: uuid }
+      responses:
+        '200':
+          description: TOTP verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/mfa/fido2/register/begin:
+    post:
+      summary: Begin FIDO2 registration
+      operationId: authMfaFido2RegisterBegin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                authenticator_name: { type: string }
+                authenticator_attachment: { type: string, enum: [platform, cross-platform] }
+      responses:
+        '200': { description: Challenge returned }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/mfa/fido2/register/complete:
+    post:
+      summary: Complete FIDO2 registration
+      operationId: authMfaFido2RegisterComplete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                registration_id: { type: string, format: uuid }
+                credential: { type: object }
+      responses:
+        '201': { description: Credential registered }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/mfa/fido2/authenticate/begin:
+    post:
+      summary: Begin FIDO2 authentication
+      operationId: authMfaFido2AuthBegin
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                challenge_id: { type: string, format: uuid }
+                user_verification: { type: string, default: preferred }
+      responses:
+        '200': { description: Challenge returned }
+
+  /auth/mfa/fido2/authenticate/complete:
+    post:
+      summary: Complete FIDO2 authentication
+      operationId: authMfaFido2AuthComplete
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fido2_challenge_id: { type: string, format: uuid }
+                credential: { type: object }
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/devices:
+    get:
+      summary: List trusted devices
+      operationId: authListDevices
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Device list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /auth/devices/{deviceId}:
+    delete:
+      summary: Revoke device
+      operationId: authRevokeDevice
+      parameters:
+        - { name: deviceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Device revoked }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /auth/sso/{provider}/authorize:
+    post:
+      summary: Initiate SSO
+      operationId: authSsoAuthorize
+      security: []
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                redirect_uri: { type: string, format: uri }
+                state: { type: string }
+                org_slug: { type: string }
+      responses:
+        '200': { description: Authorization URL returned }
+
+  /auth/sso/{provider}/callback:
+    post:
+      summary: SSO callback
+      operationId: authSsoCallback
+      security: []
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+                state: { type: string }
+                redirect_uri: { type: string, format: uri }
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/api-keys:
+    get:
+      summary: List API keys
+      operationId: authListApiKeys
+      responses:
+        '200':
+          description: API key list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create API key
+      operationId: authCreateApiKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+      responses:
+        '201':
+          description: API key created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+
+  /auth/api-keys/{keyId}:
+    delete:
+      summary: Revoke API key
+      operationId: authRevokeApiKey
+      parameters:
+        - { name: keyId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: API key revoked }
+
+  /auth/sessions:
+    get:
+      summary: List active sessions
+      operationId: authListSessions
+      responses:
+        '200':
+          description: Session list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /auth/sessions/{sessionId}:
+    delete:
+      summary: Terminate session
+      operationId: authTerminateSession
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Session terminated }
+
+  # User Service
+  /users/me:
+    get:
+      summary: Get current user
+      operationId: userGetMe
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    patch:
+      summary: Update user profile
+      operationId: userUpdateMe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    delete:
+      summary: Delete account
+      operationId: userDeleteMe
+      responses:
+        '204': { description: Account scheduled for deletion }
+
+  /users/me/preferences:
+    get:
+      summary: Get preferences
+      operationId: userGetPreferences
+      responses:
+        '200': { description: Preferences object }
+    put:
+      summary: Update preferences
+      operationId: userUpdatePreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': { description: Updated preferences }
+
+  /users/me/avatar:
+    post:
+      summary: Upload avatar
+      operationId: userUploadAvatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200': { description: Avatar updated }
+
+  # Vault Service
+  /vaults:
+    get:
+      summary: List vaults
+      operationId: vaultList
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Vault list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create vault
+      operationId: vaultCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VaultCreateRequest'
+      responses:
+        '201':
+          description: Vault created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vault'
+
+  /vaults/{vaultId}:
+    get:
+      summary: Get vault
+      operationId: vaultGet
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Vault
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vault'
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      summary: Update vault
+      operationId: vaultUpdate
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VaultUpdateRequest'
+      responses:
+        '200':
+          description: Updated vault
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vault'
+    delete:
+      summary: Delete vault
+      operationId: vaultDelete
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Vault deleted }
+
+  /vaults/{vaultId}/items:
+    get:
+      summary: List vault items
+      operationId: vaultListItems
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Item list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create vault item
+      operationId: vaultCreateItem
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VaultItemCreateRequest'
+      responses:
+        '201':
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaultItem'
+
+  /vaults/{vaultId}/items/{itemId}:
+    get:
+      summary: Get vault item
+      operationId: vaultGetItem
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: itemId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Vault item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaultItem'
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      summary: Update vault item
+      operationId: vaultUpdateItem
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: itemId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VaultItemUpdateRequest'
+      responses:
+        '200':
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaultItem'
+    delete:
+      summary: Delete vault item
+      operationId: vaultDeleteItem
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: itemId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Item deleted }
+
+  /vaults/{vaultId}/members:
+    get:
+      summary: List vault members
+      operationId: vaultListMembers
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Member list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Add vault member
+      operationId: vaultAddMember
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string, format: uuid }
+                permission: { type: string, enum: [read, write, admin] }
+      responses:
+        '201': { description: Member added }
+
+  /vaults/{vaultId}/members/{userId}:
+    delete:
+      summary: Remove vault member
+      operationId: vaultRemoveMember
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Member removed }
+
+  /vaults/{vaultId}/sync:
+    post:
+      summary: Sync vault
+      operationId: vaultSync
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cursor: { type: string }
+                client_id: { type: string }
+      responses:
+        '200': { description: Sync delta }
+
+  /vaults/{vaultId}/history:
+    get:
+      summary: Vault item history
+      operationId: vaultHistory
+      parameters:
+        - { name: vaultId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: itemId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: History list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  # Host Service
+  /hosts:
+    get:
+      summary: List hosts
+      operationId: hostList
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Host list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create host
+      operationId: hostCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HostCreateRequest'
+      responses:
+        '201':
+          description: Host created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Host'
+
+  /hosts/{hostId}:
+    get:
+      summary: Get host
+      operationId: hostGet
+      parameters:
+        - { name: hostId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Host
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Host'
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      summary: Update host
+      operationId: hostUpdate
+      parameters:
+        - { name: hostId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HostUpdateRequest'
+      responses:
+        '200':
+          description: Updated host
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Host'
+    delete:
+      summary: Delete host
+      operationId: hostDelete
+      parameters:
+        - { name: hostId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Host deleted }
+
+  /hosts/{hostId}/connect:
+    post:
+      summary: Connect to host
+      operationId: hostConnect
+      parameters:
+        - { name: hostId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key_id: { type: string, format: uuid }
+                auth_method: { type: string }
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /hosts/{hostId}/disconnect:
+    post:
+      summary: Disconnect from host
+      operationId: hostDisconnect
+      parameters:
+        - { name: hostId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Disconnected }
+
+  /hosts/{hostId}/connections:
+    get:
+      summary: Connection history
+      operationId: hostConnectionHistory
+      parameters:
+        - { name: hostId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Connection history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /hosts/{hostId}/health:
+    get:
+      summary: Host health check
+      operationId: hostHealth
+      parameters:
+        - { name: hostId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Health status }
+
+  /hosts/import:
+    post:
+      summary: Bulk import hosts
+      operationId: hostImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, json, ssh_config] }
+      responses:
+        '202': { description: Import job started }
+
+  /host-groups:
+    get:
+      summary: List host groups
+      operationId: hostGroupList
+      responses:
+        '200':
+          description: Group list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create host group
+      operationId: hostGroupCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HostGroupCreateRequest'
+      responses:
+        '201':
+          description: Group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostGroup'
+
+  /host-groups/{groupId}:
+    get:
+      summary: Get host group
+      operationId: hostGroupGet
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Host group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostGroup'
+    put:
+      summary: Update host group
+      operationId: hostGroupUpdate
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HostGroupUpdateRequest'
+      responses:
+        '200':
+          description: Updated group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HostGroup'
+    delete:
+      summary: Delete host group
+      operationId: hostGroupDelete
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Group deleted }
+
+  # SSH / Terminal Sessions
+  /sessions:
+    get:
+      summary: List sessions
+      operationId: sessionList
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Session list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create session
+      operationId: sessionCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCreateRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /sessions/{sessionId}:
+    get:
+      summary: Get session
+      operationId: sessionGet
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+    delete:
+      summary: Terminate session
+      operationId: sessionTerminate
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Session terminated }
+
+  /sessions/{sessionId}/resize:
+    post:
+      summary: Resize terminal
+      operationId: sessionResize
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cols: { type: integer, minimum: 1, maximum: 512 }
+                rows: { type: integer, minimum: 1, maximum: 512 }
+      responses:
+        '200': { description: Resized }
+
+  /sessions/{sessionId}/command:
+    post:
+      summary: Execute command
+      operationId: sessionCommand
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command: { type: string }
+                timeout_seconds: { type: integer, default: 60 }
+      responses:
+        '200': { description: Command output }
+
+  /sessions/{sessionId}/recording:
+    get:
+      summary: Get recording
+      operationId: sessionRecording
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Recording
+          content:
+            application/x-asciicast: {}
+
+  /sessions/{sessionId}/collaborate:
+    post:
+      summary: Start collaboration
+      operationId: sessionCollaborate
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                max_participants: { type: integer, default: 10 }
+                allow_input: { type: boolean, default: false }
+      responses:
+        '201': { description: Collaboration session created }
+
+  /terminal/stream:
+    get:
+      summary: WebSocket terminal stream
+      operationId: terminalStream
+      responses:
+        '101': { description: WebSocket upgrade }
+
+  /terminal/shell:
+    post:
+      summary: Request shell
+      operationId: terminalShell
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session_id: { type: string, format: uuid }
+      responses:
+        '201': { description: Shell ready }
+
+  /terminal/themes:
+    get:
+      summary: List terminal themes
+      operationId: terminalThemes
+      responses:
+        '200': { description: Theme list }
+
+  /terminal/themes/{themeId}:
+    post:
+      summary: Apply theme
+      operationId: terminalApplyTheme
+      parameters:
+        - { name: themeId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Theme applied }
+
+  /terminal/fonts:
+    get:
+      summary: List fonts
+      operationId: terminalFonts
+      responses:
+        '200': { description: Font list }
+
+  /terminal/fonts/{fontId}:
+    post:
+      summary: Set font
+      operationId: terminalSetFont
+      parameters:
+        - { name: fontId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Font set }
+
+  /terminal/clipboard:
+    post:
+      summary: Clipboard sync
+      operationId: terminalClipboard
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data: { type: string }
+                direction: { type: string, enum: [send, receive] }
+      responses:
+        '200': { description: Synced }
+
+  /terminal/scrollback:
+    get:
+      summary: Get scrollback
+      operationId: terminalScrollback
+      parameters:
+        - { name: session_id, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: lines, in: query, schema: { type: integer, default: 1000 } }
+      responses:
+        '200': { description: Scrollback buffer }
+
+  # SFTP Service
+  /sftp/sessions:
+    post:
+      summary: Create SFTP session
+      operationId: sftpCreateSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                host_id: { type: string, format: uuid }
+                key_id: { type: string, format: uuid }
+      responses:
+        '201':
+          description: SFTP session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SftpSession'
+
+  /sftp/sessions/{sessionId}:
+    delete:
+      summary: Close SFTP session
+      operationId: sftpCloseSession
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Session closed }
+
+  /sftp/sessions/{sessionId}/files:
+    get:
+      summary: List files
+      operationId: sftpListFiles
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: path, in: query, schema: { type: string, default: '/' } }
+      responses:
+        '200': { description: File list }
+
+  /sftp/sessions/{sessionId}/files/{path}:
+    get:
+      summary: Get file info
+      operationId: sftpGetFile
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: path, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: File info }
+    post:
+      summary: Upload file
+      operationId: sftpUploadFile
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: path, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201': { description: File uploaded }
+    delete:
+      summary: Delete file
+      operationId: sftpDeleteFile
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: path, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: File deleted }
+
+  /sftp/sessions/{sessionId}/files/{path}/download:
+    get:
+      summary: Download file
+      operationId: sftpDownloadFile
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: path, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: File download
+          content:
+            application/octet-stream: {}
+
+  /sftp/sessions/{sessionId}/mkdir:
+    post:
+      summary: Create directory
+      operationId: sftpMkdir
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path: { type: string }
+      responses:
+        '201': { description: Directory created }
+
+  /sftp/sessions/{sessionId}/rename:
+    post:
+      summary: Rename file/directory
+      operationId: sftpRename
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                old_path: { type: string }
+                new_path: { type: string }
+      responses:
+        '200': { description: Renamed }
+
+  /sftp/sessions/{sessionId}/transfers:
+    get:
+      summary: Transfer queue
+      operationId: sftpTransferQueue
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Transfer list }
+
+  /sftp/sessions/{sessionId}/sync:
+    post:
+      summary: Directory sync
+      operationId: sftpSync
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                local_path: { type: string }
+                remote_path: { type: string }
+                direction: { type: string, enum: [upload, download, bidirectional] }
+      responses:
+        '202': { description: Sync job started }
+
+  /sftp/sessions/{sessionId}/checksum:
+    post:
+      summary: Verify checksum
+      operationId: sftpChecksum
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                remote_path: { type: string }
+                expected_sha256: { type: string }
+      responses:
+        '200': { description: Checksum result }
+
+  # Port Forwarding
+  /port-forwards:
+    get:
+      summary: List port-forward rules
+      operationId: portForwardList
+      responses:
+        '200':
+          description: Rule list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create rule
+      operationId: portForwardCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortForwardRuleCreateRequest'
+      responses:
+        '201':
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortForwardRule'
+
+  /port-forwards/{ruleId}:
+    get:
+      summary: Get rule
+      operationId: portForwardGet
+      parameters:
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Rule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortForwardRule'
+    put:
+      summary: Update rule
+      operationId: portForwardUpdate
+      parameters:
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortForwardRuleUpdateRequest'
+      responses:
+        '200':
+          description: Updated rule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortForwardRule'
+    delete:
+      summary: Delete rule
+      operationId: portForwardDelete
+      parameters:
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Rule deleted }
+
+  /port-forwards/{ruleId}/start:
+    post:
+      summary: Start tunnel
+      operationId: portForwardStart
+      parameters:
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Tunnel started }
+
+  /port-forwards/{ruleId}/stop:
+    post:
+      summary: Stop tunnel
+      operationId: portForwardStop
+      parameters:
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Tunnel stopped }
+
+  /port-forwards/{ruleId}/metrics:
+    get:
+      summary: Tunnel metrics
+      operationId: portForwardMetrics
+      parameters:
+        - { name: ruleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Metrics }
+
+  # Snippets
+  /snippets:
+    get:
+      summary: List snippets
+      operationId: snippetList
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Snippet list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create snippet
+      operationId: snippetCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnippetCreateRequest'
+      responses:
+        '201':
+          description: Snippet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snippet'
+
+  /snippets/{snippetId}:
+    get:
+      summary: Get snippet
+      operationId: snippetGet
+      parameters:
+        - { name: snippetId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Snippet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snippet'
+    put:
+      summary: Update snippet
+      operationId: snippetUpdate
+      parameters:
+        - { name: snippetId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnippetUpdateRequest'
+      responses:
+        '200':
+          description: Updated snippet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snippet'
+    delete:
+      summary: Delete snippet
+      operationId: snippetDelete
+      parameters:
+        - { name: snippetId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Snippet deleted }
+
+  /snippets/{snippetId}/execute:
+    post:
+      summary: Execute snippet
+      operationId: snippetExecute
+      parameters:
+        - { name: snippetId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                host_ids: { type: array, items: { type: string, format: uuid } }
+                parameters: { type: object }
+      responses:
+        '202': { description: Execution started }
+
+  /snippets/{snippetId}/history:
+    get:
+      summary: Execution history
+      operationId: snippetHistory
+      parameters:
+        - { name: snippetId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: History list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /snippet-categories:
+    get:
+      summary: List categories
+      operationId: snippetCategoryList
+      responses:
+        '200':
+          description: Category list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create category
+      operationId: snippetCategoryCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                parent_id: { type: string, format: uuid }
+      responses:
+        '201': { description: Category created }
+
+  /snippets/search:
+    get:
+      summary: Full-text search
+      operationId: snippetSearch
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  # Workspaces
+  /workspaces:
+    get:
+      summary: List workspaces
+      operationId: workspaceList
+      responses:
+        '200':
+          description: Workspace list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create workspace
+      operationId: workspaceCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceCreateRequest'
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+
+  /workspaces/{workspaceId}:
+    get:
+      summary: Get workspace
+      operationId: workspaceGet
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+    put:
+      summary: Update workspace
+      operationId: workspaceUpdate
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUpdateRequest'
+      responses:
+        '200':
+          description: Updated workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+    delete:
+      summary: Delete workspace
+      operationId: workspaceDelete
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Workspace deleted }
+
+  /workspaces/{workspaceId}/restore:
+    post:
+      summary: Restore workspace
+      operationId: workspaceRestore
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                snapshot_id: { type: string, format: uuid }
+      responses:
+        '200': { description: Workspace restored }
+
+  /workspaces/{workspaceId}/sessions:
+    get:
+      summary: Sessions in workspace
+      operationId: workspaceSessions
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Session list }
+
+  /workspaces/{workspaceId}/share:
+    post:
+      summary: Share workspace
+      operationId: workspaceShare
+      parameters:
+        - { name: workspaceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_ids: { type: array, items: { type: string, format: uuid } }
+                permission: { type: string, enum: [read, write] }
+      responses:
+        '200': { description: Workspace shared }
+
+  /workspace-templates:
+    get:
+      summary: List templates
+      operationId: workspaceTemplateList
+      responses:
+        '200':
+          description: Template list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create template
+      operationId: workspaceTemplateCreate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                workspace_id: { type: string, format: uuid }
+                name: { type: string }
+                public: { type: boolean, default: false }
+      responses:
+        '201': { description: Template created }
+
+  # Organization & Team
+  /orgs/me:
+    get:
+      summary: Get current org
+      operationId: orgGetMe
+      responses:
+        '200':
+          description: Organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+
+  /orgs/me/members:
+    get:
+      summary: List members
+      operationId: orgListMembers
+      parameters:
+        - { name: role, in: query, schema: { type: string } }
+        - { name: team_id, in: query, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Member list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /orgs/me/invitations:
+    post:
+      summary: Invite member
+      operationId: orgInviteMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                role: { type: string, enum: [super_admin, org_admin, team_admin, member, auditor, api_user] }
+                team_ids: { type: array, items: { type: string, format: uuid } }
+                message: { type: string }
+      responses:
+        '201': { description: Invitation sent }
+
+  /orgs/me/teams:
+    get:
+      summary: List teams
+      operationId: orgListTeams
+      responses:
+        '200':
+          description: Team list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create team
+      operationId: orgCreateTeam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                slug: { type: string }
+                description: { type: string }
+      responses:
+        '201':
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+
+  /orgs/me/teams/{teamId}:
+    get:
+      summary: Get team
+      operationId: orgGetTeam
+      parameters:
+        - { name: teamId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Team
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+    put:
+      summary: Update team
+      operationId: orgUpdateTeam
+      parameters:
+        - { name: teamId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+      responses:
+        '200':
+          description: Updated team
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+    delete:
+      summary: Delete team
+      operationId: orgDeleteTeam
+      parameters:
+        - { name: teamId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Team deleted }
+
+  /orgs/me/teams/{teamId}/members:
+    post:
+      summary: Add team member
+      operationId: orgAddTeamMember
+      parameters:
+        - { name: teamId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string, format: uuid }
+                role: { type: string, enum: [team_admin, member] }
+      responses:
+        '201': { description: Member added }
+
+  /orgs/me/teams/{teamId}/members/{userId}:
+    delete:
+      summary: Remove team member
+      operationId: orgRemoveTeamMember
+      parameters:
+        - { name: teamId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Member removed }
+
+  /orgs/me/roles:
+    get:
+      summary: List custom roles
+      operationId: orgListRoles
+      responses:
+        '200':
+          description: Role list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      summary: Create role
+      operationId: orgCreateRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                permissions: { type: array, items: { type: string } }
+      responses:
+        '201': { description: Role created }
+
+  /orgs/me/roles/{roleId}:
+    put:
+      summary: Update role
+      operationId: orgUpdateRole
+      parameters:
+        - { name: roleId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                permissions: { type: array, items: { type: string } }
+      responses:
+        '200': { description: Role updated }
+    delete:
+      summary: Delete role
+      operationId: orgDeleteRole
+      parameters:
+        - { name: roleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Role deleted }
+
+  /orgs/me/settings:
+    get:
+      summary: Get org settings
+      operationId: orgGetSettings
+      responses:
+        '200': { description: Settings object }
+    put:
+      summary: Update org settings
+      operationId: orgUpdateSettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': { description: Settings updated }
+
+  # Audit Service
+  /audit/events:
+    get:
+      summary: Query audit events
+      operationId: auditListEvents
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+        - { name: user_id, in: query, schema: { type: string, format: uuid } }
+        - { name: event_type, in: query, schema: { type: string } }
+        - { name: resource_type, in: query, schema: { type: string } }
+        - { name: resource_id, in: query, schema: { type: string, format: uuid } }
+        - { name: outcome, in: query, schema: { type: string } }
+        - { name: created_at_gte, in: query, schema: { type: string, format: date-time } }
+        - { name: created_at_lte, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+
+  /audit/events/{eventId}:
+    get:
+      summary: Get specific audit event
+      operationId: auditGetEvent
+      parameters:
+        - { name: eventId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Audit event }
+
+  /audit/export:
+    get:
+      summary: Export audit log
+      operationId: auditExport
+      parameters:
+        - { name: format, in: query, required: true, schema: { type: string, enum: [json, csv, syslog] } }
+        - { name: created_at_gte, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: created_at_lte, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        '202': { description: Export job started }
+
+  /audit/compliance:
+    get:
+      summary: Compliance dashboard
+      operationId: auditCompliance
+      responses:
+        '200': { description: Compliance data }
+
+  /audit/retention:
+    get:
+      summary: Retention policy status
+      operationId: auditRetention
+      responses:
+        '200': { description: Retention status }
+
+  # AI Service
+  /ai/complete:
+    post:
+      summary: Command completion
+      operationId: aiComplete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AICompleteRequest'
+      responses:
+        '200':
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AICompleteResponse'
+
+  /ai/explain:
+    post:
+      summary: Explain command
+      operationId: aiExplain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command: { type: string }
+                context:
+                  type: object
+                  properties:
+                    os: { type: string }
+                    shell: { type: string }
+                detail_level: { type: string, enum: [brief, standard, detailed], default: standard }
+      responses:
+        '200': { description: Explanation }
+
+  /ai/anomaly:
+    post:
+      summary: Anomaly detection
+      operationId: aiAnomaly
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command_history: { type: array, items: { type: string } }
+                current_command: { type: string }
+      responses:
+        '200': { description: Anomaly score }
+
+  /ai/runbook:
+    post:
+      summary: Generate runbook
+      operationId: aiRunbook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description: { type: string }
+                target_hosts: { type: array, items: { type: string, format: uuid } }
+      responses:
+        '200': { description: Runbook }
+
+  /ai/incident:
+    post:
+      summary: Incident assist
+      operationId: aiIncident
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                incident_id: { type: string }
+                context: { type: object }
+      responses:
+        '200': { description: Incident assist data }
+
+  /ai/models:
+    get:
+      summary: List models
+      operationId: aiListModels
+      responses:
+        '200': { description: Model list }
+
+  /ai/feedback:
+    get:
+      summary: Get feedback
+      operationId: aiGetFeedback
+      responses:
+        '200': { description: Feedback list }
+    post:
+      summary: Submit feedback
+      operationId: aiSubmitFeedback
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                suggestion_id: { type: string }
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string }
+      responses:
+        '201': { description: Feedback recorded }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: EdDSA (Ed25519) signed JWT
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key authentication
+
+  schemas:
+    # Common
+    UUID:
+      type: string
+      format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    Pagination:
+      type: object
+      properties:
+        cursor_next: { type: string, nullable: true }
+        cursor_prev: { type: string, nullable: true }
+        has_next: { type: boolean }
+        has_prev: { type: boolean }
+        limit: { type: integer }
+        total_count: { type: integer, nullable: true }
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data: { type: array, items: { type: object } }
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # Auth
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name, accept_terms]
+      properties:
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, minLength: 12 }
+        display_name: { type: string, minLength: 2, maxLength: 100 }
+        invite_code: { type: string }
+        accept_terms: { type: boolean }
+        locale: { type: string, default: "en-US" }
+        timezone: { type: string, default: "UTC" }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        device_name: { type: string }
+        device_fingerprint: { type: string }
+        remember_me: { type: boolean, default: true }
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, default: "Bearer" }
+        expires_in: { type: integer, default: 900 }
+        refresh_token: { type: string }
+        scope: { type: string }
+
+    AuthResponse:
+      type: object
+      properties:
+        status: { type: string, enum: [authenticated, mfa_required] }
+        user:
+          $ref: '#/components/schemas/User'
+        tokens:
+          $ref: '#/components/schemas/TokenResponse'
+        session:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            device_id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+            expires_at: { type: string, format: date-time }
+        mfa_challenge:
+          type: object
+          properties:
+            challenge_id: { type: string }
+            methods: { type: array, items: { type: string } }
+            expires_at: { type: string, format: date-time }
+
+    ApiKeyCreateRequest:
+      type: object
+      required: [name, scopes]
+      properties:
+        name: { type: string, maxLength: 100 }
+        scopes: { type: array, items: { type: string } }
+        expires_at: { type: string, format: date-time }
+        allowed_ips: { type: array, items: { type: string } }
+        description: { type: string }
+
+    ApiKey:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        key: { type: string }
+        prefix: { type: string }
+        scopes: { type: array, items: { type: string } }
+        expires_at: { type: string, format: date-time }
+        allowed_ips: { type: array, items: { type: string } }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: string, format: date-time }
+
+    # User
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        avatar_url: { type: string, format: uri }
+        status: { type: string, enum: [active, suspended, pending_deletion, deleted] }
+        email_verified: { type: boolean }
+        org_id: { type: string, format: uuid }
+        locale: { type: string }
+        timezone: { type: string }
+        mfa_enabled: { type: boolean }
+        last_login_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        display_name: { type: string }
+        avatar_url: { type: string, format: uri }
+        locale: { type: string }
+        timezone: { type: string }
+
+    # Vault
+    Vault:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        owner_id: { type: string, format: uuid }
+        org_id: { type: string, format: uuid }
+        description: { type: string }
+        color: { type: string }
+        icon: { type: string }
+        encrypted: { type: boolean }
+        sync_enabled: { type: boolean }
+        item_count: { type: integer }
+        storage_bytes: { type: integer }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    VaultCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        color: { type: string }
+        icon: { type: string }
+        encrypted: { type: boolean, default: true }
+
+    VaultUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        color: { type: string }
+        icon: { type: string }
+        sync_enabled: { type: boolean }
+
+    VaultItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        vault_id: { type: string, format: uuid }
+        item_type: { type: string, enum: [host, ssh_key, password, note, certificate, totp_secret, api_credential, file] }
+        encrypted_data: { type: string, format: byte }
+        checksum: { type: string }
+        version: { type: integer }
+        is_deleted: { type: boolean }
+        created_by: { type: string, format: uuid }
+        updated_by: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    VaultItemCreateRequest:
+      type: object
+      required: [item_type, encrypted_data]
+      properties:
+        item_type: { type: string, enum: [host, ssh_key, password, note, certificate, totp_secret, api_credential, file] }
+        encrypted_data: { type: string, format: byte }
+        checksum: { type: string }
+
+    VaultItemUpdateRequest:
+      type: object
+      properties:
+        encrypted_data: { type: string, format: byte }
+        checksum: { type: string }
+
+    # Host
+    Host:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        hostname: { type: string }
+        port: { type: integer, minimum: 1, maximum: 65535, default: 22 }
+        username: { type: string }
+        auth_method: { type: string, enum: [key, password, certificate, interactive, agent, pgp] }
+        os: { type: string }
+        os_version: { type: string }
+        tags: { type: array, items: { type: string } }
+        status: { type: string, enum: [active, inactive, unreachable, archived] }
+        last_connected_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    HostCreateRequest:
+      type: object
+      required: [name, hostname]
+      properties:
+        name: { type: string }
+        hostname: { type: string }
+        port: { type: integer, default: 22 }
+        username: { type: string }
+        auth_method: { type: string, default: key }
+        key_id: { type: string, format: uuid }
+        os: { type: string }
+        tags: { type: array, items: { type: string } }
+        vault_id: { type: string, format: uuid }
+        group_id: { type: string, format: uuid }
+
+    HostUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        hostname: { type: string }
+        port: { type: integer }
+        username: { type: string }
+        auth_method: { type: string }
+        key_id: { type: string, format: uuid }
+        os: { type: string }
+        tags: { type: array, items: { type: string } }
+        status: { type: string }
+
+    HostGroup:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        parent_id: { type: string, format: uuid }
+        path: { type: string }
+        depth: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    HostGroupCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        parent_id: { type: string, format: uuid }
+        vault_id: { type: string, format: uuid }
+
+    HostGroupUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        parent_id: { type: string, format: uuid }
+
+    # Session
+    Session:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        host_id: { type: string, format: uuid }
+        org_id: { type: string, format: uuid }
+        status: { type: string, enum: [connecting, connected, disconnected, error, terminated] }
+        terminal_cols: { type: integer, default: 80 }
+        terminal_rows: { type: integer, default: 24 }
+        recording_enabled: { type: boolean }
+        collab_enabled: { type: boolean }
+        started_at: { type: string, format: date-time }
+        connected_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+        duration_seconds: { type: integer }
+        bytes_sent: { type: integer }
+        bytes_received: { type: integer }
+
+    SessionCreateRequest:
+      type: object
+      required: [host_id]
+      properties:
+        host_id: { type: string, format: uuid }
+        key_id: { type: string, format: uuid }
+        auth_method: { type: string }
+        terminal_cols: { type: integer, default: 80 }
+        terminal_rows: { type: integer, default: 24 }
+        recording_enabled: { type: boolean, default: false }
+        collab_enabled: { type: boolean, default: false }
+
+    # SFTP
+    SftpSession:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        host_id: { type: string, format: uuid }
+        status: { type: string }
+        cwd: { type: string }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+
+    # Port Forward
+    PortForwardRule:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [local, remote, dynamic] }
+        local_address: { type: string }
+        local_port: { type: integer }
+        remote_address: { type: string }
+        remote_port: { type: integer }
+        status: { type: string, enum: [active, inactive, error] }
+        auto_start: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    PortForwardRuleCreateRequest:
+      type: object
+      required: [name, type, host_id, local_port]
+      properties:
+        name: { type: string }
+        type: { type: string, enum: [local, remote, dynamic] }
+        host_id: { type: string, format: uuid }
+        local_address: { type: string, default: "127.0.0.1" }
+        local_port: { type: integer }
+        remote_address: { type: string }
+        remote_port: { type: integer }
+        auto_start: { type: boolean, default: false }
+
+    PortForwardRuleUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        local_address: { type: string }
+        local_port: { type: integer }
+        remote_address: { type: string }
+        remote_port: { type: integer }
+        auto_start: { type: boolean }
+        status: { type: string }
+
+    # Snippets
+    Snippet:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        content: { type: string }
+        language: { type: string, default: bash }
+        tags: { type: array, items: { type: string } }
+        shared: { type: boolean }
+        pinned: { type: boolean }
+        executions_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    SnippetCreateRequest:
+      type: object
+      required: [name, content]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        content: { type: string }
+        language: { type: string, default: bash }
+        tags: { type: array, items: { type: string } }
+        category_id: { type: string, format: uuid }
+        shared: { type: boolean, default: false }
+
+    SnippetUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        content: { type: string }
+        language: { type: string }
+        tags: { type: array, items: { type: string } }
+        shared: { type: boolean }
+        pinned: { type: boolean }
+
+    # Workspace
+    Workspace:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        org_id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        layout: { type: object }
+        is_template: { type: boolean }
+        pinned: { type: boolean }
+        auto_connect: { type: boolean }
+        last_opened_at: { type: string, format: date-time }
+        open_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    WorkspaceCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        layout: { type: object }
+        auto_connect: { type: boolean, default: true }
+
+    WorkspaceUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        layout: { type: object }
+        pinned: { type: boolean }
+        auto_connect: { type: boolean }
+
+    # Organization
+    Organization:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        domain: { type: string }
+        domain_verified: { type: boolean }
+        plan: { type: string, enum: [free, pro, team, enterprise] }
+        member_count: { type: integer }
+        max_members: { type: integer }
+        enforce_mfa: { type: boolean }
+        session_recording_required: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    Team:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        member_count: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    # AI
+    AICompleteRequest:
+      type: object
+      required: [partial_command]
+      properties:
+        context:
+          type: object
+          properties:
+            cwd: { type: string }
+            hostname: { type: string }
+            os: { type: string }
+            shell: { type: string }
+            history: { type: array, items: { type: string } }
+        partial_command: { type: string }
+        max_suggestions: { type: integer, default: 5 }
+
+    AICompleteResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            type: object
+            properties:
+              completion: { type: string }
+              description: { type: string }
+              confidence: { type: number, minimum: 0, maximum: 1 }
+        model: { type: string }
+        latency_ms: { type: integer }
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+              instance: { type: string }
+              trace_id: { type: string }
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+
+    NotFound:
+      description: Not Found
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+
+    Conflict:
+      description: Conflict
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+
+    ValidationError:
+      description: Validation Error
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+              errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field: { type: string }
+                    code: { type: string }
+                    message: { type: string }
+                    value: {}
+
+    RateLimit:
+      description: Too Many Requests
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              detail: { type: string }
+              retry_after: { type: integer }
+              limit: { type: integer }
+              window_seconds: { type: integer }

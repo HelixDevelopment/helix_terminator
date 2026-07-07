@@ -1,0 +1,183 @@
+apiVersion: helixqa.io/v1
+kind: TestBank
+metadata:
+  name: helixterminator-master-testbank
+  version: "1.0.0"
+  description: >
+    Master test bank configuration for the HelixTerminator platform.
+    Defines all test suites, categories, and execution policies
+    for comprehensive quality assurance across 25 services.
+  owner: helix-qa-team@helixdevelopment.io
+  lastUpdated: "2026-07-06"
+
+spec:
+  # Test bank categories and their relative weights
+  categories:
+    - name: unit
+      description: Unit test suites for individual services
+      weight: 25
+      minCoverage: 80
+      required: true
+      path: test/banks/unit
+    - name: integration
+      description: Integration tests for service interactions
+      weight: 20
+      minCoverage: 70
+      required: true
+      path: test/banks/integration
+    - name: e2e
+      description: End-to-end test scenarios
+      weight: 15
+      minCoverage: 60
+      required: true
+      path: test/banks/e2e
+    - name: contract
+      description: Contract tests for API compatibility
+      weight: 10
+      minCoverage: 75
+      required: true
+      path: test/banks/contract
+    - name: security
+      description: Security test suites
+      weight: 10
+      minCoverage: 70
+      required: true
+      path: test/banks/security
+    - name: performance
+      description: Load and performance test scenarios
+      weight: 10
+      minCoverage: 50
+      required: false
+      path: test/banks/performance
+    - name: chaos
+      description: Chaos engineering scenarios
+      weight: 5
+      minCoverage: 40
+      required: false
+      path: test/banks/chaos
+    - name: accessibility
+      description: Accessibility test suites
+      weight: 3
+      minCoverage: 60
+      required: false
+      path: test/banks/accessibility
+    - name: compatibility
+      description: Cross-platform compatibility tests
+      weight: 2
+      minCoverage: 50
+      required: false
+      path: test/banks/compatibility
+
+  # Service definitions
+  services:
+    - gateway-service
+    - auth-service
+    - user-service
+    - vault-service
+    - host-service
+    - ssh-proxy-service
+    - terminal-service
+    - sftp-service
+    - port-forward-service
+    - snippet-service
+    - keychain-service
+    - workspace-service
+    - collaboration-service
+    - notification-service
+    - audit-service
+    - analytics-service
+    - ai-service
+    - recording-service
+    - pki-service
+    - org-service
+    - billing-service
+    - config-service
+    - health-service
+    - container-bridge-service
+    - helixtrack-bridge-service
+
+  # Execution policies
+  execution:
+    # Parallel execution settings
+    parallel:
+      enabled: true
+      maxWorkers: 8
+      perService: true
+
+    # Retry policy for flaky tests
+    retry:
+      enabled: true
+      maxAttempts: 3
+      backoff: exponential
+
+    # Timeout settings
+    timeout:
+      unit: 10m
+      integration: 20m
+      e2e: 30m
+      performance: 60m
+      chaos: 45m
+
+    # Environment requirements
+    environment:
+      required:
+        - DATABASE_URL
+        - REDIS_URL
+      optional:
+        - VAULT_ADDR
+        - KUBECONFIG
+
+  # Coverage thresholds
+  coverage:
+    global:
+      lines: 75
+      functions: 80
+      branches: 70
+    perService:
+      lines: 70
+      functions: 75
+      branches: 65
+    criticalPaths:
+      - auth-service
+      - vault-service
+      - gateway-service
+      - pki-service
+      - user-service
+    criticalMinCoverage: 85
+
+  # Reporting configuration
+  reporting:
+    formats:
+      - junit
+      - cobertura
+      - html
+      - json
+    artifacts:
+      - coverage.out
+      - test-results.xml
+      - benchmark-results.json
+      - security-scan.sarif
+    notifications:
+      slack: "#helix-qa-alerts"
+      email: qa-team@helixdevelopment.io
+
+  # Test data management
+  testData:
+    seeding:
+      enabled: true
+      strategy: per-suite
+      cleanup: after-suite
+    fixtures:
+      path: test/helixqa/fixtures
+      versioned: true
+
+  # Challenge integration
+  challenges:
+    enabled: true
+    path: test/challenges
+    categories:
+      - backend
+      - frontend
+      - devops
+      - security
+      - architecture

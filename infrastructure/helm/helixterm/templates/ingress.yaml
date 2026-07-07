@@ -1,0 +1,37 @@
+{{- $global := . }}
+{{- $svc := .Values.gateway }}
+{{- if and $svc.enabled $svc.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "helixterm.serviceFullname" (dict "root" $global "serviceName" "gateway") }}
+  labels:
+    {{- include "helixterm.labels" $global | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- with $svc.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $svc.ingress.className }}
+  {{- if $svc.ingress.tls }}
+  tls:
+    {{- toYaml $svc.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+  {{- range $svc.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+        {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "helixterm.serviceFullname" (dict "root" $global "serviceName" "gateway") }}
+                port:
+                  number: {{ default 8080 $svc.service.port }}
+        {{- end }}
+  {{- end }}
+{{- end }}

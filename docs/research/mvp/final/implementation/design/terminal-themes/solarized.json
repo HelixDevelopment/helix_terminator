@@ -1,0 +1,32 @@
+{
+  "name": "Solarized Dark",
+  "description": "Solarized dark color scheme for HelixTerminator terminal",
+  "type": "dark",
+  "background": "#002B36",
+  "foreground": "#839496",
+  "cursor": "#268BD2",
+  "selection": "rgba(38, 139, 210, 0.3)",
+  "colors": {
+    "black": "#073642",
+    "red": "#DC322F",
+    "green": "#859900",
+    "yellow": "#B58900",
+    "blue": "#268BD2",
+    "magenta": "#D33682",
+    "cyan": "#2AA198",
+    "white": "#EEE8D5",
+    "brightBlack": "#002B36",
+    "brightRed": "#CB4B16",
+    "brightGreen": "#586E75",
+    "brightYellow": "#657B83",
+    "brightBlue": "#839496",
+    "brightMagenta": "#6C71C4",
+    "brightCyan": "#93A1A1",
+    "brightWhite": "#FDF6E3"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "author": "Ethan Schoonover",
+    "license": "MIT"
+  }
+}

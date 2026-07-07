@@ -81,14 +81,14 @@ class TerminalService {
   /// Stream of incoming terminal messages.
   Stream<String> get messageStream => _messageController.stream;
 
-  void dispose() {
-    disconnect();
-    _messageController.close();
+  void dispose() async {
+    await disconnect();
+    await _messageController.close();
   }
 
   String _resolveWsUrl(String hostId) {
     // In production this should read from environment / config.
-    const base = 'wss://api.helix terminator.example.com';
+    const base = 'wss://api.helix-terminator.example.com';
     return '$base/v1/terminal/$hostId';
   }
 }

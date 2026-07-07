@@ -1,0 +1,21 @@
+{
+  "platform": "harmonyos",
+  "description": "HarmonyOS-specific design token overrides for HelixTerminator",
+  "overrides": {
+    "typography": {
+      "primitive": {
+        "fontFamily": {
+          "ui": {
+            "value": "'Inter', 'HarmonyOS Sans', 'Noto Sans', sans-serif",
+            "type": "fontFamily"
+          }
+        }
+      }
+    },
+    "component": {
+      "distributedUI": {
+        "enabled": { "value": "true", "type": "boolean" }
+      }
+    }
+  }
+}

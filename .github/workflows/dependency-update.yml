@@ -1,7 +1,7 @@
+# DISABLED per Helix Constitution §11.4.156 — CI/CD automation must be disabled. Manual (workflow_dispatch) only. Re-enabling automatic triggers requires an explicit operator decision.
 name: Dependency Update
 on:
-  schedule:
-    - cron: '0 3 * * 1'
+  workflow_dispatch:
 
 jobs:
   update-deps:

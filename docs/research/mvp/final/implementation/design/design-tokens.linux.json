@@ -1,0 +1,26 @@
+{
+  "platform": "linux",
+  "description": "Linux-specific design token overrides for HelixTerminator",
+  "overrides": {
+    "typography": {
+      "primitive": {
+        "fontFamily": {
+          "ui": {
+            "value": "'Inter', 'Noto Sans', 'DejaVu Sans', 'Liberation Sans', sans-serif",
+            "type": "fontFamily"
+          },
+          "mono": {
+            "value": "'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', 'Liberation Mono', monospace",
+            "type": "fontFamily"
+          }
+        }
+      }
+    },
+    "component": {
+      "window": {
+        "titleBarHeight": { "value": "30px", "type": "dimension" },
+        "clientSideDecorations": { "value": "true", "type": "boolean" }
+      }
+    }
+  }
+}

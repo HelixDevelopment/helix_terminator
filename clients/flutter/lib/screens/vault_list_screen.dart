@@ -182,6 +182,7 @@ class _VaultListScreenState extends State<VaultListScreen> {
     final nameController = TextEditingController();
     final valueController = TextEditingController();
     final descController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
     String selectedType = 'password';
 
     showDialog(
@@ -192,39 +193,57 @@ class _VaultListScreenState extends State<VaultListScreen> {
             return AlertDialog(
               title: const Text('Add Secret'),
               content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Name'),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: selectedType,
-                      decoration: const InputDecoration(labelText: 'Type'),
-                      items: const [
-                        DropdownMenuItem(value: 'password', child: Text('Password')),
-                        DropdownMenuItem(value: 'key', child: Text('Key')),
-                        DropdownMenuItem(value: 'token', child: Text('Token')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) setState(() => selectedType = value);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: valueController,
-                      decoration: const InputDecoration(labelText: 'Value'),
-                      obscureText: true,
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: descController,
-                      decoration: const InputDecoration(labelText: 'Description'),
-                      maxLines: 2,
-                    ),
-                  ],
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(labelText: 'Name'),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Name is required';
+                          }
+                          if (value.trim().length < 2) {
+                            return 'Name must be at least 2 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedType,
+                        decoration: const InputDecoration(labelText: 'Type'),
+                        items: const [
+                          DropdownMenuItem(value: 'password', child: Text('Password')),
+                          DropdownMenuItem(value: 'key', child: Text('Key')),
+                          DropdownMenuItem(value: 'token', child: Text('Token')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) setState(() => selectedType = value);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: valueController,
+                        decoration: const InputDecoration(labelText: 'Value'),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Value is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: descController,
+                        decoration: const InputDecoration(labelText: 'Description'),
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -234,9 +253,9 @@ class _VaultListScreenState extends State<VaultListScreen> {
                 ),
                 FilledButton(
                   onPressed: () {
+                    if (!formKey.currentState!.validate()) return;
                     final name = nameController.text.trim();
                     final value = valueController.text;
-                    if (name.isEmpty || value.isEmpty) return;
                     context.read<VaultBloc>().add(
                       VaultCreateRequested(
                         name: name,

@@ -1,6 +1,11 @@
 import '../models/notification.dart' as models;
 import 'api_client.dart';
 
+class NotificationServiceException implements Exception {
+  final String message;
+  NotificationServiceException(this.message);
+}
+
 class NotificationService {
   final ApiClient _apiClient;
 
@@ -12,42 +17,78 @@ class NotificationService {
     int limit = 50,
     int offset = 0,
   }) async {
-    final queryParams = <String, String>{
-      'limit': limit.toString(),
-      'offset': offset.toString(),
-    };
-    if (type != null) queryParams['type'] = type;
-    if (unreadOnly != null) queryParams['unread'] = unreadOnly.toString();
+    try {
+      final queryParams = <String, String>{
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+      if (type != null) queryParams['type'] = type;
+      if (unreadOnly != null) queryParams['unread'] = unreadOnly.toString();
 
-    final queryString = queryParams.entries
-        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-        .join('&');
+      final queryString = queryParams.entries
+          .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+          .join('&');
 
-    final response = await _apiClient.get('/api/v1/notifications?$queryString');
-    final data = response['data'] as List<dynamic>? ?? [];
-    return data.map((json) => _notificationFromJson(json as Map<String, dynamic>)).toList();
+      final response = await _apiClient.get('/api/v1/notifications?$queryString');
+      final data = response['data'] as List<dynamic>? ?? [];
+      return data.map((json) => _notificationFromJson(json as Map<String, dynamic>)).toList();
+    } on ApiException catch (e) {
+      throw NotificationServiceException(e.message);
+    } catch (e) {
+      throw NotificationServiceException('Failed to load notifications');
+    }
   }
 
   Future<models.Notification> getNotification(String id) async {
-    final response = await _apiClient.get('/api/v1/notifications/$id');
-    return _notificationFromJson(response['data'] as Map<String, dynamic>);
+    try {
+      final response = await _apiClient.get('/api/v1/notifications/$id');
+      return _notificationFromJson(response['data'] as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      throw NotificationServiceException(e.message);
+    } catch (e) {
+      throw NotificationServiceException('Failed to load notification');
+    }
   }
 
   Future<void> markAsRead(String id) async {
-    await _apiClient.post('/api/v1/notifications/$id/read', {});
+    try {
+      await _apiClient.post('/api/v1/notifications/$id/read', {});
+    } on ApiException catch (e) {
+      throw NotificationServiceException(e.message);
+    } catch (e) {
+      throw NotificationServiceException('Failed to mark as read');
+    }
   }
 
   Future<void> markAllAsRead() async {
-    await _apiClient.post('/api/v1/notifications/read-all', {});
+    try {
+      await _apiClient.post('/api/v1/notifications/read-all', {});
+    } on ApiException catch (e) {
+      throw NotificationServiceException(e.message);
+    } catch (e) {
+      throw NotificationServiceException('Failed to mark all as read');
+    }
   }
 
   Future<void> deleteNotification(String id) async {
-    await _apiClient.post('/api/v1/notifications/$id/delete', {});
+    try {
+      await _apiClient.post('/api/v1/notifications/$id/delete', {});
+    } on ApiException catch (e) {
+      throw NotificationServiceException(e.message);
+    } catch (e) {
+      throw NotificationServiceException('Failed to delete notification');
+    }
   }
 
   Future<int> getUnreadCount() async {
-    final response = await _apiClient.get('/api/v1/notifications/unread-count');
-    return response['data'] as int? ?? 0;
+    try {
+      final response = await _apiClient.get('/api/v1/notifications/unread-count');
+      return response['data'] as int? ?? 0;
+    } on ApiException catch (e) {
+      throw NotificationServiceException(e.message);
+    } catch (e) {
+      throw NotificationServiceException('Failed to get unread count');
+    }
   }
 
   models.Notification _notificationFromJson(Map<String, dynamic> json) {

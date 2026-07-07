@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 // SSHClient wraps an active ssh.Client connection.
@@ -24,13 +25,26 @@ type SSHClient struct {
 	addr      string
 }
 
-// Connect establishes an SSH connection to the given host.
+// Connect establishes an SSH connection to the given host with proper host key verification.
 func Connect(host, port, username string, authMethod ssh.AuthMethod) (*SSHClient, error) {
 	addr := net.JoinHostPort(host, port)
+
+	knownHostsPath := os.Getenv("SSH_KNOWN_HOSTS")
+	var hostKeyCallback ssh.HostKeyCallback
+	if knownHostsPath != "" {
+		var err error
+		hostKeyCallback, err = knownhosts.New(knownHostsPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load known_hosts file %q: %w", knownHostsPath, err)
+		}
+	} else {
+		return nil, fmt.Errorf("SSH_KNOWN_HOSTS environment variable is required for host key verification")
+	}
+
 	config := &ssh.ClientConfig{
 		User:            username,
 		Auth:            []ssh.AuthMethod{authMethod},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO: use known_hosts in production
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         15 * time.Second,
 	}
 

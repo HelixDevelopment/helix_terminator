@@ -1,0 +1,21 @@
+{
+  "platform": "auroraos",
+  "description": "AuroraOS-specific design token overrides for HelixTerminator",
+  "overrides": {
+    "typography": {
+      "primitive": {
+        "fontFamily": {
+          "ui": {
+            "value": "'Inter', 'Sail Sans Pro', 'Noto Sans', sans-serif",
+            "type": "fontFamily"
+          }
+        }
+      }
+    },
+    "component": {
+      "pulleyMenu": {
+        "enabled": { "value": "true", "type": "boolean" }
+      }
+    }
+  }
+}

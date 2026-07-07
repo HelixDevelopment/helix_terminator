@@ -5,15 +5,15 @@ services:
   postgres:
     image: postgres:17.2-alpine
     environment:
-      POSTGRES_USER: helix
-      POSTGRES_PASSWORD: helix
-      POSTGRES_DB: helixterminator
+      POSTGRES_USER: ${POSTGRES_USER:-helix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helix}
+      POSTGRES_DB: ${POSTGRES_DB:-helixterminator}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U helix -d helixterminator"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helix} -d ${POSTGRES_DB:-helixterminator}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -78,7 +78,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
     networks:
       - helix-network
 
@@ -90,10 +90,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - PORT=8080
-      - AUTH_SERVICE_URL=http://auth-service:8080
-      - USER_SERVICE_URL=http://user-service:8080
-      - HOST_SERVICE_URL=http://host-service:8080
+      PORT: "8080"
+      AUTH_SERVICE_URL: http://auth-service:8080
+      USER_SERVICE_URL: http://user-service:8080
+      HOST_SERVICE_URL: http://host-service:8080
     depends_on:
       - auth-service
       - user-service
@@ -106,9 +106,9 @@ services:
       context: ../../services/auth-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
-      - REDIS_URL=redis://redis:6379
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,8 +122,8 @@ services:
       context: ../../services/user-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -135,8 +135,8 @@ services:
       context: ../../services/host-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -148,8 +148,8 @@ services:
       context: ../../services/vault-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -161,7 +161,7 @@ services:
       context: ../../services/ssh-proxy-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
+      PORT: "8080"
     networks:
       - helix-network
 
@@ -170,8 +170,8 @@ services:
       context: ../../services/terminal-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -183,8 +183,8 @@ services:
       context: ../../services/workspace-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -196,8 +196,8 @@ services:
       context: ../../services/config-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -209,8 +209,8 @@ services:
       context: ../../services/pki-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -222,8 +222,8 @@ services:
       context: ../../services/billing-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -235,8 +235,8 @@ services:
       context: ../../services/org-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -248,9 +248,9 @@ services:
       context: ../../services/notification-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
-      - KAFKA_BROKERS=kafka:9092
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
     depends_on:
       postgres:
         condition: service_healthy
@@ -264,9 +264,9 @@ services:
       context: ../../services/audit-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
-      - KAFKA_BROKERS=kafka:9092
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
     depends_on:
       postgres:
         condition: service_healthy
@@ -280,8 +280,8 @@ services:
       context: ../../services/health-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - HEALTH_ENDPOINTS={"gateway":"http://gateway-service:8080/healthz","auth":"http://auth-service:8080/healthz"}
+      PORT: "8080"
+      HEALTH_ENDPOINTS: '{"gateway":"http://gateway-service:8080/healthz","auth":"http://auth-service:8080/healthz"}'
     networks:
       - helix-network
 
@@ -290,8 +290,8 @@ services:
       context: ../../services/ai-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -303,8 +303,8 @@ services:
       context: ../../services/collaboration-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -316,8 +316,8 @@ services:
       context: ../../services/container-bridge-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -329,8 +329,8 @@ services:
       context: ../../services/helixtrack-bridge-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -342,8 +342,8 @@ services:
       context: ../../services/port-forward-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -355,8 +355,8 @@ services:
       context: ../../services/sftp-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -368,8 +368,8 @@ services:
       context: ../../services/recording-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -381,8 +381,8 @@ services:
       context: ../../services/snippet-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -394,9 +394,9 @@ services:
       context: ../../services/analytics-service
       dockerfile: Dockerfile
     environment:
-      - PORT=8080
-      - DATABASE_URL=postgres://helix:helix@postgres:5432/helixterminator?sslmode=disable
-      - KAFKA_BROKERS=kafka:9092
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
     depends_on:
       postgres:
         condition: service_healthy

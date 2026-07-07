@@ -1,0 +1,56 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $global := . }}
+{{- $serviceNames := list "gateway" "auth" "user" "vault" "host" "sshproxy" "terminal" "keychain" "workspace" "config" "pki" "billing" "org" "notification" "audit" "health" "ai" "collaboration" "containerbridge" "helixtrackbridge" "portforward" "sftp" "recording" "snippet" "analytics" }}
+{{- range $serviceNames }}
+{{- $serviceName := . }}
+{{- $svc := index $global.Values $serviceName }}
+{{- if and $svc (kindIs "map" $svc) $svc.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "helixterm.serviceFullname" (dict "root" $global "serviceName" $serviceName) }}
+  labels:
+    {{- include "helixterm.labels" $global | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceName }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "helixterm.selectorLabels" $global | nindent 6 }}
+      app.kubernetes.io/component: {{ $serviceName }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from gateway
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "helixterm.selectorLabels" $global | nindent 14 }}
+              app.kubernetes.io/component: gateway
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from other services in the same namespace
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "helixterm.selectorLabels" $global | nindent 14 }}
+  egress:
+    # Allow to other services in the same namespace
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "helixterm.selectorLabels" $global | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+{{- end }}
+{{- end }}
+{{- end }}
