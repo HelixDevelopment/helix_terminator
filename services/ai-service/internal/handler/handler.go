@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,17 +10,38 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/helixdevelopment/ai-service/internal/model"
-	"github.com/helixdevelopment/ai-service/internal/repository"
 )
+
+// Repository defines the persistence operations the handler depends on. Satisfied by
+// *repository.Repository in production; tests inject a fake (§11.4.27(A) — unit tests
+// fake the collaborator, never the codebase-under-test).
+type Repository interface {
+	CreateRequest(ctx context.Context, req *model.AIRequest) error
+	GetRequestByID(ctx context.Context, id uuid.UUID) (*model.AIRequest, error)
+	ListRequests(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*model.AIRequest, int, error)
+	Ping(ctx context.Context) error
+}
+
+// LLMClient is the minimal real-completion contract CreateRequest depends on. Satisfied
+// by *llmclient.GenericClient (HelixLLM local llama.cpp backend) in production; tests
+// inject a fake. The cloud tier (OpenAI/Anthropic API keys) is OPERATOR-BLOCKED and
+// deliberately not represented here — this service only ever talks to the local tier.
+type LLMClient interface {
+	Complete(ctx context.Context, model string, maxTokens int, temperature float64, prompt string) (content string, tokensUsed int, err error)
+}
 
 // Handler holds AI service handlers
 type Handler struct {
-	repo *repository.Repository
+	repo Repository
+	llm  LLMClient
 }
 
-// New creates a new Handler
-func New(repo *repository.Repository) *Handler {
-	return &Handler{repo: repo}
+// New creates a new Handler. llm may be nil only for call sites that never invoke
+// CreateRequest (e.g. health-check-only wiring in tests) — CreateRequest treats a nil
+// llm as a real provider failure (Status: "failed"), never as a silent fabricated
+// success, so passing nil never risks resurrecting the fabricated-"pending" bluff.
+func New(repo Repository, llm LLMClient) *Handler {
+	return &Handler{repo: repo, llm: llm}
 }
 
 // CreateRequest handles AI request creation

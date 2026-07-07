@@ -22,8 +22,10 @@ type Server struct {
 	repo   *repository.Repository
 }
 
-// New creates a new Server with routes wired.
-func New(repo *repository.Repository) *Server {
+// New creates a new Server with routes wired. llm is the real-completion client
+// (production: *llmclient.GenericClient pointed at the local HelixLLM llama.cpp
+// server) that CreateRequest calls synchronously — see internal/handler.LLMClient.
+func New(repo *repository.Repository, llm handler.LLMClient) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 
@@ -31,7 +33,7 @@ func New(repo *repository.Repository) *Server {
 	r.Use(requestIDMiddleware())
 	r.Use(loggingMiddleware())
 
-	h := handler.New(repo)
+	h := handler.New(repo, llm)
 
 	r.GET("/healthz", h.HealthCheck)
 	r.GET("/healthz/ready", h.ReadinessCheck)

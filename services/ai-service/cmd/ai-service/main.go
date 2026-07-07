@@ -7,8 +7,22 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/helixdevelopment/ai-service/internal/llmclient"
 	"github.com/helixdevelopment/ai-service/internal/repository"
 	"github.com/helixdevelopment/ai-service/internal/server"
+)
+
+// defaultLocalLLMBaseURL / defaultLocalLLMModel are the fallback values applied when
+// AI_LOCAL_PROVIDER_BASE_URL / AI_LOCAL_PROVIDER_MODEL are unset (§11.4.28B config
+// injection — overridable via env, never hardcoded past this single seam). The port
+// matches the project's local HelixLLM llama.cpp smoke-test convention.
+const (
+	defaultLocalLLMBaseURL = "http://127.0.0.1:18434/v1/chat/completions"
+	defaultLocalLLMModel   = "qwen2.5-1.5b-instruct"
+	// localLLMAPIKeyPlaceholder is a non-secret filler: llama-server enforces no
+	// auth, but the llmprovider adapter's ValidateConfig contract requires a
+	// non-empty apiKey — see internal/llmclient.NewGenericClient.
+	localLLMAPIKeyPlaceholder = "local-no-auth-required"
 )
 
 func main() {
@@ -36,7 +50,21 @@ func main() {
 	log.Println("database connection established")
 
 	repo := repository.New(pool)
-	srv := server.New(repo)
+
+	llmBaseURL := os.Getenv("AI_LOCAL_PROVIDER_BASE_URL")
+	if llmBaseURL == "" {
+		llmBaseURL = defaultLocalLLMBaseURL
+	}
+	llmModel := os.Getenv("AI_LOCAL_PROVIDER_MODEL")
+	if llmModel == "" {
+		llmModel = defaultLocalLLMModel
+	}
+	// Local HelixLLM tier only — the cloud tier (OpenAI/Anthropic API keys) is
+	// OPERATOR-BLOCKED and deliberately not wired (see docs/CONTINUATION.md).
+	llmClient := llmclient.NewGenericClient("helixllm-local", localLLMAPIKeyPlaceholder, llmBaseURL, llmModel)
+	log.Printf("ai-service: local LLM provider base_url=%s model=%s", llmBaseURL, llmModel)
+
+	srv := server.New(repo, llmClient)
 
 	log.Printf("ai-service starting on port %s", port)
 	if err := srv.Run(":" + port); err != nil {

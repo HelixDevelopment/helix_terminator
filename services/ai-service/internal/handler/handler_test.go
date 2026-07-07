@@ -20,7 +20,7 @@ func setupTestRouter() *gin.Engine {
 
 func TestHealthCheck(t *testing.T) {
 	r := setupTestRouter()
-	h := handler.New(nil)
+	h := handler.New(nil, nil)
 	r.GET("/healthz", h.HealthCheck)
 
 	w := httptest.NewRecorder()
@@ -41,7 +41,7 @@ func TestHealthCheck(t *testing.T) {
 
 func TestReadinessCheck(t *testing.T) {
 	r := setupTestRouter()
-	h := handler.New(nil)
+	h := handler.New(nil, nil)
 	r.GET("/healthz/ready", h.ReadinessCheck)
 
 	w := httptest.NewRecorder()
@@ -55,7 +55,7 @@ func TestReadinessCheck(t *testing.T) {
 
 func TestCreateRequestValidation(t *testing.T) {
 	r := setupTestRouter()
-	h := handler.New(nil)
+	h := handler.New(nil, nil)
 	r.POST("/api/v1/ai/requests", h.CreateRequest)
 
 	body := model.CreateAIRequest{
