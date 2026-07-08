@@ -68,9 +68,9 @@ type SSHSessionResponse struct {
 
 // ListSSHSessionsRequest carries pagination parameters.
 type ListSSHSessionsRequest struct {
-	UserID string `json:"user_id" binding:"required,uuid"`
-	Limit  int    `json:"limit" binding:"min=1,max=100"`
-	Offset int    `json:"offset" binding:"min=0"`
+	UserID string `json:"user_id" form:"user_id" binding:"required,uuid"`
+	Limit  int    `json:"limit" form:"limit" binding:"min=0,max=100"`
+	Offset int    `json:"offset" form:"offset" binding:"min=0"`
 }
 
 // TerminalResizeMessage is sent over WebSocket to resize the PTY.
