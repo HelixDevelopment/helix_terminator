@@ -474,6 +474,152 @@ func TestProxyToUnknownService(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "vault-service")
 }
 
+// startDeterministicFailingUpstream starts a REAL, loopback-listening HTTP
+// server that plays the role of an upstream the T8-8 background
+// health-check prober genuinely considers HEALTHY, but whose real proxied
+// request connection genuinely fails — the two outcomes are deliberately
+// decoupled by path so a test using it never races the prober:
+//
+//   - GET /healthz (the exact path probeUpstreamHealth hits, on every
+//     initial AND periodic sweep) always answers 200 OK, so
+//     upstreamService.Healthy converges to, and permanently stays, true.
+//     Since registerUpstreams already constructs every upstream with
+//     Healthy: true, and this server never gives the prober a reason to
+//     flip it false, there is no window in which IsHealthy() can return
+//     false for this upstream — proxyTo's "!IsHealthy()" 503 short-circuit
+//     can therefore never fire against it, by construction, not by timing.
+//   - Every OTHER path (i.e. the real proxied request path, e.g. "/login")
+//     hijacks the raw TCP connection and closes it without writing any
+//     HTTP response at all. This is a genuine transport-level failure —
+//     the same class of failure a real backend crashing or resetting the
+//     connection mid-request would produce — that makes the real
+//     s.httpClient.Do() call inside proxyTo return a non-nil error, driving
+//     proxyTo's distinct 502 "upstream request failed" branch.
+func startDeterministicFailingUpstream(t *testing.T) string {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			// Should be unreachable with net/http's default server, but
+			// fail loudly rather than silently degrade to a normal (and
+			// therefore non-transport-failing) response if it ever isn't.
+			http.Error(w, "test server cannot hijack", http.StatusInternalServerError)
+			return
+		}
+		conn, _, err := hj.Hijack()
+		if err != nil {
+			return
+		}
+		_ = conn.Close()
+	})
+
+	srv := &http.Server{Handler: mux}
+	go func() {
+		_ = srv.Serve(ln)
+	}()
+	t.Cleanup(func() {
+		_ = srv.Close()
+	})
+
+	return "http://" + ln.Addr().String()
+}
+
+// TestProxyReturnsBadGatewayForHealthyButUnreachableUpstream is the
+// regression guard closing a coverage gap an independent review found in
+// T8-8 (wiring a real background upstream health-check prober,
+// server.go startHealthChecks/probeAllUpstreams/probeUpstreamHealth).
+//
+// Before T8-8, upstreamService.Healthy was a static flag hardcoded true
+// forever, so proxyTo's "!upstream.IsHealthy()" 503 short-circuit was
+// dead code and every request always fell through to a real connection
+// attempt — the only failure mode a genuinely-unreachable upstream could
+// ever produce was proxyTo's 502 "upstream request failed" branch
+// (s.httpClient.Do() returning a transport-level error). T8-8 correctly
+// reconciled (per §11.4.120) the one pre-existing integration test that
+// exercised that scenario
+// (TestIntegration_GatewayReturnsBadGatewayForUnreachableUpstream) to
+// assert the new, correct steady-state 503 instead, since a persistently
+// unreachable upstream now converges to IsHealthy()==false and proxyTo
+// proactively rejects it before ever attempting the doomed connection.
+// That reconciliation was correct, but it left the DISTINCT 502 branch —
+// a registered upstream that the prober genuinely considers HEALTHY, yet
+// whose real connection attempt still fails on this particular request —
+// with no direct regression test of its own.
+//
+// This test closes that gap deterministically, without disabling or
+// racing the real T8-8 prober: auth-service is pointed at
+// startDeterministicFailingUpstream, whose /healthz always answers 200 OK
+// (so the prober's initial and periodic sweeps can only ever confirm
+// Healthy=true, never flip it false) while the real proxied path always
+// fails at the transport layer. The response MUST be exactly 502 — never
+// 503 (IsHealthy() is never false here) and never 500 (proxyTo's own
+// explicit error-response branch handles this, not gin's default
+// recovery/error handling).
+func TestProxyReturnsBadGatewayForHealthyButUnreachableUpstream(t *testing.T) {
+	failingUpstreamURL := startDeterministicFailingUpstream(t)
+	t.Setenv(upstreamEnvKey("auth-service"), failingUpstreamURL)
+	t.Setenv("GATEWAY_HEALTHCHECK_INTERVAL", "20ms")
+
+	s := setupTestServer(t)
+
+	// Wait on the real /healthz/ready condition (never a bare sleep) to
+	// confirm the real T8-8 prober has run and genuinely considers
+	// auth-service healthy before firing the request under test. Because
+	// startDeterministicFailingUpstream's /healthz always succeeds, this
+	// is expected to already be true from the very first observation (the
+	// initial Healthy: true construction in registerUpstreams is never
+	// contradicted) — the wait exists to make that invariant an explicit,
+	// checked precondition of the test rather than an assumption, and to
+	// tolerate the prober's asynchronous initial sweep without any race.
+	require.Eventually(t, func() bool {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, "/healthz/ready", nil)
+		s.Router().ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			return false
+		}
+		var body map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			return false
+		}
+		services, ok := body["services"].(map[string]interface{})
+		if !ok {
+			return false
+		}
+		status, ok := services["auth-service"].(string)
+		return ok && status == "healthy"
+	}, 2*time.Second, 20*time.Millisecond,
+		"auth-service must be confirmed healthy (never flipped false by the real T8-8 prober) before the 502 assertion below, proving the request below is not racing the prober into producing 503 instead")
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
+
+	s.Router().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadGateway, w.Code,
+		"a registered, HEALTHY upstream whose real connection attempt genuinely fails must surface proxyTo's distinct 502 branch, not the 503 known-unhealthy short-circuit")
+	assert.Contains(t, w.Body.String(), "auth-service")
+
+	// Re-confirm auth-service is STILL reported healthy immediately after
+	// the failed proxied request completes, proving the 502 above came
+	// from proxyTo's real httpClient.Do() error branch and not from some
+	// intervening prober flip to unhealthy racing in from a concurrent
+	// sweep (which would have produced 503, not 502).
+	w2 := httptest.NewRecorder()
+	req2, _ := http.NewRequest(http.MethodGet, "/healthz/ready", nil)
+	s.Router().ServeHTTP(w2, req2)
+	assert.Equal(t, http.StatusOK, w2.Code,
+		"auth-service must remain reported healthy after the 502, proving the response code exercised proxyTo's connection-failure branch, not the known-unhealthy short-circuit")
+}
+
 func TestTerminalWebSocket_NotImplemented(t *testing.T) {
 	s := setupTestServer(t)
 	w := httptest.NewRecorder()
