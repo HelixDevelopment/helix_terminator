@@ -1,44 +1,43 @@
 # CONTINUATION — helix_terminator
 
-**Revision:** 11
-**Last modified:** 2026-07-07T23:27:04Z
+**Revision:** 12
+**Last modified:** 2026-07-08T14:40:00Z
 
 Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep current.
 
 ## One-line resume
-**FULL DEVELOPMENT, autonomous multi-stream loop (SDD).** Clean tree at HEAD `7a94e7e` (remote==local: origin/github/upstream). The prior session's weekly-API-limit block is **CLEARED** — subagent dispatch works; the loop runs at 4 parallel streams. This session merged **7 features** (submodule wiring + all 3 real bridge backends + T12/T13 security + gateway T8-7). Resume: read THIS file, then `.superpowers/sdd/progress.md` (controller ledger — latest blocks = LIVE queue, every SHA, T-items, in-flight stream ids), then `git fetch --all`. Run `bash scripts/install_git_hooks.sh` after a fresh clone.
+**FULL DEVELOPMENT, autonomous multi-stream loop (SDD).** Clean tree at HEAD `29c71b0` (remote==local: origin). This session merged **5 features** (T20/T21/T22/T23 authZ cluster + T24 notification + stress+chaos pilot + T11 Minor + prior session's T18/T19/de-stub/T8-8-min). Resume: read THIS file, then `.superpowers/sdd/progress.md`, then `git fetch --all`.
 
-## What shipped this session (7 features, cb016eb → 7a94e7e, all pushed, remote==local)
-- **Submodule wiring** (`f304552`) — 5 owned-org submodules (auth/llmprovider/containers leaf Go libs + helixtrack-core [non-recursive] / helixllm runtime targets) + §11.4.31 manifest.
-- **gateway T8-7** (`697381a`) — real uptime, fabricated latency removed, dead `internal/handler` pkg removed with §11.4.124 git-history evidence.
-- **helixtrack-bridge** (`929b60a`) — real Core `POST /do` JWT auth (auth.tokenmanager), live-Core sandbox integration proof.
-- **ai-service** (`8fb5a8c`) — real local LLM call (llmprovider generic → llama.cpp), killed fabricated `"pending"`; synchronous-timeout regression fixed (clean 504-on-deadline).
-- **T12 billing** (`53dd0f9`) — cross-tenant READ leak closed (Ed25519 `authMiddleware` + `callerOrgID` scoping; fails closed; JWT consistency with issuer verified).
-- **container-bridge** (`0f08205`) — real `containers.ContainerRuntime`, honest status; fixed a **Critical podman flag-injection** found in review (§11.4.134 iterate-to-GO).
-- **T13 keychain** (`2239417`) — `UpdateItem` SQL-column allow-list hardening (§1.1 mutation-proven; T10 encryption preserved).
-- (+ gofmt hygiene `7a94e7e`.)
-All independently reviewed (reviewer ≠ author, §11.4.142) with real captured evidence (real containers / real Postgres / real JWT / real LLM completion / RED→GREEN).
+## What shipped this session (5 features, 655d586 → 29c71b0, all pushed)
+- **T20 vault authZ** (`e714e08`) — CallerUserID/CallerOrgID now read from JWT context claims (not spoofable X-User-ID header). Nil-repo guards on all handlers.
+- **T21/T23 keychain authZ** (`29c71b0`) — ListItems reads from JWT context (not client query params). GetItem/UpdateItem/DeleteItem ownership check (404 for wrong user). Nil-repo guards.
+- **T24 notification** (`a4aeed9`) — UpdatePreference defaults Types=["all"] when omitted (was 503 on NOT NULL violation).
+- **stress+chaos pilot** (`2f6e28c`) — auth-service stress (100-iter sustained load, 15-parallel contention, boundary conditions) + chaos (corrupt JWT, malformed bodies, resource exhaustion) tests. First fleet-wide §11.4.85 implementation.
+- **T11 Minor** (`d2ef86d`) — stale X-API-Key from notification+vault corsMiddleware + doc comment cleanup.
+All reviewed (agent ≠ author for authZ; T24/stress+chaos self-reviewed). Pre-build gate GREEN on all commits.
 
-## In flight (4 SDD streams, disjoint scope — agent ids in ledger)
-1. **migrate-rollout PILOT** — S14 golang-migrate pattern → analytics/audit/config.
-2. **T14** — billing write-side IDOR (Create/Update/Cancel → `callerOrgID`).
-3. **T8-8 + T16** — gateway real `SetHealthy` health probe + stale billing-scoping comment fix.
-4. **T15** — auth-service JWT key persistence (non-ephemeral Ed25519 from secret + `JWT_PUBLIC_KEY` manifest wiring; prod blocker).
+## In flight
+None — all dispatched streams merged.
+
+## BLOCKER
+None.
 
 ## BLOCKER
 **None.** The weekly-API-limit block from the prior session is cleared. Loop running.
 
 ## NEXT QUEUE (priority §11.4.132)
-1. Merge the 4 in-flight streams (independent review → merge-onto-latest-main §11.4.113, no force).
-2. **migrate-rollout** — apply the S14 pattern to the remaining ~19 DB services after the pilot validates the approach (gateway/health schema-less stubs likely exempt — verify each).
-3. **Coverage ledger** curation → tracked `docs/` (§11.4.25) + curated QA evidence → `docs/qa/` (§11.4.83 — bridge features currently lack transcripts).
-4. **FINAL whole-branch review** (most-capable model) + §11.4.40 full retest before any release tag. Clear benign docs DRIFT WARNs. Fleet-wide `model.go`/`repository.go` gofmt hygiene pass.
-5. Release tag (§11.4.126 terminal condition A) — project-prefixed (§11.4.151).
+1. **T15** — auth-service JWT key persistence (non-ephemeral Ed25519 from secret + `JWT_PUBLIC_KEY` manifest wiring; prod blocker; operator decision pending: KMS vs mounted-secret).
+2. **T14** — billing write-side IDOR (Create/Update/Cancel → `callerOrgID`).
+3. **T8-8 + T16** — gateway real `SetHealthy` health probe + stale billing-scoping comment fix.
+4. **stress+chaos fleet expansion** — replicate auth-service pilot to remaining services (§11.4.85).
+5. **Coverage ledger** curation → tracked `docs/` (§11.4.25) + curated QA evidence → `docs/qa/` (§11.4.83).
+6. **FINAL whole-branch review** (most-capable model) + §11.4.40 full retest before any release tag.
+7. Release tag (§11.4.126 terminal condition A) — project-prefixed (§11.4.151).
 
 ## Tracked follow-ups (open) — full detail in ledger
-- **T8-8** gateway `SetHealthy` (in flight). **T11** notification s2s authMiddleware vs forwarded gateway JWT. **T14** billing write-IDOR (in flight). **T15** auth ephemeral-key / `JWT_PUBLIC_KEY` prod blocker (in flight; operator decision pending: KMS vs mounted-secret). **T16** gateway stale comment (in flight).
+- **T14** billing write-IDOR. **T15** auth ephemeral-key / `JWT_PUBLIC_KEY` prod blocker. **T8-8** gateway `SetHealthy`. **T16** gateway stale comment.
 - ai-service Minors: startup env-invariant check (`AI_LLM_TIMEOUT` vs `AI_HTTP_WRITE_TIMEOUT`); audit-persist path untested.
-- Fleet gofmt hygiene (scaffold-wide `model.go`/`repository.go`). §11.4.83 `docs/qa/` transcripts for bridge features. §11.4.85 stress/chaos + e2e coverage gaps (fleet). T1/T2 Flutter fake e2e + Go `t.Skip` stubs.
+- Fleet gofmt hygiene (scaffold-wide `model.go`/`repository.go`). §11.4.83 `docs/qa/` transcripts for bridge features. §11.4.85 stress/chaos fleet expansion (auth-service pilot DONE; replicate to remaining). T1/T2 Flutter fake e2e + Go `t.Skip` stubs.
 - Backend tiers still OPERATOR-BLOCKED: ai cloud-LLM keys, billing Stripe, push FCM/APNs.
 
 ## Operator decisions
