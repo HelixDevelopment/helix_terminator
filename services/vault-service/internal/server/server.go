@@ -2,7 +2,8 @@ package server
 
 import (
 	"context"
-	"crypto/subtle"
+	"crypto/ed25519"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -17,6 +19,22 @@ import (
 	"github.com/helixdevelopment/vault-service/internal/repository"
 	"github.com/helixdevelopment/vault-service/migrations"
 )
+
+// Claims represents the identity claims extracted from a validated JWT.
+// Mirrors gateway-service's Claims (services/gateway-service/internal/
+// server/server.go) and billing-service's Claims (services/billing-service/
+// internal/server/server.go) — the gateway forwards the original signed
+// Authorization bearer token to upstream services untouched (proxyTo clones
+// the client's request headers verbatim and never strips Authorization), so
+// vault-service independently validates the SAME token with the SAME public
+// key rather than demanding a separate service-to-service X-API-Key the
+// gateway never sends (T19; same defect class as T11's notification-service
+// finding).
+type Claims struct {
+	UserID string `json:"userId"`
+	OrgID  string `json:"orgId,omitempty"`
+	jwt.RegisteredClaims
+}
 
 // Logger interface for logging.
 type Logger interface {
@@ -36,10 +54,11 @@ func (d *defaultLogger) Println(v ...interface{}) {
 
 // Server wraps the Gin engine with vault service functionality.
 type Server struct {
-	router  *gin.Engine
-	logger  Logger
-	handler *handler.Handler
-	repo    *repository.Repository
+	router       *gin.Engine
+	logger       Logger
+	handler      *handler.Handler
+	repo         *repository.Repository
+	jwtPublicKey ed25519.PublicKey
 }
 
 // New creates a new Vault Server with dependencies.
@@ -101,6 +120,21 @@ func New(logger Logger) (*Server, error) {
 		repo:    repo,
 	}
 
+	// Load JWT public key from environment — same JWT_PUBLIC_KEY secret
+	// gateway-service and billing-service are provisioned with, so a token
+	// minted by auth-service and validated at the edge validates identically
+	// here.
+	if pubKeyB64 := os.Getenv("JWT_PUBLIC_KEY"); pubKeyB64 != "" {
+		pubKeyBytes, err := base64.StdEncoding.DecodeString(pubKeyB64)
+		if err != nil {
+			logger.Printf("warning: failed to decode JWT_PUBLIC_KEY: %v", err)
+		} else if len(pubKeyBytes) != ed25519.PublicKeySize {
+			logger.Printf("warning: invalid JWT_PUBLIC_KEY size: expected %d, got %d", ed25519.PublicKeySize, len(pubKeyBytes))
+		} else {
+			s.jwtPublicKey = ed25519.PublicKey(pubKeyBytes)
+		}
+	}
+
 	// Global middleware
 	r.Use(s.recoveryMiddleware())
 	r.Use(s.requestIDMiddleware())
@@ -150,23 +184,74 @@ func (s *Server) recoveryMiddleware() gin.HandlerFunc {
 	return gin.Recovery()
 }
 
-// authMiddleware enforces service-to-service API key authentication on every
-// /api/v1/vault/* route. The expected key is provisioned via the
-// VAULT_SERVICE_API_KEY environment variable. A request with a missing,
-// empty, or mismatched X-API-Key header is rejected with 401 Unauthorized.
-// If VAULT_SERVICE_API_KEY is not configured at all, the service fails
-// closed (every vault request is rejected) rather than silently allowing
-// unauthenticated access to a secrets store.
+// authMiddleware validates the caller's bearer JWT on every /api/v1/vault/*
+// route (T19). This is the canonical Ed25519 JWT_PUBLIC_KEY chain shared
+// with gateway-service and billing-service — the gateway forwards the
+// caller's original signed Authorization bearer token through to upstream
+// services untouched, so vault-service must validate that SAME token rather
+// than demand a service-to-service X-API-Key the gateway never sends
+// (previously this middleware rejected every real gateway-routed request).
+// Requests with no token, a malformed token, a token that fails
+// signature/expiry validation, or an unconfigured JWT_PUBLIC_KEY are
+// rejected outright (fail-closed) rather than served unauthenticated.
 func (s *Server) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		expected := os.Getenv("VAULT_SERVICE_API_KEY")
-		got := c.GetHeader("X-API-Key")
-		if expected == "" || got == "" || subtle.ConstantTimeCompare([]byte(got), []byte(expected)) != 1 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-API-Key"})
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
 			return
 		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
+			return
+		}
+
+		token := parts[1]
+		if token == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "empty token"})
+			return
+		}
+
+		if s.jwtPublicKey == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "JWT validation not configured"})
+			return
+		}
+
+		claims, err := s.validateToken(token)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			return
+		}
+
+		c.Set("userID", claims.UserID)
+		c.Set("orgID", claims.OrgID)
 		c.Next()
 	}
+}
+
+func (s *Server) validateToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return s.jwtPublicKey, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims type")
+	}
+
+	return claims, nil
 }
 
 // requireCallerIdentityMiddleware enforces that a caller of a tenant-scoped
