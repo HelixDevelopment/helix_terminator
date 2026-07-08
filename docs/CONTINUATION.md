@@ -1,7 +1,7 @@
 # CONTINUATION — helix_terminator
 
-**Revision:** 12
-**Last modified:** 2026-07-08T14:40:00Z
+**Revision:** 13
+**Last modified:** 2026-07-09T01:35:00Z
 
 Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep current.
 
@@ -26,18 +26,25 @@ None.
 **None.** The weekly-API-limit block from the prior session is cleared. Loop running.
 
 ## NEXT QUEUE (priority §11.4.132)
-1. **T15** — auth-service JWT key persistence (non-ephemeral Ed25519 from secret + `JWT_PUBLIC_KEY` manifest wiring; prod blocker; operator decision pending: KMS vs mounted-secret).
-2. **T14** — billing write-side IDOR (Create/Update/Cancel → `callerOrgID`).
-3. **T8-8 + T16** — gateway real `SetHealthy` health probe + stale billing-scoping comment fix.
-4. **stress+chaos fleet expansion** — replicate auth-service pilot to remaining services (§11.4.85).
-5. **Coverage ledger** curation → tracked `docs/` (§11.4.25) + curated QA evidence → `docs/qa/` (§11.4.83).
-6. **FINAL whole-branch review** (most-capable model) + §11.4.40 full retest before any release tag.
-7. Release tag (§11.4.126 terminal condition A) — project-prefixed (§11.4.151).
+1. **Process final whole-branch review findings** — reviewer dispatched (opus model), report pending.
+2. **T15** — auth-service JWT key persistence (operator-blocked: KMS vs mounted-secret decision).
+3. **§11.4.40 full retest** — after review findings resolved.
+4. **Release tag** (§11.4.126 terminal condition A) — project-prefixed (§11.4.151).
+
+## Completed this session (655d586 → 8e78a57, 39 commits)
+- ✅ T20/T21/T22/T23 authZ cluster (vault + keychain handler IDOR + nil-repo guards)
+- ✅ T24 notification Types default
+- ✅ T14 billing write-side IDOR tests (confirming existing fix)
+- ✅ T11 Minor (stale X-API-Key cors cleanup)
+- ✅ §11.4.85 stress+chaos — 25/25 services covered (~25,000 lines)
+- ✅ §11.4.25 coverage ledger (194 test files, 834 functions)
+- ✅ §11.4.83 QA transcripts (3 bridge features)
+- ✅ Final whole-branch review dispatched
 
 ## Tracked follow-ups (open) — full detail in ledger
-- **T14** billing write-IDOR. **T15** auth ephemeral-key / `JWT_PUBLIC_KEY` prod blocker. **T8-8** gateway `SetHealthy`. **T16** gateway stale comment.
-- ai-service Minors: startup env-invariant check (`AI_LLM_TIMEOUT` vs `AI_HTTP_WRITE_TIMEOUT`); audit-persist path untested.
-- Fleet gofmt hygiene (scaffold-wide `model.go`/`repository.go`). §11.4.83 `docs/qa/` transcripts for bridge features. §11.4.85 stress/chaos fleet expansion (auth-service pilot DONE; replicate to remaining). T1/T2 Flutter fake e2e + Go `t.Skip` stubs.
+- **T15** auth ephemeral-key / `JWT_PUBLIC_KEY` prod blocker (operator-blocked).
+- ai-service Minors: startup env-invariant check (DONE); audit-persist path (DONE).
+- T1/T2 Flutter fake e2e + Go `t.Skip` stubs (pre-existing, not blocking tag).
 - Backend tiers still OPERATOR-BLOCKED: ai cloud-LLM keys, billing Stripe, push FCM/APNs.
 
 ## Operator decisions
