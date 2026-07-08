@@ -38,10 +38,19 @@ type NotificationPreference struct {
 	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 }
 
-// CreateNotificationRequest represents a request to create a notification
+// CreateNotificationRequest represents a request to create a notification.
+//
+// T18 (Constitution §11.4.102/.115/.146): this request previously carried
+// client-supplied "userId"/"orgId" fields that the handler trusted
+// verbatim to decide WHOSE notification inbox to write into — an IDOR
+// (any authenticated caller could create/spoof a notification into
+// ANOTHER user's inbox by simply naming a different userId). The target
+// user and org are now derived EXCLUSIVELY from the caller's validated
+// JWT claims (internal/server/server.go authMiddleware, T11), so these
+// fields no longer exist here — mirrors billing-service's T14
+// CreateSubscriptionRequest, which dropped its OrgID field for the same
+// reason.
 type CreateNotificationRequest struct {
-	UserID  string          `json:"userId" binding:"required,uuid"`
-	OrgID   string          `json:"orgId,omitempty" binding:"omitempty,uuid"`
 	Type    string          `json:"type" binding:"required,oneof=info warning error success"`
 	Title   string          `json:"title" binding:"required,max=255"`
 	Message string          `json:"message" binding:"required,max=2000"`
@@ -56,9 +65,20 @@ type CreateNotificationRequest struct {
 	Target string `json:"target,omitempty" binding:"omitempty,max=1000"`
 }
 
-// ListNotificationsRequest represents query parameters for listing notifications
+// ListNotificationsRequest represents query parameters for listing
+// notifications.
+//
+// T18: this request previously carried a client-supplied "user_id" query
+// parameter that the handler trusted verbatim to decide WHOSE
+// notifications to list — an IDOR (any authenticated caller could read
+// ANOTHER user's notifications by supplying a different user_id). The
+// scope is now derived EXCLUSIVELY from the caller's validated JWT claim
+// (internal/server/server.go authMiddleware, T11), so the field no
+// longer exists here. OrgID remains as an OPTIONAL further filter over
+// the caller's OWN notifications (a user may belong to more than one
+// org) — it can never expose another user's rows because the underlying
+// query is always additionally scoped to the caller's own user_id.
 type ListNotificationsRequest struct {
-	UserID  string `form:"user_id" binding:"required,uuid"`
 	OrgID   string `form:"org_id" binding:"omitempty,uuid"`
 	Status  string `form:"status" binding:"omitempty,oneof=pending sent delivered failed pending_provider_unconfigured"`
 	Channel string `form:"channel" binding:"omitempty,oneof=email in_app push webhook"`
@@ -71,9 +91,17 @@ type MarkReadRequest struct {
 	ID string `uri:"id" binding:"required,uuid"`
 }
 
-// UpdatePreferenceRequest represents a request to update notification preferences
+// UpdatePreferenceRequest represents a request to update notification
+// preferences.
+//
+// T18: this request previously carried a client-supplied "userId" field
+// that the handler trusted verbatim to decide WHOSE preference to write —
+// an IDOR (any authenticated caller could overwrite ANOTHER user's
+// notification preferences by supplying a different userId). The target
+// user is now derived EXCLUSIVELY from the caller's validated JWT claim
+// (internal/server/server.go authMiddleware, T11), so the field no
+// longer exists here.
 type UpdatePreferenceRequest struct {
-	UserID  string   `json:"userId" binding:"required,uuid"`
 	Channel string   `json:"channel" binding:"required,oneof=email in_app push webhook"`
 	Enabled bool     `json:"enabled"`
 	Types   []string `json:"types" binding:"omitempty,dive,oneof=info warning error success"`

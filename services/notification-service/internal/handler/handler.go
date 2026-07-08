@@ -49,6 +49,60 @@ func NewWithDelivery(repo *repository.Repository, emailSender *delivery.EmailSen
 	return &Handler{repo: repo, emailSender: emailSender, webhookSender: webhookSender, pushSender: pushSender}
 }
 
+// callerUserID returns the requesting caller's user ID as established by
+// the server's auth middleware (context key "userID", populated from a
+// validated JWT claim — see internal/server/server.go authMiddleware,
+// T11). It is the SOLE source of truth for WHOSE notifications/
+// preferences a request may read or write (T18 — Constitution
+// §11.4.102/.115/.146): a client-supplied "user_id" query parameter or
+// "userId" body field MUST NEVER be trusted to select which user's data
+// is served or mutated, since any authenticated caller could then
+// read/create/modify/delete another user's notifications or preferences
+// simply by supplying a different user_id (IDOR). Mirrors billing-
+// service's T12/T14 callerOrgID helper. Returns ok=false when no valid
+// identity is present in the context, in which case the caller MUST
+// reject the request (401) rather than fall back to unscoped or
+// client-supplied behaviour.
+func callerUserID(c *gin.Context) (uuid.UUID, bool) {
+	val, exists := c.Get("userID")
+	if !exists {
+		return uuid.Nil, false
+	}
+	str, ok := val.(string)
+	if !ok || str == "" {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(str)
+	if err != nil || id == uuid.Nil {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+// callerOrgID returns the requesting caller's org ID (if any) as
+// established by the auth middleware (context key "orgID"). Unlike
+// callerUserID it is optional — the JWT's orgId claim itself is
+// `omitempty` — and returns nil (never an error) when absent. Used by
+// CreateNotification so a created notification's org tag reflects the
+// caller's OWN org claim, never a client-supplied "orgId" body field
+// (T18: the prior body field let any caller tag a notification under an
+// arbitrary org, including one they do not belong to).
+func callerOrgID(c *gin.Context) *uuid.UUID {
+	val, exists := c.Get("orgID")
+	if !exists {
+		return nil
+	}
+	str, ok := val.(string)
+	if !ok || str == "" {
+		return nil
+	}
+	id, err := uuid.Parse(str)
+	if err != nil || id == uuid.Nil {
+		return nil
+	}
+	return &id
+}
+
 // CreateNotification handles POST /api/v1/notifications
 func (h *Handler) CreateNotification(c *gin.Context) {
 	var req model.CreateNotificationRequest
@@ -57,21 +111,13 @@ func (h *Handler) CreateNotification(c *gin.Context) {
 		return
 	}
 
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+	userID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
 		return
 	}
 
-	var orgID *uuid.UUID
-	if req.OrgID != "" {
-		parsed, err := uuid.Parse(req.OrgID)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid org_id"})
-			return
-		}
-		orgID = &parsed
-	}
+	orgID := callerOrgID(c)
 
 	// Channel-specific target validation — fail fast instead of silently
 	// persisting a notification that can never be delivered.
@@ -200,9 +246,9 @@ func (h *Handler) ListNotifications(c *gin.Context) {
 		return
 	}
 
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+	userID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
 		return
 	}
 
@@ -248,6 +294,12 @@ func (h *Handler) GetNotification(c *gin.Context) {
 		return
 	}
 
+	callerID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
+		return
+	}
+
 	notification, err := h.repo.GetNotificationByID(c.Request.Context(), id)
 	if err != nil {
 		if err.Error() == "notification not found" {
@@ -255,6 +307,16 @@ func (h *Handler) GetNotification(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+		return
+	}
+
+	// T18 (mirrors billing-service's T12 no-existence-oracle pattern): a
+	// notification belonging to a DIFFERENT caller MUST get the SAME
+	// "notification not found" response a genuinely-missing id would —
+	// never a distinct status/message that would let a caller confirm
+	// another user's notification ID exists.
+	if notification.UserID != callerID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "notification not found"})
 		return
 	}
 
@@ -269,6 +331,31 @@ func (h *Handler) MarkRead(c *gin.Context) {
 		return
 	}
 
+	callerID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
+		return
+	}
+
+	// T18: fetch-then-compare BEFORE mutating — the pre-fix handler
+	// mutated ANY id with no ownership check whatsoever, letting any
+	// authenticated caller mark another user's notification as read
+	// merely by learning/guessing its id. A cross-caller target returns
+	// the SAME "notification not found" a genuinely-missing id would.
+	existing, err := h.repo.GetNotificationByID(c.Request.Context(), id)
+	if err != nil {
+		if err.Error() == "notification not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+		return
+	}
+	if existing.UserID != callerID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "notification not found"})
+		return
+	}
+
 	if err := h.repo.MarkRead(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
@@ -279,15 +366,9 @@ func (h *Handler) MarkRead(c *gin.Context) {
 
 // MarkAllRead handles POST /api/v1/notifications/read-all
 func (h *Handler) MarkAllRead(c *gin.Context) {
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
-		return
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+	userID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
 		return
 	}
 
@@ -307,6 +388,27 @@ func (h *Handler) DeleteNotification(c *gin.Context) {
 		return
 	}
 
+	callerID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
+		return
+	}
+
+	// T18: fetch-then-compare BEFORE deleting — mirrors MarkRead above.
+	existing, err := h.repo.GetNotificationByID(c.Request.Context(), id)
+	if err != nil {
+		if err.Error() == "notification not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+		return
+	}
+	if existing.UserID != callerID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "notification not found"})
+		return
+	}
+
 	if err := h.repo.DeleteNotification(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
@@ -317,15 +419,9 @@ func (h *Handler) DeleteNotification(c *gin.Context) {
 
 // CountUnread handles GET /api/v1/notifications/unread-count
 func (h *Handler) CountUnread(c *gin.Context) {
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
-		return
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+	userID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
 		return
 	}
 
@@ -340,21 +436,15 @@ func (h *Handler) CountUnread(c *gin.Context) {
 
 // GetPreference handles GET /api/v1/notifications/preferences
 func (h *Handler) GetPreference(c *gin.Context) {
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
-		return
-	}
-
 	channel := c.Query("channel")
 	if channel == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "channel is required"})
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+	userID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
 		return
 	}
 
@@ -379,9 +469,9 @@ func (h *Handler) UpdatePreference(c *gin.Context) {
 		return
 	}
 
-	userID, err := uuid.Parse(req.UserID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+	userID, ok := callerUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid caller identity"})
 		return
 	}
 

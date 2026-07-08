@@ -101,12 +101,21 @@ func TestCreateNotification_Email_RealDeliveryEndToEnd(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// T18: CreateNotification/GetNotification now derive the caller's
+	// identity exclusively from the gin context (populated by the real
+	// authMiddleware in production, internal/server/server.go) rather
+	// than a client-supplied "userId" body field, so this direct
+	// handler-mount test injects the same context key.
+	callerID := uuid.New().String()
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", callerID)
+		c.Next()
+	})
 	r.POST("/api/v1/notifications", h.CreateNotification)
 	r.GET("/api/v1/notifications/:id", h.GetNotification)
 
 	to := "e2e-" + uuid.New().String()[:8] + "@example.com"
 	payload := map[string]interface{}{
-		"userId":  uuid.New().String(),
 		"type":    "info",
 		"title":   "E2E real delivery",
 		"message": "End-to-end handler-level real SMTP delivery proof " + uuid.New().String(),
@@ -178,10 +187,13 @@ func TestCreateNotification_Webhook_RealDeliveryEndToEnd(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uuid.New().String())
+		c.Next()
+	})
 	r.POST("/api/v1/notifications", h.CreateNotification)
 
 	payload := map[string]interface{}{
-		"userId":  uuid.New().String(),
 		"type":    "info",
 		"title":   "E2E webhook delivery",
 		"message": "End-to-end handler-level real webhook POST proof " + uuid.New().String(),
@@ -220,10 +232,13 @@ func TestCreateNotification_Push_HonestNotConfigured(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uuid.New().String())
+		c.Next()
+	})
 	r.POST("/api/v1/notifications", h.CreateNotification)
 
 	payload := map[string]interface{}{
-		"userId":  uuid.New().String(),
 		"type":    "info",
 		"title":   "E2E push honest state",
 		"message": "Push must never fabricate success",
