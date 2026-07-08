@@ -13,6 +13,7 @@ import (
 
 	"github.com/helixdevelopment/pki-service/internal/handler"
 	"github.com/helixdevelopment/pki-service/internal/repository"
+	"github.com/helixdevelopment/pki-service/migrations"
 )
 
 // Logger interface for logging.
@@ -54,11 +55,39 @@ func New(logger Logger) (*Server, error) {
 	}
 
 	if dbURL != "" {
-		pool, err := pgxpool.New(context.Background(), dbURL)
-		if err != nil {
-			logger.Printf("warning: failed to connect to database: %v", err)
+		// Apply pending schema migrations before opening the steady-state
+		// pool. A migration failure (including a dirty schema state) MUST
+		// NOT be served against, so on failure we deliberately skip pool
+		// creation and fall through to nil-repository mode below, matching
+		// this service's existing degrade-gracefully-on-DB-trouble
+		// behaviour. This does NOT touch certificate/key material - Run
+		// only creates/alters schema objects (tables/indexes/triggers);
+		// encryption-at-rest of ca_key_pem/key_pem stays entirely in this
+		// service's own repository/crypto layer (PKI_ENCRYPTION_KEY,
+		// checked above).
+		if version, merr := migrations.Run(dbURL, logger); merr != nil {
+			logger.Printf("warning: failed to apply database migrations: %v", merr)
 		} else {
-			repo = repository.NewPostgresRepository(pool)
+			logger.Printf("database migrations applied - schema version %d", version)
+
+			// Use the same schema-scoped connection URL the migrator
+			// applied (search_path=migrations.Schema) so the
+			// steady-state pool's unqualified "certificates" /
+			// "certificate_authorities" queries resolve against the
+			// schema migrations.Run just migrated, not the shared
+			// database's default "public" schema (schema-per-service,
+			// GAP-01).
+			poolURL, perr := migrations.ConnectionURL(dbURL)
+			if perr != nil {
+				logger.Printf("warning: failed to build schema-scoped connection URL: %v", perr)
+			} else {
+				pool, err := pgxpool.New(context.Background(), poolURL)
+				if err != nil {
+					logger.Printf("warning: failed to connect to database: %v", err)
+				} else {
+					repo = repository.NewPostgresRepository(pool)
+				}
+			}
 		}
 	}
 
