@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/helixdevelopment/recording-service/internal/handler"
 	"github.com/helixdevelopment/recording-service/internal/repository"
 	"github.com/helixdevelopment/recording-service/internal/server"
 	"github.com/helixdevelopment/recording-service/migrations"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
