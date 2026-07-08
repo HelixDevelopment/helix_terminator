@@ -38,12 +38,17 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	perms := req.Permissions
+	if perms == nil {
+		perms = []string{}
+	}
+
 	user := &model.User{
 		ID:            uuid.New().String(),
 		Email:         req.Email,
 		DisplayName:   req.DisplayName,
 		Role:          req.Role,
-		Permissions:   req.Permissions,
+		Permissions:   perms,
 		OrgID:         req.OrgID,
 		EmailVerified: false,
 	}
