@@ -149,11 +149,68 @@ func TestMarkRead(t *testing.T) {
 	}
 
 	require.NoError(t, repo.CreateNotification(ctx, notification))
-	require.NoError(t, repo.MarkRead(ctx, notification.ID))
+	require.NoError(t, repo.MarkRead(ctx, notification.ID, userID))
 
 	retrieved, err := repo.GetNotificationByID(ctx, notification.ID)
 	require.NoError(t, err)
 	assert.NotNil(t, retrieved.ReadAt)
+}
+
+// TestMarkRead_CrossUserMutationAffectsZeroRows is the repository-level
+// SQL-scoping proof for the T18 follow-up (Constitution §11.4.134
+// independent-review finding): MarkRead's UPDATE filters on BOTH id AND
+// user_id, so a caller whose userID does not own the target row can
+// NEVER flip read_at on it — even calling the repository method
+// directly (bypassing the handler's fetch-then-compare entirely)
+// affects ZERO rows. Against the pre-fix SQL (`WHERE id = $1` only) this
+// exact call would have affected 1 row and silently marked the OTHER
+// user's notification read — that pre-fix failure is the RED baseline
+// captured for this fix (Constitution §11.4.115): temporarily reverting
+// the WHERE clause to `WHERE id = $1` and re-running this test
+// reproduces the defect (the assert.Error below fails because the
+// mismatched-user call succeeds and read_at flips); restoring the
+// `AND user_id = $2` clause makes it GREEN again.
+func TestMarkRead_CrossUserMutationAffectsZeroRows(t *testing.T) {
+	repo := setupTestDB(t)
+	ctx := context.Background()
+
+	owner := uuid.New()
+	attacker := uuid.New()
+	notification := &model.Notification{
+		ID:        uuid.New(),
+		UserID:    owner,
+		Type:      "info",
+		Title:     "Test",
+		Message:   "Test",
+		Channel:   "in_app",
+		Status:    "pending",
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+	require.NoError(t, repo.CreateNotification(ctx, notification))
+
+	// The attacker's userID does not own this notification — the SQL-level
+	// scope MUST reject the mutation with zero rows affected (surfaced as
+	// "notification not found"), never silently succeed against the wrong
+	// user's row.
+	err := repo.MarkRead(ctx, notification.ID, attacker)
+	require.Error(t, err, "MarkRead with a mismatched userID must fail — affecting 1 row here would be the T18 IDOR regression")
+	assert.Contains(t, err.Error(), "notification not found")
+
+	// Positive control: read_at MUST remain untouched — proving the
+	// rejected call above genuinely affected zero rows, not merely that
+	// the error string happened to match.
+	retrieved, err := repo.GetNotificationByID(ctx, notification.ID)
+	require.NoError(t, err)
+	assert.Nil(t, retrieved.ReadAt, "attacker's cross-user MarkRead call must not have flipped read_at")
+
+	// Sanity: the real owner's MarkRead call still succeeds against the
+	// SAME row — proves the fix scopes correctly, not that it locks
+	// everyone out.
+	require.NoError(t, repo.MarkRead(ctx, notification.ID, owner))
+	retrieved, err = repo.GetNotificationByID(ctx, notification.ID)
+	require.NoError(t, err)
+	assert.NotNil(t, retrieved.ReadAt, "the owning user's MarkRead call must still succeed")
 }
 
 func TestMarkAllRead(t *testing.T) {
@@ -201,10 +258,55 @@ func TestDeleteNotification(t *testing.T) {
 	}
 
 	require.NoError(t, repo.CreateNotification(ctx, notification))
-	require.NoError(t, repo.DeleteNotification(ctx, notification.ID))
+	require.NoError(t, repo.DeleteNotification(ctx, notification.ID, userID))
 
 	_, err := repo.GetNotificationByID(ctx, notification.ID)
 	assert.Error(t, err)
+}
+
+// TestDeleteNotification_CrossUserMutationAffectsZeroRows is the
+// repository-level SQL-scoping proof for DeleteNotification, mirroring
+// TestMarkRead_CrossUserMutationAffectsZeroRows above. Against the
+// pre-fix SQL (`DELETE FROM notifications WHERE id = $1` only) this
+// exact call would have affected 1 row and silently deleted the OTHER
+// user's notification — that pre-fix failure is the RED baseline
+// captured for this fix (Constitution §11.4.115): temporarily reverting
+// the WHERE clause to `WHERE id = $1` and re-running this test
+// reproduces the defect (the row disappears for the mismatched-user
+// call); restoring the `AND user_id = $2` clause makes it GREEN again.
+func TestDeleteNotification_CrossUserMutationAffectsZeroRows(t *testing.T) {
+	repo := setupTestDB(t)
+	ctx := context.Background()
+
+	owner := uuid.New()
+	attacker := uuid.New()
+	notification := &model.Notification{
+		ID:        uuid.New(),
+		UserID:    owner,
+		Type:      "info",
+		Title:     "Test",
+		Message:   "Test",
+		Channel:   "in_app",
+		Status:    "pending",
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+	require.NoError(t, repo.CreateNotification(ctx, notification))
+
+	err := repo.DeleteNotification(ctx, notification.ID, attacker)
+	require.Error(t, err, "DeleteNotification with a mismatched userID must fail — affecting 1 row here would be the T18 IDOR regression")
+	assert.Contains(t, err.Error(), "notification not found")
+
+	// Positive control: the row MUST still exist — proving the rejected
+	// call above genuinely affected zero rows.
+	_, err = repo.GetNotificationByID(ctx, notification.ID)
+	require.NoError(t, err, "attacker's cross-user DeleteNotification call must not have deleted the row")
+
+	// Sanity: the real owner's DeleteNotification call still succeeds
+	// against the SAME row.
+	require.NoError(t, repo.DeleteNotification(ctx, notification.ID, owner))
+	_, err = repo.GetNotificationByID(ctx, notification.ID)
+	assert.Error(t, err, "the owning user's DeleteNotification call must still succeed")
 }
 
 func TestPreference(t *testing.T) {

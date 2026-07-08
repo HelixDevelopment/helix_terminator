@@ -181,20 +181,36 @@ func (r *Repository) ListNotifications(ctx context.Context, userID uuid.UUID, or
 	return notifications, total, nil
 }
 
-// MarkRead marks a notification as read
-func (r *Repository) MarkRead(ctx context.Context, id uuid.UUID) error {
+// MarkRead marks a notification as read, scoped to the owning user (T18
+// follow-up, Constitution §11.4.134 independent-review finding). The
+// handler already does a fetch-then-compare ownership check before
+// calling this method, but that check and this mutation are two
+// separate statements — a defense-in-depth backstop belongs at the SQL
+// layer too, mirroring billing-service's T12/T14 UpdateSubscription /
+// CancelSubscription pattern (WHERE id = $1 AND org_id = $2). The WHERE
+// clause here filters on BOTH id AND user_id so the UPDATE itself can
+// NEVER affect a row belonging to a different user, even if the
+// handler-level check were ever bypassed, raced (TOCTOU), or removed by
+// a future refactor. A mismatch (row exists but belongs to a different
+// user, or the row does not exist at all) produces the identical
+// zero-rows-affected outcome, so the caller can return the same
+// "notification not found" response either way — no existence oracle.
+func (r *Repository) MarkRead(ctx context.Context, id, userID uuid.UUID) error {
 	if err := r.checkPool(); err != nil {
 		return err
 	}
 	query := `
 		UPDATE notifications
-		SET read_at = $2, updated_at = $3
-		WHERE id = $1
+		SET read_at = $3, updated_at = $4
+		WHERE id = $1 AND user_id = $2
 	`
 	now := time.Now().UTC()
-	_, err := r.pool.Exec(ctx, query, id, now, now)
+	result, err := r.pool.Exec(ctx, query, id, userID, now, now)
 	if err != nil {
 		return fmt.Errorf("failed to mark notification as read: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("notification not found")
 	}
 	return nil
 }
@@ -217,15 +233,20 @@ func (r *Repository) MarkAllRead(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }
 
-// DeleteNotification deletes a notification by ID
-func (r *Repository) DeleteNotification(ctx context.Context, id uuid.UUID) error {
+// DeleteNotification deletes a notification by ID, scoped to the owning
+// user — same defense-in-depth rationale and billing-service T12/T14
+// mirroring as MarkRead above.
+func (r *Repository) DeleteNotification(ctx context.Context, id, userID uuid.UUID) error {
 	if err := r.checkPool(); err != nil {
 		return err
 	}
-	query := `DELETE FROM notifications WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id)
+	query := `DELETE FROM notifications WHERE id = $1 AND user_id = $2`
+	result, err := r.pool.Exec(ctx, query, id, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete notification: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("notification not found")
 	}
 	return nil
 }

@@ -356,7 +356,16 @@ func (h *Handler) MarkRead(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.MarkRead(c.Request.Context(), id); err != nil {
+	// T18 follow-up (Constitution §11.4.134 review finding): the repo
+	// mutation ALSO scopes WHERE id = $1 AND user_id = $2 (defense in
+	// depth on top of the fetch-then-compare above) — a mismatch here
+	// mirrors the same "notification not found" the fetch-then-compare
+	// check above would have already produced, never a distinct status.
+	if err := h.repo.MarkRead(c.Request.Context(), id, callerID); err != nil {
+		if err.Error() == "notification not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
 	}
@@ -409,7 +418,13 @@ func (h *Handler) DeleteNotification(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.DeleteNotification(c.Request.Context(), id); err != nil {
+	// T18 follow-up (Constitution §11.4.134 review finding): defense in
+	// depth, same rationale as MarkRead above.
+	if err := h.repo.DeleteNotification(c.Request.Context(), id, callerID); err != nil {
+		if err.Error() == "notification not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 		return
 	}
