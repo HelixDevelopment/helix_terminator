@@ -17,7 +17,6 @@ package handler_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,7 +26,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/helixdevelopment/analytics-service/internal/handler"
-	"github.com/helixdevelopment/analytics-service/internal/model"
 	"github.com/helixdevelopment/analytics-service/internal/repository"
 	"github.com/helixdevelopment/analytics-service/internal/testutil"
 	"github.com/jackc/pgx/v5/pgxpool"
