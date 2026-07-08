@@ -490,6 +490,13 @@ func (h *Handler) UpdatePreference(c *gin.Context) {
 		return
 	}
 
+	// T24: when the client omits "types", the slice is nil/empty — the DB
+	// column is NOT NULL, so the upsert would fail with a constraint
+	// violation → 503. Default to ["all"] so a minimal request succeeds.
+	if len(req.Types) == 0 {
+		req.Types = []string{"all"}
+	}
+
 	pref := &model.NotificationPreference{
 		UserID:  userID,
 		Channel: req.Channel,
