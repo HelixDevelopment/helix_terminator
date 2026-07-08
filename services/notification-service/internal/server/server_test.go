@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -53,9 +54,23 @@ func TestHealthEndpoints(t *testing.T) {
 // --- Authorization (Constitution §11.4 security-hardening finding #3:
 // CreateNotification, and every other /api/v1/notifications route, MUST
 // reject unauthenticated callers — the real email/webhook sinks turned an
-// open endpoint into a potential spam / SSRF-amplification relay). These
-// mirror vault-service's authMiddleware test suite (same X-API-Key /
-// fail-closed / constant-time-compare pattern, project convention).
+// open endpoint into a potential spam / SSRF-amplification relay).
+//
+// T11 (this batch): the auth MECHANISM itself was replaced. It previously
+// demanded a literal "X-API-Key" header matching NOTIFICATION_SERVICE_API_KEY
+// — a header no real caller in the canonical request path (browser →
+// gateway-service → notification-service) ever sends, because
+// gateway-service's proxyTo forwards the caller's original signed
+// "Authorization: Bearer <Ed25519-JWT>" header untouched and never injects
+// an X-API-Key (services/gateway-service/internal/server/server.go:
+// 1133 `proxyReq.Header = c.Request.Header.Clone()`). Every real end-user
+// notification request routed through the gateway was therefore
+// unconditionally rejected pre-fix, regardless of how valid the caller's
+// auth-service-issued JWT was. The tests below (and the dedicated
+// server_jwt_auth_test.go, which additionally proves a real forwarded
+// gateway JWT is now accepted) now exercise the SAME canonical Ed25519
+// JWT_PUBLIC_KEY chain gateway-service/billing-service validate, mirroring
+// their authMiddleware test conventions.
 
 func createNotificationBody() []byte {
 	payload := map[string]interface{}{
@@ -69,8 +84,8 @@ func createNotificationBody() []byte {
 	return body
 }
 
-func TestAuthMiddleware_RejectsMissingAPIKey(t *testing.T) {
-	t.Setenv("NOTIFICATION_SERVICE_API_KEY", "test-service-key-12345")
+func TestAuthMiddleware_RejectsMissingBearerToken(t *testing.T) {
+	mustSetJWTPublicKey(t)
 	gin.SetMode(gin.TestMode)
 	srv, err := server.New(nil)
 	require.NoError(t, err)
@@ -81,11 +96,12 @@ func TestAuthMiddleware_RejectsMissingAPIKey(t *testing.T) {
 	srv.Router().ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusUnauthorized, w.Code, "body: %s", w.Body.String())
-	assert.Contains(t, w.Body.String(), "X-API-Key")
+	assert.Contains(t, w.Body.String(), "authorization")
 }
 
-func TestAuthMiddleware_RejectsWrongAPIKey(t *testing.T) {
-	t.Setenv("NOTIFICATION_SERVICE_API_KEY", "test-service-key-12345")
+func TestAuthMiddleware_RejectsTokenSignedByUntrustedKey(t *testing.T) {
+	sign := mustSetJWTPublicKey(t)
+	_ = sign // the server's trusted key is set; sign with a DIFFERENT key below
 	gin.SetMode(gin.TestMode)
 	srv, err := server.New(nil)
 	require.NoError(t, err)
@@ -93,14 +109,20 @@ func TestAuthMiddleware_RejectsWrongAPIKey(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/api/v1/notifications", bytes.NewReader(createNotificationBody()))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", "totally-wrong-key")
+	req.Header.Set("Authorization", "Bearer totally.wrong.token")
 	srv.Router().ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-func TestAuthMiddleware_FailsClosedWhenUnconfigured(t *testing.T) {
-	t.Setenv("NOTIFICATION_SERVICE_API_KEY", "")
+func TestAuthMiddleware_FailsClosedWhenJWTPublicKeyUnconfigured(t *testing.T) {
+	prevKey, hadPrevKey := os.LookupEnv("JWT_PUBLIC_KEY")
+	os.Unsetenv("JWT_PUBLIC_KEY")
+	t.Cleanup(func() {
+		if hadPrevKey {
+			os.Setenv("JWT_PUBLIC_KEY", prevKey)
+		}
+	})
 	gin.SetMode(gin.TestMode)
 	srv, err := server.New(nil)
 	require.NoError(t, err)
@@ -108,37 +130,39 @@ func TestAuthMiddleware_FailsClosedWhenUnconfigured(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/api/v1/notifications", bytes.NewReader(createNotificationBody()))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", "anything-at-all")
+	req.Header.Set("Authorization", "Bearer anything-at-all")
 	srv.Router().ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code,
-		"an unconfigured NOTIFICATION_SERVICE_API_KEY must fail closed, never fail open")
+		"an unconfigured JWT_PUBLIC_KEY must fail closed, never fail open")
 }
 
-func TestAuthMiddleware_AllowsCorrectAPIKeyThroughToHandler(t *testing.T) {
-	t.Setenv("NOTIFICATION_SERVICE_API_KEY", "test-service-key-12345")
+func TestAuthMiddleware_AllowsValidJWTThroughToHandler(t *testing.T) {
+	sign := mustSetJWTPublicKey(t)
 	gin.SetMode(gin.TestMode)
 	srv, err := server.New(nil)
 	require.NoError(t, err)
 
+	token := sign(uuid.New().String(), "")
+
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodPost, "/api/v1/notifications", bytes.NewReader(createNotificationBody()))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", "test-service-key-12345")
+	req.Header.Set("Authorization", "Bearer "+token)
 	srv.Router().ServeHTTP(w, req)
 
 	// No database is wired in this test (server.New(nil) with no
-	// DATABASE_URL), so the request correctly fails past auth with 503 —
-	// the key point is it is NOT 401/403: the correct API key let the
-	// request reach the handler.
+	// DATABASE_URL), so the request correctly falls past auth to the
+	// in-memory repository path — the key point is it is NOT 401/403: a
+	// valid, correctly-signed JWT let the request reach the handler.
 	assert.NotEqual(t, http.StatusUnauthorized, w.Code,
-		"a correct X-API-Key must not be rejected by the auth middleware")
+		"a valid JWT must not be rejected by the auth middleware; body: %s", w.Body.String())
 	assert.NotEqual(t, http.StatusForbidden, w.Code,
-		"a correct X-API-Key must not be rejected by the auth middleware")
+		"a valid JWT must not be rejected by the auth middleware; body: %s", w.Body.String())
 }
 
 func TestAuthMiddleware_AppliesToEveryNotificationRoute(t *testing.T) {
-	t.Setenv("NOTIFICATION_SERVICE_API_KEY", "test-service-key-12345")
+	mustSetJWTPublicKey(t)
 	gin.SetMode(gin.TestMode)
 	srv, err := server.New(nil)
 	require.NoError(t, err)
@@ -164,13 +188,13 @@ func TestAuthMiddleware_AppliesToEveryNotificationRoute(t *testing.T) {
 			req, _ := http.NewRequest(rt.method, rt.path, nil)
 			srv.Router().ServeHTTP(w, req)
 			assert.Equal(t, http.StatusUnauthorized, w.Code,
-				"%s %s must require X-API-Key like every other /api/v1/notifications route", rt.method, rt.path)
+				"%s %s must require a valid bearer JWT like every other /api/v1/notifications route", rt.method, rt.path)
 		})
 	}
 }
 
 func TestHealthEndpoints_NoAuthRequired(t *testing.T) {
-	t.Setenv("NOTIFICATION_SERVICE_API_KEY", "test-service-key-12345")
+	mustSetJWTPublicKey(t)
 	gin.SetMode(gin.TestMode)
 	srv, err := server.New(nil)
 	require.NoError(t, err)
@@ -179,7 +203,7 @@ func TestHealthEndpoints_NoAuthRequired(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest(http.MethodGet, path, nil)
 		srv.Router().ServeHTTP(w, req)
-		assert.NotEqual(t, http.StatusUnauthorized, w.Code, "%s must never require an API key", path)
+		assert.NotEqual(t, http.StatusUnauthorized, w.Code, "%s must never require auth", path)
 	}
 }
 
