@@ -244,4 +244,28 @@ func TestCreateRequest_LLMTimeout_ReturnsCleanGatewayTimeout(t *testing.T) {
 	if w.Code != http.StatusGatewayTimeout {
 		t.Fatalf("expected 504 Gateway Timeout on LLM deadline exceeded, got %d body=%s", w.Code, w.Body.String())
 	}
+
+	// Proof #3 (ai-Minor audit-persist coverage): CreateRequest's timeout branch
+	// ALSO best-effort persists a "failed" row for the audit trail before returning
+	// 504 (see handler.go's `if perr := h.repo.CreateRequest(...)` inside the
+	// context.DeadlineExceeded branch) — this specific persist-then-504 path had no
+	// prior test coverage; a regression here would silently drop the only
+	// operator-visible record that a timed-out request was ever attempted, while the
+	// caller-facing 504 response would look unchanged.
+	if len(repo.requests) != 1 {
+		t.Fatalf("expected exactly 1 persisted request after the timed-out CreateRequest call, got %d", len(repo.requests))
+	}
+	var persisted *model.AIRequest
+	for _, stored := range repo.requests {
+		persisted = stored
+	}
+	if persisted.Status != "failed" {
+		t.Fatalf("expected persisted row Status %q for the timed-out request (audit trail), got %q", "failed", persisted.Status)
+	}
+	if persisted.Response != "" {
+		t.Fatalf("expected empty Response persisted for the timed-out request, got fabricated content %q", persisted.Response)
+	}
+	if persisted.Prompt != body.Prompt {
+		t.Fatalf("persisted row does not carry the real request prompt: got %q, want %q", persisted.Prompt, body.Prompt)
+	}
 }
