@@ -48,17 +48,44 @@ func New(repo Repository) *Handler {
 const callerUserIDHeader = "X-User-ID"
 
 // CallerUserID extracts and parses the caller's authenticated tenant
-// identity from the X-User-ID header. Exported so server-layer middleware
-// (tenantIsolationMiddleware and the collection-route caller-identity
-// guard) share this exact parsing logic with the handlers that consume it,
-// rather than maintaining two independently-drifting implementations of
-// "what counts as a valid caller identity" (§11.4.124 reuse-don't-duplicate).
+// identity. It first checks the gin context (set by JWT auth middleware),
+// then falls back to the X-User-ID header for backward compatibility.
+// Exported so server-layer middleware and handlers share this exact
+// parsing logic (§11.4.124 reuse-don't-duplicate).
 func CallerUserID(c *gin.Context) (uuid.UUID, bool) {
+	// T20: Prefer JWT context over spoofable header.
+	if ctxVal, exists := c.Get("userID"); exists {
+		if id, ok := ctxVal.(uuid.UUID); ok && id != uuid.Nil {
+			return id, true
+		}
+		if idStr, ok := ctxVal.(string); ok {
+			if id, err := uuid.Parse(idStr); err == nil {
+				return id, true
+			}
+		}
+	}
+	// Fallback to header for backward compatibility.
 	id, err := uuid.Parse(c.GetHeader(callerUserIDHeader))
 	if err != nil {
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+// CallerOrgID extracts and parses the caller's authenticated organization
+// identity from the gin context (set by JWT auth middleware).
+func CallerOrgID(c *gin.Context) (uuid.UUID, bool) {
+	if ctxVal, exists := c.Get("orgID"); exists {
+		if id, ok := ctxVal.(uuid.UUID); ok && id != uuid.Nil {
+			return id, true
+		}
+		if idStr, ok := ctxVal.(string); ok {
+			if id, err := uuid.Parse(idStr); err == nil && id != uuid.Nil {
+				return id, true
+			}
+		}
+	}
+	return uuid.Nil, false
 }
 
 // CreateSecret handles POST /api/v1/vault/secrets.
@@ -70,6 +97,11 @@ func CallerUserID(c *gin.Context) (uuid.UUID, bool) {
 // (safer than silently overriding it, per the same-object convention used
 // elsewhere in this service).
 func (h *Handler) CreateSecret(c *gin.Context) {
+	// T22: nil-repo guard
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "repository not initialized"})
+		return
+	}
 	callerID, ok := CallerUserID(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-User-ID"})
@@ -112,6 +144,11 @@ func (h *Handler) CreateSecret(c *gin.Context) {
 
 // GetSecret handles GET /api/v1/vault/secrets/:id.
 func (h *Handler) GetSecret(c *gin.Context) {
+	// T22: nil-repo guard
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "repository not initialized"})
+		return
+	}
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -138,6 +175,11 @@ func (h *Handler) GetSecret(c *gin.Context) {
 // user_id query param is now permitted ONLY when it equals the caller's
 // own identity (redundant no-op); any other value is rejected outright.
 func (h *Handler) ListSecrets(c *gin.Context) {
+	// T22: nil-repo guard
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "repository not initialized"})
+		return
+	}
 	callerID, ok := CallerUserID(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing or invalid X-User-ID"})
@@ -195,6 +237,11 @@ func (h *Handler) ListSecrets(c *gin.Context) {
 
 // UpdateSecret handles PUT /api/v1/vault/secrets/:id.
 func (h *Handler) UpdateSecret(c *gin.Context) {
+	// T22: nil-repo guard
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "repository not initialized"})
+		return
+	}
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -244,6 +291,11 @@ func (h *Handler) UpdateSecret(c *gin.Context) {
 
 // DeleteSecret handles DELETE /api/v1/vault/secrets/:id.
 func (h *Handler) DeleteSecret(c *gin.Context) {
+	// T22: nil-repo guard
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "repository not initialized"})
+		return
+	}
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -261,6 +313,11 @@ func (h *Handler) DeleteSecret(c *gin.Context) {
 
 // GetSecretVersions handles GET /api/v1/vault/secrets/:id/versions.
 func (h *Handler) GetSecretVersions(c *gin.Context) {
+	// T22: nil-repo guard
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "repository not initialized"})
+		return
+	}
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -288,6 +345,11 @@ func (h *Handler) GetSecretVersions(c *gin.Context) {
 
 // RotateSecret handles POST /api/v1/vault/secrets/:id/rotate.
 func (h *Handler) RotateSecret(c *gin.Context) {
+	// T22: nil-repo guard
+	if h.repo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "repository not initialized"})
+		return
+	}
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {

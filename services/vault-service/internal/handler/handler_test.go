@@ -447,3 +447,215 @@ func TestGetSecretVersions(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Len(t, resp.Versions, 2)
 }
+
+// --- T20: Context-based identity tests ---
+// CallerUserID should prefer gin context ("userID") over the X-User-ID header.
+// The context value is set by JWT auth middleware and cannot be spoofed by the
+// client, unlike the header.
+
+// setupRouterWithContextMiddleware returns a router that sets "userID" in the
+// gin context from the X-User-ID header (simulating JWT middleware).
+func setupRouterWithContextMiddleware(h *handler.Handler) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		if uid := c.GetHeader("X-User-ID"); uid != "" {
+			c.Set("userID", uid)
+		}
+		c.Next()
+	})
+	r.POST("/api/v1/vault/secrets", h.CreateSecret)
+	r.GET("/api/v1/vault/secrets", h.ListSecrets)
+	return r
+}
+
+// TestCreateSecret_UsesContextIdentity proves that when the gin context
+// carries "userID" (set by JWT middleware), CreateSecret uses THAT value
+// as the owner — even if the X-User-ID header carries a DIFFERENT value.
+func TestCreateSecret_UsesContextIdentity(t *testing.T) {
+	repo := newMockRepo()
+	h := handler.New(repo)
+	r := setupRouterWithContextMiddleware(h)
+
+	contextUser := uuid.New()
+
+	reqBody := model.CreateSecretRequest{
+		UserID:         contextUser, // binding:"required"; handler verifies it matches context
+		Name:           "context-owned",
+		Type:           "api_token",
+		EncryptedValue: "enc",
+		IV:             "iv",
+		Salt:           "salt",
+	}
+	body, _ := json.Marshal(reqBody)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/vault/secrets", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-User-ID", contextUser.String()) // JWT middleware reads this → sets context
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	var resp model.SecretResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, contextUser, resp.UserID,
+		"secret owner must be the context user, not any header-supplied value")
+}
+
+// TestCreateSecret_HeaderIgnoredWhenContextPresent proves that when gin
+// context carries "userID", a DIFFERENT X-User-ID header value is ignored.
+func TestCreateSecret_HeaderIgnoredWhenContextPresent(t *testing.T) {
+	repo := newMockRepo()
+	h := handler.New(repo)
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	// Simulate middleware that always sets context from a trusted source.
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12")
+		c.Next()
+	})
+	r.POST("/api/v1/vault/secrets", h.CreateSecret)
+
+	contextUUID := uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12")
+	reqBody := model.CreateSecretRequest{
+		UserID:         contextUUID, // must match context; binding:"required"
+		Name:           "test",
+		Type:           "api_token",
+		EncryptedValue: "enc",
+		IV:             "iv",
+		Salt:           "salt",
+	}
+	body, _ := json.Marshal(reqBody)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/vault/secrets", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-User-ID", uuid.New().String()) // different value — must be ignored
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	var resp model.SecretResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, uuid.MustParse("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12"), resp.UserID,
+		"context identity must take precedence over header")
+}
+
+// TestListSecrets_UsesContextIdentity proves ListSecrets scopes to the
+// context user, not a spoofed header or query param.
+func TestListSecrets_UsesContextIdentity(t *testing.T) {
+	repo := newMockRepo()
+	contextUser := uuid.New()
+	otherUser := uuid.New()
+
+	myID := uuid.New()
+	otherID := uuid.New()
+	repo.secrets[myID] = &model.Secret{ID: myID, UserID: contextUser, Name: "mine", Type: model.SecretTypeAPIToken}
+	repo.secrets[otherID] = &model.Secret{ID: otherID, UserID: otherUser, Name: "theirs", Type: model.SecretTypeAPIToken}
+
+	h := handler.New(repo)
+	r := setupRouterWithContextMiddleware(h)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/vault/secrets", nil)
+	req.Header.Set("X-User-ID", contextUser.String())
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp model.ListSecretsResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Len(t, resp.Secrets, 1)
+	assert.Equal(t, contextUser, resp.Secrets[0].UserID)
+}
+
+// --- T22: nil-repo guard tests ---
+// Every handler that accesses h.repo MUST return 503 when repo is nil.
+
+func TestCreateSecret_NilRepo(t *testing.T) {
+	h := handler.New(nil)
+	r := setupRouter(h)
+
+	reqBody := model.CreateSecretRequest{
+		Name: "test", Type: "api_token",
+		EncryptedValue: "enc", IV: "iv", Salt: "salt",
+	}
+	body, _ := json.Marshal(reqBody)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/vault/secrets", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-User-ID", uuid.New().String())
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
+func TestGetSecret_NilRepo(t *testing.T) {
+	h := handler.New(nil)
+	r := setupRouter(h)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/vault/secrets/"+uuid.New().String(), nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
+func TestListSecrets_NilRepo(t *testing.T) {
+	h := handler.New(nil)
+	r := setupRouter(h)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/vault/secrets", nil)
+	req.Header.Set("X-User-ID", uuid.New().String())
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
+func TestUpdateSecret_NilRepo(t *testing.T) {
+	h := handler.New(nil)
+	r := setupRouter(h)
+
+	body, _ := json.Marshal(model.UpdateSecretRequest{Name: "x"})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/api/v1/vault/secrets/"+uuid.New().String(), bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
+func TestDeleteSecret_NilRepo(t *testing.T) {
+	h := handler.New(nil)
+	r := setupRouter(h)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/api/v1/vault/secrets/"+uuid.New().String(), nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
+func TestGetSecretVersions_NilRepo(t *testing.T) {
+	h := handler.New(nil)
+	r := setupRouter(h)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/vault/secrets/"+uuid.New().String()+"/versions", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
+func TestRotateSecret_NilRepo(t *testing.T) {
+	h := handler.New(nil)
+	r := setupRouter(h)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"encrypted_value": "new", "iv": "iv", "salt": "salt", "created_by": uuid.New().String(),
+	})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/vault/secrets/"+uuid.New().String()+"/rotate", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+}

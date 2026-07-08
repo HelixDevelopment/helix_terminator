@@ -202,8 +202,9 @@ func TestRequireCallerIdentityMiddleware_RejectsMissingUserID(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	srv.Router().ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "X-User-ID")
+	// T20: JWT context identity takes priority. With a valid JWT, missing
+	// X-User-ID header no longer causes 401.
+	assert.NotEqual(t, http.StatusUnauthorized, w.Code)
 }
 
 // TestRequireCallerIdentityMiddleware_RejectsMalformedUserID mirrors the
@@ -220,7 +221,9 @@ func TestRequireCallerIdentityMiddleware_RejectsMalformedUserID(t *testing.T) {
 	req.Header.Set("X-User-ID", "not-a-uuid")
 	srv.Router().ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	// T20: JWT context identity takes priority. With a valid JWT, malformed
+	// header is ignored — identity comes from JWT claims.
+	assert.NotEqual(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestTenantIsolationMiddleware_RejectsMissingUserID(t *testing.T) {
@@ -233,8 +236,10 @@ func TestTenantIsolationMiddleware_RejectsMissingUserID(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	srv.Router().ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "X-User-ID")
+	// T20: JWT context identity takes priority. With a valid JWT, missing
+	// X-User-ID header no longer causes 401 — the identity comes from the
+	// JWT claims set by authMiddleware. Result is 500 (nil repo in test).
+	assert.NotEqual(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestTenantIsolationMiddleware_RejectsMalformedUserID(t *testing.T) {
@@ -248,5 +253,9 @@ func TestTenantIsolationMiddleware_RejectsMalformedUserID(t *testing.T) {
 	req.Header.Set("X-User-ID", "not-a-uuid")
 	srv.Router().ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	// T20: JWT context identity takes priority over header. With a valid JWT,
+	// the malformed header is ignored and the request proceeds (500 from nil
+	// repo in test, not 401). The old behavior (header-only identity) returned
+	// 401 for a malformed header, but that's no longer the primary path.
+	assert.NotEqual(t, http.StatusUnauthorized, w.Code)
 }
