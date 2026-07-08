@@ -16,14 +16,14 @@ const (
 
 // HelixTrackBridge represents a HelixTrack integration bridge
 type HelixTrackBridge struct {
-	ID            uuid.UUID  `json:"id" db:"id"`
-	IntegrationID string     `json:"integrationId" db:"integration_id"`
-	OrgID         uuid.UUID  `json:"orgId" db:"org_id"`
-	Name          string     `json:"name" db:"name"`
-	Status        string     `json:"status" db:"status"`
-	Config        []byte     `json:"config" db:"config"`
-	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt     time.Time  `json:"updatedAt" db:"updated_at"`
+	ID            uuid.UUID `json:"id" db:"id"`
+	IntegrationID string    `json:"integrationId" db:"integration_id"`
+	OrgID         uuid.UUID `json:"orgId" db:"org_id"`
+	Name          string    `json:"name" db:"name"`
+	Status        string    `json:"status" db:"status"`
+	Config        []byte    `json:"config" db:"config"`
+	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
 }
 
 // CreateHelixTrackBridgeRequest represents a request to create a bridge

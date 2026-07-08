@@ -10,35 +10,35 @@ import (
 type ConnectionStatus string
 
 const (
-	StatusConnecting    ConnectionStatus = "connecting"
-	StatusConnected     ConnectionStatus = "connected"
-	StatusDisconnected  ConnectionStatus = "disconnected"
-	StatusError         ConnectionStatus = "error"
+	StatusConnecting   ConnectionStatus = "connecting"
+	StatusConnected    ConnectionStatus = "connected"
+	StatusDisconnected ConnectionStatus = "disconnected"
+	StatusError        ConnectionStatus = "error"
 )
 
 // SSHSession represents an active or historical SSH terminal session.
 type SSHSession struct {
-	ID               uuid.UUID      `json:"id" db:"id"`
-	UserID           uuid.UUID      `json:"user_id" db:"user_id"`
-	HostID           uuid.UUID      `json:"host_id" db:"host_id"`
-	HostAddress      string         `json:"host_address" db:"host_address"`
-	Username         string         `json:"username" db:"username"`
-	AuthType         string         `json:"auth_type" db:"auth_type"`
+	ID               uuid.UUID        `json:"id" db:"id"`
+	UserID           uuid.UUID        `json:"user_id" db:"user_id"`
+	HostID           uuid.UUID        `json:"host_id" db:"host_id"`
+	HostAddress      string           `json:"host_address" db:"host_address"`
+	Username         string           `json:"username" db:"username"`
+	AuthType         string           `json:"auth_type" db:"auth_type"`
 	ConnectionStatus ConnectionStatus `json:"connection_status" db:"connection_status"`
-	ConnectedAt      *time.Time     `json:"connected_at,omitempty" db:"connected_at"`
-	DisconnectedAt   *time.Time     `json:"disconnected_at,omitempty" db:"disconnected_at"`
-	LastActivityAt   *time.Time     `json:"last_activity_at,omitempty" db:"last_activity_at"`
-	CreatedAt        time.Time      `json:"created_at" db:"created_at"`
+	ConnectedAt      *time.Time       `json:"connected_at,omitempty" db:"connected_at"`
+	DisconnectedAt   *time.Time       `json:"disconnected_at,omitempty" db:"disconnected_at"`
+	LastActivityAt   *time.Time       `json:"last_activity_at,omitempty" db:"last_activity_at"`
+	CreatedAt        time.Time        `json:"created_at" db:"created_at"`
 }
 
 // SSHChannel represents an SSH channel opened within a session.
 type SSHChannel struct {
-	ID          uuid.UUID  `json:"id" db:"id"`
-	SessionID   uuid.UUID  `json:"session_id" db:"session_id"`
-	ChannelType string     `json:"channel_type" db:"channel_type"`
-	LocalPort   *int       `json:"local_port,omitempty" db:"local_port"`
-	RemotePort  *int       `json:"remote_port,omitempty" db:"remote_port"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	SessionID   uuid.UUID `json:"session_id" db:"session_id"`
+	ChannelType string    `json:"channel_type" db:"channel_type"`
+	LocalPort   *int      `json:"local_port,omitempty" db:"local_port"`
+	RemotePort  *int      `json:"remote_port,omitempty" db:"remote_port"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 }
 
 // CreateSSHSessionRequest is the payload to initiate a new SSH session.
@@ -53,17 +53,17 @@ type CreateSSHSessionRequest struct {
 
 // SSHSessionResponse is the API representation of an SSH session.
 type SSHSessionResponse struct {
-	ID               uuid.UUID      `json:"id"`
-	UserID           uuid.UUID      `json:"user_id"`
-	HostID           uuid.UUID      `json:"host_id"`
-	HostAddress      string         `json:"host_address"`
-	Username         string         `json:"username"`
-	AuthType         string         `json:"auth_type"`
+	ID               uuid.UUID        `json:"id"`
+	UserID           uuid.UUID        `json:"user_id"`
+	HostID           uuid.UUID        `json:"host_id"`
+	HostAddress      string           `json:"host_address"`
+	Username         string           `json:"username"`
+	AuthType         string           `json:"auth_type"`
 	ConnectionStatus ConnectionStatus `json:"connection_status"`
-	ConnectedAt      *time.Time     `json:"connected_at,omitempty"`
-	DisconnectedAt   *time.Time     `json:"disconnected_at,omitempty"`
-	LastActivityAt   *time.Time     `json:"last_activity_at,omitempty"`
-	CreatedAt        time.Time      `json:"created_at"`
+	ConnectedAt      *time.Time       `json:"connected_at,omitempty"`
+	DisconnectedAt   *time.Time       `json:"disconnected_at,omitempty"`
+	LastActivityAt   *time.Time       `json:"last_activity_at,omitempty"`
+	CreatedAt        time.Time        `json:"created_at"`
 }
 
 // ListSSHSessionsRequest carries pagination parameters.

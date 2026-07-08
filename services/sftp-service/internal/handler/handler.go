@@ -36,9 +36,9 @@ func (h *Handler) CreateSession(c *gin.Context) {
 	userIDStr := c.GetString("user_id")
 	userID, _ := uuid.Parse(userIDStr)
 	session := &model.SFTPSession{
-		ID:        uuid.New(),
-		HostID:    hostID,
-		UserID:    userID,
+		ID:         uuid.New(),
+		HostID:     hostID,
+		UserID:     userID,
 		RemotePath: req.RemotePath,
 		LocalPath:  req.LocalPath,
 		Direction:  req.Direction,

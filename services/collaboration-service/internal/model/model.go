@@ -14,16 +14,16 @@ const (
 
 // CollaborationSession represents a shared collaboration session
 type CollaborationSession struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	HostID      uuid.UUID `json:"hostId" db:"host_id"`
-	CreatedBy   uuid.UUID `json:"createdBy" db:"created_by"`
-	OrgID       *uuid.UUID `json:"orgId,omitempty" db:"org_id"`
-	Name        string    `json:"name" db:"name"`
-	Status      string    `json:"status" db:"status"`
+	ID           uuid.UUID   `json:"id" db:"id"`
+	HostID       uuid.UUID   `json:"hostId" db:"host_id"`
+	CreatedBy    uuid.UUID   `json:"createdBy" db:"created_by"`
+	OrgID        *uuid.UUID  `json:"orgId,omitempty" db:"org_id"`
+	Name         string      `json:"name" db:"name"`
+	Status       string      `json:"status" db:"status"`
 	Participants []uuid.UUID `json:"participants" db:"participants"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
-	EndedAt     *time.Time `json:"endedAt,omitempty" db:"ended_at"`
+	CreatedAt    time.Time   `json:"createdAt" db:"created_at"`
+	UpdatedAt    time.Time   `json:"updatedAt" db:"updated_at"`
+	EndedAt      *time.Time  `json:"endedAt,omitempty" db:"ended_at"`
 }
 
 // CreateCollaborationSessionRequest represents a request to create a session

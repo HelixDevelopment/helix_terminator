@@ -43,14 +43,14 @@ type CreateUserRequest struct {
 
 // UpdateUserRequest represents a request to update a user
 type UpdateUserRequest struct {
-	DisplayName *string   `json:"displayName,omitempty"`
-	AvatarURL   *string   `json:"avatarUrl,omitempty"`
-	Role        *string   `json:"role,omitempty" binding:"omitempty,oneof=user admin superadmin"`
-	Permissions []string  `json:"permissions,omitempty"`
-	OrgID       *string   `json:"orgId,omitempty"`
-	Bio         *string   `json:"bio,omitempty"`
-	Timezone    *string   `json:"timezone,omitempty"`
-	Locale      *string   `json:"locale,omitempty"`
+	DisplayName *string  `json:"displayName,omitempty"`
+	AvatarURL   *string  `json:"avatarUrl,omitempty"`
+	Role        *string  `json:"role,omitempty" binding:"omitempty,oneof=user admin superadmin"`
+	Permissions []string `json:"permissions,omitempty"`
+	OrgID       *string  `json:"orgId,omitempty"`
+	Bio         *string  `json:"bio,omitempty"`
+	Timezone    *string  `json:"timezone,omitempty"`
+	Locale      *string  `json:"locale,omitempty"`
 }
 
 // ListUsersRequest represents a request to list users

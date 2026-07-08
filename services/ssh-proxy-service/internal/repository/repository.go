@@ -184,9 +184,9 @@ func (r *PostgresRepository) ListChannels(ctx context.Context, sessionID uuid.UU
 
 // InMemoryRepository is an in-memory implementation of Repository for testing.
 type InMemoryRepository struct {
-	mu        sync.RWMutex
-	sessions  map[uuid.UUID]*model.SSHSession
-	channels  map[uuid.UUID]*model.SSHChannel
+	mu       sync.RWMutex
+	sessions map[uuid.UUID]*model.SSHSession
+	channels map[uuid.UUID]*model.SSHChannel
 }
 
 func (r *InMemoryRepository) Ping(ctx context.Context) error {

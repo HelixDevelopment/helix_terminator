@@ -3,9 +3,9 @@ package server_test
 import (
 	"testing"
 
+	"github.com/helixdevelopment/org-service/internal/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/helixdevelopment/org-service/internal/server"
 )
 
 func TestNew(t *testing.T) {

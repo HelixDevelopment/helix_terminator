@@ -16,9 +16,9 @@ const DefaultTimeout = 5 * time.Second
 
 // HealthChecker performs health checks on configured services.
 type HealthChecker struct {
-	client   *http.Client
+	client    *http.Client
 	endpoints map[string]string
-	timeout  time.Duration
+	timeout   time.Duration
 }
 
 // New creates a new HealthChecker with the given service endpoints.

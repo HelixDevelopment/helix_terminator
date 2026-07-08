@@ -8,19 +8,19 @@ import (
 
 // AIRequest represents a request to the AI service
 type AIRequest struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	UserID    uuid.UUID `json:"userId" db:"user_id"`
-	OrgID     *uuid.UUID `json:"orgId,omitempty" db:"org_id"`
-	Prompt    string    `json:"prompt" db:"prompt"`
-	Context   string    `json:"context,omitempty" db:"context"`
-	Model     string    `json:"model" db:"model"`
-	MaxTokens int       `json:"maxTokens" db:"max_tokens"`
-	Temperature float64 `json:"temperature" db:"temperature"`
-	Status    string    `json:"status" db:"status"`
-	Response  string    `json:"response,omitempty" db:"response"`
-	TokensUsed int      `json:"tokensUsed,omitempty" db:"tokens_used"`
-	CreatedAt time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	UserID      uuid.UUID  `json:"userId" db:"user_id"`
+	OrgID       *uuid.UUID `json:"orgId,omitempty" db:"org_id"`
+	Prompt      string     `json:"prompt" db:"prompt"`
+	Context     string     `json:"context,omitempty" db:"context"`
+	Model       string     `json:"model" db:"model"`
+	MaxTokens   int        `json:"maxTokens" db:"max_tokens"`
+	Temperature float64    `json:"temperature" db:"temperature"`
+	Status      string     `json:"status" db:"status"`
+	Response    string     `json:"response,omitempty" db:"response"`
+	TokensUsed  int        `json:"tokensUsed,omitempty" db:"tokens_used"`
+	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // CreateAIRequest represents a request to create an AI prompt
@@ -34,15 +34,15 @@ type CreateAIRequest struct {
 
 // AIResponse is the API response for an AI request
 type AIResponse struct {
-	ID         uuid.UUID `json:"id"`
-	UserID     uuid.UUID `json:"userId"`
+	ID         uuid.UUID  `json:"id"`
+	UserID     uuid.UUID  `json:"userId"`
 	OrgID      *uuid.UUID `json:"orgId,omitempty"`
-	Prompt     string    `json:"prompt"`
-	Response   string    `json:"response,omitempty"`
-	Model      string    `json:"model"`
-	TokensUsed int       `json:"tokensUsed,omitempty"`
-	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"createdAt"`
+	Prompt     string     `json:"prompt"`
+	Response   string     `json:"response,omitempty"`
+	Model      string     `json:"model"`
+	TokensUsed int        `json:"tokensUsed,omitempty"`
+	Status     string     `json:"status"`
+	CreatedAt  time.Time  `json:"createdAt"`
 }
 
 // ListAIRequestsResponse is the API response for listing AI requests

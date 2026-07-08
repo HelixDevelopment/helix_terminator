@@ -8,11 +8,11 @@ import (
 
 // SFTPSessionStatus constants
 const (
-	SFTPSessionStatusPending    = "pending"
-	SFTPSessionStatusActive     = "active"
-	SFTPSessionStatusCompleted  = "completed"
-	SFTPSessionStatusFailed     = "failed"
-	SFTPSessionStatusCancelled  = "cancelled"
+	SFTPSessionStatusPending   = "pending"
+	SFTPSessionStatusActive    = "active"
+	SFTPSessionStatusCompleted = "completed"
+	SFTPSessionStatusFailed    = "failed"
+	SFTPSessionStatusCancelled = "cancelled"
 )
 
 // SFTPDirection constants

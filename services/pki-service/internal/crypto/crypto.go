@@ -65,12 +65,12 @@ func CreateCACertificate(privPEM, subject string, validityDays int) (certPEM str
 	}
 
 	template := &x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject:      parseSubject(subject),
-		NotBefore:    time.Now().UTC(),
-		NotAfter:     time.Now().UTC().Add(time.Duration(validityDays) * 24 * time.Hour),
-		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		SerialNumber:          serialNumber,
+		Subject:               parseSubject(subject),
+		NotBefore:             time.Now().UTC(),
+		NotAfter:              time.Now().UTC().Add(time.Duration(validityDays) * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}

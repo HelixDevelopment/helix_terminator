@@ -44,17 +44,17 @@ type UpdateSnippetRequest struct {
 
 // SnippetResponse is the API response
 type SnippetResponse struct {
-	ID          uuid.UUID `json:"id"`
+	ID          uuid.UUID  `json:"id"`
 	OrgID       *uuid.UUID `json:"orgId,omitempty"`
-	CreatedBy   uuid.UUID `json:"createdBy"`
-	Name        string    `json:"name"`
-	Content     string    `json:"content"`
-	Language    string    `json:"language"`
-	Tags        []string  `json:"tags"`
-	Description string    `json:"description"`
-	IsPublic    bool      `json:"isPublic"`
-	UsageCount  int       `json:"usageCount"`
-	CreatedAt   time.Time `json:"createdAt"`
+	CreatedBy   uuid.UUID  `json:"createdBy"`
+	Name        string     `json:"name"`
+	Content     string     `json:"content"`
+	Language    string     `json:"language"`
+	Tags        []string   `json:"tags"`
+	Description string     `json:"description"`
+	IsPublic    bool       `json:"isPublic"`
+	UsageCount  int        `json:"usageCount"`
+	CreatedAt   time.Time  `json:"createdAt"`
 }
 
 // ListSnippetsResponse is the API response for listing

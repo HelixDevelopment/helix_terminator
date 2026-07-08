@@ -30,19 +30,19 @@ func ValidSecretTypes() []string {
 
 // Secret represents an encrypted secret stored in the vault.
 type Secret struct {
-	ID             uuid.UUID       `json:"id" db:"id"`
-	UserID         uuid.UUID       `json:"user_id" db:"user_id"`
-	OrgID          uuid.UUID       `json:"org_id,omitempty" db:"org_id"`
-	Name           string          `json:"name" db:"name"`
-	Type           SecretType      `json:"type" db:"type"`
-	EncryptedValue string          `json:"-" db:"encrypted_value"`
-	IV             string          `json:"-" db:"iv"`
-	Salt           string          `json:"-" db:"salt"`
-	Metadata       map[string]any  `json:"metadata,omitempty" db:"metadata"`
-	Tags           []string        `json:"tags,omitempty" db:"tags"`
-	CreatedAt      time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at" db:"updated_at"`
-	DeletedAt      *time.Time      `json:"-" db:"deleted_at"`
+	ID             uuid.UUID      `json:"id" db:"id"`
+	UserID         uuid.UUID      `json:"user_id" db:"user_id"`
+	OrgID          uuid.UUID      `json:"org_id,omitempty" db:"org_id"`
+	Name           string         `json:"name" db:"name"`
+	Type           SecretType     `json:"type" db:"type"`
+	EncryptedValue string         `json:"-" db:"encrypted_value"`
+	IV             string         `json:"-" db:"iv"`
+	Salt           string         `json:"-" db:"salt"`
+	Metadata       map[string]any `json:"metadata,omitempty" db:"metadata"`
+	Tags           []string       `json:"tags,omitempty" db:"tags"`
+	CreatedAt      time.Time      `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at" db:"updated_at"`
+	DeletedAt      *time.Time     `json:"-" db:"deleted_at"`
 }
 
 // SecretVersion represents a historical version of a secret.

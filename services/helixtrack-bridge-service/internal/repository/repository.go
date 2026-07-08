@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/helixtrack-bridge-service/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/helixdevelopment/helixtrack-bridge-service/internal/model"
 )
 
 // Repository handles HelixTrack-bridge data access

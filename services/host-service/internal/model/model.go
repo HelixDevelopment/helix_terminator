@@ -20,31 +20,31 @@ const (
 type ConnectionStatus string
 
 const (
-	StatusUnknown  ConnectionStatus = "unknown"
-	StatusOnline   ConnectionStatus = "online"
-	StatusOffline  ConnectionStatus = "offline"
-	StatusError    ConnectionStatus = "error"
+	StatusUnknown ConnectionStatus = "unknown"
+	StatusOnline  ConnectionStatus = "online"
+	StatusOffline ConnectionStatus = "offline"
+	StatusError   ConnectionStatus = "error"
 )
 
 // Host represents an SSH host managed by the platform.
 type Host struct {
-	ID               uuid.UUID        `json:"id" db:"id"`
-	UserID           uuid.UUID        `json:"user_id" db:"user_id"`
-	OrgID            uuid.UUID        `json:"org_id" db:"org_id"`
-	Name             string           `json:"name" db:"name"`
-	Hostname         string           `json:"hostname" db:"hostname"`
-	Port             int              `json:"port" db:"port"`
-	Username         string           `json:"username" db:"username"`
-	AuthType         AuthType         `json:"auth_type" db:"auth_type"`
-	VaultSecretID    *uuid.UUID       `json:"vault_secret_id,omitempty" db:"vault_secret_id"`
+	ID               uuid.UUID              `json:"id" db:"id"`
+	UserID           uuid.UUID              `json:"user_id" db:"user_id"`
+	OrgID            uuid.UUID              `json:"org_id" db:"org_id"`
+	Name             string                 `json:"name" db:"name"`
+	Hostname         string                 `json:"hostname" db:"hostname"`
+	Port             int                    `json:"port" db:"port"`
+	Username         string                 `json:"username" db:"username"`
+	AuthType         AuthType               `json:"auth_type" db:"auth_type"`
+	VaultSecretID    *uuid.UUID             `json:"vault_secret_id,omitempty" db:"vault_secret_id"`
 	ConnectionParams map[string]interface{} `json:"connection_params,omitempty" db:"connection_params"`
-	Tags             []string         `json:"tags,omitempty" db:"tags"`
-	LastConnectedAt  *time.Time       `json:"last_connected_at,omitempty" db:"last_connected_at"`
-	ConnectionStatus ConnectionStatus `json:"connection_status" db:"connection_status"`
-	LastError        string           `json:"last_error,omitempty" db:"last_error"`
-	CreatedAt        time.Time        `json:"created_at" db:"created_at"`
-	UpdatedAt        time.Time        `json:"updated_at" db:"updated_at"`
-	DeletedAt        *time.Time       `json:"-" db:"deleted_at"`
+	Tags             []string               `json:"tags,omitempty" db:"tags"`
+	LastConnectedAt  *time.Time             `json:"last_connected_at,omitempty" db:"last_connected_at"`
+	ConnectionStatus ConnectionStatus       `json:"connection_status" db:"connection_status"`
+	LastError        string                 `json:"last_error,omitempty" db:"last_error"`
+	CreatedAt        time.Time              `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time              `json:"updated_at" db:"updated_at"`
+	DeletedAt        *time.Time             `json:"-" db:"deleted_at"`
 }
 
 // HostConnectionLog represents an event log for host connections.

@@ -15,11 +15,11 @@ const (
 
 // ServiceHealth represents the health status of a single service.
 type ServiceHealth struct {
-	Name           string     `json:"name"`
+	Name           string       `json:"name"`
 	Status         HealthStatus `json:"status"`
-	LastCheckAt    time.Time  `json:"last_check_at"`
-	ResponseTimeMs int64      `json:"response_time_ms"`
-	ErrorMessage   string     `json:"error_message,omitempty"`
+	LastCheckAt    time.Time    `json:"last_check_at"`
+	ResponseTimeMs int64        `json:"response_time_ms"`
+	ErrorMessage   string       `json:"error_message,omitempty"`
 }
 
 // SystemHealth represents the aggregated health status of all services.

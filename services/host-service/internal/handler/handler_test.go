@@ -76,8 +76,8 @@ func TestCreateHostValidation(t *testing.T) {
 		{
 			name: "missing name",
 			body: map[string]interface{}{
-				"hostname": "192.168.1.1",
-				"username": "admin",
+				"hostname":  "192.168.1.1",
+				"username":  "admin",
 				"auth_type": "password",
 			},
 			wantStatus: http.StatusBadRequest,
@@ -85,8 +85,8 @@ func TestCreateHostValidation(t *testing.T) {
 		{
 			name: "missing hostname",
 			body: map[string]interface{}{
-				"name": "my-host",
-				"username": "admin",
+				"name":      "my-host",
+				"username":  "admin",
 				"auth_type": "password",
 			},
 			wantStatus: http.StatusBadRequest,
@@ -94,8 +94,8 @@ func TestCreateHostValidation(t *testing.T) {
 		{
 			name: "missing username",
 			body: map[string]interface{}{
-				"name": "my-host",
-				"hostname": "192.168.1.1",
+				"name":      "my-host",
+				"hostname":  "192.168.1.1",
 				"auth_type": "password",
 			},
 			wantStatus: http.StatusBadRequest,
@@ -103,9 +103,9 @@ func TestCreateHostValidation(t *testing.T) {
 		{
 			name: "invalid auth_type",
 			body: map[string]interface{}{
-				"name": "my-host",
-				"hostname": "192.168.1.1",
-				"username": "admin",
+				"name":      "my-host",
+				"hostname":  "192.168.1.1",
+				"username":  "admin",
 				"auth_type": "invalid",
 			},
 			wantStatus: http.StatusBadRequest,
@@ -113,9 +113,9 @@ func TestCreateHostValidation(t *testing.T) {
 		{
 			name: "valid request with defaults",
 			body: map[string]interface{}{
-				"name": "my-host",
-				"hostname": "192.168.1.1",
-				"username": "admin",
+				"name":      "my-host",
+				"hostname":  "192.168.1.1",
+				"username":  "admin",
 				"auth_type": "password",
 			},
 			wantStatus: http.StatusServiceUnavailable, // DB not available

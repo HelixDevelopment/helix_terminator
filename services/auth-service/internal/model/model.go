@@ -26,19 +26,19 @@ type User struct {
 
 // Session represents an active user session
 type Session struct {
-	ID             uuid.UUID  `json:"id" db:"id"`
-	UserID         uuid.UUID  `json:"userId" db:"user_id"`
-	DeviceID       string     `json:"deviceId,omitempty" db:"device_id"`
-	DeviceName     string     `json:"deviceName,omitempty" db:"device_name"`
-	DeviceType     string     `json:"deviceType,omitempty" db:"device_type"`
-	IPAddress      string     `json:"ipAddress" db:"ip_address"`
-	UserAgent      string     `json:"userAgent,omitempty" db:"user_agent"`
-	AccessTokenHash  string   `json:"-" db:"access_token_hash"`
-	RefreshTokenHash string   `json:"-" db:"refresh_token_hash"`
-	ExpiresAt      time.Time  `json:"expiresAt" db:"expires_at"`
-	LastActiveAt   time.Time  `json:"lastActiveAt" db:"last_active_at"`
-	RevokedAt      *time.Time `json:"-" db:"revoked_at"`
-	CreatedAt      time.Time  `json:"createdAt" db:"created_at"`
+	ID               uuid.UUID  `json:"id" db:"id"`
+	UserID           uuid.UUID  `json:"userId" db:"user_id"`
+	DeviceID         string     `json:"deviceId,omitempty" db:"device_id"`
+	DeviceName       string     `json:"deviceName,omitempty" db:"device_name"`
+	DeviceType       string     `json:"deviceType,omitempty" db:"device_type"`
+	IPAddress        string     `json:"ipAddress" db:"ip_address"`
+	UserAgent        string     `json:"userAgent,omitempty" db:"user_agent"`
+	AccessTokenHash  string     `json:"-" db:"access_token_hash"`
+	RefreshTokenHash string     `json:"-" db:"refresh_token_hash"`
+	ExpiresAt        time.Time  `json:"expiresAt" db:"expires_at"`
+	LastActiveAt     time.Time  `json:"lastActiveAt" db:"last_active_at"`
+	RevokedAt        *time.Time `json:"-" db:"revoked_at"`
+	CreatedAt        time.Time  `json:"createdAt" db:"created_at"`
 }
 
 // RegisterRequest represents a user registration request
@@ -59,13 +59,13 @@ type LoginRequest struct {
 
 // AuthResponse represents the response after successful authentication
 type AuthResponse struct {
-	AccessToken  string    `json:"accessToken"`
-	RefreshToken string    `json:"refreshToken"`
-	ExpiresIn    int64     `json:"expiresIn"`
-	User         *User     `json:"user"`
-	MFARequired  bool      `json:"mfaRequired,omitempty"`
-	MFAMethods   []string  `json:"mfaMethods,omitempty"`
-	ChallengeID  string    `json:"challengeId,omitempty"`
+	AccessToken  string   `json:"accessToken"`
+	RefreshToken string   `json:"refreshToken"`
+	ExpiresIn    int64    `json:"expiresIn"`
+	User         *User    `json:"user"`
+	MFARequired  bool     `json:"mfaRequired,omitempty"`
+	MFAMethods   []string `json:"mfaMethods,omitempty"`
+	ChallengeID  string   `json:"challengeId,omitempty"`
 }
 
 // MFAVerifyRequest represents an MFA verification request
@@ -107,8 +107,8 @@ type LogoutRequest struct {
 
 // ValidateTokenRequest represents a token validation request
 type ValidateTokenRequest struct {
-	Token  string `json:"token" binding:"required"`
-	Scope  string `json:"scope,omitempty"`
+	Token string `json:"token" binding:"required"`
+	Scope string `json:"scope,omitempty"`
 }
 
 // ValidateTokenResponse represents the response after token validation

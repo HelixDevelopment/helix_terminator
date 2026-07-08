@@ -26,29 +26,29 @@ const (
 
 // Organization represents a platform organization.
 type Organization struct {
-	ID          uuid.UUID       `json:"id" db:"id"`
-	Name        string          `json:"name" db:"name"`
-	Slug        string          `json:"slug" db:"slug"`
-	Description string          `json:"description,omitempty" db:"description"`
-	LogoURL     string          `json:"logoUrl,omitempty" db:"logo_url"`
-	OwnerID     uuid.UUID       `json:"ownerId" db:"owner_id"`
-	Plan        Plan            `json:"plan" db:"plan"`
+	ID          uuid.UUID              `json:"id" db:"id"`
+	Name        string                 `json:"name" db:"name"`
+	Slug        string                 `json:"slug" db:"slug"`
+	Description string                 `json:"description,omitempty" db:"description"`
+	LogoURL     string                 `json:"logoUrl,omitempty" db:"logo_url"`
+	OwnerID     uuid.UUID              `json:"ownerId" db:"owner_id"`
+	Plan        Plan                   `json:"plan" db:"plan"`
 	Settings    map[string]interface{} `json:"settings,omitempty" db:"settings"`
-	MemberCount int             `json:"memberCount" db:"member_count"`
-	CreatedAt   time.Time       `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time       `json:"updatedAt" db:"updated_at"`
-	DeletedAt   *time.Time      `json:"-" db:"deleted_at"`
+	MemberCount int                    `json:"memberCount" db:"member_count"`
+	CreatedAt   time.Time              `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time              `json:"updatedAt" db:"updated_at"`
+	DeletedAt   *time.Time             `json:"-" db:"deleted_at"`
 }
 
 // Team represents a team within an organization.
 type Team struct {
-	ID          uuid.UUID  `json:"id" db:"id"`
-	OrgID       uuid.UUID  `json:"orgId" db:"org_id"`
-	Name        string     `json:"name" db:"name"`
-	Description string     `json:"description,omitempty" db:"description"`
-	MemberCount int        `json:"memberCount" db:"member_count"`
-	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	OrgID       uuid.UUID `json:"orgId" db:"org_id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description,omitempty" db:"description"`
+	MemberCount int       `json:"memberCount" db:"member_count"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
 }
 
 // Membership represents a user's membership in an organization or team.

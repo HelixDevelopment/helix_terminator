@@ -17,10 +17,10 @@ const (
 
 // Valid value types
 const (
-	ValueTypeString   = "string"
-	ValueTypeInt      = "int"
-	ValueTypeBool     = "bool"
-	ValueTypeJSON     = "json"
+	ValueTypeString    = "string"
+	ValueTypeInt       = "int"
+	ValueTypeBool      = "bool"
+	ValueTypeJSON      = "json"
 	ValueTypeEncrypted = "encrypted"
 )
 

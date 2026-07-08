@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"github.com/helixdevelopment/config-service/internal/handler"
 	"github.com/helixdevelopment/config-service/internal/model"
 	"github.com/helixdevelopment/config-service/internal/repository"
+	"github.com/stretchr/testify/assert"
 )
 
 func setupTestRouter() *gin.Engine {

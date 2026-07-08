@@ -19,7 +19,7 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin:     func(r *http.Request) bool { return true },
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
@@ -32,15 +32,15 @@ type SessionManager struct {
 
 // activeSession holds the runtime state for one WebSocket-to-SSH bridge.
 type activeSession struct {
-	sshClient   *sshclient.SSHClient
-	sshSession  *ssh.Session
-	wsConn      *websocket.Conn
-	stdin       io.WriteCloser
-	stdout      io.Reader
-	stderr      io.Reader
-	cancel      context.CancelFunc
-	resizeCh    chan model.TerminalResizeMessage
-	closeOnce   sync.Once
+	sshClient  *sshclient.SSHClient
+	sshSession *ssh.Session
+	wsConn     *websocket.Conn
+	stdin      io.WriteCloser
+	stdout     io.Reader
+	stderr     io.Reader
+	cancel     context.CancelFunc
+	resizeCh   chan model.TerminalResizeMessage
+	closeOnce  sync.Once
 }
 
 // NewSessionManager creates a new SessionManager.

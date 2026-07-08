@@ -30,15 +30,15 @@ func TestHostJSONSerialization(t *testing.T) {
 	orgID := uuid.MustParse("33333333-3333-3333-3333-333333333333")
 
 	host := model.Host{
-		ID:       id,
-		UserID:   userID,
-		OrgID:    orgID,
-		Name:     "test-host",
-		Hostname: "192.168.1.1",
-		Port:     22,
-		Username: "admin",
-		AuthType: model.AuthTypePassword,
-		Tags:     []string{"prod"},
+		ID:               id,
+		UserID:           userID,
+		OrgID:            orgID,
+		Name:             "test-host",
+		Hostname:         "192.168.1.1",
+		Port:             22,
+		Username:         "admin",
+		AuthType:         model.AuthTypePassword,
+		Tags:             []string{"prod"},
 		ConnectionStatus: model.StatusOnline,
 	}
 

@@ -3,8 +3,8 @@ package model_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/helixdevelopment/org-service/internal/model"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPlanConstants(t *testing.T) {

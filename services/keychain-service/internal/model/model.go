@@ -8,31 +8,31 @@ import (
 
 // KeychainItem represents a stored credential or key in the keychain
 type KeychainItem struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	UserID      uuid.UUID `json:"userId" db:"user_id"`
-	OrgID       *uuid.UUID `json:"orgId,omitempty" db:"org_id"`
-	Name        string    `json:"name" db:"name"`
-	Type        KeyType   `json:"type" db:"type"`
-	Fingerprint string    `json:"fingerprint" db:"fingerprint"`
-	PublicKey   string    `json:"publicKey,omitempty" db:"public_key"`
-	PrivateKey  string    `json:"-" db:"private_key"` // never serialized
-	Passphrase  string    `json:"-" db:"passphrase"`   // never serialized
+	ID          uuid.UUID              `json:"id" db:"id"`
+	UserID      uuid.UUID              `json:"userId" db:"user_id"`
+	OrgID       *uuid.UUID             `json:"orgId,omitempty" db:"org_id"`
+	Name        string                 `json:"name" db:"name"`
+	Type        KeyType                `json:"type" db:"type"`
+	Fingerprint string                 `json:"fingerprint" db:"fingerprint"`
+	PublicKey   string                 `json:"publicKey,omitempty" db:"public_key"`
+	PrivateKey  string                 `json:"-" db:"private_key"` // never serialized
+	Passphrase  string                 `json:"-" db:"passphrase"`  // never serialized
 	Metadata    map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
-	Tags        []string  `json:"tags,omitempty" db:"tags"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
-	DeletedAt   *time.Time `json:"deletedAt,omitempty" db:"deleted_at"`
+	Tags        []string               `json:"tags,omitempty" db:"tags"`
+	CreatedAt   time.Time              `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time              `json:"updatedAt" db:"updated_at"`
+	DeletedAt   *time.Time             `json:"deletedAt,omitempty" db:"deleted_at"`
 }
 
 // KeyType represents the type of keychain item
 type KeyType string
 
 const (
-	KeyTypeSSH       KeyType = "ssh"
-	KeyTypeGPG       KeyType = "gpg"
-	KeyTypeAPIKey    KeyType = "api_key"
-	KeyTypePassword  KeyType = "password"
-	KeyTypeX509      KeyType = "x509"
+	KeyTypeSSH      KeyType = "ssh"
+	KeyTypeGPG      KeyType = "gpg"
+	KeyTypeAPIKey   KeyType = "api_key"
+	KeyTypePassword KeyType = "password"
+	KeyTypeX509     KeyType = "x509"
 )
 
 // ValidKeyTypes returns all valid key types
@@ -53,10 +53,10 @@ type CreateKeychainItemRequest struct {
 
 // UpdateKeychainItemRequest represents a request to update a keychain item
 type UpdateKeychainItemRequest struct {
-	Name       *string                `json:"name,omitempty"`
-	PublicKey  *string                `json:"publicKey,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
-	Tags       []string               `json:"tags,omitempty"`
+	Name      *string                `json:"name,omitempty"`
+	PublicKey *string                `json:"publicKey,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	Tags      []string               `json:"tags,omitempty"`
 }
 
 // ListKeychainItemsRequest represents a request to list keychain items

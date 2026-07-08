@@ -17,7 +17,7 @@ import (
 
 // Handler holds service handlers.
 type Handler struct {
-	repo      repository.Repository
+	repo       repository.Repository
 	sessionMgr *wshandler.SessionManager
 }
 

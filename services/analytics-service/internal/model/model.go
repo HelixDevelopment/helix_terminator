@@ -9,11 +9,11 @@ import (
 
 // AnalyticsEventType constants
 const (
-	AnalyticsEventTypeSession    = "session"
-	AnalyticsEventTypeCommand    = "command"
-	AnalyticsEventTypeTransfer   = "transfer"
-	AnalyticsEventTypeLogin      = "login"
-	AnalyticsEventTypeError      = "error"
+	AnalyticsEventTypeSession  = "session"
+	AnalyticsEventTypeCommand  = "command"
+	AnalyticsEventTypeTransfer = "transfer"
+	AnalyticsEventTypeLogin    = "login"
+	AnalyticsEventTypeError    = "error"
 )
 
 // AnalyticsEvent represents a tracked analytics event

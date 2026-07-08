@@ -54,12 +54,12 @@ type TerminalSession struct {
 
 // TerminalOutput represents a chunk of terminal output.
 type TerminalOutput struct {
-	ID           uuid.UUID  `json:"id" db:"id"`
-	SessionID    uuid.UUID  `json:"session_id" db:"session_id"`
-	OutputType   OutputType `json:"output_type" db:"output_type"`
-	Data         []byte     `json:"data" db:"data"`
-	Timestamp    time.Time  `json:"timestamp" db:"timestamp"`
-	SequenceNum  int        `json:"sequence_num" db:"sequence_num"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	SessionID   uuid.UUID  `json:"session_id" db:"session_id"`
+	OutputType  OutputType `json:"output_type" db:"output_type"`
+	Data        []byte     `json:"data" db:"data"`
+	Timestamp   time.Time  `json:"timestamp" db:"timestamp"`
+	SequenceNum int        `json:"sequence_num" db:"sequence_num"`
 }
 
 // TerminalRecording represents a persisted recording of a terminal session.
@@ -84,9 +84,9 @@ type CreateTerminalSessionRequest struct {
 
 // UpdateTerminalSessionRequest represents a request to update a terminal session.
 type UpdateTerminalSessionRequest struct {
-	Status   string `json:"status,omitempty" binding:"omitempty,oneof=pending active paused closed error"`
-	Cols     int    `json:"cols,omitempty" binding:"omitempty,min=1,max=999"`
-	Rows     int    `json:"rows,omitempty" binding:"omitempty,min=1,max=999"`
+	Status    string `json:"status,omitempty" binding:"omitempty,oneof=pending active paused closed error"`
+	Cols      int    `json:"cols,omitempty" binding:"omitempty,min=1,max=999"`
+	Rows      int    `json:"rows,omitempty" binding:"omitempty,min=1,max=999"`
 	ShellType string `json:"shell_type,omitempty" binding:"omitempty,max=50"`
 }
 

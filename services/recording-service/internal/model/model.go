@@ -22,26 +22,26 @@ const (
 
 // Recording represents a terminal session recording
 type Recording struct {
-	ID           uuid.UUID  `json:"id" db:"id"`
-	SessionID    uuid.UUID  `json:"sessionId" db:"session_id"`
-	HostID       uuid.UUID  `json:"hostId" db:"host_id"`
-	UserID       uuid.UUID  `json:"userId" db:"user_id"`
-	OrgID        *uuid.UUID `json:"orgId,omitempty" db:"org_id"`
-	FilePath     string     `json:"filePath" db:"file_path"`
-	Format       string     `json:"format" db:"format"`
-	Status       string     `json:"status" db:"status"`
-	DurationSec  int        `json:"durationSec" db:"duration_sec"`
-	FileSizeBytes int64     `json:"fileSizeBytes" db:"file_size_bytes"`
-	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`
+	ID            uuid.UUID  `json:"id" db:"id"`
+	SessionID     uuid.UUID  `json:"sessionId" db:"session_id"`
+	HostID        uuid.UUID  `json:"hostId" db:"host_id"`
+	UserID        uuid.UUID  `json:"userId" db:"user_id"`
+	OrgID         *uuid.UUID `json:"orgId,omitempty" db:"org_id"`
+	FilePath      string     `json:"filePath" db:"file_path"`
+	Format        string     `json:"format" db:"format"`
+	Status        string     `json:"status" db:"status"`
+	DurationSec   int        `json:"durationSec" db:"duration_sec"`
+	FileSizeBytes int64      `json:"fileSizeBytes" db:"file_size_bytes"`
+	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt     time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // CreateRecordingRequest represents a request to create a recording
 type CreateRecordingRequest struct {
-	SessionID     string `json:"sessionId" binding:"required,uuid"`
-	HostID        string `json:"hostId" binding:"required,uuid"`
-	FilePath      string `json:"filePath" binding:"required,max=1024"`
-	Format        string `json:"format" binding:"required,oneof=asciinema raw"`
+	SessionID string `json:"sessionId" binding:"required,uuid"`
+	HostID    string `json:"hostId" binding:"required,uuid"`
+	FilePath  string `json:"filePath" binding:"required,max=1024"`
+	Format    string `json:"format" binding:"required,oneof=asciinema raw"`
 }
 
 // UpdateRecordingRequest represents a request to update a recording
