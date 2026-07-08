@@ -148,7 +148,7 @@ func New(logger Logger) (*Server, error) {
 	r.GET("/healthz/ready", h.ReadinessCheck)
 	r.GET("/healthz", h.HealthCheck)
 
-	// Notification routes — require a valid service-to-service API key.
+	// Notification routes — require a valid Ed25519 JWT (T11).
 	// This closes the open-relay gap the real email/webhook delivery sinks
 	// introduced: without authentication, CreateNotification could be
 	// abused by anyone as an unauthenticated spam / SSRF-amplification
@@ -327,7 +327,7 @@ func (s *Server) corsMiddleware() gin.HandlerFunc {
 			c.Header("Access-Control-Allow-Credentials", "true")
 		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID, X-API-Key")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
 		c.Header("Access-Control-Max-Age", "86400")
 
 		if c.Request.Method == "OPTIONS" {
