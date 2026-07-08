@@ -94,6 +94,10 @@ services:
       AUTH_SERVICE_URL: http://auth-service:8080
       USER_SERVICE_URL: http://user-service:8080
       HOST_SERVICE_URL: http://host-service:8080
+      # Verifies tokens signed by auth-service (see
+      # docs/guides/JWT_KEY_PROVISIONING.md). Must match auth-service's
+      # JWT_PRIVATE_KEY-derived public key when the latter is set.
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
     depends_on:
       - auth-service
       - user-service
@@ -109,6 +113,14 @@ services:
       PORT: "8080"
       DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
       REDIS_URL: redis://redis:6379
+      # JWT signing key provisioning (see docs/guides/JWT_KEY_PROVISIONING.md).
+      # ENVIRONMENT defaults to "development" so a keyless local bring-up still
+      # boots via the loud-warned ephemeral dev keypair instead of failing
+      # closed; set ENVIRONMENT=production in your .env (with real keys below)
+      # for a shared/staging compose deployment.
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -224,6 +236,10 @@ services:
     environment:
       PORT: "8080"
       DATABASE_URL: postgres://${POSTGRES_USER:-helix}:${POSTGRES_PASSWORD:-helix}@postgres:5432/${POSTGRES_DB:-helixterminator}?sslmode=disable
+      # Verifies tokens signed by auth-service (see
+      # docs/guides/JWT_KEY_PROVISIONING.md). Must match auth-service's
+      # JWT_PRIVATE_KEY-derived public key when the latter is set.
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

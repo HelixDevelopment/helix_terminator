@@ -1,7 +1,7 @@
 # JWT Key Provisioning — auth-service
 
-**Revision:** 1
-**Last modified:** 2026-07-07T23:35:41Z
+**Revision:** 2
+**Last modified:** 2026-07-08T00:00:00Z
 
 ## Problem this closes (T15, production blocker)
 
@@ -119,6 +119,52 @@ ephemeral, unusable tokens. (In practice, Kubernetes itself already
 refuses to start a container whose `secretKeyRef` points at a
 nonexistent Secret/key — `ENVIRONMENT=production` is defense in depth
 for any non-Kubernetes deployment target of this same binary.)
+
+## Docker Compose
+
+`infrastructure/docker/compose/docker-compose.yml` wires the same three
+env vars for `auth-service` (`ENVIRONMENT`, `JWT_PRIVATE_KEY`,
+`JWT_PUBLIC_KEY`) and `gateway-service` / `billing-service`
+(`JWT_PUBLIC_KEY` only), each sourced via the compose file's existing
+`${VAR:-default}` interpolation convention — never a literal value in
+the tracked YAML.
+
+**Default local bring-up (no `.env`, or a `.env` without these keys
+set):** `ENVIRONMENT` defaults to `development` and the JWT vars default
+to empty, so `auth-service` takes its loud-warned ephemeral-keypair dev
+path (see "The fix" above) — the stack boots and is usable for solo
+local development, but tokens will not validate across an `auth-service`
+restart, nor against `gateway-service` / `billing-service` (they have no
+public key to check against, either). This mirrors the compose file's
+existing "keyless" default for other secrets (e.g. `GF_SECURITY_ADMIN_PASSWORD`).
+
+**Real / shared compose deployment (staging-like, multiple developers,
+or anything where JWT validation must actually work end-to-end):**
+
+1. Generate a keypair with the snippet in "Generating an Ed25519
+   keypair" above.
+2. Create (or edit) `infrastructure/docker/compose/.env` — copy
+   `infrastructure/docker/compose/.env.example` if you do not have one
+   yet — and set:
+
+   ```dotenv
+   ENVIRONMENT=production
+   JWT_PRIVATE_KEY=<value printed above>
+   JWT_PUBLIC_KEY=<value printed above>
+   ```
+
+3. Bring the stack up (`docker compose up -d` /
+   `podman-compose up -d`, per Constitution §11.4.161 rootless preferred)
+   — `auth-service` now signs with the persisted key, refuses to start
+   if `JWT_PRIVATE_KEY` is malformed or mismatched with a set
+   `JWT_PUBLIC_KEY`, and `gateway-service` / `billing-service` validate
+   against the same public key.
+
+`infrastructure/docker/compose/.env` is **never committed** — it is
+covered by the repo's root `.env` gitignore pattern (`.gitignore` line
+`.env`, which matches at any depth including this directory) per
+Constitution §11.4.30 / §11.4.10. Only `.env.example` (placeholders,
+commented out) is tracked.
 
 ## Rotation
 
