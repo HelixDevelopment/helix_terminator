@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/helixdevelopment/ai-service/internal/handler"
 	"github.com/helixdevelopment/ai-service/internal/llmclient"
 	"github.com/helixdevelopment/ai-service/internal/repository"
 	"github.com/helixdevelopment/ai-service/internal/server"
@@ -27,6 +28,18 @@ const (
 )
 
 func main() {
+	// §11.4.108 startup env-invariant: AI_HTTP_WRITE_TIMEOUT MUST exceed
+	// AI_LLM_TIMEOUT by server.MinWriteTimeoutMargin — see
+	// internal/server.ValidateTimeoutInvariant's doc comment for the T8-x
+	// truncation defect a misconfigured deploy would otherwise silently
+	// reintroduce (a slow-but-SUCCESSFUL completion has its HTTP response
+	// truncated underneath CreateRequest's synchronous LLM call). Checked FIRST,
+	// before any DB/LLM wiring, so a bad deploy config fails fast instead of
+	// serving traffic under a latent truncation risk.
+	if err := server.ValidateTimeoutInvariant(server.ResolveHTTPWriteTimeout(), handler.ResolveLLMTimeout()); err != nil {
+		log.Fatalf("ai-service: startup env-invariant violated: %v", err)
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8088"

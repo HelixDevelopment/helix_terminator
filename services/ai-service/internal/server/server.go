@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -39,6 +40,37 @@ func ResolveHTTPWriteTimeout() time.Duration {
 		}
 	}
 	return DefaultHTTPWriteTimeout
+}
+
+// MinWriteTimeoutMargin is the minimum gap ValidateTimeoutInvariant enforces between
+// the effective HTTP WriteTimeout and the effective LLM completion budget, whatever
+// their configured values (env-overridden or default). See DefaultHTTPWriteTimeout's
+// doc comment for the T8-x truncation defect this margin guards against.
+const MinWriteTimeoutMargin = 10 * time.Second
+
+// ValidateTimeoutInvariant asserts writeTimeout exceeds llmTimeout by at least
+// MinWriteTimeoutMargin — the SAME invariant TestHTTPWriteTimeoutExceedsLLMBudget
+// checks at test time, but callable at process-startup time (see
+// cmd/ai-service/main.go) so a misconfigured deploy that raises AI_LLM_TIMEOUT
+// without raising AI_HTTP_WRITE_TIMEOUT to match is caught BEFORE the server starts
+// accepting traffic, not merely by a test that runs in CI and can be skipped or
+// missed on a raw `go build` + deploy. A margin below MinWriteTimeoutMargin (or a
+// non-positive margin) silently reintroduces the T8-x truncation defect: a
+// slow-but-successful completion gets its HTTP response truncated by WriteTimeout
+// underneath the synchronous CreateRequest call, even though the DB row was written
+// correctly.
+func ValidateTimeoutInvariant(writeTimeout, llmTimeout time.Duration) error {
+	margin := writeTimeout - llmTimeout
+	if margin < MinWriteTimeoutMargin {
+		return fmt.Errorf(
+			"AI_HTTP_WRITE_TIMEOUT (%s) must exceed AI_LLM_TIMEOUT (%s) by at least %s "+
+				"(current margin %s) — otherwise a slow-but-SUCCESSFUL LLM completion "+
+				"truncates the HTTP response underneath CreateRequest's synchronous call "+
+				"(see DefaultHTTPWriteTimeout doc comment, T8-x finding); "+
+				"raise AI_HTTP_WRITE_TIMEOUT or lower AI_LLM_TIMEOUT",
+			writeTimeout, llmTimeout, MinWriteTimeoutMargin, margin)
+	}
+	return nil
 }
 
 // Server wraps the Gin engine and HTTP server.
