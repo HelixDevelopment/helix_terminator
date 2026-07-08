@@ -13,6 +13,7 @@ import (
 
 	"github.com/helixdevelopment/workspace-service/internal/handler"
 	"github.com/helixdevelopment/workspace-service/internal/repository"
+	"github.com/helixdevelopment/workspace-service/migrations"
 )
 
 // Logger interface for logging.
@@ -45,15 +46,40 @@ func New(logger Logger) (*Server, error) {
 		logger = &defaultLogger{}
 	}
 
-	// Initialize database connection
+	// Initialize database connection.
+	//
+	// This is the second of workspace-service's two independent DB-init
+	// sites (see cmd/workspace-service/main.go's own pgxpool.New call,
+	// which builds a pool that is never passed here and otherwise
+	// unused). Apply pending schema migrations (migrations.Run) BEFORE
+	// opening this steady-state pool so it never queries the schema
+	// pre-migration; Run is idempotent, so this is safe to call even
+	// when main.go already ran it moments earlier for the same
+	// DATABASE_URL. The pool is opened via
+	// migrations.ConnectionURL(dbURL) so its unqualified "workspaces" /
+	// "workspace_hosts" queries resolve against the migrated
+	// search_path=workspace_service schema, not the shared database's
+	// default "public" schema (schema-per-service, GAP-01) - matching
+	// the DSN main.go's own pool now also uses.
 	var repo *repository.Repository
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL != "" {
-		pool, err := pgxpool.New(context.Background(), dbURL)
-		if err != nil {
-			logger.Printf("warning: failed to connect to database: %v", err)
+		if version, merr := migrations.Run(dbURL, logger); merr != nil {
+			logger.Printf("warning: failed to apply database migrations: %v", merr)
 		} else {
-			repo = repository.New(pool)
+			logger.Printf("database migrations applied - schema version %d", version)
+
+			poolURL, perr := migrations.ConnectionURL(dbURL)
+			if perr != nil {
+				logger.Printf("warning: failed to build schema-scoped connection URL: %v", perr)
+			} else {
+				pool, err := pgxpool.New(context.Background(), poolURL)
+				if err != nil {
+					logger.Printf("warning: failed to connect to database: %v", err)
+				} else {
+					repo = repository.New(pool)
+				}
+			}
 		}
 	}
 

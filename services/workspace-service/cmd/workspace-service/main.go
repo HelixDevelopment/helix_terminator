@@ -13,6 +13,7 @@ import (
 
 	"github.com/helixdevelopment/workspace-service/internal/repository"
 	"github.com/helixdevelopment/workspace-service/internal/server"
+	"github.com/helixdevelopment/workspace-service/migrations"
 )
 
 func main() {
@@ -23,15 +24,41 @@ func main() {
 
 	logger := log.New(os.Stdout, "[workspace-service] ", log.LstdFlags)
 
-	// Initialize database connection
+	// Initialize database connection.
+	//
+	// workspace-service has TWO independent DB-init sites: this one and
+	// internal/server/server.go's New() (called just below), which opens
+	// its own separate pgxpool.Pool and is the pool that actually backs
+	// the running service's repository - the pool built here is not
+	// passed anywhere and is otherwise unused by this binary. Both sites
+	// apply pending schema migrations (migrations.Run) BEFORE opening
+	// their own pool so neither ever queries the schema pre-migration;
+	// Run is idempotent (a second invocation against an already-migrated
+	// database is a no-op, migrate.ErrNoChange), so calling it from both
+	// sites is safe regardless of call order. Both pools are opened via
+	// migrations.ConnectionURL(dbURL) so they consistently resolve
+	// unqualified table names against the migrated
+	// search_path=workspace_service schema, not the shared database's
+	// default "public" schema (schema-per-service, GAP-01).
 	var repo *repository.Repository
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL != "" {
-		pool, err := pgxpool.New(context.Background(), dbURL)
-		if err != nil {
-			logger.Printf("warning: failed to connect to database: %v", err)
+		if version, merr := migrations.Run(dbURL, logger); merr != nil {
+			logger.Printf("warning: failed to apply database migrations: %v", merr)
 		} else {
-			repo = repository.New(pool)
+			logger.Printf("database migrations applied - schema version %d", version)
+
+			poolURL, perr := migrations.ConnectionURL(dbURL)
+			if perr != nil {
+				logger.Printf("warning: failed to build schema-scoped connection URL: %v", perr)
+			} else {
+				pool, err := pgxpool.New(context.Background(), poolURL)
+				if err != nil {
+					logger.Printf("warning: failed to connect to database: %v", err)
+				} else {
+					repo = repository.New(pool)
+				}
+			}
 		}
 	}
 
