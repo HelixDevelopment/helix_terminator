@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,48 +29,6 @@ import (
 
 	"github.com/helixdevelopment/gateway-service/internal/testutil"
 )
-
-// chaosPostRaw sends a request with a raw byte body and returns
-// the status code + raw response body. Does NOT assume the body
-// is valid JSON — sends whatever bytes are provided.
-func chaosPostRaw(t *testing.T, method, url, contentType string, body []byte) (int, []byte) {
-	t.Helper()
-	req, err := http.NewRequest(method, url, bytes.NewReader(body))
-	if err != nil {
-		t.Fatalf("http.NewRequest failed: %v", err)
-	}
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
-
-	w := httptest.NewRecorder()
-	// We need the router from setupTestServer, so callers pass it in
-	// via the closure pattern below. This helper is just for the raw
-	// request/response extraction.
-	_ = w
-	return 0, nil
-}
-
-// chaosDoRaw performs a raw request against the gateway router and
-// returns the status code + response body bytes. Unlike the stress
-// test helpers, this sends whatever bytes are provided without
-// assuming valid JSON.
-func chaosDoRaw(t *testing.T, router http.Handler, method, url, contentType string, body []byte) (int, []byte) {
-	t.Helper()
-	var req *http.Request
-	if body != nil {
-		req, _ = http.NewRequest(method, url, bytes.NewReader(body))
-	} else {
-		req, _ = http.NewRequest(method, url, nil)
-	}
-	if contentType != "" {
-		req.Header.Set("Content-Type", contentType)
-	}
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	return w.Code, w.Body.Bytes()
-}
 
 // TestChaosInputCorruption exercises corrupt/malformed inputs against
 // the gateway. Every case MUST produce a clean HTTP error response
@@ -520,6 +477,3 @@ func truncate(s string, n int) string {
 	return s[:n] + "..."
 }
 
-// Ensure io import is used (chaosDoRaw uses it indirectly via
-// httptest, but the compiler needs to see the import).
-var _ io.Reader
