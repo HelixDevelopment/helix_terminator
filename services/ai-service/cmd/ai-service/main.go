@@ -9,6 +9,7 @@ import (
 	"github.com/helixdevelopment/ai-service/internal/llmclient"
 	"github.com/helixdevelopment/ai-service/internal/repository"
 	"github.com/helixdevelopment/ai-service/internal/server"
+	"github.com/helixdevelopment/ai-service/migrations"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -36,9 +37,31 @@ func main() {
 		databaseURL = "postgres://postgres:postgres@localhost:5432/helixterminator?sslmode=disable"
 	}
 
+	// Apply pending schema migrations before opening the steady-state pool.
+	// ai-service already fails fast on DB connectivity trouble (see
+	// pgxpool.New below), so a migration failure (including a dirty schema
+	// state) is fatal here too - never serve against an unmigrated schema.
+	// This is purely additive schema-per-service DDL; it does not touch
+	// internal/llmclient's LLM-provider dispatch.
+	version, merr := migrations.Run(databaseURL, log.Default())
+	if merr != nil {
+		log.Fatalf("failed to apply database migrations: %v", merr)
+	}
+	log.Printf("database migrations applied - schema version %d", version)
+
+	// Use the same schema-scoped connection URL the migrator applied
+	// (search_path=migrations.Schema) so the steady-state pool's
+	// unqualified "ai_requests" queries resolve against the schema
+	// migrations.Run just migrated, not the shared database's default
+	// "public" schema (schema-per-service, GAP-01).
+	poolURL, perr := migrations.ConnectionURL(databaseURL)
+	if perr != nil {
+		log.Fatalf("failed to build schema-scoped connection URL: %v", perr)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	pool, err := pgxpool.New(ctx, databaseURL)
+	pool, err := pgxpool.New(ctx, poolURL)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
