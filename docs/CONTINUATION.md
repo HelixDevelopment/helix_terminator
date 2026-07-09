@@ -1,7 +1,7 @@
 # CONTINUATION — helix_terminator
 
-**Revision:** 13
-**Last modified:** 2026-07-09T01:35:00Z
+**Revision:** 14
+**Last modified:** 2026-07-09T04:25:00Z
 
 Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep current.
 
@@ -25,11 +25,14 @@ None.
 ## BLOCKER
 **None.** The weekly-API-limit block from the prior session is cleared. Loop running.
 
+## RELEASE
+**helix_terminator-0.1.0** tagged and pushed (848bebf, 2026-07-09).
+§11.4.40 full retest: 25/25 PASS (1,032 test functions).
+§11.4.85 stress+chaos: 25/25 services covered.
+
 ## NEXT QUEUE (priority §11.4.132)
-1. **Process final whole-branch review findings** — reviewer dispatched (opus model), report pending.
-2. **T15** — auth-service JWT key persistence (operator-blocked: KMS vs mounted-secret decision).
-3. **§11.4.40 full retest** — after review findings resolved.
-4. **Release tag** (§11.4.126 terminal condition A) — project-prefixed (§11.4.151).
+1. **T15** — auth-service JWT key persistence (operator-blocked: KMS vs mounted-secret decision).
+2. **Post-release monitoring** — watch for regressions in production.
 
 ## Completed this session (655d586 → 8e78a57, 39 commits)
 - ✅ T20/T21/T22/T23 authZ cluster (vault + keychain handler IDOR + nil-repo guards)
