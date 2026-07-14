@@ -1,0 +1,3 @@
+github.com/helixdevelopment/pki-service/internal/sshca: no non-test Go files in /mnt/track1/helix_terminator/services/pki-service/internal/sshca
+FAIL	github.com/helixdevelopment/pki-service/internal/sshca [build failed]
+FAIL

@@ -1,0 +1,34 @@
+=== RUN   TestEvidence_SSHKeygenCrossChecksIssuedCerts
+    sshca_evidence_test.go:65: === INDEPENDENT ORACLE: ssh-keygen -L (USER cert, serial 8097008968109857950) ===
+        /tmp/.private/milos/TestEvidence_SSHKeygenCrossChecksIssuedCerts3025592540/001/user-cert.pub:
+                Type: ssh-ed25519-cert-v01@openssh.com user certificate
+                Public key: ED25519-CERT SHA256:I+R54dYneqmk1qXy5bA1+GhaA0otpQdUlceYRdfFmpE
+                Signing CA: ED25519 SHA256:p5iwdttejdpjeTZDQl+Fdb/K6ll4xDZWCRL8CnsBJMk (using ssh-ed25519)
+                Key ID: "alice@helixterminator.io"
+                Serial: 8097008968109857950
+                Valid: from 2026-07-14T23:41:30 to 2026-07-14T23:57:30
+                Principals: 
+                        alice
+                        deploy
+                Critical Options: (none)
+                Extensions: 
+                        permit-X11-forwarding
+                        permit-agent-forwarding
+                        permit-port-forwarding
+                        permit-pty
+                        permit-user-rc
+    sshca_evidence_test.go:90: === INDEPENDENT ORACLE: ssh-keygen -L (HOST cert, serial 10194307387177073528) ===
+        /tmp/.private/milos/TestEvidence_SSHKeygenCrossChecksIssuedCerts3025592540/001/host-cert.pub:
+                Type: ssh-ed25519-cert-v01@openssh.com host certificate
+                Public key: ED25519-CERT SHA256:I+R54dYneqmk1qXy5bA1+GhaA0otpQdUlceYRdfFmpE
+                Signing CA: ED25519 SHA256:p5iwdttejdpjeTZDQl+Fdb/K6ll4xDZWCRL8CnsBJMk (using ssh-ed25519)
+                Key ID: "web01.helixterminator.io"
+                Serial: 10194307387177073528
+                Valid: from 2026-07-14T23:41:30 to 2026-10-12T23:42:30
+                Principals: 
+                        web01.helixterminator.io
+                Critical Options: (none)
+                Extensions: (none)
+--- PASS: TestEvidence_SSHKeygenCrossChecksIssuedCerts (0.01s)
+PASS
+ok  	github.com/helixdevelopment/pki-service/internal/sshca	0.015s
