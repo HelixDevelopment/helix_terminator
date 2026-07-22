@@ -4,6 +4,15 @@ import 'api_client.dart';
 class NotificationServiceException implements Exception {
   final String message;
   NotificationServiceException(this.message);
+
+  // See lib/services/api_client.dart's ApiException.toString() for why this
+  // override exists: NotificationBloc's catch handler renders this via
+  // `e.toString()`, and without this override that rendered
+  // `Instance of 'NotificationServiceException'` instead of the real
+  // message — the same class of user-facing defect fixed consistently
+  // across every custom exception in lib/services/.
+  @override
+  String toString() => message;
 }
 
 class NotificationService {

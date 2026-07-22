@@ -4,6 +4,14 @@ import 'api_client.dart';
 class HostServiceException implements Exception {
   final String message;
   HostServiceException(this.message);
+
+  // See lib/services/api_client.dart's ApiException.toString() for why this
+  // override exists: HostBloc's catch handlers render this via `e.toString()`,
+  // and without this override that rendered `Instance of 'HostServiceException'`
+  // instead of the real message — a genuine user-facing defect caught by
+  // test/host_bloc_test.dart's failure-path assertions.
+  @override
+  String toString() => message;
 }
 
 class HostService {

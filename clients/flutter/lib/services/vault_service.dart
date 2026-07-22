@@ -4,6 +4,15 @@ import 'api_client.dart';
 class VaultServiceException implements Exception {
   final String message;
   VaultServiceException(this.message);
+
+  // See lib/services/api_client.dart's ApiException.toString() for why this
+  // override exists: VaultBloc's catch handlers render this via string
+  // interpolation (`'...: $e'`), and without this override that rendered
+  // `Instance of 'VaultServiceException'` instead of the real message — a
+  // genuine user-facing defect caught by test/vault_bloc_test.dart's
+  // failure-path assertions.
+  @override
+  String toString() => message;
 }
 
 /// Service that performs CRUD operations for Vault secrets.

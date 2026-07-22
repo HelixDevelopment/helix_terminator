@@ -4,6 +4,15 @@ import 'api_client.dart';
 class WorkspaceServiceException implements Exception {
   final String message;
   WorkspaceServiceException(this.message);
+
+  // See lib/services/api_client.dart's ApiException.toString() for why this
+  // override exists: WorkspaceBloc's catch handlers render this via string
+  // interpolation (`'...: $e'`), and without this override that rendered
+  // `Instance of 'WorkspaceServiceException'` instead of the real message —
+  // a genuine user-facing defect caught by test/workspace_bloc_test.dart's
+  // failure-path assertions.
+  @override
+  String toString() => message;
 }
 
 /// Service that performs CRUD operations for Workspaces.

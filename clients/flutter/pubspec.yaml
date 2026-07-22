@@ -26,6 +26,10 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  # Test-only: BLoC state-transition harness + mocking for real (non-stub)
+  # bloc/service tests. Never imported from lib/.
+  bloc_test: ^9.1.7
+  mocktail: ^1.0.4
 
 flutter:
   uses-material-design: true

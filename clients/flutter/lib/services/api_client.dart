@@ -9,6 +9,16 @@ class ApiException implements Exception {
   final int? statusCode;
 
   ApiException(this.message, {this.statusCode});
+
+  // Without this override, any `'$e'` / `e.toString()` call on a caught
+  // ApiException (the pattern every *Bloc error handler uses) renders the
+  // useless default `Instance of 'ApiException'` instead of the real
+  // message — discovered via test/api_client_test.dart & the *_bloc_test.dart
+  // suite's failure-path assertions (§11.4.1/§11.4.4 test-interrupt-on-
+  // discovery: root-caused and fixed here rather than the tests weakened to
+  // match the broken output).
+  @override
+  String toString() => message;
 }
 
 class ApiClient {
@@ -16,8 +26,11 @@ class ApiClient {
   final http.Client _client;
   final AuthService? _authService;
 
-  ApiClient({required this.baseUrl, AuthService? authService})
-      : _client = http.Client(),
+  /// [httpClient] is an injectable seam for tests (e.g. `http.testing.MockClient`)
+  /// so requests can be exercised without a real network call. Production
+  /// callers omit it and get a real `http.Client()`, unchanged from before.
+  ApiClient({required this.baseUrl, AuthService? authService, http.Client? httpClient})
+      : _client = httpClient ?? http.Client(),
         _authService = authService;
 
   Future<Map<String, dynamic>> get(String path) async {

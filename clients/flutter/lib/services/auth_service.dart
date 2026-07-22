@@ -5,6 +5,12 @@ import '../models/user.dart';
 class AuthException implements Exception {
   final String message;
   AuthException(this.message);
+
+  // See ApiException.toString() for why this override exists — same class
+  // of bug, same fix, applied consistently across every custom exception
+  // that carries a user-facing message.
+  @override
+  String toString() => message;
 }
 
 class AuthResult {

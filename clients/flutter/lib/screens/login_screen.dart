@@ -196,9 +196,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'Don\'t have an account?',
-                            style: TextStyle(color: colorScheme.onSurfaceVariant),
+                          // Flexible + ellipsis: without this, this Row
+                          // overflows its 400px-constrained parent by ~58px
+                          // (RenderFlex overflow -- a real, user-visible
+                          // rendering defect discovered by
+                          // test/app_boot_journey_test.dart, not a
+                          // theoretical concern) because an unconstrained
+                          // Text sized to its natural width plus the
+                          // TextButton's own width can exceed the
+                          // available space. The "Register" affordance
+                          // stays fully visible/tappable; only the
+                          // descriptive text shrinks.
+                          Flexible(
+                            child: Text(
+                              'Don\'t have an account?',
+                              style: TextStyle(color: colorScheme.onSurfaceVariant),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           TextButton(
                             onPressed: () {
