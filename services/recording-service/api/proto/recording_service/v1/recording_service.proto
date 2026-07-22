@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package recording_service.v1;
+
+option go_package = "github.com/helixdevelopment/recording-service/api/proto/recording_service/v1;recording_servicev1";
+
+// TODO: define service RPCs and messages
+
+service RecordingServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

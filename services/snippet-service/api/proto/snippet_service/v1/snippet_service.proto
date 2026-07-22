@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package snippet_service.v1;
+
+option go_package = "github.com/helixdevelopment/snippet-service/api/proto/snippet_service/v1;snippet_servicev1";
+
+// TODO: define service RPCs and messages
+
+service SnippetServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

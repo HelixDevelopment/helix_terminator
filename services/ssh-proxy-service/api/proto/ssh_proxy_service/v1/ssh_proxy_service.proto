@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ssh_proxy_service.v1;
+
+option go_package = "github.com/helixdevelopment/ssh-proxy-service/api/proto/ssh_proxy_service/v1;ssh_proxy_servicev1";
+
+// TODO: define service RPCs and messages
+
+service SshProxyServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

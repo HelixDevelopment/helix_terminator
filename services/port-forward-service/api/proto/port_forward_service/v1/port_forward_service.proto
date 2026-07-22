@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package port_forward_service.v1;
+
+option go_package = "github.com/helixdevelopment/port-forward-service/api/proto/port_forward_service/v1;port_forward_servicev1";
+
+// TODO: define service RPCs and messages
+
+service PortForwardServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

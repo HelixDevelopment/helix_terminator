@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package sftp_service.v1;
+
+option go_package = "github.com/helixdevelopment/sftp-service/api/proto/sftp_service/v1;sftp_servicev1";
+
+// TODO: define service RPCs and messages
+
+service SftpServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}
