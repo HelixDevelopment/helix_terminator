@@ -181,6 +181,29 @@ func NewPushSenderWithConfig(cfg PushConfig) *PushSender {
 	}
 }
 
+// NewPushSenderForTesting constructs a PushSender armed with cfg (FCM/APNs
+// credentials) whose provider HTTP calls are dispatched through client and
+// fcmBaseURL/apnsBaseURL (e.g. an httptest.Server) instead of the real
+// Google/Apple endpoints. Its purpose is letting OTHER packages (e.g.
+// internal/handler's tests, via handler.NewWithDelivery) wire a REAL
+// PushSender — exercising the exact request-construction/response-handling
+// code path production uses (sendFCM/sendAPNs) — without contacting a live
+// provider. Mirrors NewWebhookSenderForTesting's role for the webhook
+// sender. Constitution §11.4.27 — the mock transport stands in for the
+// third-party push backend (the operator-gated boundary documented on
+// PushSender above); this constructor itself is test-only scaffolding, not
+// a production entry point.
+func NewPushSenderForTesting(cfg PushConfig, client *http.Client, fcmBaseURL, apnsBaseURL string) *PushSender {
+	return &PushSender{
+		cfg:         cfg,
+		configured:  true,
+		httpClient:  client,
+		now:         time.Now,
+		fcmBaseURL:  fcmBaseURL,
+		apnsBaseURL: apnsBaseURL,
+	}
+}
+
 // client returns the configured transport or a default real *http.Client. The
 // default carries a bounded timeout so a hung provider can never wedge a
 // request goroutine.

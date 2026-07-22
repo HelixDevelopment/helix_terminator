@@ -79,8 +79,14 @@ type CreateNotificationRequest struct {
 // org) — it can never expose another user's rows because the underlying
 // query is always additionally scoped to the caller's own user_id.
 type ListNotificationsRequest struct {
-	OrgID   string `form:"org_id" binding:"omitempty,uuid"`
-	Status  string `form:"status" binding:"omitempty,oneof=pending sent delivered failed pending_provider_unconfigured"`
+	OrgID string `form:"org_id" binding:"omitempty,uuid"`
+	// Status vocabulary mirrors every real outcome deliverEmail/deliverWebhook/
+	// deliverPush can persist: "pending" (default/in_app), "sent" (email/push
+	// success), "delivered" (webhook success), "failed" (any channel's real
+	// send error), "pending_provider_unconfigured" (push, no provider armed),
+	// "failed_missing_target" (push, provider armed but no device token —
+	// internal/handler/handler.go deliverPush).
+	Status  string `form:"status" binding:"omitempty,oneof=pending sent delivered failed pending_provider_unconfigured failed_missing_target"`
 	Channel string `form:"channel" binding:"omitempty,oneof=email in_app push webhook"`
 	Limit   int    `form:"limit,default=20" binding:"omitempty,min=1,max=100"`
 	Offset  int    `form:"offset,default=0" binding:"omitempty,min=0"`

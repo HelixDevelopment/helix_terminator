@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -172,7 +173,7 @@ func (h *Handler) CreateNotification(c *gin.Context) {
 	case "webhook":
 		h.deliverWebhook(c.Request.Context(), notification)
 	case "push":
-		h.deliverPush(notification)
+		h.deliverPush(c.Request.Context(), notification)
 	}
 
 	if err := h.repo.CreateNotification(c.Request.Context(), notification); err != nil {
@@ -228,21 +229,77 @@ func (h *Handler) deliverWebhook(ctx context.Context, n *model.Notification) {
 	n.SentAt = &sentAt
 }
 
-// deliverPush honestly reports that no FCM/APNs provider is configured —
-// it NEVER fabricates a "sent"/"delivered" status for a channel with no
-// real backend wired in.
-func (h *Handler) deliverPush(n *model.Notification) {
+// deliverPush attempts a REAL FCM/APNs push via h.pushSender and sets
+// notification.Status to the REAL outcome — it NEVER fabricates a
+// "sent"/"delivered" status for a channel with no real backend wired in,
+// AND it never silently no-ops when a real backend IS wired in.
+//
+// T-PUSH-WIRING (PR #8 review, Important finding): this previously called
+// the arg-less PushSender.Send(), which always dispatches
+// SendTo(ctx, "", PushPayload{}) — an empty device token — so even an ARMED
+// provider (real FCM/APNs credentials present) short-circuited to
+// ErrPushTokenEmpty BEFORE sendFCM/sendAPNs ever ran, and every push
+// notification was persisted as "pending_provider_unconfigured" regardless
+// of whether a provider was actually configured (armed credentials produced
+// ZERO real sends — Constitution §11.4.108 present-but-not-wired /
+// §11.4.197). It now calls SendTo with the notification's REAL device
+// token (n.Target, mirroring the email/webhook channels' use of n.Target as
+// the delivery destination) and content, so an armed provider genuinely
+// dispatches through sendFCM/sendAPNs.
+func (h *Handler) deliverPush(ctx context.Context, n *model.Notification) {
 	if h.pushSender == nil {
 		n.Status = "pending_provider_unconfigured"
 		return
 	}
-	if err := h.pushSender.Send(); err != nil {
+
+	err := h.pushSender.SendTo(ctx, n.Target, delivery.PushPayload{
+		Title: n.Title,
+		Body:  n.Message,
+		Data:  pushDataFromRaw(n.Data),
+	})
+
+	switch {
+	case err == nil:
+		sentAt := time.Now().UTC()
+		n.Status = "sent"
+		n.SentAt = &sentAt
+	case errors.Is(err, delivery.ErrPushProviderNotConfigured):
+		// No provider armed (covers both h.pushSender == NewPushSender()
+		// zero-value AND a hand-constructed unconfigured sender) — the
+		// honest not-configured state, unchanged from before this fix.
 		n.Status = "pending_provider_unconfigured"
-		return
+	case errors.Is(err, delivery.ErrPushTokenEmpty):
+		// A provider IS configured, but this notification carries no
+		// device/registration token to send to — distinct from
+		// "pending_provider_unconfigured", which would now be INACCURATE
+		// (it would claim no provider is armed when one genuinely is).
+		n.Status = "failed_missing_target"
+	default:
+		// A configured provider's REAL send call returned a real error
+		// (transport failure, non-2xx rejection, provider-reported
+		// per-message failure) — surfaced honestly, never a fabricated
+		// "sent".
+		n.Status = "failed"
 	}
-	sentAt := time.Now().UTC()
-	n.Status = "sent"
-	n.SentAt = &sentAt
+}
+
+// pushDataFromRaw converts a notification's raw JSON Data payload
+// (model.Notification.Data, arbitrary operator-supplied JSON) into the flat
+// string map FCM HTTP v1 / the legacy FCM endpoint require for
+// delivery.PushPayload.Data (FCM mandates a data map of string values;
+// APNs's custom-data payload uses the same shape here for parity). When
+// Data is empty, absent, or not shaped as a flat JSON object of string
+// values, it is omitted from the push (best-effort) rather than failing the
+// entire send — Title/Body remain the push's primary content either way.
+func pushDataFromRaw(raw []byte) map[string]string {
+	if len(raw) == 0 {
+		return nil
+	}
+	var m map[string]string
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return nil
+	}
+	return m
 }
 
 // ListNotifications handles GET /api/v1/notifications
