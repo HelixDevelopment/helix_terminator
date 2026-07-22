@@ -70,6 +70,15 @@ func setupStressEnv(t *testing.T) *stressEnv {
 	r.GET("/api/v1/orgs/:id", h.GetOrg)
 	r.PUT("/api/v1/orgs/:id", h.UpdateOrg)
 	r.DELETE("/api/v1/orgs/:id", h.DeleteOrg)
+	// Team routes (mirrors internal/server/server.go's real registration -
+	// found missing via real-Postgres stress testing, T2:
+	// TestStressTeamCRUD_SustainedLoad always 404'd because this manually
+	// re-wired route subset never included them).
+	r.POST("/api/v1/orgs/:id/teams", h.CreateTeam)
+	r.GET("/api/v1/orgs/:id/teams", h.ListTeams)
+	r.GET("/api/v1/teams/:id", h.GetTeam)
+	r.PUT("/api/v1/teams/:id", h.UpdateTeam)
+	r.DELETE("/api/v1/teams/:id", h.DeleteTeam)
 
 	ts := httptest.NewServer(r)
 
@@ -183,12 +192,20 @@ func uniqueSlug(prefix string, i int) string {
 }
 
 // extractOrgID extracts the organization ID from the response body.
+//
+// §11.4.102 root-cause FACT (found while running this stress suite for
+// real, T2): this previously read body["organization"]["id"], assuming
+// a nested {"organization": {...}} envelope. The real handler
+// (internal/handler.go CreateOrg) responds with
+// model.OrgResponse{Organization: *org}, and OrgResponse embeds
+// Organization ANONYMOUSLY (model.go), so encoding/json promotes every
+// field flat - the real wire shape is {"id": ..., "name": ..., ...} at
+// the top level, never nested under an "organization" key. Every
+// iteration of this stress suite has therefore always failed on "no org
+// id" whenever genuinely run against a real database + real handler,
+// before it ever exercised sustained load or concurrent contention.
 func extractOrgID(body map[string]interface{}) string {
-	org, ok := body["organization"].(map[string]interface{})
-	if !ok {
-		return ""
-	}
-	id, _ := org["id"].(string)
+	id, _ := body["id"].(string)
 	return id
 }
 
@@ -459,11 +476,10 @@ func TestStressTeamCRUD_SustainedLoad(t *testing.T) {
 		if status != http.StatusCreated {
 			t.Fatalf("iteration %d: POST /teams status = %d, want 201; body=%v", i, status, body)
 		}
-		team, ok := body["team"].(map[string]interface{})
-		if !ok {
-			t.Fatalf("iteration %d: no team in response", i)
-		}
-		teamID, _ := team["id"].(string)
+		// model.TeamResponse embeds Team anonymously (same pattern as
+		// OrgResponse - see extractOrgID's doc comment above) so the
+		// real response is flat, never nested under a "team" key.
+		teamID, _ := body["id"].(string)
 		if teamID == "" {
 			t.Fatalf("iteration %d: no team id", i)
 		}

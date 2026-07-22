@@ -32,6 +32,19 @@ func (r *Repository) CreateUser(ctx context.Context, user *model.User) error {
 	if user.ID == "" {
 		user.ID = uuid.New().String()
 	}
+	// The users.permissions column is NOT NULL DEFAULT '{}' (see
+	// migrations/001_init.up.sql). A nil Go slice marshals to SQL NULL,
+	// not an empty array, and pgx does not coerce it - so a caller that
+	// omits Permissions would violate the NOT NULL constraint at INSERT
+	// time. The HTTP handler (internal/handler.CreateUser) already
+	// defends against this before calling CreateUser, but Repository is
+	// an exported type any other caller (gRPC handler, CLI seed tool,
+	// tests) can call directly - defend at the layer that actually owns
+	// the schema contract, not only at the one caller that happens to
+	// exist today (found via real-Postgres integration testing, T2).
+	if user.Permissions == nil {
+		user.Permissions = []string{}
+	}
 	return r.pool.QueryRow(ctx, query,
 		user.ID, user.Email, user.DisplayName, user.AvatarURL, user.Role, user.Permissions, user.OrgID, user.EmailVerified,
 	).Scan(&user.CreatedAt, &user.UpdatedAt)
@@ -213,7 +226,23 @@ func (r *Repository) CreateOrUpdateProfile(ctx context.Context, userID string, p
 	return err
 }
 
-// GetProfile retrieves a user profile
+// GetProfile retrieves a user profile.
+//
+// The query LEFT JOINs user_profiles, so bio/timezone/locale/
+// ssh_public_key/github_id/gitlab_id are genuinely SQL NULL - not just
+// possible but the COMMON case - whenever a user has never had a
+// profile row created for them (CreateOrUpdateProfile never called) or
+// only had a PARTIAL profile written (UpdateProfile's handler builds a
+// map containing only the fields the caller actually sent, and
+// CreateOrUpdateProfile's INSERT explicitly binds every other named
+// column to SQL NULL). model.UserProfile declares these as plain
+// (non-pointer) strings, and pgx refuses to scan SQL NULL into a
+// non-pointer string destination - so scan into nullable *string locals
+// first and fold NULL to "" when populating the response (found via
+// real-Postgres integration testing, T2: the previous unconditional
+// &profile.Bio/&profile.SSHPublicKey/... scan 500'd on the very next
+// GetProfile call after ANY partial profile update, and on the very
+// first GetProfile for a brand-new user with no profile row at all).
 func (r *Repository) GetProfile(ctx context.Context, userID string) (*model.UserProfile, error) {
 	query := `
 		SELECT u.id, u.email, u.display_name, u.avatar_url, u.role, u.permissions, u.org_id, u.email_verified, u.last_login_at, u.created_at, u.updated_at,
@@ -223,17 +252,36 @@ func (r *Repository) GetProfile(ctx context.Context, userID string) (*model.User
 		WHERE u.id = $1 AND u.deleted_at IS NULL
 	`
 	var profile model.UserProfile
+	var bio, timezone, locale, sshPublicKey, githubID, gitlabID *string
 	err := r.pool.QueryRow(ctx, query, userID).Scan(
 		&profile.ID, &profile.Email, &profile.DisplayName, &profile.AvatarURL, &profile.Role, &profile.Permissions,
 		&profile.OrgID, &profile.EmailVerified, &profile.LastLoginAt, &profile.CreatedAt, &profile.UpdatedAt,
-		&profile.Bio, &profile.Timezone, &profile.Locale, &profile.Preferences, &profile.SSHPublicKey,
-		&profile.GitHubID, &profile.GitLabID,
+		&bio, &timezone, &locale, &profile.Preferences, &sshPublicKey,
+		&githubID, &gitlabID,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, err
+	}
+	if bio != nil {
+		profile.Bio = *bio
+	}
+	if timezone != nil {
+		profile.Timezone = *timezone
+	}
+	if locale != nil {
+		profile.Locale = *locale
+	}
+	if sshPublicKey != nil {
+		profile.SSHPublicKey = *sshPublicKey
+	}
+	if githubID != nil {
+		profile.GitHubID = *githubID
+	}
+	if gitlabID != nil {
+		profile.GitLabID = *gitlabID
 	}
 	return &profile, nil
 }

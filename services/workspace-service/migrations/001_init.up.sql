@@ -1,10 +1,23 @@
 -- 001_init.sql
 -- Create workspaces and workspace_hosts tables with indexes and triggers.
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
+--
+-- Uses gen_random_uuid() (built into PostgreSQL 13+ pg_catalog, always
+-- resolvable via every service's search_path with no extension) rather
+-- than uuid_generate_v4() (from the "uuid-ossp" extension). Found via
+-- real-Postgres integration testing (T2): CREATE EXTENSION objects are
+-- database-wide, not schema-scoped - in helix_terminator's shared-
+-- database, schema-per-service topology (see migrations/migrate.go's
+-- doc comment), whichever service's migration runs FIRST installs
+-- "uuid-ossp" into ITS OWN schema; every other service's subsequent
+-- "CREATE EXTENSION IF NOT EXISTS" is then a silent no-op (the
+-- extension already exists by name, database-wide), and if that
+-- service's search_path does not include the schema the extension
+-- actually landed in, its own uuid_generate_v4() calls fail with
+-- "function uuid_generate_v4() does not exist" - reproduced here by
+-- running org-service's migration then workspace-service's migration
+-- against one shared database.
 CREATE TABLE IF NOT EXISTS workspaces (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL,
     user_id UUID NOT NULL,
     name TEXT NOT NULL,

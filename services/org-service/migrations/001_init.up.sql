@@ -1,10 +1,23 @@
 -- 001_init.sql
 -- Organizations, teams, and memberships schema for org-service
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
+--
+-- Uses gen_random_uuid() (built into PostgreSQL 13+ pg_catalog, always
+-- resolvable via every service's search_path with no extension) rather
+-- than uuid_generate_v4() (from the "uuid-ossp" extension). Found via
+-- real-Postgres integration testing (T2): CREATE EXTENSION objects are
+-- database-wide, not schema-scoped - in helix_terminator's shared-
+-- database, schema-per-service topology (see migrations/migrate.go's
+-- doc comment), whichever service's migration runs FIRST installs
+-- "uuid-ossp" into ITS OWN schema; every other service's subsequent
+-- "CREATE EXTENSION IF NOT EXISTS" is then a silent no-op (the
+-- extension already exists by name, database-wide), and if that
+-- service's search_path does not include the schema the extension
+-- actually landed in, its own uuid_generate_v4() calls fail with
+-- "function uuid_generate_v4() does not exist" - reproduced here by
+-- running org-service's migration then workspace-service's migration
+-- (which shared this same defect) against one shared database.
 CREATE TABLE IF NOT EXISTS organizations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
@@ -23,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_organizations_owner_id ON organizations(owner_id)
 CREATE INDEX IF NOT EXISTS idx_organizations_deleted_at ON organizations(deleted_at) WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS teams (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -35,7 +48,7 @@ CREATE TABLE IF NOT EXISTS teams (
 CREATE INDEX IF NOT EXISTS idx_teams_org_id ON teams(org_id);
 
 CREATE TABLE IF NOT EXISTS memberships (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     user_id UUID NOT NULL,
     team_id UUID REFERENCES teams(id) ON DELETE SET NULL,

@@ -59,6 +59,14 @@ func New(repo *repository.Repository) *Server {
 	}
 }
 
+// Router exposes the underlying engine for testing (mirrors
+// org-service/internal/server's identical accessor) so tests can drive
+// real requests through the actual registered routes + middleware via
+// httptest without opening a real network listener.
+func (s *Server) Router() http.Handler {
+	return s.router
+}
+
 // Run starts the HTTP server with graceful shutdown.
 func (s *Server) Run(addr string) error {
 	s.srv = &http.Server{

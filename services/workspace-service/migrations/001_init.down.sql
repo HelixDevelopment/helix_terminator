@@ -12,10 +12,3 @@ DROP INDEX IF EXISTS idx_workspaces_deleted_at;
 DROP INDEX IF EXISTS idx_workspaces_user_id;
 DROP INDEX IF EXISTS idx_workspaces_org_id;
 DROP TABLE IF EXISTS workspaces;
-
--- Note: the "uuid-ossp" extension is deliberately NOT dropped here. It is a
--- database-wide (not schema-scoped) object that other services sharing the
--- same "helixterminator" PostgreSQL database also depend on (idempotently
--- re-declared via their own CREATE EXTENSION IF NOT EXISTS); dropping it on
--- a workspace_service-only rollback would break every other service still
--- relying on uuid_generate_v4().

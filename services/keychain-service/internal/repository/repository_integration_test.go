@@ -40,7 +40,7 @@ const testEncKey = "T10-test-only-encryption-key-2026-07-08-do-not-use-in-prod"
 
 // mustConnectAndMigrate connects to the real Postgres pointed at by
 // DATABASE_URL and applies keychain-service's real migration
-// (migrations/001_init.sql) idempotently. Skips (does not fail) when
+// (migrations/001_init.up.sql) idempotently. Skips (does not fail) when
 // DATABASE_URL is unset — the correct §11.4.3 topology-appropriate
 // behaviour for an integration test with no real target.
 func mustConnectAndMigrate(t *testing.T) *pgxpool.Pool {
@@ -59,9 +59,18 @@ func mustConnectAndMigrate(t *testing.T) *pgxpool.Pool {
 
 	require.NoError(t, pool.Ping(ctx), "real Postgres at DATABASE_URL is not reachable")
 
-	migrationPath := filepath.Join("..", "..", "migrations", "001_init.sql")
+	// §11.4.102 root-cause FACT: this previously read "001_init.sql",
+	// which has never existed on disk (the real migration files are
+	// "001_init.up.sql" / "001_init.down.sql", see
+	// services/keychain-service/migrations/) - so every test in this
+	// file has always failed with "no such file or directory" before
+	// ever reaching Postgres, whenever DATABASE_URL was actually set.
+	// The T10 encryption-at-rest + T13 UpdateItem hardening real-Postgres
+	// proofs this file documents have therefore never genuinely run.
+	// Found via real-Postgres integration testing while covering T2.
+	migrationPath := filepath.Join("..", "..", "migrations", "001_init.up.sql")
 	migrationSQL, err := os.ReadFile(migrationPath)
-	require.NoError(t, err, "failed to read migrations/001_init.sql")
+	require.NoError(t, err, "failed to read migrations/001_init.up.sql")
 
 	_, err = pool.Exec(ctx, string(migrationSQL))
 	require.NoError(t, err, "failed to apply real migration to real Postgres")

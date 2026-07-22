@@ -192,7 +192,7 @@ func (r *Repository) UpdateOrg(ctx context.Context, id uuid.UUID, updates map[st
 		UPDATE organizations
 		SET %s
 		WHERE id = $%d AND deleted_at IS NULL
-	`, joinConditions(setParts), argIdx)
+	`, joinSetClauses(setParts), argIdx)
 	_, err := r.pool.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to update organization: %w", err)
@@ -480,6 +480,25 @@ func joinConditions(conditions []string) string {
 	for i, c := range conditions {
 		if i > 0 {
 			result += " AND "
+		}
+		result += c
+	}
+	return result
+}
+
+// joinSetClauses joins UPDATE ... SET assignment fragments with ", "
+// (SQL SET-clause syntax), distinct from joinConditions' " AND " join
+// (SQL WHERE-clause syntax). Found via real-Postgres integration
+// testing (T2): UpdateOrg previously reused joinConditions for its SET
+// clause, producing invalid SQL like "SET name = $1 AND updated_at =
+// $2" - a syntax error Postgres rejects, meaning every PUT
+// /api/v1/orgs/:id request always failed with a 500 regardless of
+// payload.
+func joinSetClauses(clauses []string) string {
+	result := ""
+	for i, c := range clauses {
+		if i > 0 {
+			result += ", "
 		}
 		result += c
 	}
