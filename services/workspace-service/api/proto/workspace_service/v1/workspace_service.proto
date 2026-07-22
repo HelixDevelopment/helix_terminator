@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package workspace_service.v1;
+
+option go_package = "github.com/helixdevelopment/workspace-service/api/proto/workspace_service/v1;workspace_servicev1";
+
+// TODO: define service RPCs and messages
+
+service WorkspaceServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

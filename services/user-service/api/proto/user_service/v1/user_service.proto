@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package user_service.v1;
+
+option go_package = "github.com/helixdevelopment/user-service/api/proto/user_service/v1;user_servicev1";
+
+// TODO: define service RPCs and messages
+
+service UserServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

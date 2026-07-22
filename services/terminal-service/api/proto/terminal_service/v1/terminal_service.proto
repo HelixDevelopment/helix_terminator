@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package terminal_service.v1;
+
+option go_package = "github.com/helixdevelopment/terminal-service/api/proto/terminal_service/v1;terminal_servicev1";
+
+// TODO: define service RPCs and messages
+
+service TerminalServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}
