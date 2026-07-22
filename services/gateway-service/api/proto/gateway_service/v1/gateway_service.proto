@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package gateway_service.v1;
+
+option go_package = "github.com/helixdevelopment/gateway-service/api/proto/gateway_service/v1;gateway_servicev1";
+
+// TODO: define service RPCs and messages
+
+service GatewayServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

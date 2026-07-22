@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package collaboration_service.v1;
+
+option go_package = "github.com/helixdevelopment/collaboration-service/api/proto/collaboration_service/v1;collaboration_servicev1";
+
+// TODO: define service RPCs and messages
+
+service CollaborationServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

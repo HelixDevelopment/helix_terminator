@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package health_service.v1;
+
+option go_package = "github.com/helixdevelopment/health-service/api/proto/health_service/v1;health_servicev1";
+
+// TODO: define service RPCs and messages
+
+service HealthServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}
