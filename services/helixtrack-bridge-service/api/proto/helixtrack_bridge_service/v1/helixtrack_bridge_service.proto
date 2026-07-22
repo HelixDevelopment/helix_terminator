@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package helixtrack_bridge_service.v1;
+
+option go_package = "github.com/helixdevelopment/helixtrack-bridge-service/api/proto/helixtrack_bridge_service/v1;helixtrack_bridge_servicev1";
+
+// TODO: define service RPCs and messages
+
+service HelixtrackBridgeServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

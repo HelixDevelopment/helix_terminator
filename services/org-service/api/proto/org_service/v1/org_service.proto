@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package org_service.v1;
+
+option go_package = "github.com/helixdevelopment/org-service/api/proto/org_service/v1;org_servicev1";
+
+// Protobuf definitions for org-service (future gRPC gateway)
+
+service OrgService {
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+}

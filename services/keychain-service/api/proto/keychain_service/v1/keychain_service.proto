@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package keychain_service.v1;
+
+option go_package = "github.com/helixdevelopment/keychain-service/api/proto/keychain_service/v1;keychain_servicev1";
+
+// TODO: define service RPCs and messages
+
+service KeychainServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

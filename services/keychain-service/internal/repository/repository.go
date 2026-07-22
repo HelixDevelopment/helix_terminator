@@ -212,7 +212,7 @@ func (r *Repository) UpdateItem(ctx context.Context, id uuid.UUID, updates map[s
 // hardcoded Go string literals ("name", "public_key", "metadata",
 // "tags") — never a client-supplied field name — so the defect was NOT
 // exploitable through any exported HTTP or gRPC entry point at the time
-// of this fix (the gRPC service in api/proto/keychain-service.proto
+// of this fix (the gRPC service in api/proto/keychain_service/v1/keychain_service.proto
 // defines no RPCs beyond HealthCheck). It was nonetheless a LATENT
 // SQL-shape defect: Repository.UpdateItem is an exported method that
 // accepts a raw map[string]interface{}, and any future caller that ever

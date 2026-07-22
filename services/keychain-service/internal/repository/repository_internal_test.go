@@ -15,7 +15,7 @@
 // UpdateKeychainItemRequest (internal/model/model.go) has no
 // pass-through field-name mechanism, so the defect was NOT reachable
 // from any exported HTTP entry point. The gRPC service defined in
-// api/proto/keychain-service.proto declares no RPCs beyond HealthCheck,
+// api/proto/keychain_service/v1/keychain_service.proto declares no RPCs beyond HealthCheck,
 // so there is no gRPC path either. CONCLUSION (§11.4.6, no guessing):
 // this was a LATENT SQL-shape defect, not an exploitable one, at the
 // time of this fix — but Repository.UpdateItem is exported and took a
