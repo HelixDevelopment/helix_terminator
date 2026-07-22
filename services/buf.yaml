@@ -1,0 +1,33 @@
+version: v2
+modules:
+  - path: ai-service/api/proto
+  - path: analytics-service/api/proto
+  - path: audit-service/api/proto
+  - path: auth-service/api/proto
+  - path: billing-service/api/proto
+  - path: collaboration-service/api/proto
+  - path: config-service/api/proto
+  - path: container-bridge-service/api/proto
+  - path: gateway-service/api/proto
+  - path: health-service/api/proto
+  - path: helixtrack-bridge-service/api/proto
+  - path: host-service/api/proto
+  - path: keychain-service/api/proto
+  - path: notification-service/api/proto
+  - path: org-service/api/proto
+  - path: pki-service/api/proto
+  - path: port-forward-service/api/proto
+  - path: recording-service/api/proto
+  - path: sftp-service/api/proto
+  - path: snippet-service/api/proto
+  - path: ssh-proxy-service/api/proto
+  - path: terminal-service/api/proto
+  - path: user-service/api/proto
+  - path: vault-service/api/proto
+  - path: workspace-service/api/proto
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

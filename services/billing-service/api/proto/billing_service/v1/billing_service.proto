@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package billing_service.v1;
+
+option go_package = "github.com/helixdevelopment/billing-service/api/proto/billing_service/v1;billing_servicev1";
+
+// TODO: define service RPCs and messages
+
+service BillingServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}

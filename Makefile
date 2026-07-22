@@ -24,10 +24,11 @@ constitution-check: verify meta-test test ## Run verify, meta-test, and test in 
 # HelixTerminator platform targets
 # ---------------------------------------------------------------------------
 
-.PHONY: all build test lint fmt docker-build docker-push deploy-dev deploy-staging deploy-prod
+.PHONY: all build test lint fmt docker-build docker-push deploy-dev deploy-staging deploy-prod proto-lint proto-breaking proto-generate
 
 GO_SERVICES := $(wildcard services/*)
 FLUTTER_DIR := clients/flutter
+BUF ?= buf
 
 all: fmt lint test build ## Run full CI pipeline locally
 
@@ -108,3 +109,29 @@ help-platform: ## List platform-specific targets
 	@echo "  dev-up, dev-down, dev-logs"
 	@echo "  deploy-dev, deploy-staging, deploy-prod"
 	@echo "  flutter-test, flutter-build"
+	@echo "  proto-lint, proto-breaking, proto-generate"
+
+# ---------------------------------------------------------------------------
+# Proto (buf) targets — see docs/guides/PROTO_LAYOUT_CONVENTION.md
+# ---------------------------------------------------------------------------
+
+proto-lint: ## Run buf lint across the services/ proto workspace
+	$(BUF) lint services
+
+proto-breaking: ## Run buf breaking against the helix_terminator-0.1.0 tag baseline, per service
+	@# services/buf.yaml declares one buf module PER service (25 modules); at the
+	@# helix_terminator-0.1.0 tag no buf.yaml existed, so buf treats that ref as ONE
+	@# implicit module. `buf breaking` cannot compare a 25-module workspace against a
+	@# 1-module snapshot in a single invocation ("input contained 25 images, whereas
+	@# against contained 1 images") — verified on this host. Loop per service instead,
+	@# each comparison is then a real 1-module-vs-1-module check.
+	@for svc in $(GO_SERVICES); do \
+		svc_name=$$(basename $$svc); \
+		if [ -f "$$svc/api/proto" ] || [ -d "$$svc/api/proto" ]; then \
+			echo "buf breaking services/$$svc_name/api/proto ..."; \
+			$(BUF) breaking services/$$svc_name/api/proto --against ".git#tag=helix_terminator-0.1.0,subdir=services/$$svc_name/api/proto" || exit 100; \
+		fi; \
+	done
+
+proto-generate: ## Regenerate Go proto bindings (requires protoc-gen-go + protoc-gen-go-grpc on PATH)
+	$(BUF) generate services

@@ -72,6 +72,7 @@ own files live under `constitution/` and are governed separately (§11.4.35).
 - [QWEN.md](QWEN.md) — Qwen project instructions (inherits `constitution/QWEN.md`)
 - [docs/CONSTITUTION_INHERITANCE.md](docs/CONSTITUTION_INHERITANCE.md) — How this project inherits + verifies constitution governance
 - [docs/guides/HELIX_TERMINATOR_CONSTITUTION.md](docs/guides/HELIX_TERMINATOR_CONSTITUTION.md) — Project-specific constitution extensions (currently none promoted)
+- [docs/guides/AGENT_HOOKS.md](docs/guides/AGENT_HOOKS.md) — Staged constitution hook wiring (§11.4.109 / §11.4.164) — activation status and evidence
 
 ### Project Status, Planning & Requests
 
@@ -81,6 +82,7 @@ own files live under `constitution/` and are governed separately (§11.4.35).
 - [CHANGELOG.md](CHANGELOG.md) — Notable changes to helix_terminator
 - [docs/requests/history.md](docs/requests/history.md) — §11.4.208 operator-request-history ledger
 - [docs/requests/feature_queue.md](docs/requests/feature_queue.md) — §11.4.213 durable FEATURE-directive research/scheduling queue
+- [docs/guides/WORKABLE_ITEMS.md](docs/guides/WORKABLE_ITEMS.md) — §11.4.202/§11.4.93/§11.4.95 workable-items reporting-directive + SQLite SSoT wiring
 
 ### Reviews & Audits
 
@@ -115,6 +117,11 @@ own files live under `constitution/` and are governed separately (§11.4.35).
 
 - [docs/scripts/firebase_setup.md](docs/scripts/firebase_setup.md) — `firebase_setup.sh` — user guide
 - [docs/scripts/install_git_hooks.md](docs/scripts/install_git_hooks.md) — `install_git_hooks.sh` — user guide
+- [docs/scripts/capture_operator_request.md](docs/scripts/capture_operator_request.md) — `capture_operator_request.sh` — §11.4.210 operator-request auto-capture hook — user guide
+
+### Developer & Build Conventions
+
+- [docs/guides/PROTO_LAYOUT_CONVENTION.md](docs/guides/PROTO_LAYOUT_CONVENTION.md) — Protobuf layout + `buf` lint/breaking convention (per-service `api/proto/<name>/v1/` modules)
 
 ### Test Challenges & Chaos Engineering
 

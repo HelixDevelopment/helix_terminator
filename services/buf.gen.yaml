@@ -1,0 +1,19 @@
+version: v2
+# Regeneration template for the services/ proto surface (S-T3-W01 Wave 0).
+#
+# Honest gap (§11.4.3 / §11.4.69 SKIP-with-reason): as of this commit, no
+# protoc-gen-go / protoc-gen-go-grpc plugin is installed on any host that
+# has run this workspace's tooling. `make proto-generate` is provided so
+# the regeneration mechanism exists and is documented, but its execution
+# is expected to fail with a "plugin not found" error until those plugins
+# are installed. Tracked as a separate follow-up item — not required for
+# the buf-lint naming remediation this file's sibling buf.yaml supports,
+# because zero generated code currently exists or is consumed by any Go
+# service or the Flutter client (see docs/guides/PROTO_LAYOUT_CONVENTION.md).
+plugins:
+  - local: protoc-gen-go
+    out: gen
+    opt: paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: gen
+    opt: paths=source_relative

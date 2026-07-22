@@ -71,3 +71,11 @@ clients/flutter/.pub-cache/
 
 # Agent worktree scratchpad — evidence + temp files, never versioned. §11.4.11 / §11.4.30
 scratchpad/
+
+# §11.4.93/§11.4.95 workable-items SQLite SSoT: docs/workable_items.db itself
+# is TRACKED (authoritative source data, NOT a build artifact — §11.4.95,
+# NEVER add it here). Only its transient WAL/SHM sidecars are ignored; a
+# WAL-checkpoint (`PRAGMA wal_checkpoint(TRUNCATE)`) runs before every
+# commit-stage per §11.4.95 so these are always safely discardable.
+docs/workable_items.db-wal
+docs/workable_items.db-shm

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package auth_service.v1;
+
+option go_package = "github.com/helixdevelopment/auth-service/api/proto/auth_service/v1;auth_servicev1";
+
+// TODO: define service RPCs and messages
+
+service AuthServiceService {
+	rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+	bool healthy = 1;
+}
