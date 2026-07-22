@@ -17,6 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/helixdevelopment/billing-service/internal/handler"
+	"github.com/helixdevelopment/billing-service/internal/payment"
 	"github.com/helixdevelopment/billing-service/internal/repository"
 )
 
@@ -78,6 +79,16 @@ func New(repo *repository.Repository) *Server {
 	r.GET("/healthz/ready", h.ReadinessCheck)
 	r.GET("/health", h.HealthCheck)
 	r.GET("/ready", h.ReadinessCheck)
+
+	// Stripe webhook receiver — mounted OUTSIDE the JWT-authenticated /api/v1
+	// group because Stripe authenticates deliveries with a signature header
+	// (verified by the gateway's WebhookHandler), never a bearer JWT. The
+	// gateway is env-configured (STRIPE_WEBHOOK_SECRET, §11.4.10): when the
+	// secret is absent the handler fails closed with 503; a forged/stale/absent
+	// signature is rejected with 400; only a genuinely-signed delivery gets 200.
+	// This connects the webhook-verification path PR #7 armed but never mounted.
+	gw := payment.NewGateway()
+	r.POST("/webhooks/stripe", gin.WrapF(gw.WebhookHandler()))
 
 	api := r.Group("/api/v1")
 	api.Use(s.authMiddleware())
