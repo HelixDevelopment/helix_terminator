@@ -16,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/billing-service/internal/billing"
 	"github.com/helixdevelopment/billing-service/internal/handler"
 	"github.com/helixdevelopment/billing-service/internal/repository"
 )
@@ -72,12 +73,38 @@ func New(repo *repository.Repository) *Server {
 	r.Use(requestIDMiddleware())
 	r.Use(loggingMiddleware())
 
-	h := handler.New(repo)
+	// Constitution §11.4 anti-bluff honest feature-flag: read
+	// STRIPE_SECRET_KEY (+ STRIPE_WEBHOOK_SECRET) from the process
+	// environment exactly once at startup, mirroring the JWT_PUBLIC_KEY
+	// env-read pattern above. When absent, provider is nil and every
+	// subscription-lifecycle-mutating handler honestly responds 501
+	// "payments provider not configured" — NEVER a fabricated success.
+	// When present, every subsequent request this process serves makes
+	// REAL calls against the real Stripe API. See
+	// internal/billing.NewProviderFromEnv + docs/guides/BILLING.md.
+	provider, perr := billing.NewProviderFromEnv()
+	if perr != nil {
+		log.Printf("warning: failed to construct payments provider from environment: %v", perr)
+	} else if provider != nil {
+		log.Printf("billing-service: payments provider %q configured — subscription lifecycle calls are REAL", provider.Name())
+	} else {
+		log.Printf("billing-service: no payments provider configured (STRIPE_SECRET_KEY unset) — subscription-lifecycle-mutating endpoints will respond 501 Not Implemented")
+	}
+
+	h := handler.New(repo, handler.WithProvider(provider))
 
 	r.GET("/healthz", h.HealthCheck)
 	r.GET("/healthz/ready", h.ReadinessCheck)
 	r.GET("/health", h.HealthCheck)
 	r.GET("/ready", h.ReadinessCheck)
+
+	// Stripe (or any configured processor) authenticates a webhook
+	// delivery via its own payload-signature scheme (Stripe-Signature
+	// header + shared secret, verified inside h.StripeWebhook via
+	// billing.PaymentProvider.VerifyWebhook) — NEVER a bearer JWT, so
+	// this route is deliberately mounted OUTSIDE the api.Use(s.authMiddleware())
+	// group below.
+	r.POST("/api/v1/webhooks/stripe", h.StripeWebhook)
 
 	api := r.Group("/api/v1")
 	api.Use(s.authMiddleware())

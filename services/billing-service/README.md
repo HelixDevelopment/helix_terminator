@@ -63,6 +63,19 @@ go test -v -race -cover ./...
 | `LOG_LEVEL` | No | info | Log level (debug/info/warn/error) |
 | `KAFKA_BROKERS` | No | — | Kafka bootstrap servers |
 | `REDIS_URL` | No | — | Redis connection string |
+| `JWT_PUBLIC_KEY` | No (401 on all `/api/v1/*` when unset) | — | base64 Ed25519 public key, same key `auth-service`/`gateway-service` use |
+| `STRIPE_SECRET_KEY` | No (honest `501` on subscription-lifecycle endpoints when unset) | — | Stripe API secret key (`sk_test_...`/`sk_live_...`) — see `docs/guides/BILLING.md` |
+| `STRIPE_WEBHOOK_SECRET` | No (webhook verification fails closed when unset) | — | Stripe webhook endpoint signing secret (`whsec_...`) — see `docs/guides/BILLING.md` |
+
+## Payments / Stripe integration
+
+Subscription create/update/cancel are backed by a pluggable
+`billing.PaymentProvider` (`internal/billing/`), with a real Stripe Go
+SDK implementation. With no `STRIPE_SECRET_KEY` configured, the
+subscription-lifecycle-mutating endpoints honestly respond `501 Not
+Implemented` — never a fabricated success. Full architecture, Stripe
+setup, webhook configuration, and test instructions:
+**`docs/guides/BILLING.md`**.
 
 ---
 

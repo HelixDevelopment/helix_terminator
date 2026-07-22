@@ -10,8 +10,12 @@
 //   - Boundary conditions: empty planID, invalid status, invalid UUID,
 //     missing auth — every boundary produces a categorised result.
 //
-// Run:
+// Run (requires a real Stripe test-mode key + test-mode Price — see
+// docs/guides/BILLING.md; Constitution §11.4.27(A) forbids a fake
+// payment provider in a stress test):
 //
+//	export STRIPE_SECRET_KEY="sk_test_..."
+//	export STRIPE_TEST_PRICE_ID="price_..."
 //	go test -race -tags stress -run TestStress -v -timeout 120s ./internal/handler/
 package handler_test
 
@@ -21,12 +25,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/billing-service/internal/billing"
 	"github.com/helixdevelopment/billing-service/internal/handler"
 	"github.com/helixdevelopment/billing-service/internal/repository"
 	"github.com/helixdevelopment/billing-service/internal/testutil"
@@ -34,19 +40,36 @@ import (
 )
 
 // stressEnv holds the assembled test environment: a real gin engine
-// wired to a real handler backed by a real PostgreSQL pool.
+// wired to a real handler backed by a real PostgreSQL pool AND a real
+// (never faked, §11.4.27(A)) billing.PaymentProvider.
 type stressEnv struct {
-	ts      *httptest.Server
-	orgID   uuid.UUID
-	cleanup func()
+	ts            *httptest.Server
+	orgID         uuid.UUID
+	stripePriceID string
+	cleanup       func()
 }
 
-// setupStressEnv boots a real PostgreSQL container (via podman),
-// applies billing-service migrations, constructs a real handler+router
-// with a test middleware that injects orgID, and returns a ready
-// httptest.Server. Skips honestly if podman is unavailable.
+// setupStressEnv boots a real PostgreSQL container (via podman) AND
+// requires a real Stripe test-mode payment provider, applies
+// billing-service migrations, constructs a real handler+router with a
+// test middleware that injects orgID, and returns a ready
+// httptest.Server. Skips honestly if podman OR a real Stripe test key/
+// test-mode price is unavailable — Constitution §11.4.27(A): stress
+// tests MUST exercise the real, fully implemented system, never a fake
+// payment provider, so "no real Stripe test credentials provisioned"
+// is an honest topology_unsupported SKIP, not a licence to substitute a
+// mock here.
 func setupStressEnv(t *testing.T) *stressEnv {
 	t.Helper()
+
+	stripePriceID := os.Getenv("STRIPE_TEST_PRICE_ID")
+	if os.Getenv(billing.EnvStripeSecretKey) == "" || stripePriceID == "" {
+		t.Skip("SKIP: STRIPE_SECRET_KEY and/or STRIPE_TEST_PRICE_ID not set — cannot run stress tests against the real Stripe API (operator_attended); see docs/guides/BILLING.md")
+	}
+	provider, perr := billing.NewProviderFromEnv()
+	if perr != nil {
+		t.Fatalf("billing.NewProviderFromEnv failed: %v", perr)
+	}
 
 	poolURL, available := testutil.StartTestPostgres(t)
 	if !available {
@@ -63,7 +86,7 @@ func setupStressEnv(t *testing.T) *stressEnv {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := handler.New(repo)
+	h := handler.New(repo, handler.WithProvider(provider))
 
 	// Test middleware that injects orgID into context — bypasses
 	// real JWT validation but preserves the handler's tenant-scoping
@@ -86,8 +109,9 @@ func setupStressEnv(t *testing.T) *stressEnv {
 	ts := httptest.NewServer(r)
 
 	return &stressEnv{
-		ts:    ts,
-		orgID: testOrgID,
+		ts:            ts,
+		orgID:         testOrgID,
+		stripePriceID: stripePriceID,
 		cleanup: func() {
 			ts.Close()
 			pool.Close()
@@ -210,7 +234,8 @@ func TestStressCreateGetUpdateCancel_SustainedLoad(t *testing.T) {
 
 		// Create subscription
 		status, body := stressPostJSON(t, client, env.ts.URL+"/api/v1/subscriptions", map[string]string{
-			"planId": planID.String(),
+			"planId":        planID.String(),
+			"stripePriceId": env.stripePriceID,
 		})
 		if status != http.StatusCreated {
 			t.Fatalf("iteration %d: POST /subscriptions status = %d, want 201; body=%v", i, status, body)
@@ -270,7 +295,8 @@ func TestStressConcurrentContention(t *testing.T) {
 
 		// Create subscription
 		status, body := stressPostJSON(t, client, env.ts.URL+"/api/v1/subscriptions", map[string]string{
-			"planId": planID.String(),
+			"planId":        planID.String(),
+			"stripePriceId": env.stripePriceID,
 		})
 		if status != http.StatusCreated {
 			t.Errorf("goroutine %d: POST /subscriptions status = %d, want 201; body=%v", id, status, body)
@@ -355,7 +381,8 @@ func TestStressBoundaryConditions(t *testing.T) {
 		// First create a valid subscription
 		planID := uuid.New()
 		status, body := stressPostJSON(t, client, env.ts.URL+"/api/v1/subscriptions", map[string]string{
-			"planId": planID.String(),
+			"planId":        planID.String(),
+			"stripePriceId": env.stripePriceID,
 		})
 		if status != http.StatusCreated {
 			t.Fatalf("create subscription status = %d, want 201", status)
@@ -377,7 +404,8 @@ func TestStressBoundaryConditions(t *testing.T) {
 		// Create + cancel
 		planID := uuid.New()
 		status, body := stressPostJSON(t, client, env.ts.URL+"/api/v1/subscriptions", map[string]string{
-			"planId": planID.String(),
+			"planId":        planID.String(),
+			"stripePriceId": env.stripePriceID,
 		})
 		if status != http.StatusCreated {
 			t.Fatalf("create subscription status = %d, want 201", status)
@@ -439,12 +467,15 @@ func TestStressBoundaryConditions(t *testing.T) {
 }
 
 // TestStressBoundaryConditions_NoRepo exercises boundary conditions
-// against the validation layer WITHOUT a database — proves
-// ShouldBindJSON rejects malformed input before any DB call.
+// against the validation layer WITHOUT a database AND without a
+// payment provider — proves ShouldBindJSON rejects malformed input
+// before any DB/provider call, and that the honest-501 gate (§11.4
+// anti-bluff — handler.New(nil) below wires NO provider) fires for an
+// otherwise-well-formed request.
 func TestStressBoundaryConditions_NoRepo(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := handler.New(nil)
+	h := handler.New(nil) // no repo, no provider — the fully-unconfigured state
 
 	// Set up test middleware with orgID
 	r.Use(func(c *gin.Context) {
@@ -463,7 +494,11 @@ func TestStressBoundaryConditions_NoRepo(t *testing.T) {
 		{"invalid_json", "{broken", 400},
 		{"missing_plan_id", `{}`, 400},
 		{"invalid_plan_id", `{"planId":"not-a-uuid"}`, 400},
-		{"valid_shape_no_repo", `{"planId":"` + uuid.New().String() + `"}`, 503},
+		// §11.4 anti-bluff: a well-formed planId with NO provider
+		// configured must honestly 501, never fabricate success (and
+		// never reach the nil repo at all — the provider check runs
+		// first).
+		{"valid_shape_no_repo", `{"planId":"` + uuid.New().String() + `"}`, 501},
 	}
 
 	for _, tc := range cases {

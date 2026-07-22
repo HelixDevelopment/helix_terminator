@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -8,18 +9,40 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/billing-service/internal/billing"
 	"github.com/helixdevelopment/billing-service/internal/model"
 	"github.com/helixdevelopment/billing-service/internal/repository"
 )
 
 // Handler holds billing service handlers
 type Handler struct {
-	repo *repository.Repository
+	repo     *repository.Repository
+	provider billing.PaymentProvider
+}
+
+// Option configures a Handler at construction time.
+type Option func(*Handler)
+
+// WithProvider wires a real billing.PaymentProvider into the Handler.
+// Omitting it (the zero value — provider stays nil) is the honest "no
+// payment processor is configured" operating mode (Constitution §11.4
+// anti-bluff): every subscription-lifecycle-mutating endpoint
+// (CreateSubscription / UpdateSubscription's plan-change path /
+// CancelSubscription's processor-backed path / StripeWebhook) responds
+// 501 "payments provider not configured" rather than ever fabricate a
+// success with no processor behind it — see internal/billing/provider.go
+// for the full rationale.
+func WithProvider(p billing.PaymentProvider) Option {
+	return func(h *Handler) { h.provider = p }
 }
 
 // New creates a new Handler
-func New(repo *repository.Repository) *Handler {
-	return &Handler{repo: repo}
+func New(repo *repository.Repository, opts ...Option) *Handler {
+	h := &Handler{repo: repo}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // callerOrgID returns the requesting tenant's org ID as established by the
@@ -49,7 +72,37 @@ func callerOrgID(c *gin.Context) (uuid.UUID, bool) {
 	return id, true
 }
 
-// CreateSubscription handles subscription creation
+// idempotencyKeyFromRequest returns the client-supplied "Idempotency-Key"
+// header when present (the standard REST idiom Stripe's own API itself
+// uses — a client that wants retry-safety across a network timeout sets
+// this header identically on every retry of the same logical request),
+// or a freshly generated key otherwise. A freshly generated per-call key
+// provides no retry protection on its own, but that is strictly safer
+// than the alternative of deriving a key from request CONTENT (e.g. org
+// + price): a content-derived key would make Stripe's idempotency layer
+// silently return the FIRST subscription's result for a second,
+// legitimately-different subscription create to the same price by the
+// same org — a subtle, hard-to-detect variant of exactly the bluff this
+// package exists to prevent (a client asking for and expecting a new
+// resource, silently getting an old one back instead).
+func idempotencyKeyFromRequest(c *gin.Context) string {
+	if key := c.GetHeader("Idempotency-Key"); key != "" {
+		return key
+	}
+	return uuid.NewString()
+}
+
+// CreateSubscription handles subscription creation.
+//
+// Constitution §11.4 anti-bluff — THE BLUFF THIS FIX CLOSES: this
+// handler used to persist a new subscription row with Status:"active"
+// unconditionally, with NO payment processor ever contacted — a
+// fabricated success. It now REQUIRES a configured billing.PaymentProvider
+// (see WithProvider / internal/billing.NewProviderFromEnv, wired from
+// STRIPE_SECRET_KEY by internal/server.New) and persists ONLY the real
+// status the processor actually returned. With no provider configured,
+// this endpoint honestly reports 501 Not Implemented — never a
+// fabricated "active".
 func (h *Handler) CreateSubscription(c *gin.Context) {
 	var req model.CreateSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -69,16 +122,57 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 		return
 	}
 
+	// §11.4 anti-bluff honest feature-flag: no configured processor ⇒
+	// honestly refuse rather than fabricate a subscription with nothing
+	// behind it. This is checked BEFORE any DB access so the response is
+	// deterministic regardless of database availability.
+	if h.provider == nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "payments provider not configured"})
+		return
+	}
+
+	if req.StripePriceID == nil || strings.TrimSpace(*req.StripePriceID) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "stripePriceId is required when a payment provider is configured"})
+		return
+	}
+
 	planID, _ := uuid.Parse(req.PlanID)
 
+	// Reuse this org's existing processor-side customer record (from a
+	// prior subscription, if any) rather than creating a duplicate
+	// customer for every subscription the org creates.
+	existingCustomerID, err := h.repo.GetLatestExternalCustomerID(c.Request.Context(), callerOrg, h.provider.Name())
+	if err != nil {
+		if strings.Contains(err.Error(), "database not connected") {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve billing customer"})
+		return
+	}
+
+	result, err := h.provider.CreateSubscription(c.Request.Context(), billing.CreateSubscriptionInput{
+		OrgID:              callerOrg.String(),
+		PriceID:            *req.StripePriceID,
+		ExistingCustomerID: existingCustomerID,
+		IdempotencyKey:     idempotencyKeyFromRequest(c),
+	})
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "payment provider rejected the subscription create", "details": err.Error()})
+		return
+	}
+
 	sub := &model.Subscription{
-		ID:        uuid.New(),
-		OrgID:     callerOrg,
-		PlanID:    planID,
-		Status:    "active",
-		StartedAt: time.Now().UTC(),
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		ID:                     uuid.New(),
+		OrgID:                  callerOrg,
+		PlanID:                 planID,
+		Status:                 result.Status, // the REAL status the processor returned — never hardcoded
+		StartedAt:              time.Now().UTC(),
+		CreatedAt:              time.Now().UTC(),
+		UpdatedAt:              time.Now().UTC(),
+		Provider:               h.provider.Name(),
+		ExternalSubscriptionID: result.ExternalSubscriptionID,
+		ExternalCustomerID:     result.ExternalCustomerID,
 	}
 
 	if err := h.repo.CreateSubscription(c.Request.Context(), sub); err != nil {
@@ -178,7 +272,20 @@ func (h *Handler) ListSubscriptions(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// UpdateSubscription handles updating a subscription
+// UpdateSubscription handles updating a subscription.
+//
+// Constitution §11.4 anti-bluff: a plan/price change on a
+// processor-backed subscription (ExternalSubscriptionID != "") is a
+// REAL billing event and MUST go through the configured
+// billing.PaymentProvider — it is never applied as a local-only DB
+// write for such a row. A subscription that was never processor-backed
+// (Provider == "none" — see migration 002_payment_provider) has no
+// processor truth to diverge from, so its plan_id may still be updated
+// as local bookkeeping without a provider. Status updates accept only
+// {canceled, expired} (model.UpdateSubscriptionRequest) — reactivating
+// a subscription to "active" via this endpoint is deliberately
+// impossible; that must come from a real processor result (Create /
+// the plan-change path below / a verified webhook), never a bare PUT.
 func (h *Handler) UpdateSubscription(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -195,6 +302,10 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 	var req model.UpdateSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.PlanID != nil && req.Status != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot change plan and status in the same request"})
 		return
 	}
 
@@ -228,7 +339,38 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 	updates := make(map[string]interface{})
 	if req.PlanID != nil {
 		planID, _ := uuid.Parse(*req.PlanID)
-		updates["plan_id"] = planID
+		if existing.ExternalSubscriptionID != "" {
+			// Processor-backed row: the price change MUST be applied
+			// against the real processor before we ever write a new
+			// plan_id locally — never assert a plan change locally that
+			// the processor was never asked to make.
+			if h.provider == nil {
+				c.JSON(http.StatusNotImplemented, gin.H{"error": "payments provider not configured; cannot change a processor-backed subscription's plan"})
+				return
+			}
+			if req.StripePriceID == nil || strings.TrimSpace(*req.StripePriceID) == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "stripePriceId is required to change a processor-backed subscription's plan"})
+				return
+			}
+			result, perr := h.provider.UpdateSubscription(c.Request.Context(), billing.UpdateSubscriptionInput{
+				ExternalSubscriptionID: existing.ExternalSubscriptionID,
+				NewPriceID:             *req.StripePriceID,
+				IdempotencyKey:         idempotencyKeyFromRequest(c),
+			})
+			if perr != nil {
+				c.JSON(http.StatusBadGateway, gin.H{"error": "payment provider rejected the subscription update", "details": perr.Error()})
+				return
+			}
+			updates["plan_id"] = planID
+			updates["status"] = result.Status // the REAL status the processor returned
+			if result.ExternalCustomerID != "" {
+				updates["external_customer_id"] = result.ExternalCustomerID
+			}
+		} else {
+			// Never processor-backed (Provider == "none"): local
+			// bookkeeping only, no processor truth to diverge from.
+			updates["plan_id"] = planID
+		}
 	}
 	if req.Status != nil {
 		updates["status"] = *req.Status
@@ -259,7 +401,17 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, toSubscriptionResponse(sub))
 }
 
-// CancelSubscription handles canceling a subscription
+// CancelSubscription handles canceling a subscription.
+//
+// Constitution §11.4 anti-bluff: a processor-backed subscription
+// (ExternalSubscriptionID != "") is canceled by REALLY calling the
+// configured billing.PaymentProvider and persisting the REAL status it
+// returns — never a hardcoded "canceled" literal, and never applied
+// locally-only when no provider is configured (that would leave this
+// service's record diverged from the processor's real state, a
+// data-integrity variant of the same bluff). A subscription that was
+// never processor-backed has no processor truth to diverge from and is
+// canceled locally.
 func (h *Handler) CancelSubscription(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -296,9 +448,26 @@ func (h *Handler) CancelSubscription(c *gin.Context) {
 		return
 	}
 
+	realStatus := "canceled"
+	if existing.ExternalSubscriptionID != "" {
+		if h.provider == nil {
+			c.JSON(http.StatusNotImplemented, gin.H{"error": "payments provider not configured; cannot cancel a processor-backed subscription without it"})
+			return
+		}
+		result, perr := h.provider.CancelSubscription(c.Request.Context(), billing.CancelSubscriptionInput{
+			ExternalSubscriptionID: existing.ExternalSubscriptionID,
+			IdempotencyKey:         idempotencyKeyFromRequest(c),
+		})
+		if perr != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "payment provider rejected the subscription cancel", "details": perr.Error()})
+			return
+		}
+		realStatus = result.Status
+	}
+
 	// T14: the mutation itself is ALSO scoped to the caller's own org —
 	// defense in depth on top of the fetch-then-compare check above.
-	if err := h.repo.CancelSubscription(c.Request.Context(), id, callerOrg); err != nil {
+	if err := h.repo.CancelSubscription(c.Request.Context(), id, callerOrg, realStatus); err != nil {
 		if strings.Contains(err.Error(), "database not connected") {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
 			return
@@ -389,6 +558,66 @@ func (h *Handler) ListInvoices(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"invoices": resp, "total": total, "limit": limit, "offset": offset})
 }
 
+// StripeWebhook handles inbound Stripe webhook events (Constitution
+// §11.4: this is what actually wires billing.PaymentProvider.VerifyWebhook
+// end-to-end — a VerifyWebhook implementation that no HTTP endpoint ever
+// calls would be dead, unproven code). Mounted OUTSIDE the JWT auth
+// middleware group (see internal/server/server.go) since Stripe
+// authenticates a webhook delivery via its own Stripe-Signature header
+// scheme, never a bearer JWT.
+//
+// Reconciliation scope: for customer.subscription.updated and
+// customer.subscription.deleted events, the locally-stored subscription
+// row (matched by provider + external_subscription_id) has its status
+// reconciled to the REAL status the processor now reports — closing the
+// gap where a processor-initiated change (e.g. a failed payment
+// auto-canceling a subscription) would otherwise never reach this
+// service's own records, leaving them silently stale (itself a
+// data-integrity variant of the bluff this service exists to close).
+// Other event types are acknowledged (200) without action: Stripe
+// requires a 2xx response to stop retrying delivery, and doing nothing
+// for an event type this service does not yet reconcile is honest — it
+// never pretends to have handled something it didn't.
+func (h *Handler) StripeWebhook(c *gin.Context) {
+	if h.provider == nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "payments provider not configured"})
+		return
+	}
+
+	payload, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+		return
+	}
+
+	event, err := h.provider.VerifyWebhook(payload, c.GetHeader("Stripe-Signature"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "webhook signature verification failed"})
+		return
+	}
+
+	switch event.Type {
+	case "customer.subscription.updated", "customer.subscription.deleted":
+		if h.repo != nil {
+			if extID, status, perr := billing.ParseSubscriptionObject(event.ObjectRaw); perr == nil && extID != "" && status != "" {
+				// Best-effort reconciliation: a failure here does not
+				// change the fact that the webhook's signature was
+				// genuinely verified, so Stripe still gets a 2xx and
+				// will not endlessly retry delivery of an event this
+				// service cannot currently persist against (e.g. DB
+				// unavailable) — but it IS surfaced in the response
+				// body so an operator inspecting delivery logs sees it.
+				if uerr := h.repo.UpdateSubscriptionStatusByExternalID(c.Request.Context(), h.provider.Name(), extID, status); uerr != nil {
+					c.JSON(http.StatusOK, gin.H{"received": true, "eventId": event.ID, "reconciled": false, "reconcileError": uerr.Error()})
+					return
+				}
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"received": true, "eventId": event.ID})
+}
+
 // HealthCheck returns service health status
 func (h *Handler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "healthy", "service": "billing-service", "timestamp": time.Now().UTC()})
@@ -409,14 +638,16 @@ func (h *Handler) ReadinessCheck(c *gin.Context) {
 
 func toSubscriptionResponse(sub *model.Subscription) *model.SubscriptionResponse {
 	return &model.SubscriptionResponse{
-		ID:         sub.ID,
-		OrgID:      sub.OrgID,
-		PlanID:     sub.PlanID,
-		Status:     sub.Status,
-		StartedAt:  sub.StartedAt,
-		EndsAt:     sub.EndsAt,
-		CanceledAt: sub.CanceledAt,
-		CreatedAt:  sub.CreatedAt,
+		ID:                     sub.ID,
+		OrgID:                  sub.OrgID,
+		PlanID:                 sub.PlanID,
+		Status:                 sub.Status,
+		StartedAt:              sub.StartedAt,
+		EndsAt:                 sub.EndsAt,
+		CanceledAt:             sub.CanceledAt,
+		CreatedAt:              sub.CreatedAt,
+		Provider:               sub.Provider,
+		ExternalSubscriptionID: sub.ExternalSubscriptionID,
 	}
 }
 

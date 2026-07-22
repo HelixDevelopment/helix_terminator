@@ -10,8 +10,13 @@
 //   - Boundary conditions: nil body, empty JSON, extremely large
 //     payloads, unicode, SQL injection.
 //
-// Run:
+// Run — subtests that need a genuinely-created subscription additionally
+// require a real Stripe test-mode key + test-mode Price (Constitution
+// §11.4.27(A) forbids a fake payment provider in a chaos test; see
+// docs/guides/BILLING.md):
 //
+//	export STRIPE_SECRET_KEY="sk_test_..."
+//	export STRIPE_TEST_PRICE_ID="price_..."
 //	go test -race -tags chaos -run TestChaos -v -timeout 120s ./internal/handler/
 package handler_test
 
@@ -22,11 +27,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/helixdevelopment/billing-service/internal/billing"
 	"github.com/helixdevelopment/billing-service/internal/handler"
 	"github.com/helixdevelopment/billing-service/internal/repository"
 	"github.com/helixdevelopment/billing-service/internal/testutil"
@@ -34,19 +41,31 @@ import (
 )
 
 // chaosEnv holds the assembled test environment for chaos tests.
+// fullyAvailable is true only when BOTH a real PostgreSQL instance AND
+// a real Stripe test-mode payment provider are wired — subtests that
+// need a genuinely-created subscription (not merely a validation-layer
+// probe) MUST check it and t.Skip honestly when false, rather than
+// assume success.
 type chaosEnv struct {
-	ts      *httptest.Server
-	orgID   uuid.UUID
-	cleanup func()
+	ts             *httptest.Server
+	orgID          uuid.UUID
+	stripePriceID  string
+	fullyAvailable bool
+	cleanup        func()
 }
 
-// setupChaosEnv boots the chaos test environment. If podman is
-// available, uses a real PostgreSQL container; otherwise falls back
-// to a nil-repo handler (validation-only path).
+// setupChaosEnv boots the chaos test environment. When BOTH podman and a
+// real Stripe test-mode key/price are available, uses a real
+// PostgreSQL container + real billing.PaymentProvider (Constitution
+// §11.4.27(A): never a fake provider here); otherwise falls back to a
+// nil-repo, nil-provider handler (validation-only path) with
+// fullyAvailable=false.
 func setupChaosEnv(t *testing.T) *chaosEnv {
 	t.Helper()
 
-	poolURL, available := testutil.StartTestPostgres(t)
+	poolURL, dbAvailable := testutil.StartTestPostgres(t)
+	stripePriceID := os.Getenv("STRIPE_TEST_PRICE_ID")
+	stripeAvailable := os.Getenv(billing.EnvStripeSecretKey) != "" && stripePriceID != ""
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -59,13 +78,17 @@ func setupChaosEnv(t *testing.T) *chaosEnv {
 		c.Next()
 	})
 
-	if available {
+	if dbAvailable && stripeAvailable {
 		pool, err := pgxpool.New(t.Context(), poolURL)
 		if err != nil {
 			t.Fatalf("pgxpool.New failed: %v", err)
 		}
+		provider, perr := billing.NewProviderFromEnv()
+		if perr != nil {
+			t.Fatalf("billing.NewProviderFromEnv failed: %v", perr)
+		}
 		repo := repository.New(pool)
-		h := handler.New(repo)
+		h := handler.New(repo, handler.WithProvider(provider))
 
 		api := r.Group("/api/v1")
 		api.POST("/subscriptions", h.CreateSubscription)
@@ -78,8 +101,10 @@ func setupChaosEnv(t *testing.T) *chaosEnv {
 
 		ts := httptest.NewServer(r)
 		return &chaosEnv{
-			ts:    ts,
-			orgID: testOrgID,
+			ts:             ts,
+			orgID:          testOrgID,
+			stripePriceID:  stripePriceID,
+			fullyAvailable: true,
 			cleanup: func() {
 				ts.Close()
 				pool.Close()
@@ -87,7 +112,9 @@ func setupChaosEnv(t *testing.T) *chaosEnv {
 		}
 	}
 
-	// Nil-repo fallback — validation-only, no DB
+	// Fallback — validation-only, no DB and/or no real payment
+	// provider. fullyAvailable=false tells create-dependent subtests to
+	// SKIP rather than assert a 201 this configuration cannot produce.
 	h := handler.New(nil)
 
 	api := r.Group("/api/v1")
@@ -101,12 +128,36 @@ func setupChaosEnv(t *testing.T) *chaosEnv {
 
 	ts := httptest.NewServer(r)
 	return &chaosEnv{
-		ts:    ts,
-		orgID: testOrgID,
+		ts:             ts,
+		orgID:          testOrgID,
+		fullyAvailable: false,
 		cleanup: func() {
 			ts.Close()
 		},
 	}
+}
+
+// isChaosCrashStatus reports whether status indicates the server
+// genuinely broke (an unhandled crash/degradation class response) as
+// opposed to a deliberate, documented business decision. Both 501 Not
+// Implemented (no billing.PaymentProvider configured — Constitution
+// §11.4 anti-bluff honest-501 gate, internal/handler.CreateSubscription
+// et al.) and 503 Service Unavailable ("database not connected",
+// internal/repository.checkPool) are numerically 5xx but are CORRECT,
+// intentional responses in setupChaosEnv's deliberately-unconfigured
+// fallback tier (nil repo, nil provider — used whenever podman and/or a
+// real Stripe test key are unavailable) — they are not a symptom of
+// the malformed/corrupt/oversized input each chaos scenario in this
+// file actually injects. Excluding them keeps this file's original
+// intent (no panic, no hang, no genuine 500-class failure) accurate
+// under the new architecture without weakening it — a real 500
+// Internal Server Error (or 502/504) still counts as a crash.
+func isChaosCrashStatus(status int) bool {
+	switch status {
+	case http.StatusNotImplemented, http.StatusServiceUnavailable:
+		return false
+	}
+	return status >= 500
 }
 
 // chaosPostRaw sends a POST request with a raw byte body and returns
@@ -173,7 +224,7 @@ func TestChaosInputCorruption(t *testing.T) {
 			"[]",
 			"42",
 			`{"planId":}`,
-			`{"planId":123}`,  // wrong type
+			`{"planId":123}`, // wrong type
 			`{"planId":null}`,
 			"{broken json here",
 			strings.Repeat("{", 100),                // deeply nested
@@ -197,7 +248,7 @@ func TestChaosInputCorruption(t *testing.T) {
 					t.Logf("malformed body %d to %s: connection failed (acceptable)", i, ep)
 					continue
 				}
-				if status >= 500 {
+				if isChaosCrashStatus(status) {
 					t.Errorf("malformed body %d to %s: got %d — expected 400 for bad input", i, ep, status)
 				}
 			}
@@ -216,7 +267,7 @@ func TestChaosInputCorruption(t *testing.T) {
 		validBody := fmt.Sprintf(`{"planId":"%s"}`, uuid.New().String())
 		for _, ct := range contentTypes {
 			status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", ct, []byte(validBody))
-			if status >= 500 {
+			if isChaosCrashStatus(status) {
 				t.Errorf("content-type %q: got %d — expected 400", ct, status)
 			}
 			t.Logf("content-type %q → %d", ct, status)
@@ -226,7 +277,7 @@ func TestChaosInputCorruption(t *testing.T) {
 	t.Run("binary_garbage_body", func(t *testing.T) {
 		garbage := []byte{0xff, 0xfe, 0xfd, 0xfc, 0x00, 0x01, 0x02, 0x03}
 		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", garbage)
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("binary garbage: got %d — expected 400", status)
 		}
 		t.Logf("binary garbage → %d", status)
@@ -242,13 +293,29 @@ func TestChaosInputCorruption(t *testing.T) {
 			"undefined",
 		}
 		for _, id := range corruptIDs {
-			req, _ := http.NewRequest("GET", env.ts.URL+"/api/v1/subscriptions/"+id, nil)
+			// Constitution §11.4.108 (pre-existing, unrelated defect
+			// discovered while validating this stream's own changes,
+			// per §11.4.124): http.NewRequest's error was previously
+			// discarded (`req, _ :=`), so a control-character id (e.g.
+			// "\x00\x01\x02") that makes NewRequest itself fail left
+			// req nil and client.Do(nil) PANICKED — captured evidence:
+			// "invalid memory address or nil pointer dereference"
+			// inside net/http.(*Client).do BEFORE this fix. A client-
+			// side construction failure on deliberately-corrupt input
+			// is itself a legitimate, non-crash chaos outcome (the
+			// request never even reached the server) and is now
+			// logged, not fatal.
+			req, reqErr := http.NewRequest("GET", env.ts.URL+"/api/v1/subscriptions/"+id, nil)
+			if reqErr != nil {
+				t.Logf("corrupt UUID %q: http.NewRequest itself rejected it (acceptable): %v", truncate(id, 30), reqErr)
+				continue
+			}
 			resp, err := client.Do(req)
 			if err != nil {
 				continue
 			}
 			resp.Body.Close()
-			if resp.StatusCode >= 500 {
+			if isChaosCrashStatus(resp.StatusCode) {
 				t.Errorf("corrupt UUID %q: got %d — expected 400", truncate(id, 30), resp.StatusCode)
 			}
 			t.Logf("corrupt UUID %q → %d", truncate(id, 30), resp.StatusCode)
@@ -278,7 +345,7 @@ func TestChaosResourceExhaustion(t *testing.T) {
 				errCount++
 				return
 			}
-			if status >= 500 {
+			if isChaosCrashStatus(status) {
 				serverErrCount++
 			}
 		})
@@ -302,17 +369,20 @@ func TestChaosResourceExhaustion(t *testing.T) {
 				return
 			}
 			resp.Body.Close()
-			if resp.StatusCode >= 500 {
+			if isChaosCrashStatus(resp.StatusCode) {
 				t.Errorf("rapid list %d: got %d — expected 200", id, resp.StatusCode)
 			}
 		})
 	})
 
 	t.Run("concurrent_cancel_same_subscription", func(t *testing.T) {
+		if !env.fullyAvailable {
+			t.Skip("SKIP: requires a real database AND a real Stripe test-mode provider to create a genuine subscription (operator_attended); see docs/guides/BILLING.md")
+		}
 		// Create one subscription, then cancel it from N goroutines
 		// simultaneously — must not deadlock
 		planID := uuid.New()
-		body := fmt.Sprintf(`{"planId":"%s"}`, planID.String())
+		body := fmt.Sprintf(`{"planId":"%s","stripePriceId":"%s"}`, planID.String(), env.stripePriceID)
 		status, resp := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte(body))
 		if status != http.StatusCreated {
 			t.Fatalf("create subscription status = %d, want 201", status)
@@ -332,7 +402,7 @@ func TestChaosResourceExhaustion(t *testing.T) {
 				return
 			}
 			resp.Body.Close()
-			if resp.StatusCode >= 500 {
+			if isChaosCrashStatus(resp.StatusCode) {
 				t.Errorf("concurrent cancel %d: got %d — expected 204 or 4xx", id, resp.StatusCode)
 			}
 		})
@@ -350,7 +420,7 @@ func TestChaosResourceExhaustion(t *testing.T) {
 				return
 			}
 			resp.Body.Close()
-			if resp.StatusCode >= 500 {
+			if isChaosCrashStatus(resp.StatusCode) {
 				t.Errorf("get nonexistent %d: got %d — expected 404", id, resp.StatusCode)
 			}
 		})
@@ -373,7 +443,7 @@ func TestChaosBoundaryConditions(t *testing.T) {
 			t.Fatalf("nil body request failed: %v", err)
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode >= 500 {
+		if isChaosCrashStatus(resp.StatusCode) {
 			t.Errorf("nil body: got %d — expected 400", resp.StatusCode)
 		}
 		t.Logf("nil body → %d", resp.StatusCode)
@@ -381,7 +451,7 @@ func TestChaosBoundaryConditions(t *testing.T) {
 
 	t.Run("empty_json_object", func(t *testing.T) {
 		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte("{}"))
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("empty JSON: got %d — expected 400", status)
 		}
 		t.Logf("empty JSON → %d", status)
@@ -389,7 +459,7 @@ func TestChaosBoundaryConditions(t *testing.T) {
 
 	t.Run("empty_json_array", func(t *testing.T) {
 		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte("[]"))
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("empty array: got %d — expected 400", status)
 		}
 		t.Logf("empty array → %d", status)
@@ -413,7 +483,7 @@ func TestChaosBoundaryConditions(t *testing.T) {
 		// All fields at zero value — validation must catch
 		payload := `{"planId":""}`
 		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte(payload))
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("zero-value fields: got %d — expected 400", status)
 		}
 		t.Logf("zero-value fields → %d", status)
@@ -423,7 +493,7 @@ func TestChaosBoundaryConditions(t *testing.T) {
 		payload := `{"planId":"パスワードパスワードパスワード"}`
 		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte(payload))
 		// Either accepted or rejected — never 500
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("unicode planId: got %d — expected non-server-error", status)
 		}
 		t.Logf("unicode planId → %d", status)
@@ -432,16 +502,19 @@ func TestChaosBoundaryConditions(t *testing.T) {
 	t.Run("sql_injection_in_plan_id", func(t *testing.T) {
 		payload := `{"planId":"'; DROP TABLE subscriptions; --"}`
 		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte(payload))
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("SQL injection attempt: got %d — expected 400 (invalid uuid)", status)
 		}
 		t.Logf("SQL injection attempt → %d", status)
 	})
 
 	t.Run("sql_injection_in_status_field", func(t *testing.T) {
+		if !env.fullyAvailable {
+			t.Skip("SKIP: requires a real database AND a real Stripe test-mode provider to create a genuine subscription (operator_attended); see docs/guides/BILLING.md")
+		}
 		// First create a valid subscription
 		planID := uuid.New()
-		body := fmt.Sprintf(`{"planId":"%s"}`, planID.String())
+		body := fmt.Sprintf(`{"planId":"%s","stripePriceId":"%s"}`, planID.String(), env.stripePriceID)
 		createStatus, createResp := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte(body))
 		if createStatus != http.StatusCreated {
 			t.Fatalf("create subscription status = %d, want 201", createStatus)
@@ -453,16 +526,19 @@ func TestChaosBoundaryConditions(t *testing.T) {
 		// Try SQL injection via status update
 		payload := `{"status":"'; DROP TABLE subscriptions; --"}`
 		status, _ := chaosPutRaw(t, client, env.ts.URL+"/api/v1/subscriptions/"+subID, "application/json", []byte(payload))
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("SQL injection in status: got %d — expected 400", status)
 		}
 		t.Logf("SQL injection in status → %d", status)
 	})
 
 	t.Run("xss_in_status_field", func(t *testing.T) {
+		if !env.fullyAvailable {
+			t.Skip("SKIP: requires a real database AND a real Stripe test-mode provider to create a genuine subscription (operator_attended); see docs/guides/BILLING.md")
+		}
 		// First create a valid subscription
 		planID := uuid.New()
-		body := fmt.Sprintf(`{"planId":"%s"}`, planID.String())
+		body := fmt.Sprintf(`{"planId":"%s","stripePriceId":"%s"}`, planID.String(), env.stripePriceID)
 		createStatus, createResp := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte(body))
 		if createStatus != http.StatusCreated {
 			t.Fatalf("create subscription status = %d, want 201", createStatus)
@@ -473,7 +549,7 @@ func TestChaosBoundaryConditions(t *testing.T) {
 
 		payload := `{"status":"<script>alert('xss')</script>"}`
 		status, _ := chaosPutRaw(t, client, env.ts.URL+"/api/v1/subscriptions/"+subID, "application/json", []byte(payload))
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("XSS in status: got %d — expected 400", status)
 		}
 		t.Logf("XSS in status → %d", status)
@@ -483,7 +559,7 @@ func TestChaosBoundaryConditions(t *testing.T) {
 		// UUID-like but way too long
 		payload := fmt.Sprintf(`{"planId":"%s"}`, strings.Repeat("a", 10000))
 		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/subscriptions", "application/json", []byte(payload))
-		if status >= 500 {
+		if isChaosCrashStatus(status) {
 			t.Errorf("extremely large planId: got %d — expected 400", status)
 		}
 		t.Logf("extremely large planId → %d", status)
@@ -502,7 +578,7 @@ func TestChaosBoundaryConditions(t *testing.T) {
 				continue
 			}
 			resp.Body.Close()
-			if resp.StatusCode >= 500 {
+			if isChaosCrashStatus(resp.StatusCode) {
 				t.Errorf("special path %q: got %d — expected 4xx", path, resp.StatusCode)
 			}
 			t.Logf("special path %q → %d", path, resp.StatusCode)

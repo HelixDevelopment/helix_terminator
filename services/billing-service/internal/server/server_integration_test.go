@@ -34,7 +34,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -47,6 +46,7 @@ import (
 	"github.com/helixdevelopment/billing-service/internal/model"
 	"github.com/helixdevelopment/billing-service/internal/repository"
 	"github.com/helixdevelopment/billing-service/internal/server"
+	"github.com/helixdevelopment/billing-service/migrations"
 )
 
 // testClaims mirrors gateway-service's Claims struct (services/
@@ -61,11 +61,41 @@ type testClaims struct {
 	jwt.RegisteredClaims
 }
 
+// integrationTestLogger adapts *testing.T to the migrations.Logger
+// interface (mirrors internal/testutil/postgres_helper.go's
+// pgTestLogger).
+type integrationTestLogger struct{ t *testing.T }
+
+func (l *integrationTestLogger) Printf(format string, v ...interface{}) {
+	l.t.Logf("[migrations] "+format, v...)
+}
+
 // mustConnectAndMigrate connects to the real Postgres pointed at by
-// DATABASE_URL and applies billing-service's real migration
-// (migrations/001_init.sql) idempotently. Skips (does not fail) when
-// DATABASE_URL is unset — the correct §11.4.3 topology-appropriate
-// behaviour for an integration test with no real target.
+// DATABASE_URL and applies billing-service's REAL embedded migrations
+// (migrations.Run — the exact mechanism cmd/billing-service/main.go
+// runs at process startup, see migrations/migrate.go) idempotently.
+// Skips (does not fail) when DATABASE_URL is unset — the correct
+// §11.4.3 topology-appropriate behaviour for an integration test with
+// no real target.
+//
+// Constitution §11.4.108 (fixed a pre-existing, unrelated defect
+// discovered while validating this stream's own changes against this
+// file, per §11.4.124 investigate-before-touching): this helper
+// previously hand-read a file at "../../migrations/001_init.sql" (note:
+// no ".up" suffix) that never existed on disk (the real files are
+// 001_init.up.sql / 001_init.down.sql / 002_payment_provider.up.sql /
+// 002_payment_provider.down.sql), and applied it to the default
+// "public" schema — diverging from the real service's schema-per-
+// service migration path (migrations.Run, search_path=migrations.Schema)
+// cmd/billing-service/main.go actually uses. Every integration test in
+// this file (and server_write_isolation_integration_test.go, which
+// shares this helper) was therefore unable to run against a real
+// Postgres instance at all, pre-existing and unrelated to Stripe/
+// PaymentProvider work — captured evidence: `go test -tags integration`
+// against a real container failed with "open
+// ../../migrations/001_init.sql: no such file or directory" BEFORE this
+// fix. Now reuses the real migrations.Run/ConnectionURL path so the
+// pool returned actually matches production schema targeting.
 func mustConnectAndMigrate(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
@@ -77,25 +107,26 @@ func mustConnectAndMigrate(t *testing.T) *pgxpool.Pool {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, dbURL)
-	require.NoError(t, err, "failed to open pgxpool against DATABASE_URL")
-	require.NoError(t, pool.Ping(ctx), "real Postgres at DATABASE_URL is not reachable")
-
 	// §11.4.98: this test MUST be re-runnable endlessly against the same
-	// disposable Postgres without manual intervention. 001_init.sql's
-	// CREATE INDEX statements are not idempotent (no IF NOT EXISTS), so a
-	// second invocation against an already-migrated database would fail
-	// applying the migration itself. Reset to a clean public schema first
-	// so every run starts from the same real, freshly-migrated state.
-	_, err = pool.Exec(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
-	require.NoError(t, err, "failed to reset public schema before migrating")
+	// disposable Postgres without manual intervention — reset the
+	// service's dedicated schema to a clean slate first so every run
+	// starts from the same real, freshly-migrated state.
+	resetPool, err := pgxpool.New(ctx, dbURL)
+	require.NoError(t, err, "failed to open pgxpool against DATABASE_URL")
+	require.NoError(t, resetPool.Ping(ctx), "real Postgres at DATABASE_URL is not reachable")
+	_, err = resetPool.Exec(ctx, "DROP SCHEMA IF EXISTS "+migrations.Schema+" CASCADE")
+	require.NoError(t, err, "failed to reset %q schema before migrating", migrations.Schema)
+	resetPool.Close()
 
-	migrationPath := filepath.Join("..", "..", "migrations", "001_init.sql")
-	migrationSQL, err := os.ReadFile(migrationPath)
-	require.NoError(t, err, "failed to read migrations/001_init.sql")
+	_, err = migrations.Run(dbURL, &integrationTestLogger{t: t})
+	require.NoError(t, err, "failed to apply real embedded migrations to real Postgres")
 
-	_, err = pool.Exec(ctx, string(migrationSQL))
-	require.NoError(t, err, "failed to apply real migration to real Postgres")
+	poolURL, err := migrations.ConnectionURL(dbURL)
+	require.NoError(t, err, "failed to build schema-scoped connection URL")
+
+	pool, err := pgxpool.New(ctx, poolURL)
+	require.NoError(t, err, "failed to open schema-scoped pgxpool")
+	require.NoError(t, pool.Ping(ctx), "schema-scoped pgxpool is not reachable")
 
 	t.Cleanup(func() {
 		pool.Close()

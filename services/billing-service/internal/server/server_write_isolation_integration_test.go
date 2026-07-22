@@ -42,6 +42,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -97,10 +98,32 @@ func TestBillingWriteEndpointsCrossTenantIsolation_RealPostgres(t *testing.T) {
 	tokenA := sign(orgA.String(), userA.String())
 
 	t.Run("CreateSubscription ignores client-supplied orgId and attributes to the caller's own org", func(t *testing.T) {
+		// Constitution §11.4.27(A): CreateSubscription now REQUIRES a
+		// real, configured billing.PaymentProvider (see internal/handler
+		// + internal/billing/provider.go — the honest-501 anti-bluff
+		// fix). srv was built by mustNewServerWithRealJWTKey via
+		// server.New(repo), which wires whatever STRIPE_SECRET_KEY was
+		// present in THIS PROCESS's environment when srv was
+		// constructed (mirroring the JWT_PUBLIC_KEY provisioning
+		// pattern immediately above). Real payment-processor
+		// infrastructure per §11.4.27(A) — never a fake provider
+		// substituted into this test — so this subtest, and this
+		// subtest alone (the other subtests below exercise
+		// Update/Cancel against subscriptions seeded directly via
+		// repo.CreateSubscription with no processor involved, which
+		// remains fully testable with no provider configured), SKIPs
+		// honestly per §11.4.3 when no real Stripe test-mode price is
+		// provisioned for this run.
+		stripePriceID := os.Getenv("STRIPE_TEST_PRICE_ID")
+		if os.Getenv("STRIPE_SECRET_KEY") == "" || stripePriceID == "" {
+			t.Skip("SKIP: STRIPE_SECRET_KEY and/or STRIPE_TEST_PRICE_ID not set — cannot run this subtest against the real Stripe API (operator_attended); see docs/guides/BILLING.md")
+		}
+
 		planID := uuid.New()
 		w := doJSONRequest(t, srv, http.MethodPost, "/api/v1/subscriptions", tokenA, map[string]interface{}{
-			"orgId":  orgB.String(), // hostile: tenant A's client claims org B
-			"planId": planID.String(),
+			"orgId":         orgB.String(), // hostile: tenant A's client claims org B
+			"planId":        planID.String(),
+			"stripePriceId": stripePriceID,
 		})
 		require.Equal(t, http.StatusCreated, w.Code, "body: %s", w.Body.String())
 
