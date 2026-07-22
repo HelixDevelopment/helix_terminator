@@ -1,51 +1,47 @@
 # CONTINUATION — helix_terminator
 
-**Revision:** 15
-**Last modified:** 2026-07-22T12:00:00Z
+**Revision:** 16
+**Last modified:** 2026-07-22T14:31:39Z
 
 Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep current.
 
 ## One-line resume
-**FULL DEVELOPMENT, autonomous multi-stream loop (SDD), §11.4.126.** `origin/main == local main`. This session: recursively fetched/pulled **all owned submodules to latest** + **adopted constitution Rev49**; running parallel streams (SDD) on backend/test/governance work + implementing operator-unblocked backends. Resume: read THIS file, then `.superpowers/sdd/progress.md`, then `git fetch --all`.
+**FULL DEVELOPMENT, autonomous multi-stream loop (SDD), §11.4.126.** `origin/main == local main @ 057949d`. Current wave: **Rev49 consumer build-outs** (governance mirrors, request ledgers, README §11.4.212) — written, in independent Fable review — plus **Slack-via-Herald notification channel** implementation in flight. Resume: read THIS file, then `.superpowers/sdd/progress.md` (tail blocks = live state), then `git fetch --all`.
 
-## Live state (2026-07-22)
-- **origin/main** this session: `3f65187` → `ee8a8f3` (4 submodule bumps) → this commit (constitution Rev49 + this doc).
-- **Submodules — all fetched/pulled to latest (pure fast-forward, NO force §11.4.113):**
-  - `constitution` `e6504c2`(Rev36) → `c74b7e4`(Rev49, +125) — **adopted**. Governance-text inherited via `@constitution/CLAUDE.md` import; optional consumer build-outs tracked below.
-  - `submodules/containers` `9da662f` (+130), `submodules/helixllm` `a44bd61` (+34), `submodules/helixtrack-core` `6edbb5e` (+1, nested Website init'd clean), `submodules/llmprovider` `ebeaef2` (+7). `submodules/auth` unchanged `0ae1f5d`.
-  - `submodules/open-design`: **ORPHAN** — declared in `.gitmodules` but no gitlink in the parent index; carries untracked `design-systems/helixterminator/`. Decision pending (B10).
-- **Harness note (load-bearing):** this environment runs a git-worktree isolation model — a `git commit` on `main` auto-routes into `.claude/worktrees/<topic>` on a `fix/<topic>` branch, so `git push origin main` pushes the *stale* main ref. **Reliable landing: commit → capture the new SHA → `git push origin <sha>:refs/heads/main` → `merge --ff-only` local main.**
+## Landed since rev 15 (all on origin/main, remote==local)
+- `4dac814` S-FLUT — 8 stub tests + fake e2e → 86 real Flutter tests (+2 real bug fixes).
+- `fd358de` QA submodules added: Challenges + HelixQA + Herald (§11.4.27; Slack-via-Herald prerequisite).
+- `fb444d9` S-T2 — Go `t.Skip(TODO)` stub tests → real coverage (user/org/workspace).
+- `21a5443` S-BILL — real Stripe `PaymentProvider` (fabricated-active bluff killed; honest-501-until-keys).
+- `057949d` S-FIREBASE — dynamic Firebase setup foundation + real FCM/APNs push delivery.
+- helixtrack-bridge self-hosted Core sandbox proven live earlier at `75ff1ca`.
 
-## Rev49 migration (operator: "Full Rev49 migration now")
-Per S-GOV analysis: parent inherits by `@import`, restates ZERO anchor literals; gates (I1–I5 + docs) check no `§11.4.NNN` literal; no `CM-COVENANT-*-PROPAGATION` gate runs in the parent → mechanical full migration = **advance gitlink + commit** (DONE this commit), stays GREEN, reversible. New anchors **§11.4.177–223 (47)** inherit as text. Behavioral rules apply immediately: §11.4.102(D) auto-activate systematic-debugging; §11.4.140 `--->`/`/ACTION` forms + CRITICAL/IMPORTANT/NOTE/FEATURE actions; §11.4.209/.211 code-review + conflict-resolution on Fable@xhigh; §11.4.132/.189 risk-first validation.
-OPTIONAL consumer build-outs (tracked, NOT gate-required):
-- thin `GEMINI.md` + `QWEN.md` pointer files (§11.4.157 pre-existing gap; small).
-- wire `guard-forbidden-commands.sh` (§11.4.109) + `post_update_hook.sh` (§11.4.164) via `.claude/settings.json` (small, inherit-by-reference).
-- **HIGH-RISK (deferred pending §11.4.66 applicability decision):** `guard-branch-consistency`/`guard-track-branch-label`/`guard-work-track-binding` (§11.4.181/.182/.191) — fail-closed, can block ordinary commits if the project does not run the multitrack workflow.
-- build `UserPromptSubmit` capture hook (§11.4.210), `docs/requests/history.md` ledger (§11.4.208), workable-items DB (§11.4.202), README orphan-reachability audit (§11.4.212).
+## Durable state (from rev 15, still true)
+- Submodules fetched/pulled to latest (pure ff, NO force §11.4.113): `constitution` `c74b7e4` (Rev49, adopted; parent inherits by `@import`, restates ZERO anchor literals, gates stay GREEN); `containers` `9da662f`; `helixllm` `a44bd61`; `helixtrack-core` `6edbb5e`; `llmprovider` `ebeaef2`; `auth` `0ae1f5d`; + `challenges`/`helixqa`/`herald` (added `fd358de`, §11.4.36 upstreams verified).
+- `submodules/open-design`: **ORPHAN** — declared in `.gitmodules`, no gitlink in parent index; untracked `design-systems/helixterminator/`. Decision pending (B10).
+- Operator decisions (2026-07-22): constitution=full Rev49 now · T15=mounted K8s Secret (closed) · billing=real Stripe, TEST keys interactively when needed · ai=local HelixLLM only · push=full FCM+APNs via Firebase CLI · Slack=**via Herald bridge** · helixtrack-bridge=self-hosted sandbox · QA submodules=add both.
 
-## In flight (parallel streams, §11.4.103)
-- **S-BILL** (`stream/billing-stripe`): real pluggable `PaymentProvider` + Stripe impl + honest-501-until-keys + `docs/guides/BILLING.md`. RUNNING.
-- **S-FLUT** (`stream/flutter-real-tests`): replace 8 stub tests + fake e2e with real tests (container flutter:3.24.0). RUNNING.
-- **S-AI** (`stream/ai-helixllm` @`937c5598`): DONE — investigation found the AI backend ALREADY real+merged (synchronous local-HelixLLM OpenAI-compat client; verified live vs Qwen3-Coder-30B → real "pong"/16 tokens); added `docs/guides/AI_SERVICE.md`. PENDING controller review + integration. (Follow-ups: ai-service/README stale API surface; env var `AI_LOCAL_PROVIDER_BASE_URL`.)
-- **S-GOV**: DONE (Rev49 migration plan above).
-
-## Operator decisions (2026-07-22)
-constitution=full Rev49 now · T15=mounted K8s Secret (closed) · billing=real Stripe, request TEST keys interactively when impl lands, full docs · ai=local HelixLLM only · push=**full FCM+APNs via Firebase CLI** · Slack=**via Herald bridge** (needs Herald submodule) · helixtrack-bridge=**self-hosted sandbox** · QA submodules=**ADD both** (Challenges + HelixQA).
+## In flight (session 2026-07-22b — Rev49 build-outs batch, base 057949d)
+Working-tree, uncommitted, disjoint paths; agents edit only, controller integrates:
+- **DONE, in Fable review (§11.4.209):** `GEMINI.md` + `QWEN.md` mirrors (§11.4.157, import `@constitution/GEMINI.md`/`@constitution/QWEN.md`); `docs/requests/history.md` (§11.4.208, 11 reconstructed entries, honest UNKNOWNs) + `docs/requests/feature_queue.md` (§11.4.213 scaffold); `README.md` §11.4.212 orphan audit (179→0 orphans, 183 links).
+- **S-SLACK-IMPL RUNNING:** Slack channel in `services/notification-service` via direct Go-import of Herald `slack.Adapter` (`submodules/herald/commons_messaging/channels/slack/send.go:28` — real, wire-verified). §11.4.101 autonomous decision (operator may override): direct-import shape chosen; CloudEvent/`pherald`-deployment path rejected for scope (brief: session scratchpad `reports/rev49/S-SLACK-INVEST.md`).
+- **CLOSED with evidence:** §11.4.36 `install_upstreams` on challenges/helixqa/herald (declared upstreams + origin push fan-out counts captured in ledger).
 
 ## Next queue (priority §11.4.132)
-1. Review + integrate S-BILL / S-FLUT / S-AI onto main (§11.4.125/.142 independent review → §11.4.134 iterate-to-GO → cherry-pick/SHA-push).
-2. Add submodules (§11.4.27 + Slack): `vasic-digital/Challenges`, `HelixDevelopment/HelixQA`, `vasic-digital/Herald` — via containers-submodule pattern / `git submodule add` + `install_upstreams` (§11.4.36).
-3. notification push: full FCM+APNs via Firebase CLI (needs Firebase project + service-account + APNs `.p8` — batch-3 Q).
-4. helixtrack-bridge: boot self-hosted Core (containers submodule / rootless podman) + real integration test (§11.4.27).
-5. notification Slack via Herald bridge.
-6. Rev49 optional build-outs (GEMINI/QWEN, safe hooks, request-history, README audit; multitrack guards pending decision).
-7. T2 Go `t.Skip` stubs → real; T3 proto 1125 buf-lint naming.
-8. Open question batches: B4 SMTP prod relay, B8 gateway SSO, B10 open-design orphan, B11 `feature/pki-ssh-certificates` branch, B12 5 Dependabot PRs.
+1. Process Fable review verdict → fix loop (§11.4.134) → commit doc batch (explicit paths, never `add -A`) → SHA-push → verify remote==local.
+2. Review S-SLACK-IMPL (Fable §11.4.209) → iterate → land; includes notification README truth-fix. Real Slack e2e honestly SKIPs `credentials_absent` until operator provides a workspace token (env var names in service docs).
+3. Safe hook wiring `.claude/settings.json`: `guard-forbidden-commands.sh` (§11.4.109) + `post_update_hook.sh` (§11.4.164) — serial, after tree quiet (live-harness change). Multitrack guards (§11.4.181/.182/.191) still deferred pending §11.4.66 operator decision.
+4. §11.4.210 `UserPromptSubmit` request-capture hook (`docs/requests/history.md` is manual-append until then — honest gap).
+5. B11: merge `feature/pki-ssh-certificates` (sshca code+QA only, NOT stale docs) — needs clean tree; conflicts resolved on Fable xhigh (§11.4.211).
+6. Reconcile PR#7 (superseded scaffold) + PR#6 (JWT manifest cherry-pick).
+7. T3 proto buf-lint naming (1125) — serial, wide blast radius.
+8. Operator-blocked: B4 SMTP relay, B8 gateway SSO, B10 open-design orphan, B12 Dependabot PRs (`gh auth refresh -s workflow`), Slack workspace token, Stripe TEST keys.
+9. Other track advanced `feat/push-delivery-client` (742f509→70ce493) — NOT claimed here (§11.4.192 domain binding); its owner integrates.
 
 ## Binding constraints
-Anti-bluff §11.4 (captured physical evidence per closure). **NO force-push** — SHA-push to `refs/heads/main` / merge-onto-latest (§11.4.113). git-direct; pre-commit = inheritance(I1–I5)+docs gates (GREEN). Harness worktree model (above). Host PID-constrained (~4096 `ulimit -u`) → `GOMAXPROCS=2`, worktree-isolate every mutating agent (§11.4.84), rootless podman PLAIN default userns only (no `:z`/`--userns=keep-id`/`label=disable`). Constitution pinned `c74b7e4` (Rev49). Subagent worktrees under the session scratchpad; integrate via review → cherry-pick/SHA-push onto latest main.
+Anti-bluff §11.4 (captured physical evidence per closure). **NO force-push** — SHA-push to `refs/heads/main` / merge-onto-latest (§11.4.113). git-direct; pre-commit = inheritance(I1–I5)+docs gates (GREEN). **Harness note (load-bearing):** worktree-isolation model may route a `git commit` on `main` into `.claude/worktrees/<topic>` — reliable landing: commit → capture SHA → `git push origin <sha>:refs/heads/main` → `merge --ff-only` local main. Host PID-constrained (~4096 `ulimit -u`) → `GOMAXPROCS=2`; §11.4.84 quiescence before any commit; rootless podman PLAIN default userns only (no `:z`/`--userns=keep-id`/`label=disable`). Constitution pinned `c74b7e4` (Rev49). Code review + merge-conflict resolution on Fable xhigh (Opus xhigh fallback) — §11.4.209/§11.4.211.
 
 ## Resume infrastructure
 - **This file** — read FIRST, then `git fetch --all`.
 - `.superpowers/sdd/progress.md` — controller ledger (git-ignored); latest blocks = live queue + SHAs + stream states.
+- `docs/requests/history.md` — §11.4.208 operator-request ledger (manual-append until the §11.4.210 hook lands).
