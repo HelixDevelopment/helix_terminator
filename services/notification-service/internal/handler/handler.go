@@ -36,6 +36,13 @@ func New(repo *repository.Repository) *Handler {
 	if cfg, ok := delivery.SMTPConfigFromEnv(); ok {
 		h.emailSender = delivery.NewEmailSender(cfg)
 	}
+	// Push (FCM/APNs): arm the sender only when a COMPLETE provider credential
+	// set is present (env-sourced, never hardcoded — §11.4.10). The default
+	// stays the unconfigured NewPushSender() above; an armed sender still makes
+	// no network call and never fabricates delivery (see delivery.PushSender).
+	if cfg, ok := delivery.PushConfigFromEnv(); ok {
+		h.pushSender = delivery.NewPushSenderWithConfig(cfg)
+	}
 	return h
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/helixdevelopment/ai-service/internal/handler"
@@ -25,6 +26,16 @@ const (
 	// auth, but the llmprovider adapter's ValidateConfig contract requires a
 	// non-empty apiKey — see internal/llmclient.NewGenericClient.
 	localLLMAPIKeyPlaceholder = "local-no-auth-required"
+
+	// Cloud-tier defaults (§11.4.28B config injection — overridable via
+	// AI_CLOUD_BASE_URL / AI_CLOUD_MODEL, never hardcoded past this seam). The
+	// generic OpenAI-compatible adapter (llmclient.NewGenericClient) targets a
+	// FULL chat-completions path; the Anthropic default is its OpenAI-compatible
+	// endpoint, so the SAME adapter serves both cloud providers.
+	defaultOpenAIBaseURL    = "https://api.openai.com/v1/chat/completions"
+	defaultOpenAIModel      = "gpt-4o-mini"
+	defaultAnthropicBaseURL = "https://api.anthropic.com/v1/chat/completions"
+	defaultAnthropicModel   = "claude-3-5-haiku-latest"
 )
 
 func main() {
@@ -87,18 +98,61 @@ func main() {
 
 	repo := repository.New(pool)
 
-	llmBaseURL := os.Getenv("AI_LOCAL_PROVIDER_BASE_URL")
-	if llmBaseURL == "" {
-		llmBaseURL = defaultLocalLLMBaseURL
+	// Optional monthly cloud-LLM spend ceiling. HONEST BOUNDARY (Constitution
+	// §11.4 anti-bluff): the value is parsed, validated, and logged for operator
+	// visibility, but it is NOT enforced here — no request path meters spend
+	// against it yet. A future change wires real cost metering; until then the
+	// ceiling is surfaced, never claimed active.
+	if raw := os.Getenv("LLM_MONTHLY_COST_CEILING_USD"); raw != "" {
+		ceiling, cerr := strconv.ParseFloat(raw, 64)
+		if cerr != nil || ceiling < 0 {
+			log.Fatalf("ai-service: LLM_MONTHLY_COST_CEILING_USD must be a non-negative number, got %q", raw)
+		}
+		log.Printf("ai-service: LLM monthly cost ceiling configured at $%.2f (SURFACED, NOT ENFORCED)", ceiling)
 	}
-	llmModel := os.Getenv("AI_LOCAL_PROVIDER_MODEL")
-	if llmModel == "" {
-		llmModel = defaultLocalLLMModel
+
+	// LLM provider-tier selection. A cloud tier arms ONLY when its API key is
+	// present (env-sourced, never hardcoded — §11.4.10); with no cloud key the
+	// service falls back to the local HelixLLM tier (the honest internal
+	// default). Presence of a key SELECTS the tier — no API call is made here;
+	// the first real completion runs through the handler at request time. The
+	// same generic OpenAI-compatible adapter serves all three tiers.
+	var llmClient *llmclient.GenericClient
+	switch {
+	case os.Getenv("OPENAI_API_KEY") != "":
+		baseURL := os.Getenv("AI_CLOUD_BASE_URL")
+		if baseURL == "" {
+			baseURL = defaultOpenAIBaseURL
+		}
+		model := os.Getenv("AI_CLOUD_MODEL")
+		if model == "" {
+			model = defaultOpenAIModel
+		}
+		llmClient = llmclient.NewGenericClient("openai-cloud", os.Getenv("OPENAI_API_KEY"), baseURL, model)
+		log.Printf("ai-service: cloud LLM provider=openai base_url=%s model=%s", baseURL, model)
+	case os.Getenv("ANTHROPIC_API_KEY") != "":
+		baseURL := os.Getenv("AI_CLOUD_BASE_URL")
+		if baseURL == "" {
+			baseURL = defaultAnthropicBaseURL
+		}
+		model := os.Getenv("AI_CLOUD_MODEL")
+		if model == "" {
+			model = defaultAnthropicModel
+		}
+		llmClient = llmclient.NewGenericClient("anthropic-cloud", os.Getenv("ANTHROPIC_API_KEY"), baseURL, model)
+		log.Printf("ai-service: cloud LLM provider=anthropic base_url=%s model=%s", baseURL, model)
+	default:
+		llmBaseURL := os.Getenv("AI_LOCAL_PROVIDER_BASE_URL")
+		if llmBaseURL == "" {
+			llmBaseURL = defaultLocalLLMBaseURL
+		}
+		llmModel := os.Getenv("AI_LOCAL_PROVIDER_MODEL")
+		if llmModel == "" {
+			llmModel = defaultLocalLLMModel
+		}
+		llmClient = llmclient.NewGenericClient("helixllm-local", localLLMAPIKeyPlaceholder, llmBaseURL, llmModel)
+		log.Printf("ai-service: local LLM provider base_url=%s model=%s", llmBaseURL, llmModel)
 	}
-	// Local HelixLLM tier only — the cloud tier (OpenAI/Anthropic API keys) is
-	// OPERATOR-BLOCKED and deliberately not wired (see docs/CONTINUATION.md).
-	llmClient := llmclient.NewGenericClient("helixllm-local", localLLMAPIKeyPlaceholder, llmBaseURL, llmModel)
-	log.Printf("ai-service: local LLM provider base_url=%s model=%s", llmBaseURL, llmModel)
 
 	srv := server.New(repo, llmClient)
 

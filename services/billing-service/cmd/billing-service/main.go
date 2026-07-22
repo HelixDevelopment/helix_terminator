@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/helixdevelopment/billing-service/internal/payment"
 	"github.com/helixdevelopment/billing-service/internal/repository"
 	"github.com/helixdevelopment/billing-service/internal/server"
 	"github.com/helixdevelopment/billing-service/migrations"
@@ -60,6 +61,14 @@ func main() {
 	log.Println("database connection established")
 
 	repo := repository.New(pool)
+
+	// Payment-gateway seam (Stripe). Armed only when STRIPE_SECRET_KEY is
+	// present (env-sourced, never hardcoded — §11.4.10); the internal dev
+	// default is a disabled gateway. NewGateway performs NO Stripe API call —
+	// gateway.Mode is a log-safe state word that never contains a secret.
+	gateway := payment.NewGateway()
+	log.Printf("billing-service: payment mode=%s", gateway.Mode())
+
 	srv := server.New(repo)
 
 	log.Printf("billing-service starting on port %s", port)

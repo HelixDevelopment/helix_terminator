@@ -65,3 +65,21 @@ clients/flutter/.pub-cache/
 
 # Agent worktree scratchpad — evidence + temp files, never versioned. §11.4.11 / §11.4.30
 scratchpad/
+
+# ── Feature-tier credentials (Constitution §11.4.10 / §11.4.30) ──────────────
+# Real secrets NEVER tracked. Only .env.example placeholders + the secrets-dir
+# scaffolding (.gitkeep / README.md / *.example) are versioned. The negations
+# below re-include those, and MUST stay after the broad patterns to win.
+.env.*
+*.env
+!.env.example
+!*.env.example
+# Provider secret directory — contents ignored, scaffolding kept. Use "/*" (not
+# a bare dir) so the .gitkeep/README/*.example negations can re-include files.
+scripts/testing/secrets/*
+!scripts/testing/secrets/.gitkeep
+!scripts/testing/secrets/README.md
+!scripts/testing/secrets/*.example
+# APNs signing key / PKCS#12 bundles — provider secret files, never tracked.
+*.p8
+*.p12
