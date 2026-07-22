@@ -65,3 +65,16 @@ spec:
                 secretKeyRef:
                   name: helixterminator-db-secret
                   key: DATABASE_URL
+            # T15/T19: JWT_PUBLIC_KEY validates the gateway-forwarded bearer
+            # token on every authenticated vault route (services/vault-service/internal/server/server.go authMiddleware).
+            # MUST be the public half of the SAME Ed25519 keypair provisioned
+            # as auth-service's JWT_PRIVATE_KEY (see infrastructure/kubernetes/
+            # base/services/auth-service/deployment.yaml +
+            # docs/guides/JWT_KEY_PROVISIONING.md). Without it this service fails
+            # closed (401 "JWT validation not configured") on every
+            # authenticated request.
+            - name: JWT_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: helix-jwt-keys
+                  key: JWT_PUBLIC_KEY
