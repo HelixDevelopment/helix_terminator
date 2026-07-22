@@ -1,0 +1,8 @@
+ok  	github.com/helixdevelopment/notification-service/cmd/notification-service	0.005s
+ok  	github.com/helixdevelopment/notification-service/internal/delivery	1.418s
+ok  	github.com/helixdevelopment/notification-service/internal/handler	0.007s
+ok  	github.com/helixdevelopment/notification-service/internal/model	0.004s
+ok  	github.com/helixdevelopment/notification-service/internal/repository	0.008s
+ok  	github.com/helixdevelopment/notification-service/internal/server	0.009s
+?   	github.com/helixdevelopment/notification-service/internal/testutil	[no test files]
+ok  	github.com/helixdevelopment/notification-service/migrations	0.004s

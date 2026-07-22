@@ -1,0 +1,15 @@
+== HEL-002 harness 2026-07-22T21:04:13Z OUT=specs/001-hel-002-gowork-off-build/evidence/red_run2 ==
+FAIL ws_build (rc=1)
+FAIL ws_vet (rc=1)
+FAIL ws_test (rc=1)
+FAIL ws_vet_integration (rc=1)
+FAIL off_build (rc=1)
+FAIL off_vet (rc=1)
+FAIL off_test (rc=1)
+FAIL off_vet_integration (rc=1)
+FAIL drift (rc=8)
+FAIL tidy_stable (rc=1)
+FAIL ctx_reach (rc=1)
+FAIL docker_build (rc=125)
+== VERDICT: mandatory_failures=12 ==
+OVERALL FAIL

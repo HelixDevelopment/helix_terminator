@@ -1,0 +1,11 @@
+T001 prerequisite verification — 2026-07-22T21:02:24Z
+OK   submodules/herald/commons/go.mod
+OK   submodules/herald/commons_messaging/go.mod
+OK   submodules/herald/commons_infra/go.mod
+OK   submodules/herald/commons_storage/go.mod
+OK   submodules/herald/submodules/background/go.mod
+OK   submodules/herald/submodules/cache/go.mod
+OK   submodules/herald/submodules/database/go.mod
+OK   submodules/herald/submodules/Models/go.mod
+OK   submodules/herald/submodules/telebot/go.mod
+ 4b7a85ebd5a49b827f91276cf51b0a175114a79a submodules/herald (v0.6.0-114-g4b7a85e)

@@ -1,0 +1,9 @@
+# HEL-002: Dockerfile-specific ignore (BuildKit/podman `<Dockerfile>.dockerignore`).
+# Allowlist style: the repo-root build context sends ONLY what the build needs.
+# On engines without per-Dockerfile ignore support this file is inert and the
+# build still succeeds (fail-safe; proven by the recorded green build).
+*
+!services/notification-service
+!submodules/herald
+services/notification-service/Dockerfile.dockerignore
+submodules/herald/.git

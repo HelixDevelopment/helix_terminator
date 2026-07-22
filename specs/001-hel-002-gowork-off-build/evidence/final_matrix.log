@@ -1,0 +1,15 @@
+== HEL-002 harness 2026-07-22T21:08:57Z OUT=specs/001-hel-002-gowork-off-build/evidence/final_run ==
+PASS ws_build (rc=0)
+PASS ws_vet (rc=0)
+PASS ws_test (rc=0)
+PASS ws_vet_integration (rc=0)
+PASS off_build (rc=0)
+PASS off_vet (rc=0)
+PASS off_test (rc=0)
+PASS off_vet_integration (rc=0)
+PASS drift (rc=0)
+PASS tidy_stable (rc=0)
+PASS ctx_reach (rc=0)
+PASS docker_build (rc=0)
+== VERDICT: mandatory_failures=0 ==
+OVERALL PASS

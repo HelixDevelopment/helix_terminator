@@ -1,0 +1,11 @@
+OK  submodules/herald/submodules/background
+OK  submodules/herald/submodules/cache
+OK  submodules/herald/submodules/database
+OK  submodules/herald/submodules/Models
+OK  submodules/herald/commons
+OK  submodules/herald/commons_infra
+OK  submodules/herald/commons_messaging
+OK  submodules/herald/commons_storage
+OK  submodules/herald/submodules/telebot
+Dockerfile: no root-context COPY of service
+Dockerfile: no COPY of submodules/herald

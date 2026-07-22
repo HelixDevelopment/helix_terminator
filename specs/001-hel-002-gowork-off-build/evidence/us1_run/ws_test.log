@@ -1,0 +1,8 @@
+ok  	github.com/helixdevelopment/notification-service/cmd/notification-service	(cached)
+ok  	github.com/helixdevelopment/notification-service/internal/delivery	(cached)
+ok  	github.com/helixdevelopment/notification-service/internal/handler	(cached)
+ok  	github.com/helixdevelopment/notification-service/internal/model	(cached)
+ok  	github.com/helixdevelopment/notification-service/internal/repository	(cached)
+ok  	github.com/helixdevelopment/notification-service/internal/server	(cached)
+?   	github.com/helixdevelopment/notification-service/internal/testutil	[no test files]
+ok  	github.com/helixdevelopment/notification-service/migrations	(cached)

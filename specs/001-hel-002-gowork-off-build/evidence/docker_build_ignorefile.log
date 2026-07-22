@@ -1,0 +1,58 @@
+[1/2] STEP 1/5: FROM golang:1.26-alpine AS builder
+[1/2] STEP 2/5: WORKDIR /src/services/notification-service
+--> Using cache ebfcff9a4da954e83ff39ea5f087c36fc6d2bd33492a0895814612ccc6340275
+--> ebfcff9a4da9
+[1/2] STEP 3/5: COPY services/notification-service/ /src/services/notification-service/
+--> Using cache e8c24836f213ad866a54b3b0f9521084540ec669b7ad197ad11c780dc974c16e
+--> e8c24836f213
+[1/2] STEP 4/5: COPY submodules/herald/ /src/submodules/herald/
+--> e5d87157a7dd
+[1/2] STEP 5/5: RUN CGO_ENABLED=0 GOOS=linux GOWORK=off go build -ldflags="-w -s" -o /bin/notification-service ./cmd/notification-service
+go: downloading github.com/jackc/pgx/v5 v5.10.0
+go: downloading github.com/gin-gonic/gin v1.12.0
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/golang-jwt/jwt/v5 v5.3.1
+go: downloading github.com/golang-migrate/migrate/v4 v4.19.1
+go: downloading github.com/slack-go/slack v0.16.0
+go: downloading github.com/quic-go/quic-go v0.59.0
+go: downloading github.com/gin-contrib/sse v1.1.0
+go: downloading golang.org/x/net v0.56.0
+go: downloading google.golang.org/protobuf v1.36.11
+go: downloading github.com/ugorji/go/codec v1.3.1
+go: downloading github.com/goccy/go-yaml v1.19.2
+go: downloading github.com/pelletier/go-toml/v2 v2.2.4
+go: downloading github.com/mattn/go-isatty v0.0.20
+go: downloading github.com/go-playground/validator/v10 v10.30.1
+go: downloading go.mongodb.org/mongo-driver/v2 v2.5.0
+go: downloading github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
+go: downloading github.com/jackc/puddle/v2 v2.2.2
+go: downloading github.com/gorilla/websocket v1.4.2
+go: downloading github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+go: downloading github.com/jackc/pgpassfile v1.0.0
+go: downloading golang.org/x/text v0.38.0
+go: downloading golang.org/x/sys v0.46.0
+go: downloading golang.org/x/crypto v0.53.0
+go: downloading github.com/leodido/go-urn v1.4.0
+go: downloading github.com/go-playground/universal-translator v0.18.1
+go: downloading github.com/gabriel-vasile/mimetype v1.4.12
+go: downloading github.com/quic-go/qpack v0.6.0
+go: downloading golang.org/x/sync v0.21.0
+go: downloading github.com/go-playground/locales v0.14.1
+--> b42c579d75be
+[2/2] STEP 1/5: FROM gcr.io/distroless/static:nonroot
+[2/2] STEP 2/5: COPY --from=builder /bin/notification-service /bin/notification-service
+--> Using cache 5bb6403035cb5d1a000df3e406a07074cebbb8253a8aa5a3db81747979fecc6c
+--> 5bb6403035cb
+[2/2] STEP 3/5: EXPOSE 8080
+--> Using cache 293c2d3f0f3f46f0a053000893dc55915800588fdbc069cb01807b1bda4a70d3
+--> 293c2d3f0f3f
+[2/2] STEP 4/5: USER nonroot:nonroot
+--> Using cache 4f669ae5d3c20c22de35c8a8077bb1813370548f07c2e406a4ba5eb5093a07cb
+--> 4f669ae5d3c2
+[2/2] STEP 5/5: ENTRYPOINT ["/bin/notification-service"]
+--> Using cache 53aef00a4b6367119a1e1db882a106d952dcb68f60055d9d95d4248c2d6360e4
+[2/2] COMMIT hel002-notification-service:proof2
+--> 53aef00a4b63
+Successfully tagged localhost/hel002-notification-service:proof2
+Successfully tagged localhost/hel002-notification-service:proof
+53aef00a4b6367119a1e1db882a106d952dcb68f60055d9d95d4248c2d6360e4

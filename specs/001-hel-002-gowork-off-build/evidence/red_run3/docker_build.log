@@ -1,0 +1,7 @@
+Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.
+[1/2] STEP 1/6: FROM golang:1.22-alpine AS builder
+[1/2] STEP 2/6: WORKDIR /app
+--> Using cache 03992cd5d5d5b4e00e5409a89f999075176e9827d578fa643c27c90363dd9eed
+--> 03992cd5d5d5
+[1/2] STEP 3/6: COPY go.mod go.sum ./
+Error: building at STEP "COPY go.mod go.sum ./": checking on sources under "/home/milos/Factory/projects/tools_and_research/helix_terminator/.claude/worktrees/hel-002-provingground": copier: stat: "/go.mod": no such file or directory

@@ -1,0 +1,69 @@
+Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.
+[1/2] STEP 1/5: FROM golang:1.26-alpine AS builder
+[1/2] STEP 2/5: WORKDIR /src/services/notification-service
+--> ebfcff9a4da9
+[1/2] STEP 3/5: COPY services/notification-service/ /src/services/notification-service/
+--> e8c24836f213
+[1/2] STEP 4/5: COPY submodules/herald/ /src/submodules/herald/
+--> 2efd2da74518
+[1/2] STEP 5/5: RUN CGO_ENABLED=0 GOOS=linux GOWORK=off go build -ldflags="-w -s" -o /bin/notification-service ./cmd/notification-service
+go: downloading github.com/golang-jwt/jwt/v5 v5.3.1
+go: downloading github.com/jackc/pgx/v5 v5.10.0
+go: downloading github.com/gin-gonic/gin v1.12.0
+go: downloading github.com/google/uuid v1.6.0
+go: downloading github.com/golang-migrate/migrate/v4 v4.19.1
+go: downloading github.com/slack-go/slack v0.16.0
+go: downloading golang.org/x/net v0.56.0
+go: downloading github.com/gin-contrib/sse v1.1.0
+go: downloading github.com/mattn/go-isatty v0.0.20
+go: downloading google.golang.org/protobuf v1.36.11
+go: downloading github.com/quic-go/quic-go v0.59.0
+go: downloading github.com/ugorji/go/codec v1.3.1
+go: downloading go.mongodb.org/mongo-driver/v2 v2.5.0
+go: downloading github.com/goccy/go-yaml v1.19.2
+go: downloading github.com/pelletier/go-toml/v2 v2.2.4
+go: downloading github.com/go-playground/validator/v10 v10.30.1
+go: downloading github.com/jackc/puddle/v2 v2.2.2
+go: downloading github.com/jackc/pgpassfile v1.0.0
+go: downloading github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+go: downloading golang.org/x/text v0.38.0
+go: downloading github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
+go: downloading golang.org/x/sys v0.46.0
+go: downloading github.com/gorilla/websocket v1.4.2
+go: downloading github.com/gabriel-vasile/mimetype v1.4.12
+go: downloading github.com/go-playground/universal-translator v0.18.1
+go: downloading github.com/leodido/go-urn v1.4.0
+go: downloading golang.org/x/crypto v0.53.0
+go: downloading golang.org/x/sync v0.21.0
+go: downloading github.com/quic-go/qpack v0.6.0
+go: downloading github.com/go-playground/locales v0.14.1
+--> ced220f1f6bf
+[2/2] STEP 1/5: FROM gcr.io/distroless/static:nonroot
+Trying to pull gcr.io/distroless/static:nonroot...
+Getting image source signatures
+Copying blob sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a
+Copying blob sha256:1eed391ea893e6015bf4ce4ed366909975d2acdbe907670919236a8d18ea6b07
+Copying blob sha256:99ba982a9142213c751a1709dcf088e63d8601f03b3f211bae037be698fef270
+Copying blob sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28
+Copying blob sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0
+Copying blob sha256:99515e7b4d35e0652d3b0fde571b6ec269222ecacc506f026e1758d6261e9109
+Copying blob sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212
+Copying blob sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4
+Copying blob sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296
+Copying blob sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112
+Copying blob sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a
+Copying blob sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795
+Copying blob sha256:bdfd7f7e5bf6fc27e70b59101db21c3d8284d283884419dd5fe7020583bb79ca
+Copying config sha256:b940eaddbba01346352fa402e89d94af7c6d283c1de0bc97abafbf12cdde9866
+Writing manifest to image destination
+[2/2] STEP 2/5: COPY --from=builder /bin/notification-service /bin/notification-service
+--> 5bb6403035cb
+[2/2] STEP 3/5: EXPOSE 8080
+--> 293c2d3f0f3f
+[2/2] STEP 4/5: USER nonroot:nonroot
+--> 4f669ae5d3c2
+[2/2] STEP 5/5: ENTRYPOINT ["/bin/notification-service"]
+[2/2] COMMIT hel002-notification-service:proof
+--> 53aef00a4b63
+Successfully tagged localhost/hel002-notification-service:proof
+53aef00a4b6367119a1e1db882a106d952dcb68f60055d9d95d4248c2d6360e4
