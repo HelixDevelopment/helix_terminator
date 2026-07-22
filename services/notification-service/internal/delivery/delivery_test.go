@@ -71,11 +71,12 @@ func TestWebhookSender_InvalidURL_ReturnsError(t *testing.T) {
 
 // TestPushSender_AlwaysHonestlyUnconfigured proves push delivery NEVER
 // fabricates success — Constitution §11.4 anti-bluff covenant: a
-// not-yet-implemented provider must surface as an honest error, not a
-// silent "sent".
+// not-yet-configured provider must surface as an honest error, not a
+// silent "sent". Real FCM HTTP v1 credentialed behaviour is covered in
+// push_test.go / push_live_test.go.
 func TestPushSender_AlwaysHonestlyUnconfigured(t *testing.T) {
 	sender := delivery.NewPushSender()
-	err := sender.Send()
+	err := sender.Send(context.Background(), "some-device-token", delivery.PushMessage{Title: "t", Body: "b"})
 	require.ErrorIs(t, err, delivery.ErrPushProviderNotConfigured)
 }
 

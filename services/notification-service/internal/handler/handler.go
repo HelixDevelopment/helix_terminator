@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -25,8 +27,10 @@ type Handler struct {
 // New returns a new Handler with dependencies. Delivery clients are built
 // from environment configuration (Constitution §11.4.10 — never hardcoded):
 // email requires SMTP_HOST to be set (see delivery.SMTPConfigFromEnv); the
-// webhook sender needs no external configuration; push has no real provider
-// wired yet and always reports an honest "not configured" outcome.
+// webhook sender needs no external configuration; push requires
+// FCM_SERVICE_ACCOUNT_JSON to be set (see delivery.PushConfigFromEnv +
+// scripts/firebase/firebase_setup.sh) — until then it honestly reports
+// "not configured" rather than fabricating delivery.
 func New(repo *repository.Repository) *Handler {
 	h := &Handler{
 		repo:          repo,
@@ -35,6 +39,20 @@ func New(repo *repository.Repository) *Handler {
 	}
 	if cfg, ok := delivery.SMTPConfigFromEnv(); ok {
 		h.emailSender = delivery.NewEmailSender(cfg)
+	}
+	// FCM_SERVICE_ACCOUNT_JSON unset => ok is false, h.pushSender stays the
+	// honest NewPushSender() zero value above. Set-but-broken (ok true,
+	// err non-nil) is deliberately NOT collapsed into "not configured" —
+	// Constitution §11.4 anti-bluff: a real operator misconfiguration must
+	// surface (here, a startup log line naming the broken path) rather
+	// than be silently swallowed into the same status a genuinely
+	// unconfigured deployment reports.
+	if sender, ok, err := delivery.NewPushSenderFromEnv(); ok {
+		if err != nil {
+			log.Printf("[notify] push (FCM) configuration error, falling back to honest not-configured state: %v", err)
+		} else {
+			h.pushSender = sender
+		}
 	}
 	return h
 }
@@ -165,7 +183,7 @@ func (h *Handler) CreateNotification(c *gin.Context) {
 	case "webhook":
 		h.deliverWebhook(c.Request.Context(), notification)
 	case "push":
-		h.deliverPush(notification)
+		h.deliverPush(c.Request.Context(), notification)
 	}
 
 	if err := h.repo.CreateNotification(c.Request.Context(), notification); err != nil {
@@ -221,21 +239,63 @@ func (h *Handler) deliverWebhook(ctx context.Context, n *model.Notification) {
 	n.SentAt = &sentAt
 }
 
-// deliverPush honestly reports that no FCM/APNs provider is configured —
-// it NEVER fabricates a "sent"/"delivered" status for a channel with no
-// real backend wired in.
-func (h *Handler) deliverPush(n *model.Notification) {
+// deliverPush attempts REAL FCM HTTP v1 delivery to n.Target (the device
+// registration token — see model.Notification.Target) when a credentialed
+// delivery.PushSender is wired (FCM_SERVICE_ACCOUNT_JSON set, see
+// scripts/firebase/firebase_setup.sh). It NEVER fabricates a
+// "sent"/"delivered" status: an unconfigured sender yields the honest
+// "pending_provider_unconfigured" status (distinct from a real send
+// failure, e.g. an invalid/expired device token or a network error, which
+// yields "failed") — never conflating the two per Constitution §11.4.
+func (h *Handler) deliverPush(ctx context.Context, n *model.Notification) {
 	if h.pushSender == nil {
 		n.Status = "pending_provider_unconfigured"
 		return
 	}
-	if err := h.pushSender.Send(); err != nil {
-		n.Status = "pending_provider_unconfigured"
+	msg := delivery.PushMessage{
+		Title: n.Title,
+		Body:  n.Message,
+		Data:  notificationDataToPushData(n.Data),
+	}
+	if err := h.pushSender.Send(ctx, n.Target, msg); err != nil {
+		if errors.Is(err, delivery.ErrPushProviderNotConfigured) {
+			n.Status = "pending_provider_unconfigured"
+		} else {
+			n.Status = "failed"
+		}
 		return
 	}
 	sentAt := time.Now().UTC()
 	n.Status = "sent"
 	n.SentAt = &sentAt
+}
+
+// notificationDataToPushData converts a Notification's free-form JSON Data
+// payload into FCM's required map[string]string data-field shape. Non-
+// string values are re-marshalled to their JSON text form (FCM's data
+// payload only carries strings — this mirrors what the Firebase Admin SDKs
+// themselves do for non-string values). Malformed or empty raw JSON yields
+// nil (push still proceeds with title/body only) rather than blocking
+// delivery on a data-field concern.
+func notificationDataToPushData(raw []byte) map[string]string {
+	if len(raw) == 0 {
+		return nil
+	}
+	var generic map[string]interface{}
+	if err := json.Unmarshal(raw, &generic); err != nil {
+		return nil
+	}
+	out := make(map[string]string, len(generic))
+	for k, v := range generic {
+		if s, ok := v.(string); ok {
+			out[k] = s
+			continue
+		}
+		if b, err := json.Marshal(v); err == nil {
+			out[k] = string(b)
+		}
+	}
+	return out
 }
 
 // ListNotifications handles GET /api/v1/notifications

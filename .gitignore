@@ -27,6 +27,12 @@ go.work.sum
 # env file
 .env
 
+# Firebase setup secrets — service-account JSON, downloaded client SDK
+# configs (google-services.json / GoogleService-Info.plist). Regenerable
+# via scripts/firebase/firebase_setup.sh (§11.4.77). NEVER git-versioned
+# (§11.4.10 / §11.4.10.A).
+scripts/firebase/secrets/
+
 # Editor/IDE
 # .idea/
 # .vscode/

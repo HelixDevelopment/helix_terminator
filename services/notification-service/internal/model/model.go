@@ -18,8 +18,9 @@ type Notification struct {
 	Data    []byte     `json:"data,omitempty" db:"data"`
 	Channel string     `json:"channel" db:"channel"`
 	// Target is the delivery destination: recipient email address for
-	// channel=email, destination URL for channel=webhook. Unused for
-	// in_app/push.
+	// channel=email, destination URL for channel=webhook, FCM device
+	// registration token for channel=push (see
+	// internal/delivery/push.go). Unused for in_app.
 	Target    string     `json:"target,omitempty" db:"target"`
 	Status    string     `json:"status" db:"status"`
 	ReadAt    *time.Time `json:"readAt,omitempty" db:"read_at"`
@@ -59,7 +60,11 @@ type CreateNotificationRequest struct {
 	Status  string          `json:"status" binding:"omitempty,oneof=pending sent delivered failed"`
 	// Target is the delivery destination, required for channel=email
 	// (recipient email address) and channel=webhook (destination URL).
-	// Ignored for in_app/push. The server always overwrites the persisted
+	// For channel=push it is the FCM device registration token (required
+	// only once push is actually configured — see internal/delivery/push.go
+	// — an unconfigured deployment reports the honest
+	// "pending_provider_unconfigured" status regardless of Target).
+	// Ignored for in_app. The server always overwrites the persisted
 	// status with the REAL delivery outcome for email/webhook/push — any
 	// client-supplied Status above is honored only for in_app.
 	Target string `json:"target,omitempty" binding:"omitempty,max=1000"`
