@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,12 +11,28 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/helixdevelopment/org-service/internal/handler"
 	"github.com/helixdevelopment/org-service/internal/repository"
 	"github.com/helixdevelopment/org-service/migrations"
 )
+
+// Claims represents the identity claims extracted from a validated JWT.
+// Mirrors gateway-service's and billing-service's Claims — the gateway
+// forwards the caller's original signed Authorization bearer token to upstream
+// services untouched, so org-service independently validates the SAME token
+// with the SAME public key (JWT_PUBLIC_KEY) to obtain the caller's identity
+// (T19). This closes the previous fail-OPEN hole where a request with no
+// Authorization header was silently injected a default
+// "00000000-0000-0000-0000-000000000000" userID/orgID and served
+// unauthenticated.
+type Claims struct {
+	UserID string `json:"userId"`
+	OrgID  string `json:"orgId,omitempty"`
+	jwt.RegisteredClaims
+}
 
 // Logger interface for logging.
 type Logger interface {
@@ -34,10 +52,11 @@ func (d *defaultLogger) Println(v ...interface{}) {
 
 // Server wraps the Gin engine with org service functionality.
 type Server struct {
-	router  *gin.Engine
-	logger  Logger
-	handler *handler.Handler
-	repo    *repository.Repository
+	router       *gin.Engine
+	logger       Logger
+	handler      *handler.Handler
+	repo         *repository.Repository
+	jwtPublicKey ed25519.PublicKey
 }
 
 // New creates a new Server with dependencies.
@@ -94,6 +113,23 @@ func New(logger Logger) (*Server, error) {
 		logger:  logger,
 		handler: h,
 		repo:    repo,
+	}
+
+	// Load JWT public key from environment — the same JWT_PUBLIC_KEY secret
+	// gateway-service and billing-service are provisioned with, so a token
+	// minted by auth-service and validated at the edge validates identically
+	// here. A missing/malformed key leaves s.jwtPublicKey nil, and the
+	// authMiddleware then fails CLOSED (rejects every request) rather than
+	// serving unauthenticated traffic.
+	if pubKeyB64 := os.Getenv("JWT_PUBLIC_KEY"); pubKeyB64 != "" {
+		pubKeyBytes, err := base64.StdEncoding.DecodeString(pubKeyB64)
+		if err != nil {
+			logger.Printf("warning: failed to decode JWT_PUBLIC_KEY: %v", err)
+		} else if len(pubKeyBytes) != ed25519.PublicKeySize {
+			logger.Printf("warning: invalid JWT_PUBLIC_KEY size: expected %d, got %d", ed25519.PublicKeySize, len(pubKeyBytes))
+		} else {
+			s.jwtPublicKey = ed25519.PublicKey(pubKeyBytes)
+		}
 	}
 
 	// Global middleware
@@ -241,34 +277,71 @@ func isAllowedOrigin(origin string, allowed []string) bool {
 	return false
 }
 
+// authMiddleware validates the caller's bearer JWT on every /api/v1 org/team/
+// membership route (T19). It fails CLOSED: a request with no Authorization
+// header, a malformed header, an empty/invalid/expired/wrongly-signed token, or
+// an unconfigured JWT_PUBLIC_KEY is rejected 401 outright — never served with a
+// default userID/orgID injected. On success the validated claims are set into
+// the gin context under the same "userID"/"orgID" keys the handlers read.
 func (s *Server) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			// For scaffold, allow unauthenticated requests with default user
-			c.Set("userID", "00000000-0000-0000-0000-000000000000")
-			c.Set("orgID", "00000000-0000-0000-0000-000000000000")
-			c.Next()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
-			c.Abort()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
 			return
 		}
 
 		token := parts[1]
 		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "empty token"})
-			c.Abort()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "empty token"})
 			return
 		}
 
-		// For scaffold, accept any token and set default user/org
-		c.Set("userID", "00000000-0000-0000-0000-000000000000")
-		c.Set("orgID", "00000000-0000-0000-0000-000000000000")
+		if s.jwtPublicKey == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "JWT validation not configured"})
+			return
+		}
+
+		claims, err := s.validateToken(token)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			return
+		}
+
+		c.Set("userID", claims.UserID)
+		c.Set("orgID", claims.OrgID)
 		c.Next()
 	}
+}
+
+// validateToken parses and verifies tokenString the same way gateway-service
+// and billing-service do: it MUST be signed with Ed25519 (EdDSA) — any other
+// alg is rejected outright — and MUST verify against s.jwtPublicKey.
+func (s *Server) validateToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return s.jwtPublicKey, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims type")
+	}
+
+	return claims, nil
 }
