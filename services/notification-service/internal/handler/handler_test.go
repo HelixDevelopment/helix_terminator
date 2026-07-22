@@ -178,6 +178,58 @@ func TestCreateNotificationValidation(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+// TestCreateNotification_SlackChannel_AcceptedByBinding proves "slack" is
+// a member of the CreateNotificationRequest.Channel closed set (the
+// binding:"...oneof=..." tag on internal/model/model.go) — a request
+// carrying channel="slack" + a target must pass gin's request-shape
+// validation and reach business logic (503, no DB wired via
+// repository.New(nil)), never 400 "invalid channel value".
+func TestCreateNotification_SlackChannel_AcceptedByBinding(t *testing.T) {
+	_, r := setupAuthedTestHandler(t, uuid.New().String())
+
+	payload := map[string]interface{}{
+		"type":    "info",
+		"title":   "Test",
+		"message": "Test message",
+		"channel": "slack",
+		"target":  "C0123ABCD",
+	}
+	body, _ := json.Marshal(payload)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/notifications", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code, "body: %s", w.Body.String())
+	assert.NotContains(t, w.Body.String(), "oneof")
+}
+
+// TestCreateNotification_SlackChannel_MissingTargetRejected proves the
+// target-required validation switch (handler.go's CreateNotification)
+// covers channel=slack exactly like email/webhook — a slack request with
+// no destination channel ID is rejected 400 before ever reaching the
+// persistence layer.
+func TestCreateNotification_SlackChannel_MissingTargetRejected(t *testing.T) {
+	_, r := setupAuthedTestHandler(t, uuid.New().String())
+
+	payload := map[string]interface{}{
+		"type":    "info",
+		"title":   "Test",
+		"message": "Test message",
+		"channel": "slack",
+	}
+	body, _ := json.Marshal(payload)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/notifications", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code, "body: %s", w.Body.String())
+	assert.Contains(t, w.Body.String(), "target (Slack channel ID) is required")
+}
+
 // TestCreateNotification_IgnoresClientSuppliedUserID proves the removed
 // "userId" body field, if a legacy/malicious client still sends it, has
 // NO effect: the created notification's owner is ALWAYS the caller's

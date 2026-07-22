@@ -49,3 +49,61 @@ require (
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// Slack delivery (internal/delivery/slack_herald.go, NO build tag —
+// compiled by DEFAULT, Constitution §11.4.197: a wired feature is active
+// by default, never present-but-off) imports Herald's live Slack channel
+// adapter. The require + replace pair below resolves the module graph
+// this needs, rooted at submodules/herald (which this checkout has
+// initialized recursively — `git -C submodules/herald submodule update
+// --init --recursive` — the project-wide submodule-init mandate,
+// Constitution §11.4.27/§11.4.36, that every checkout of this repo is
+// already expected to satisfy).
+//
+// DELIBERATE NON-REPLACEMENT of github.com/slack-go/slack (verified,
+// Constitution §11.4.6 — not guessed): unlike every other herald-internal
+// dependency below, github.com/slack-go/slack is NOT replaced to its
+// local submodule copy at submodules/herald/submodules/slack-go. That
+// copy is checked out at tag v0.27.0, which has drifted ahead of the API
+// Herald's own commons_messaging/channels/slack source tree here was
+// actually written against — v0.16.0, per
+// submodules/herald/commons_messaging/go.mod's own `require` — and does
+// NOT compile against it (`slack.UploadFileV2Parameters`/
+// `.UploadFileV2Context` and `slackevents.MessageEvent.Files` are
+// undefined at v0.27.0; captured verbatim in the implementation report,
+// this is a Herald-repo-internal submodule-pin drift, out of this
+// change's scope to fix). Leaving no replace here lets Go's MVS resolve
+// the real public v0.16.0 release from the module proxy instead, which
+// DOES compile — verified: `go build ./...` (default, no tags) is clean.
+//
+// DELIBERATELY NOT `go mod tidy`'d (Constitution §11.4.92 Pass 2 —
+// regression-blast-radius): a bare `go mod tidy` against this module DOES
+// now succeed (unlike an earlier round of this change, before Herald's
+// submodules were initialized), but it forces gin-gonic/gin v1.10.0 →
+// v1.12.0 (and several further transitive bumps: bytedance/sonic,
+// go-playground/validator, golang.org/x/arch, etc.) project-wide, purely
+// because Herald's own `commons` module requires newer versions of
+// several shared dependencies — an unrequested, out-of-scope version-bump
+// blast radius for an add-a-notification-channel change, affecting the
+// HTTP framework every endpoint in this service depends on. This
+// require+replace block was hand-verified instead (`go build`/`go vet`/
+// `go test`, default and `-tags integration`, all green — see the
+// implementation report) without pulling that bump in. If a future change
+// legitimately needs gin v1.12+ (or `go mod tidy` is run for an unrelated
+// reason), the resulting gin bump should be reviewed and tested on its
+// own merits, not silently absorbed as a side effect of Slack support.
+require github.com/vasic-digital/herald/commons_messaging v0.0.0
+
+require github.com/vasic-digital/herald/commons v0.0.0 // indirect
+
+replace (
+	github.com/vasic-digital/herald/commons => ../../submodules/herald/commons
+	github.com/vasic-digital/herald/commons_infra => ../../submodules/herald/commons_infra
+	github.com/vasic-digital/herald/commons_messaging => ../../submodules/herald/commons_messaging
+	github.com/vasic-digital/herald/commons_storage => ../../submodules/herald/commons_storage
+	digital.vasic.background => ../../submodules/herald/submodules/background
+	digital.vasic.cache => ../../submodules/herald/submodules/cache
+	digital.vasic.database => ../../submodules/herald/submodules/database
+	digital.vasic.models => ../../submodules/herald/submodules/Models
+	gopkg.in/telebot.v3 => ../../submodules/herald/submodules/telebot
+)

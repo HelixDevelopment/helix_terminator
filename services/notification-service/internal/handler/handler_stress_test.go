@@ -413,6 +413,40 @@ func TestStressBoundaryConditions(t *testing.T) {
 		t.Logf("webhook without target → %d (expected 400)", status)
 	})
 
+	t.Run("slack_channel_without_target_rejected", func(t *testing.T) {
+		status, _ := stressPostJSON(t, client, env.ts.URL+"/api/v1/notifications", map[string]interface{}{
+			"type":    "info",
+			"title":   "No Target",
+			"message": "Test message",
+			"channel": "slack",
+		})
+		if status == http.StatusCreated {
+			t.Fatal("slack channel without target must be rejected, got 201")
+		}
+		t.Logf("slack without target → %d (expected 400)", status)
+	})
+
+	t.Run("slack_channel_with_target_honest_not_configured", func(t *testing.T) {
+		// Under sustained/concurrent load, a slack notification WITH a
+		// target must still be created with the HONEST
+		// "pending_provider_unconfigured" status (HERALD_SLACK_BOT_TOKEN is
+		// not set for this test environment) — never fabricated "sent",
+		// and never a 4xx/5xx (the request itself is well-formed).
+		status, created := stressPostJSON(t, client, env.ts.URL+"/api/v1/notifications", map[string]interface{}{
+			"type":    "info",
+			"title":   "Slack Under Load",
+			"message": "Test message",
+			"channel": "slack",
+			"target":  "C0123ABCD",
+		})
+		if status != http.StatusCreated {
+			t.Fatalf("well-formed slack notification rejected, got %d: %v", status, created)
+		}
+		if created["status"] != "pending_provider_unconfigured" {
+			t.Fatalf("expected honest pending_provider_unconfigured status, got %v", created["status"])
+		}
+	})
+
 	t.Run("empty_body_rejected", func(t *testing.T) {
 		req, _ := http.NewRequest("POST", env.ts.URL+"/api/v1/notifications", strings.NewReader(""))
 		req.Header.Set("Content-Type", "application/json")

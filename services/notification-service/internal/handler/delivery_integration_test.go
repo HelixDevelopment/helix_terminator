@@ -97,7 +97,7 @@ func TestCreateNotification_Email_RealDeliveryEndToEnd(t *testing.T) {
 	})
 	ws := delivery.NewWebhookSender(5 * time.Second)
 	ps := delivery.NewPushSender()
-	h := handler.NewWithDelivery(repo, es, ws, ps)
+	h := handler.NewWithDelivery(repo, es, ws, ps, nil)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -183,7 +183,7 @@ func TestCreateNotification_Webhook_RealDeliveryEndToEnd(t *testing.T) {
 	// internal/delivery/webhook_ssrf_test.go).
 	ws := delivery.NewWebhookSenderForTesting(5 * time.Second)
 	ps := delivery.NewPushSender()
-	h := handler.NewWithDelivery(repo, nil, ws, ps)
+	h := handler.NewWithDelivery(repo, nil, ws, ps, nil)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -228,7 +228,7 @@ func TestCreateNotification_Push_HonestNotConfigured(t *testing.T) {
 	repo := setupE2EPostgres(t)
 
 	ps := delivery.NewPushSender()
-	h := handler.NewWithDelivery(repo, nil, nil, ps)
+	h := handler.NewWithDelivery(repo, nil, nil, ps, nil)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -255,4 +255,84 @@ func TestCreateNotification_Push_HonestNotConfigured(t *testing.T) {
 	var created map[string]interface{}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &created))
 	require.Equal(t, "pending_provider_unconfigured", created["status"])
+}
+
+// TestCreateNotification_Slack_HonestNotConfigured proves slack channel
+// notifications are created with an HONEST status, never a fabricated
+// "sent", exactly mirroring TestCreateNotification_Push_HonestNotConfigured
+// above. This drives the REAL handler.New() constructor (not
+// NewWithDelivery) against a real Postgres-backed repository, with
+// HERALD_SLACK_BOT_TOKEN deliberately unset, so it exercises the exact
+// startup-time wiring path production uses — the notification is
+// persisted through the real DB (proving migration 003's channel CHECK
+// constraint accepts 'slack') with the honest
+// "pending_provider_unconfigured" status.
+func TestCreateNotification_Slack_HonestNotConfigured(t *testing.T) {
+	repo := setupE2EPostgres(t)
+
+	t.Setenv("HERALD_SLACK_BOT_TOKEN", "")
+	h := handler.New(repo)
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uuid.New().String())
+		c.Next()
+	})
+	r.POST("/api/v1/notifications", h.CreateNotification)
+
+	payload := map[string]interface{}{
+		"type":    "info",
+		"title":   "E2E slack honest state",
+		"message": "Slack must never fabricate success",
+		"channel": "slack",
+		"target":  "C0123ABCD",
+	}
+	body, _ := json.Marshal(payload)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/notifications", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code, "body: %s", w.Body.String())
+	var created map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &created))
+	require.Equal(t, "pending_provider_unconfigured", created["status"])
+	require.Equal(t, "C0123ABCD", created["target"])
+}
+
+// TestCreateNotification_Slack_MissingTargetRejected proves the
+// target-required validation (handler.go's CreateNotification switch)
+// covers channel=slack exactly like email/webhook — a request with no
+// destination channel ID is rejected 400 before ever reaching the
+// database, never silently persisted as an undeliverable row.
+func TestCreateNotification_Slack_MissingTargetRejected(t *testing.T) {
+	repo := setupE2EPostgres(t)
+
+	t.Setenv("HERALD_SLACK_BOT_TOKEN", "")
+	h := handler.New(repo)
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", uuid.New().String())
+		c.Next()
+	})
+	r.POST("/api/v1/notifications", h.CreateNotification)
+
+	payload := map[string]interface{}{
+		"type":    "info",
+		"title":   "Missing target",
+		"message": "no target supplied",
+		"channel": "slack",
+	}
+	body, _ := json.Marshal(payload)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/notifications", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code, "body: %s", w.Body.String())
 }

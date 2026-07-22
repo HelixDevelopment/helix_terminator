@@ -127,11 +127,12 @@ func TestRun_EmptyDatabaseURL(t *testing.T) {
 // database available) this test SKIPs with an honest reason rather than
 // faking a PASS, per §11.4.3 per-environment-topology dispatch.
 //
-// This service has TWO forward migrations (001_init, 002_add_delivery_
-// fields), so a successful Run() MUST leave the schema at version 2 (the
-// highest embedded version), not merely a non-zero version - a schema
-// stuck at version 1 (002 silently skipped/failed) would be a
-// §11.4.108 SOURCE-declares-it/RUNTIME-does-not-have-it defect.
+// This service has THREE forward migrations (001_init, 002_add_delivery_
+// fields, 003_add_slack_channel), so a successful Run() MUST leave the
+// schema at version 3 (the highest embedded version), not merely a
+// non-zero version - a schema stuck at version 1 or 2 (002/003 silently
+// skipped/failed) would be a §11.4.108 SOURCE-declares-it/RUNTIME-does-
+// not-have-it defect.
 //
 // To run for real:
 //
@@ -147,7 +148,7 @@ func TestRun_Integration(t *testing.T) {
 
 	logger := &testLogger{t: t}
 
-	const wantVersion = 2 // highest embedded migration version (001_init + 002_add_delivery_fields)
+	const wantVersion = 3 // highest embedded migration version (001_init + 002_add_delivery_fields + 003_add_slack_channel)
 
 	version, err := Run(dbURL, logger)
 	if err != nil {

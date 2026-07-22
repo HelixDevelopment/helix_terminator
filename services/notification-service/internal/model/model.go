@@ -20,7 +20,8 @@ type Notification struct {
 	// Target is the delivery destination: recipient email address for
 	// channel=email, destination URL for channel=webhook, FCM device
 	// registration token for channel=push (see
-	// internal/delivery/push.go). Unused for in_app.
+	// internal/delivery/push.go), destination Slack channel ID for
+	// channel=slack (see internal/delivery/slack.go). Unused for in_app.
 	Target    string     `json:"target,omitempty" db:"target"`
 	Status    string     `json:"status" db:"status"`
 	ReadAt    *time.Time `json:"readAt,omitempty" db:"read_at"`
@@ -56,17 +57,20 @@ type CreateNotificationRequest struct {
 	Title   string          `json:"title" binding:"required,max=255"`
 	Message string          `json:"message" binding:"required,max=2000"`
 	Data    json.RawMessage `json:"data,omitempty" binding:"omitempty,max=65536"`
-	Channel string          `json:"channel" binding:"required,oneof=email in_app push webhook"`
+	Channel string          `json:"channel" binding:"required,oneof=email in_app push webhook slack"`
 	Status  string          `json:"status" binding:"omitempty,oneof=pending sent delivered failed"`
 	// Target is the delivery destination, required for channel=email
-	// (recipient email address) and channel=webhook (destination URL).
-	// For channel=push it is the FCM device registration token (required
-	// only once push is actually configured — see internal/delivery/push.go
-	// — an unconfigured deployment reports the honest
-	// "pending_provider_unconfigured" status regardless of Target).
+	// (recipient email address), channel=webhook (destination URL), and
+	// channel=slack (destination Slack channel ID, e.g. "C0123ABCD" — see
+	// internal/delivery/slack.go). For channel=push it is the FCM device
+	// registration token (required only once push is actually configured
+	// — see internal/delivery/push.go — an unconfigured deployment
+	// reports the honest "pending_provider_unconfigured" status
+	// regardless of Target; channel=slack behaves the same way once
+	// HERALD_SLACK_BOT_TOKEN is unset or the sender could not be built).
 	// Ignored for in_app. The server always overwrites the persisted
-	// status with the REAL delivery outcome for email/webhook/push — any
-	// client-supplied Status above is honored only for in_app.
+	// status with the REAL delivery outcome for email/webhook/push/slack
+	// — any client-supplied Status above is honored only for in_app.
 	Target string `json:"target,omitempty" binding:"omitempty,max=1000"`
 }
 
@@ -86,7 +90,7 @@ type CreateNotificationRequest struct {
 type ListNotificationsRequest struct {
 	OrgID   string `form:"org_id" binding:"omitempty,uuid"`
 	Status  string `form:"status" binding:"omitempty,oneof=pending sent delivered failed pending_provider_unconfigured"`
-	Channel string `form:"channel" binding:"omitempty,oneof=email in_app push webhook"`
+	Channel string `form:"channel" binding:"omitempty,oneof=email in_app push webhook slack"`
 	Limit   int    `form:"limit,default=20" binding:"omitempty,min=1,max=100"`
 	Offset  int    `form:"offset,default=0" binding:"omitempty,min=0"`
 }
@@ -107,7 +111,7 @@ type MarkReadRequest struct {
 // (internal/server/server.go authMiddleware, T11), so the field no
 // longer exists here.
 type UpdatePreferenceRequest struct {
-	Channel string   `json:"channel" binding:"required,oneof=email in_app push webhook"`
+	Channel string   `json:"channel" binding:"required,oneof=email in_app push webhook slack"`
 	Enabled bool     `json:"enabled"`
 	Types   []string `json:"types" binding:"omitempty,dive,oneof=info warning error success"`
 }

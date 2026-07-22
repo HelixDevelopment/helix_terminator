@@ -79,3 +79,6 @@ scratchpad/
 # commit-stage per §11.4.95 so these are always safely discardable.
 docs/workable_items.db-wal
 docs/workable_items.db-shm
+
+# Ephemeral runtime/QA evidence (raw §11.4.128 corpus + §11.4.202 reporting evidence); curated proof lives under docs/qa/
+/qa-results/

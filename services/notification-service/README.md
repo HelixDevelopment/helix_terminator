@@ -36,19 +36,41 @@ user, audit
 
 ## Delivery Channels
 
-`POST /api/v1/notifications` accepts `channel: email|in_app|push|webhook` and,
-for `email`/`webhook`, a required `target` field (recipient email address, or
-destination URL respectively). The persisted `status` reflects the REAL
-delivery outcome — it is never left permanently `pending`:
+`POST /api/v1/notifications` accepts `channel: email|in_app|push|webhook|slack`
+and, for `email`/`webhook`/`slack`, a required `target` field (recipient email
+address, destination URL, or destination Slack channel ID — e.g. `C0123ABCD`
+— respectively). The persisted `status` reflects the REAL delivery outcome —
+it is never left permanently `pending`:
 
 | Channel | Delivery mechanism | Requires | Success status | Failure status |
 |---|---|---|---|---|
 | `email` | Real SMTP send (`net/smtp`) to `target` | `SMTP_HOST` configured | `sent` | `failed` |
 | `webhook` | Real outbound `http.Client` POST to `target` | none (any reachable http(s) URL) | `delivered` | `failed` |
-| `push` | Not yet implemented — FCM/APNs credentials are not configured in this environment | operator-supplied `FCM_SERVER_KEY` / `APNS_*` (not yet wired) | — | `pending_provider_unconfigured` (honest, never fabricated) |
+| `push` | Real FCM HTTP v1 send to `target` (device registration token) | `FCM_SERVICE_ACCOUNT_JSON` configured | `sent` | `failed` |
+| `slack` | Real Slack `chat.postMessage` (via the Herald submodule's Slack channel adapter — compiled in by default, no build tag) to `target` (a Slack channel ID) | `HERALD_SLACK_BOT_TOKEN` configured | `sent` | `failed` |
 | `in_app` | No external transport; status is caller-supplied (default `pending`) | — | — | — |
 
-See `internal/delivery/` for the SMTP and webhook clients.
+Every channel without its required configuration reports the honest
+`pending_provider_unconfigured` status rather than fabricating a delivery
+outcome.
+
+See `internal/delivery/` for the SMTP, webhook, push, and Slack clients.
+
+**Slack build precondition.** `internal/delivery/slack_herald.go` imports the
+Herald submodule's real Slack channel adapter directly (Constitution
+§11.4.74 reuse-first) and compiles by default (no build tag — Constitution
+§11.4.197: a wired feature must be active by default). This requires
+`submodules/herald`'s own nested git submodules to be initialized —
+`git -C submodules/herald submodule update --init --recursive` — which
+this repository's project-wide submodule-init mandate (Constitution
+§11.4.27/§11.4.36) already expects of every checkout. **Do not run a bare
+`go mod tidy` on this service's `go.mod`**: it now technically succeeds,
+but it forces `gin-gonic/gin` v1.10.0→v1.12.0 (plus several further
+transitive bumps) project-wide, purely because Herald's own `commons`
+module requires newer shared-dependency versions — an unrequested,
+out-of-scope blast radius. See the hand-written comment directly above the
+Herald `require`/`replace` block in `go.mod` for the full rationale; if a
+gin bump is ever genuinely wanted, land and test it as its own change.
 
 ## Health Checks
 
@@ -83,6 +105,9 @@ go test -v -race -cover ./...
 | `SMTP_FROM` | No | notifications@localhost | Envelope/header From address |
 | `SMTP_USERNAME` | No | — | SMTP AUTH username (PLAIN auth used only when set) |
 | `SMTP_PASSWORD` | No | — | SMTP AUTH password — never hardcode, never commit |
+| `FCM_SERVICE_ACCOUNT_JSON` | No | — | Path to a Firebase/GCP service-account JSON key; push delivery is honestly reported as `pending_provider_unconfigured` when unset |
+| `FCM_PROJECT_ID` | No | (from service account JSON) | Overrides the project id read from the service account key |
+| `HERALD_SLACK_BOT_TOKEN` | No | — | Slack bot token (`xoxb-…`, `chat:write` scope) for the Herald-backed Slack channel adapter (see `internal/delivery/slack.go`), compiled in by default; Slack delivery is honestly reported as `pending_provider_unconfigured` when unset |
 
 ---
 

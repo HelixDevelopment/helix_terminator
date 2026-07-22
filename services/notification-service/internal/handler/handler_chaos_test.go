@@ -457,6 +457,28 @@ func TestChaosBoundaryConditions(t *testing.T) {
 		t.Logf("invalid status → %d", status)
 	})
 
+	t.Run("sql_injection_in_slack_target", func(t *testing.T) {
+		// The Slack target (channel ID) is caller-supplied; it must never
+		// be trusted as SQL-safe by assumption — the parameterized query
+		// in repository.go is what actually protects this, but the
+		// request itself must never 500 regardless of what's in target.
+		payload := `{"type":"info","title":"Slack Chaos","message":"SQLi-in-target test","channel":"slack","target":"C0123'; DROP TABLE notifications; --"}`
+		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/notifications", "application/json", []byte(payload))
+		if status >= 500 && status != http.StatusServiceUnavailable {
+			t.Errorf("SQL injection in slack target: got %d — expected 201 or 503 (never 500)", status)
+		}
+		t.Logf("SQL injection in slack target → %d", status)
+	})
+
+	t.Run("slack_channel_accepted_valid_preference", func(t *testing.T) {
+		payload := `{"channel":"slack","enabled":true}`
+		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/notifications/preferences", "application/json", []byte(payload))
+		if status >= 500 && status != http.StatusServiceUnavailable {
+			t.Errorf("valid slack preference channel: got %d — expected non-server-error", status)
+		}
+		t.Logf("slack preference channel → %d", status)
+	})
+
 	t.Run("invalid_preference_channel", func(t *testing.T) {
 		payload := `{"channel":"invalid_channel","enabled":true}`
 		status, _ := chaosPostRaw(t, client, env.ts.URL+"/api/v1/notifications/preferences", "application/json", []byte(payload))

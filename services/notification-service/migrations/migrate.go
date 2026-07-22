@@ -10,13 +10,16 @@
 // wiring) so migrations previously assumed pre-applied are actually run
 // by the service binary.
 //
-// This service has TWO forward migrations (001_init, 002_add_delivery_
-// fields) - each carries its own dedicated *.down.sql reversing ONLY
-// that migration's forward changes (002's down drops the `target`
-// column + restores the pre-002 status CHECK constraint; 001's down
-// drops the notifications/notification_preferences tables entirely),
-// so golang-migrate can step the schema down one version at a time in
-// the correct reverse order.
+// This service has THREE forward migrations (001_init, 002_add_delivery_
+// fields, 003_add_slack_channel) - each carries its own dedicated
+// *.down.sql reversing ONLY that migration's forward changes (003's down
+// restores the pre-003 4-value channel CHECK constraint on both
+// notifications and notification_preferences, dropping 'slack' from the
+// allowed set; 002's down drops the `target` column + restores the
+// pre-002 status CHECK constraint; 001's down drops the
+// notifications/notification_preferences tables entirely), so
+// golang-migrate can step the schema down one version at a time in the
+// correct reverse order.
 //
 // All helix_terminator services share a single PostgreSQL database (see
 // infrastructure/docker/compose/docker-compose.yml, POSTGRES_DB

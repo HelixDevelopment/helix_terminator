@@ -22,6 +22,7 @@ type Handler struct {
 	emailSender   *delivery.EmailSender
 	webhookSender *delivery.WebhookSender
 	pushSender    *delivery.PushSender
+	slackSender   *delivery.SlackSender
 }
 
 // New returns a new Handler with dependencies. Delivery clients are built
@@ -29,13 +30,16 @@ type Handler struct {
 // email requires SMTP_HOST to be set (see delivery.SMTPConfigFromEnv); the
 // webhook sender needs no external configuration; push requires
 // FCM_SERVICE_ACCOUNT_JSON to be set (see delivery.PushConfigFromEnv +
-// scripts/firebase/firebase_setup.sh) — until then it honestly reports
-// "not configured" rather than fabricating delivery.
+// scripts/firebase/firebase_setup.sh); slack requires HERALD_SLACK_BOT_TOKEN
+// to be set (see delivery.SlackConfigFromEnv + internal/delivery/slack.go)
+// — until then each honestly reports "not configured" rather than
+// fabricating delivery.
 func New(repo *repository.Repository) *Handler {
 	h := &Handler{
 		repo:          repo,
 		webhookSender: delivery.NewWebhookSender(10 * time.Second),
 		pushSender:    delivery.NewPushSender(),
+		slackSender:   delivery.NewSlackSender(),
 	}
 	if cfg, ok := delivery.SMTPConfigFromEnv(); ok {
 		h.emailSender = delivery.NewEmailSender(cfg)
@@ -54,6 +58,18 @@ func New(repo *repository.Repository) *Handler {
 			h.pushSender = sender
 		}
 	}
+	// HERALD_SLACK_BOT_TOKEN unset => ok is false, h.slackSender stays the
+	// honest NewSlackSender() zero value above. Set-but-broken mirrors the
+	// push case exactly — see internal/delivery/slack.go's package doc
+	// comment for the specific "built without -tags heraldslack" instance
+	// of this branch that fires in every default build today.
+	if sender, ok, err := delivery.NewSlackSenderFromEnv(); ok {
+		if err != nil {
+			log.Printf("[notify] slack (Herald) configuration error, falling back to honest not-configured state: %v", err)
+		} else {
+			h.slackSender = sender
+		}
+	}
 	return h
 }
 
@@ -62,9 +78,9 @@ func New(repo *repository.Repository) *Handler {
 // test infrastructure (a real SMTP sink, a real HTTP receiver) — per
 // Constitution §11.4.27 no fakes/mocks are used beyond unit tests, so tests
 // exercising this handler wire REAL delivery.EmailSender / WebhookSender /
-// PushSender instances, never a mock double.
-func NewWithDelivery(repo *repository.Repository, emailSender *delivery.EmailSender, webhookSender *delivery.WebhookSender, pushSender *delivery.PushSender) *Handler {
-	return &Handler{repo: repo, emailSender: emailSender, webhookSender: webhookSender, pushSender: pushSender}
+// PushSender / SlackSender instances, never a mock double.
+func NewWithDelivery(repo *repository.Repository, emailSender *delivery.EmailSender, webhookSender *delivery.WebhookSender, pushSender *delivery.PushSender, slackSender *delivery.SlackSender) *Handler {
+	return &Handler{repo: repo, emailSender: emailSender, webhookSender: webhookSender, pushSender: pushSender, slackSender: slackSender}
 }
 
 // callerUserID returns the requesting caller's user ID as established by
@@ -150,6 +166,11 @@ func (h *Handler) CreateNotification(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "target (webhook URL) is required for channel=webhook"})
 			return
 		}
+	case "slack":
+		if req.Target == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "target (Slack channel ID) is required for channel=slack"})
+			return
+		}
 	}
 
 	status := req.Status
@@ -184,6 +205,8 @@ func (h *Handler) CreateNotification(c *gin.Context) {
 		h.deliverWebhook(c.Request.Context(), notification)
 	case "push":
 		h.deliverPush(c.Request.Context(), notification)
+	case "slack":
+		h.deliverSlack(c.Request.Context(), notification)
 	}
 
 	if err := h.repo.CreateNotification(c.Request.Context(), notification); err != nil {
@@ -266,6 +289,47 @@ func (h *Handler) deliverPush(ctx context.Context, n *model.Notification) {
 		return
 	}
 	sentAt := time.Now().UTC()
+	n.Status = "sent"
+	n.SentAt = &sentAt
+}
+
+// deliverSlack attempts REAL Slack delivery (via Herald's Slack channel
+// adapter, see internal/delivery/slack.go) to n.Target (the destination
+// Slack channel ID — see model.Notification.Target) when a credentialed
+// delivery.SlackSender is wired (HERALD_SLACK_BOT_TOKEN set). It NEVER
+// fabricates a "sent" status: an unconfigured sender yields the honest
+// "pending_provider_unconfigured" status (distinct from a real send
+// failure, which yields "failed") — never conflating the two, exactly
+// mirroring deliverPush above. The message text sent to Slack combines
+// n.Title and n.Message (Slack has no separate title/body fields, unlike
+// FCM's notification payload).
+func (h *Handler) deliverSlack(ctx context.Context, n *model.Notification) {
+	if h.slackSender == nil {
+		n.Status = "pending_provider_unconfigured"
+		return
+	}
+	text := n.Title
+	if n.Message != "" {
+		if text != "" {
+			text += "\n"
+		}
+		text += n.Message
+	}
+	if err := h.slackSender.Send(ctx, n.Target, text); err != nil {
+		if errors.Is(err, delivery.ErrSlackProviderNotConfigured) {
+			n.Status = "pending_provider_unconfigured"
+		} else {
+			n.Status = "failed"
+		}
+		return
+	}
+	sentAt := time.Now().UTC()
+	// Herald's Slack adapter evidence ceiling is DeliveryRouted ("platform
+	// stored & broadcast", i.e. Slack accepted + routed the message) — the
+	// SAME evidence class webhook.go's 2xx response represents, so "sent"
+	// (not "delivered", which this service reserves for webhook's
+	// stronger receiver-side 2xx confirmation) is the honest status here,
+	// matching push's own DeliveryRouted-equivalent "sent" mapping.
 	n.Status = "sent"
 	n.SentAt = &sentAt
 }
@@ -622,6 +686,7 @@ func toNotificationResponse(n *model.Notification) model.NotificationResponse {
 		Message:   n.Message,
 		Data:      data,
 		Channel:   n.Channel,
+		Target:    n.Target,
 		Status:    n.Status,
 		ReadAt:    n.ReadAt,
 		SentAt:    n.SentAt,
