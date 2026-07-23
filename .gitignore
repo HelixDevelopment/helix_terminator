@@ -24,14 +24,36 @@ profile.cov
 go.work
 go.work.sum
 
-# env file
+# env files — secrets, credentials, API keys (§11.4.10 / §11.4.30). Every
+# `.env*` variant is ignored EXCEPT the tracked placeholder-value
+# `.env.example` (any directory depth — see
+# infrastructure/docker/compose/.env.example, negation applies project-wide
+# since a slash-free gitignore pattern matches at every depth).
 .env
+.env.*
+!.env.example
 
 # Firebase setup secrets — service-account JSON, downloaded client SDK
 # configs (google-services.json / GoogleService-Info.plist). Regenerable
 # via scripts/firebase/firebase_setup.sh (§11.4.77). NEVER git-versioned
 # (§11.4.10 / §11.4.10.A).
 scripts/firebase/secrets/
+
+# Per-service local credential files an operator stores as a file instead
+# of a shell export (Stripe secret key, SMTP relay creds, etc. — see
+# docs/credentials/FEATURE_TIER_SETUP.md). `.example` placeholders + this
+# directory's own README.md stay tracked (§11.4.10 exception).
+scripts/testing/secrets/*
+!scripts/testing/secrets/.gitkeep
+!scripts/testing/secrets/README.md
+!scripts/testing/secrets/*.example
+
+# Apple Push Notification service credentials (APNs Authentication Key
+# uploaded to Firebase's Cloud Messaging → Apple app configuration; see
+# docs/credentials/FEATURE_TIER_SETUP.md "Push notifications" section).
+# NEVER git-versioned (§11.4.10).
+*.p8
+*.p12
 
 # Editor/IDE
 # .idea/
