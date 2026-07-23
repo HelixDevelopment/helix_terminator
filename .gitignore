@@ -82,3 +82,6 @@ docs/workable_items.db-shm
 
 # Ephemeral runtime/QA evidence (raw §11.4.128 corpus + §11.4.202 reporting evidence); curated proof lives under docs/qa/
 /qa-results/
+
+# Agent git worktrees — never versioned in the parent (survive on disk)
+.worktrees/

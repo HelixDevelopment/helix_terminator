@@ -1,12 +1,17 @@
 # CONTINUATION — helix_terminator
 
-**Revision:** 16
-**Last modified:** 2026-07-22T14:31:39Z
+**Revision:** 17
+**Last modified:** 2026-07-23T10:40:00+05:00
 
 Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep current.
 
-## One-line resume
-**FULL DEVELOPMENT, autonomous multi-stream loop (SDD), §11.4.126.** `origin/main == local main @ 057949d`. Current wave: **Rev49 consumer build-outs** (governance mirrors, request ledgers, README §11.4.212) — written, in independent Fable review — plus **Slack-via-Herald notification channel** implementation in flight. Resume: read THIS file, then `.superpowers/sdd/progress.md` (tail blocks = live state), then `git fetch --all`.
+## ONE-WORD RESUME — type `continue`
+**Conductor / multi-track fleet, autonomous loop (§11.4.126).** A fresh session (any toolkit alias — ledgers live under the cross-alias `~/.claude-shared/`) resumes the WHOLE fleet by reading, in order:
+1. **`~/.claude-shared/session_ledgers/conductor_respawn_log.md`** — THE fleet-state SSoT; its top "RESUME PROTOCOL" is self-contained (4 parked streams + exact resume points, quota state, git SHAs, conductor-owed work).
+2. Each parked stream's ledger in that same dir (named in the SSoT).
+3. `git fetch --all --prune` per repo before editing (§11.4.37).
+
+**Live @ 2026-07-23 10:40 +05:** main `197a3b7` (constitution gitlink → `6fd244e`, on all 6 mirrors). Fleet PARKED on quota (session-limit **reset 08:40 → back now**; **Fable weekly-limited to Jul 28 → resume on Sonnet/Opus, NOT Fable**). Per the live §11.4.225 finding, resume a **smaller Sonnet-tier fleet** (a heavy Opus fleet throttled this host's interactive scope 62% of periods = the operator's typing lag). 4 streams: **F1 cross-tenant authz (BLOCKING security)**, HEL-001 review-finish, land §11.4.226, tmux scope-split (do NOT release the old 8.6-CPU split).
 
 ## Landed since rev 15 (all on origin/main, remote==local)
 - `4dac814` S-FLUT — 8 stub tests + fake e2e → 86 real Flutter tests (+2 real bug fixes).
