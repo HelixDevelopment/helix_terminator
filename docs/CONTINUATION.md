@@ -1,7 +1,7 @@
 # CONTINUATION — helix_terminator
 
-**Revision:** 17
-**Last modified:** 2026-07-23T10:40:00+05:00
+**Revision:** 18
+**Last modified:** 2026-07-23T14:25:47+0500
 
 Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep current.
 
@@ -11,7 +11,7 @@ Standing session-resumption record (Constitution §12.10 / §11.4.131). Keep cur
 2. Each parked stream's ledger in that same dir (named in the SSoT).
 3. `git fetch --all --prune` per repo before editing (§11.4.37).
 
-**Live @ 2026-07-23 10:40 +05:** main `197a3b7` (constitution gitlink → `6fd244e`, on all 6 mirrors). Fleet PARKED on quota (session-limit **reset 08:40 → back now**; **Fable weekly-limited to Jul 28 → resume on Sonnet/Opus, NOT Fable**). Per the live §11.4.225 finding, resume a **smaller Sonnet-tier fleet** (a heavy Opus fleet throttled this host's interactive scope 62% of periods = the operator's typing lag). 4 streams: **F1 cross-tenant authz (BLOCKING security)**, HEL-001 review-finish, land §11.4.226, tmux scope-split (do NOT release the old 8.6-CPU split).
+**Live @ 2026-07-23 (session 2b):** main `bebac54` (constitution `6fd244e`, all 6 mirrors). **DONE this session:** claude_toolkit **v1.25.5 released** (4 mirrors + GitHub/GitLab release objects); **helixagent proven working end-to-end** (Qwen3-Coder-30B verified + real captured answer, no bluff); **HEL-012** (LLMsVerifier anti-hallucination FEATURE) + **HEL-013** (F1 cross-tenant authz BUG) filed + committed to the SSoT (13 items). **STILL PARKED on quota (Fable weekly→Jul 28; resume on Sonnet/Opus, smaller fleet per §11.4.225 throttle finding):** F1 authz fix (HEL-013), HEL-001 review-finish, land §11.4.226, tmux scope-split (do NOT release the old 8.6-CPU split). **Owed:** remaining EFFORT-4 findings as SSoT items; `.helix/reporting.yaml` sync_command (docs regen skipped); helixagent prompts #1/#3 (skill+git tool-use) via interactive TUI. **Full current detail: `~/.claude-shared/session_ledgers/conductor_respawn_log.md` (RESUME PROTOCOL).**
 
 ## Landed since rev 15 (all on origin/main, remote==local)
 - `4dac814` S-FLUT — 8 stub tests + fake e2e → 86 real Flutter tests (+2 real bug fixes).
